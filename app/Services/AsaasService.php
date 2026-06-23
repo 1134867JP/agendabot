@@ -6,6 +6,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
+use RuntimeException;
 
 class AsaasService
 {
@@ -24,28 +25,33 @@ class AsaasService
         }
 
         $response = $this->http()->post('/customers', [
-            'name'              => $user->name,
-            'email'             => $user->email,
+            'name' => $user->name,
+            'email' => $user->email,
             'externalReference' => "tenant_{$tenant->id}",
         ]);
 
         $customerId = $response->json('id');
+
+        if (! $response->successful() || ! is_string($customerId) || $customerId === '') {
+            throw new RuntimeException('Não foi possível criar o cliente no Asaas.');
+        }
+
         $tenant->update(['asaas_customer_id' => $customerId]);
 
         return $customerId;
     }
 
-    public function criarAssinatura(string $customerId, string $plano, string $paymentMethod = 'CREDIT_CARD'): array
+    public function criarAssinatura(string $customerId, string $plano, string $paymentMethod = 'CREDIT_CARD'): ?array
     {
         $valor = config("plans.{$plano}.valor");
 
         $response = $this->http()->post('/subscriptions', [
-            'customer'          => $customerId,
-            'billingType'       => $paymentMethod,
-            'value'             => $valor,
-            'nextDueDate'       => now()->addDays((int) env('TRIAL_DAYS', 14))->format('Y-m-d'),
-            'cycle'             => 'MONTHLY',
-            'description'       => 'AgendaBot — Plano ' . ucfirst($plano),
+            'customer' => $customerId,
+            'billingType' => $paymentMethod,
+            'value' => $valor,
+            'nextDueDate' => now()->addDays((int) env('TRIAL_DAYS', 14))->format('Y-m-d'),
+            'cycle' => 'MONTHLY',
+            'description' => 'AgendaBot — Plano '.ucfirst($plano),
             'externalReference' => "plano_{$plano}",
         ]);
 
@@ -55,18 +61,21 @@ class AsaasService
     public function gerarLinkCheckout(string $subscriptionId): ?string
     {
         $response = $this->http()->get("/subscriptions/{$subscriptionId}/paymentLink");
+
         return $response->json('url');
     }
 
     public function cancelarAssinatura(string $subscriptionId): bool
     {
         $response = $this->http()->delete("/subscriptions/{$subscriptionId}");
+
         return $response->successful();
     }
 
     public function statusAssinatura(string $subscriptionId): string
     {
         $response = $this->http()->get("/subscriptions/{$subscriptionId}");
+
         return $response->json('status') ?? 'desconhecido';
     }
 }

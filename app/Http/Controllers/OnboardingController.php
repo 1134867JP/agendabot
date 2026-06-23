@@ -77,25 +77,32 @@ class OnboardingController extends Controller
         ]);
 
         $user   = auth()->user();
-        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', $user->id))->first();
+        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', $user->id))->firstOrFail();
 
-        $asaas      = app(AsaasService::class);
-        $customerId = $asaas->criarOuBuscarCliente($user, $tenant);
+        try {
+            $asaas      = app(AsaasService::class);
+            $customerId = $asaas->criarOuBuscarCliente($user, $tenant);
+            $subscription = $asaas->criarAssinatura($customerId, $request->plano);
 
-        $subscription = $asaas->criarAssinatura($customerId, $request->plano);
+            $tenant->update([
+                'asaas_subscription_id' => $subscription['id'] ?? null,
+                'plano'                 => $request->plano,
+            ]);
 
-        $tenant->update([
-            'asaas_subscription_id' => $subscription['id'] ?? null,
-            'plano'                 => $request->plano,
-        ]);
+            $linkPagamento = $asaas->gerarLinkCheckout($subscription['id'] ?? '');
 
-        $linkPagamento = $asaas->gerarLinkCheckout($subscription['id'] ?? '');
+            if ($linkPagamento) {
+                return redirect($linkPagamento);
+            }
 
-        if ($linkPagamento) {
-            return redirect($linkPagamento);
+            return redirect()->route('onboarding.sucesso');
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->withErrors([
+                'plano' => 'Não foi possível iniciar o checkout no Asaas. Tente novamente em alguns instantes.',
+            ]);
         }
-
-        return redirect()->route('onboarding.sucesso');
     }
 
     public function sucesso(): Response
