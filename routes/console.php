@@ -1,6 +1,8 @@
 <?php
 
 use App\Jobs\EnviarLembretesJob;
+use App\Jobs\EnviarLembreteConsultaV2;
+use App\Jobs\VerificarTrialExpiradoJob;
 use App\Models\Tenant;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -26,3 +28,9 @@ Schedule::call(function () {
 
 // Enviar lembretes D-1 para agendamentos de amanhã
 Schedule::job(new EnviarLembretesJob)->dailyAt('09:00');
+
+// Enviar lembretes v2 para agendamentos de amanhã (08:00)
+Schedule::job(new EnviarLembreteConsultaV2)->dailyAt('08:00');
+
+// Verificar trials expirados diariamente (00:30)
+Schedule::job(new VerificarTrialExpiradoJob)->dailyAt('00:30');
