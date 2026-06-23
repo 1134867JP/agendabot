@@ -34,7 +34,8 @@ COPY . .
 RUN composer dump-autoload -o && php artisan package:discover --ansi || true
 RUN npm run build
 
-RUN chown -R www-data:www-data /var/www/html && \
+RUN mkdir -p storage/app/public storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache && \
+    chown -R www-data:www-data /var/www/html && \
     chmod -R 775 storage bootstrap/cache
 
 EXPOSE 80
