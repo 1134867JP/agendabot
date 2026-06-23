@@ -8,6 +8,12 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Tenant;
+use App\Http\Controllers\Tenant\ClienteController;
+use App\Http\Controllers\Tenant\ConversaController;
+use App\Http\Controllers\Tenant\HorarioProfissionalController;
+use App\Http\Controllers\Tenant\OpcaoExtraController;
+use App\Http\Controllers\Tenant\ProfissionalController;
+use App\Http\Controllers\Tenant\ServicoController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
@@ -70,6 +76,31 @@ Route::middleware('auth')->group(function () {
 
         // Horários
         Route::post('recursos/{recurso}/horarios', [Tenant\HorarioController::class, 'sync'])->name('horarios.sync');
+
+        // Profissionais
+        Route::resource('profissionais', ProfissionalController::class)->except(['show']);
+        Route::post('profissionais/{profissional}/horarios', [HorarioProfissionalController::class, 'sync'])
+            ->name('profissionais.horarios.sync');
+
+        // Serviços
+        Route::resource('servicos', ServicoController::class)->except(['show']);
+
+        // Opções extras (convênios, pagamentos)
+        Route::resource('opcoes-extras', OpcaoExtraController::class)->except(['show']);
+
+        // Clientes
+        Route::get('clientes', [ClienteController::class, 'index'])->name('clientes.index');
+        Route::get('clientes/{cliente}', [ClienteController::class, 'show'])->name('clientes.show');
+
+        // Conversas WhatsApp
+        Route::get('conversas', [ConversaController::class, 'index'])->name('conversas.index');
+        Route::get('conversas/{conversa}/mensagens', [ConversaController::class, 'mensagens'])->name('conversas.mensagens');
+        Route::post('conversas/{conversa}/assumir', [ConversaController::class, 'assumir'])->name('conversas.assumir');
+        Route::post('conversas/{conversa}/devolver', [ConversaController::class, 'devolver'])->name('conversas.devolver');
+        Route::post('conversas/{conversa}/enviar', [ConversaController::class, 'enviarMensagem'])->name('conversas.enviar');
+
+        // Config bot
+        Route::put('configuracoes/bot', [Tenant\ConfiguracaoController::class, 'updateBot'])->name('configuracoes.bot');
 
         // WhatsApp
         Route::get('whatsapp', [Tenant\WhatsAppController::class, 'index'])->name('whatsapp');
