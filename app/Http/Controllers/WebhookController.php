@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\ProcessarMensagemJob;
+use App\Jobs\ProcessarMensagemWhatsapp;
 use App\Models\Tenant;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -14,6 +15,11 @@ class WebhookController extends Controller
         $tenant = Tenant::where('slug', $tenantSlug)
             ->where('ativo', true)
             ->firstOrFail();
+
+        // Verificar se o bot está ativo para este tenant
+        if (! $tenant->bot_ativo) {
+            return response('ok');
+        }
 
         $data = $request->json()->all();
 
@@ -34,7 +40,8 @@ class WebhookController extends Controller
             return response('ok');
         }
 
-        ProcessarMensagemJob::dispatch($tenant, $telefone, $mensagem);
+        $evolutionMessageId = data_get($data, 'data.key.id');
+        ProcessarMensagemWhatsapp::dispatch($tenant, $telefone, $mensagem, $evolutionMessageId);
 
         return response('ok');
     }

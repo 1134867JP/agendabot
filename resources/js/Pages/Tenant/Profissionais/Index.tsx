@@ -1,0 +1,620 @@
+import { Head, router, useForm } from '@inertiajs/react';
+import { useState } from 'react';
+import AppLayout from '@/Layouts/AppLayout';
+import { PageProps } from '@/types';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface HorarioProfissional {
+    id?: number;
+    profissional_id?: number;
+    dia_semana: number;
+    hora_inicio: string;
+    hora_fim: string;
+    duracao_slot: number;
+    ativo: boolean;
+}
+
+interface Profissional {
+    id: number;
+    nome: string;
+    especialidades: string[] | null;
+    ativo: boolean;
+    horarios: HorarioProfissional[];
+}
+
+interface Props extends PageProps {
+    profissionais: Profissional[];
+}
+
+const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const DURACOES = [15, 20, 30, 45, 60, 90, 120];
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function buildHorariosRows(horarios: HorarioProfissional[]): HorarioProfissional[] {
+    return DIAS.map((_, i) => {
+        const h = horarios.find(h => h.dia_semana === i);
+        if (h) {
+            return { ...h, ativo: true };
+        }
+        return {
+            dia_semana: i,
+            hora_inicio: '09:00',
+            hora_fim: '18:00',
+            duracao_slot: 30,
+            ativo: false,
+        };
+    });
+}
+
+// ─── HorariosEditor ──────────────────────────────────────────────────────────
+
+function HorariosEditor({
+    profissional,
+    onClose,
+}: {
+    profissional: Profissional;
+    onClose: () => void;
+}) {
+    const [rows, setRows] = useState<HorarioProfissional[]>(
+        buildHorariosRows(profissional.horarios ?? [])
+    );
+    const [saving, setSaving] = useState(false);
+
+    const toggle = (idx: number) =>
+        setRows(r => r.map((row, i) => (i === idx ? { ...row, ativo: !row.ativo } : row)));
+
+    const setField = (
+        idx: number,
+        field: 'hora_inicio' | 'hora_fim' | 'duracao_slot',
+        value: string | number
+    ) =>
+        setRows(r => r.map((row, i) => (i === idx ? { ...row, [field]: value } : row)));
+
+    const salvar = () => {
+        setSaving(true);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        router.post(route('tenant.profissionais.horarios.sync', profissional.id), { horarios: rows } as any, {
+            onSuccess: onClose,
+            onFinish: () => setSaving(false),
+            preserveScroll: true,
+        });
+    };
+
+    return (
+        <div
+            className="px-6 pb-5 pt-4"
+            style={{ borderTop: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}
+        >
+            <h4
+                className="mb-4 text-xs font-semibold uppercase tracking-wide"
+                style={{ color: 'var(--text-3)' }}
+            >
+                Horários de atendimento
+            </h4>
+
+            <div className="space-y-2.5">
+                {rows.map((row, i) => (
+                    <div key={i} className="flex flex-wrap items-center gap-4">
+                        {/* Toggle + dia */}
+                        <label className="flex w-28 cursor-pointer items-center gap-2.5">
+                            <div
+                                onClick={() => toggle(i)}
+                                className="relative flex h-5 w-9 cursor-pointer items-center rounded-full transition-colors"
+                                style={{ background: row.ativo ? 'var(--accent)' : 'rgba(255,255,255,0.15)' }}
+                            >
+                                <span
+                                    className={`absolute h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${
+                                        row.ativo ? 'translate-x-4' : 'translate-x-1'
+                                    }`}
+                                />
+                            </div>
+                            <span
+                                className="text-sm"
+                                style={{ color: row.ativo ? 'var(--text-1)' : 'var(--text-3)' }}
+                            >
+                                {DIAS[i]}
+                            </span>
+                        </label>
+
+                        {/* Hora início */}
+                        <input
+                            type="time"
+                            value={row.hora_inicio}
+                            onChange={e => setField(i, 'hora_inicio', e.target.value)}
+                            disabled={!row.ativo}
+                            className="input w-28 disabled:opacity-40"
+                        />
+
+                        <span className="text-xs" style={{ color: 'var(--text-3)' }}>até</span>
+
+                        {/* Hora fim */}
+                        <input
+                            type="time"
+                            value={row.hora_fim}
+                            onChange={e => setField(i, 'hora_fim', e.target.value)}
+                            disabled={!row.ativo}
+                            className="input w-28 disabled:opacity-40"
+                        />
+
+                        {/* Duração do slot */}
+                        <select
+                            value={row.duracao_slot}
+                            onChange={e => setField(i, 'duracao_slot', parseInt(e.target.value))}
+                            disabled={!row.ativo}
+                            className="input w-28 disabled:opacity-40"
+                        >
+                            {DURACOES.map(m => (
+                                <option key={m} value={m}>
+                                    {m} min
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                ))}
+            </div>
+
+            <div className="mt-5 flex gap-2">
+                <button onClick={salvar} disabled={saving} className="btn-primary">
+                    {saving ? 'Salvando…' : 'Salvar horários'}
+                </button>
+                <button onClick={onClose} className="btn-secondary">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// ─── NovoProfissionalModal ────────────────────────────────────────────────────
+
+function NovoProfissionalModal({ onClose }: { onClose: () => void }) {
+    const { data, setData, post, processing, errors, reset } = useForm({
+        nome: '',
+        especialidades: [] as string[],
+        ativo: true,
+    });
+
+    const [novaEsp, setNovaEsp] = useState('');
+
+    const addEspecialidade = () => {
+        const trimmed = novaEsp.trim();
+        if (!trimmed) return;
+        setData('especialidades', [...data.especialidades, trimmed]);
+        setNovaEsp('');
+    };
+
+    const removeEspecialidade = (idx: number) =>
+        setData(
+            'especialidades',
+            data.especialidades.filter((_, i) => i !== idx)
+        );
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        post(route('tenant.profissionais.store'), {
+            onSuccess: () => {
+                reset();
+                onClose();
+            },
+            preserveScroll: true,
+        });
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+            <div
+                className="w-full max-w-sm rounded-2xl p-7 shadow-2xl"
+                style={{
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border-strong)',
+                }}
+            >
+                <div className="mb-5 flex items-start justify-between">
+                    <h3
+                        style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
+                        className="text-xl font-semibold text-white"
+                    >
+                        Novo profissional
+                    </h3>
+                    <button
+                        onClick={onClose}
+                        style={{ color: 'var(--text-3)' }}
+                        className="hover:text-white transition-colors"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <form onSubmit={submit} className="space-y-4">
+                    {/* Nome */}
+                    <div>
+                        <label className="label mb-1">Nome *</label>
+                        <input
+                            value={data.nome}
+                            onChange={e => setData('nome', e.target.value)}
+                            className="input"
+                            placeholder="Ex: Dr. Ana, Barbeiro Carlos"
+                            required
+                        />
+                        {errors.nome && <p className="mt-1 text-xs text-red-400">{errors.nome}</p>}
+                    </div>
+
+                    {/* Especialidades */}
+                    <div>
+                        <label className="label mb-1">Especialidades</label>
+                        <div className="flex gap-2">
+                            <input
+                                value={novaEsp}
+                                onChange={e => setNovaEsp(e.target.value)}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        addEspecialidade();
+                                    }
+                                }}
+                                className="input flex-1"
+                                placeholder="Ex: Corte masculino"
+                            />
+                            <button
+                                type="button"
+                                onClick={addEspecialidade}
+                                className="btn-secondary px-3"
+                            >
+                                +
+                            </button>
+                        </div>
+
+                        {data.especialidades.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                                {data.especialidades.map((esp, i) => (
+                                    <span
+                                        key={i}
+                                        className="flex items-center gap-1 rounded px-2 py-0.5 text-xs"
+                                        style={{
+                                            background: 'var(--accent-light)',
+                                            color: 'var(--accent)',
+                                        }}
+                                    >
+                                        {esp}
+                                        <button
+                                            type="button"
+                                            onClick={() => removeEspecialidade(i)}
+                                            className="transition-opacity hover:opacity-70"
+                                        >
+                                            ×
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-1">
+                        <button type="button" onClick={onClose} className="btn-secondary">
+                            Cancelar
+                        </button>
+                        <button type="submit" disabled={processing} className="btn-primary">
+                            {processing ? 'Criando…' : 'Criar profissional'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// ─── EditarProfissionalModal ──────────────────────────────────────────────────
+
+function EditarProfissionalModal({
+    profissional,
+    onClose,
+}: {
+    profissional: Profissional;
+    onClose: () => void;
+}) {
+    const { data, setData, put, processing, errors } = useForm({
+        nome: profissional.nome,
+        especialidades: profissional.especialidades ?? [],
+        ativo: profissional.ativo,
+    });
+
+    const [novaEsp, setNovaEsp] = useState('');
+
+    const addEspecialidade = () => {
+        const trimmed = novaEsp.trim();
+        if (!trimmed) return;
+        setData('especialidades', [...data.especialidades, trimmed]);
+        setNovaEsp('');
+    };
+
+    const removeEspecialidade = (idx: number) =>
+        setData(
+            'especialidades',
+            data.especialidades.filter((_, i) => i !== idx)
+        );
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        put(route('tenant.profissionais.update', profissional.id), {
+            onSuccess: onClose,
+            preserveScroll: true,
+        });
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+            <div
+                className="w-full max-w-sm rounded-2xl p-7 shadow-2xl"
+                style={{
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border-strong)',
+                }}
+            >
+                <div className="mb-5 flex items-start justify-between">
+                    <h3
+                        style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
+                        className="text-xl font-semibold text-white"
+                    >
+                        Editar profissional
+                    </h3>
+                    <button
+                        onClick={onClose}
+                        style={{ color: 'var(--text-3)' }}
+                        className="hover:text-white transition-colors"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <form onSubmit={submit} className="space-y-4">
+                    {/* Nome */}
+                    <div>
+                        <label className="label mb-1">Nome *</label>
+                        <input
+                            value={data.nome}
+                            onChange={e => setData('nome', e.target.value)}
+                            className="input"
+                            required
+                        />
+                        {errors.nome && <p className="mt-1 text-xs text-red-400">{errors.nome}</p>}
+                    </div>
+
+                    {/* Especialidades */}
+                    <div>
+                        <label className="label mb-1">Especialidades</label>
+                        <div className="flex gap-2">
+                            <input
+                                value={novaEsp}
+                                onChange={e => setNovaEsp(e.target.value)}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        addEspecialidade();
+                                    }
+                                }}
+                                className="input flex-1"
+                                placeholder="Adicionar especialidade"
+                            />
+                            <button
+                                type="button"
+                                onClick={addEspecialidade}
+                                className="btn-secondary px-3"
+                            >
+                                +
+                            </button>
+                        </div>
+
+                        {data.especialidades.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                                {data.especialidades.map((esp, i) => (
+                                    <span
+                                        key={i}
+                                        className="flex items-center gap-1 rounded px-2 py-0.5 text-xs"
+                                        style={{
+                                            background: 'var(--accent-light)',
+                                            color: 'var(--accent)',
+                                        }}
+                                    >
+                                        {esp}
+                                        <button
+                                            type="button"
+                                            onClick={() => removeEspecialidade(i)}
+                                            className="transition-opacity hover:opacity-70"
+                                        >
+                                            ×
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Status ativo */}
+                    <div className="flex items-center gap-3">
+                        <div
+                            onClick={() => setData('ativo', !data.ativo)}
+                            className="relative flex h-5 w-9 cursor-pointer items-center rounded-full transition-colors"
+                            style={{ background: data.ativo ? 'var(--accent)' : 'rgba(255,255,255,0.15)' }}
+                        >
+                            <span
+                                className={`absolute h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${
+                                    data.ativo ? 'translate-x-4' : 'translate-x-1'
+                                }`}
+                            />
+                        </div>
+                        <span className="text-sm" style={{ color: 'var(--text-2)' }}>
+                            {data.ativo ? 'Ativo' : 'Inativo'}
+                        </span>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-1">
+                        <button type="button" onClick={onClose} className="btn-secondary">
+                            Cancelar
+                        </button>
+                        <button type="submit" disabled={processing} className="btn-primary">
+                            {processing ? 'Salvando…' : 'Salvar alterações'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+export default function ProfissionaisIndex({ profissionais }: Props) {
+    const [novoModal, setNovoModal] = useState(false);
+    const [editando, setEditando] = useState<Profissional | null>(null);
+    const [expandido, setExpandido] = useState<number | null>(null);
+
+    const toggleAtivo = (p: Profissional) => {
+        router.put(
+            route('tenant.profissionais.update', p.id),
+            {
+                nome: p.nome,
+                especialidades: p.especialidades ?? [],
+                ativo: !p.ativo,
+            },
+            { preserveScroll: true }
+        );
+    };
+
+    const excluir = (id: number) => {
+        if (confirm('Desativar este profissional?')) {
+            router.delete(route('tenant.profissionais.destroy', id), { preserveScroll: true });
+        }
+    };
+
+    return (
+        <AppLayout title="Profissionais">
+            <Head title="Profissionais" />
+
+            <div className="mb-5 flex items-center justify-between">
+                <p className="text-sm" style={{ color: 'var(--text-3)' }}>
+                    {profissionais.length} profissional
+                    {profissionais.length !== 1 ? 'is' : ''} cadastrado
+                    {profissionais.length !== 1 ? 's' : ''}
+                </p>
+                <button onClick={() => setNovoModal(true)} className="btn-primary">
+                    + Novo profissional
+                </button>
+            </div>
+
+            {/* Lista */}
+            <div className="space-y-3">
+                {profissionais.length === 0 && (
+                    <div className="card p-10 text-center" style={{ color: 'var(--text-3)' }}>
+                        <p className="text-sm">Nenhum profissional cadastrado ainda.</p>
+                        <p className="mt-1 text-xs">
+                            Cadastre seus barbeiros, fisioterapeutas, treinadores, etc.
+                        </p>
+                    </div>
+                )}
+
+                {profissionais.map(p => (
+                    <div key={p.id} className="card overflow-hidden">
+                        <div className="flex items-center justify-between px-6 py-4">
+                            {/* Avatar + info */}
+                            <div className="flex items-center gap-4">
+                                <div
+                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                                    style={{
+                                        background: p.ativo
+                                            ? 'var(--accent)'
+                                            : 'rgba(255,255,255,0.15)',
+                                    }}
+                                >
+                                    {p.nome.charAt(0).toUpperCase()}
+                                </div>
+
+                                <div>
+                                    <p className="font-semibold text-white">{p.nome}</p>
+
+                                    {p.especialidades && p.especialidades.length > 0 && (
+                                        <div className="mt-1 flex flex-wrap gap-1">
+                                            {p.especialidades.map((esp, i) => (
+                                                <span
+                                                    key={i}
+                                                    className="rounded px-1.5 py-0.5 text-[11px]"
+                                                    style={{
+                                                        background: 'rgba(255,255,255,0.06)',
+                                                        color: 'var(--text-3)',
+                                                    }}
+                                                >
+                                                    {esp}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
+                                        {p.horarios.length > 0
+                                            ? `${p.horarios.length} dia${p.horarios.length !== 1 ? 's' : ''} configurado${p.horarios.length !== 1 ? 's' : ''}`
+                                            : 'Sem horários definidos'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Ações */}
+                            <div className="flex items-center gap-2">
+                                <span className={`badge ${p.ativo ? 'badge-green' : 'badge-gray'}`}>
+                                    {p.ativo ? 'Ativo' : 'Inativo'}
+                                </span>
+
+                                <button
+                                    onClick={() =>
+                                        setExpandido(expandido === p.id ? null : p.id)
+                                    }
+                                    className="btn-secondary py-1.5 text-xs"
+                                >
+                                    {expandido === p.id ? 'Fechar' : 'Horários'}
+                                </button>
+
+                                <button
+                                    onClick={() => setEditando(p)}
+                                    className="btn-secondary py-1.5 text-xs"
+                                >
+                                    Editar
+                                </button>
+
+                                <button
+                                    onClick={() => toggleAtivo(p)}
+                                    className="btn-secondary py-1.5 text-xs"
+                                >
+                                    {p.ativo ? 'Desativar' : 'Ativar'}
+                                </button>
+
+                                <button
+                                    onClick={() => excluir(p.id)}
+                                    className="btn-danger py-1.5 text-xs"
+                                >
+                                    Excluir
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Horários expandidos */}
+                        {expandido === p.id && (
+                            <HorariosEditor
+                                profissional={p}
+                                onClose={() => setExpandido(null)}
+                            />
+                        )}
+                    </div>
+                ))}
+            </div>
+
+            {/* Modais */}
+            {novoModal && <NovoProfissionalModal onClose={() => setNovoModal(false)} />}
+            {editando && (
+                <EditarProfissionalModal
+                    profissional={editando}
+                    onClose={() => setEditando(null)}
+                />
+            )}
+        </AppLayout>
+    );
+}

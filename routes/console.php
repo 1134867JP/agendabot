@@ -1,7 +1,11 @@
 <?php
 
 use App\Jobs\EnviarLembretesJob;
+use App\Jobs\EnviarLembreteConsultaV2;
+use App\Jobs\VerificarTrialExpiradoJob;
+use App\Models\Agendamento;
 use App\Models\Tenant;
+use Carbon\Carbon;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -26,3 +30,15 @@ Schedule::call(function () {
 
 // Enviar lembretes D-1 para agendamentos de amanhã
 Schedule::job(new EnviarLembretesJob)->dailyAt('09:00');
+
+// Enviar lembretes v2 — um job por agendamento do dia seguinte (08:00)
+Schedule::call(function () {
+    $amanha = Carbon::tomorrow();
+    Agendamento::with(['tenant', 'recurso', 'servico'])
+        ->whereDate('data_hora', $amanha)
+        ->where('status', '!=', 'cancelado')
+        ->each(fn (Agendamento $ag) => EnviarLembreteConsultaV2::dispatch($ag));
+})->dailyAt('08:00');
+
+// Verificar trials expirados diariamente (00:30)
+Schedule::job(new VerificarTrialExpiradoJob)->dailyAt('00:30');

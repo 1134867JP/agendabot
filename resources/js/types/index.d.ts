@@ -25,6 +25,16 @@ export interface Tenant {
     trial_ends_at: string | null;
     subscription_ends_at: string | null;
     plano: 'basico' | 'profissional' | 'ilimitado';
+    // Bot & IA fields
+    nome_agente?: string | null;
+    tom_voz?: 'formal' | 'semiformal' | 'descontraido' | null;
+    instrucoes_extras?: string | null;
+    bot_ativo?: boolean | null;
+    ramo_negocio?: string | null;
+    descricao_negocio?: string | null;
+    cidade?: string | null;
+    endereco?: string | null;
+    horarios_funcionamento?: string | null;
 }
 
 export interface SubscriptionInfo {

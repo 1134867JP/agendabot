@@ -9,9 +9,18 @@ interface Stats {
     whatsapp_conectado: boolean;
 }
 
+interface SetupCompleto {
+    profissionais: boolean;
+    servicos: boolean;
+    whatsapp: boolean;
+    bot_config: boolean;
+    horario: boolean;
+}
+
 interface Props extends PageProps {
     stats: Stats;
     proximos_agendamentos: Agendamento[];
+    setup_completo: SetupCompleto;
 }
 
 function StatCard({ label, value, sub, accent = false }: {
@@ -55,12 +64,71 @@ function formatBrl(value: number) {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-export default function TenantDashboard({ stats, proximos_agendamentos }: Props) {
+export default function TenantDashboard({ stats, proximos_agendamentos, setup_completo }: Props) {
+    const todoConfigurado =
+        setup_completo.bot_config &&
+        setup_completo.profissionais &&
+        setup_completo.servicos &&
+        setup_completo.whatsapp &&
+        setup_completo.horario;
+
+    const setupItems = [
+        {
+            done: setup_completo.bot_config,
+            label: 'Configure o bot (nome, tom de voz, descrição)',
+            href: route('tenant.configuracoes.index'),
+        },
+        {
+            done: setup_completo.profissionais && setup_completo.horario,
+            label: 'Adicione profissionais com horários',
+            href: route('tenant.profissionais.index'),
+        },
+        {
+            done: setup_completo.servicos,
+            label: 'Cadastre seus serviços',
+            href: route('tenant.servicos.index'),
+        },
+        {
+            done: setup_completo.whatsapp,
+            label: 'Conecte o WhatsApp',
+            href: route('tenant.whatsapp'),
+        },
+    ];
+
     return (
         <AppLayout title="Dashboard">
             <Head title="Dashboard" />
 
             <div className="space-y-6">
+                {/* Setup progress banner */}
+                {!todoConfigurado ? (
+                    <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
+                        <h3 className="mb-2 font-semibold text-yellow-800">
+                            Complete a configuração do seu negócio
+                        </h3>
+                        <div className="space-y-1.5">
+                            {setupItems.map((item) => (
+                                <a
+                                    key={item.href}
+                                    href={item.href}
+                                    className="flex items-center gap-2 text-sm text-yellow-700 hover:underline"
+                                >
+                                    <span className="shrink-0 text-base leading-none">
+                                        {item.done ? '✅' : '⬜'}
+                                    </span>
+                                    <span style={{ textDecoration: item.done ? 'line-through' : 'none', opacity: item.done ? 0.6 : 1 }}>
+                                        {item.label}
+                                    </span>
+                                </a>
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+                        ✅ Tudo configurado! O bot está pronto para receber agendamentos.
+                    </div>
+                )}
+
                 {/* Stats grid */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard label="Agendamentos hoje" value={stats.agendamentos_hoje} />
