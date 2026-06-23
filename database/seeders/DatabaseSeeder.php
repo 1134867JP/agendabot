@@ -38,6 +38,7 @@ class DatabaseSeeder extends Seeder
             ['slug' => 'clinica-dental-demo'],
             [
                 'nome'               => 'Clínica Dental Demo',
+                'tipo_servico'       => 'personalizado',
                 'ramo_negocio'       => 'Clínica odontológica',
                 'descricao_negocio'  => 'Clínica especializada em odontologia estética e preventiva. Atendemos com carinho e modernidade.',
                 'cidade'             => 'Porto Alegre',
