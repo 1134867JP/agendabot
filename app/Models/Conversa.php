@@ -1,5 +1,4 @@
 <?php
-// app/Models/Conversa.php — substituir conteúdo completo
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;

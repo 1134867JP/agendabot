@@ -30,8 +30,11 @@ class Profissional extends Model
         $fim    = Carbon::parse($data->format('Y-m-d') . ' ' . $horario->hora_fim);
         $duracao = $horario->duracao_slot;
 
+        $inicioDia = $data->copy()->startOfDay();
+        $fimDia    = $data->copy()->endOfDay();
+
         $agendados = $this->agendamentos()
-            ->whereDate('data_hora', $data)
+            ->whereBetween('data_hora', [$inicioDia, $fimDia])
             ->whereNotIn('status', ['cancelado'])
             ->pluck('data_hora')
             ->map(fn ($dt) => Carbon::parse($dt)->format('H:i'))
