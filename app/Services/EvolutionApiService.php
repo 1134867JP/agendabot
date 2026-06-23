@@ -31,6 +31,7 @@ class EvolutionApiService
         $response = Http::withHeaders(['apikey' => $this->globalApiKey])
             ->post("{$this->baseUrl}/instance/create", [
                 'instanceName' => $instanceName,
+                'integration'  => 'WHATSAPP-BAILEYS',
                 'qrcode'       => true,
             ]);
 
