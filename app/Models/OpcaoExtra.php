@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OpcaoExtra extends Model
 {
+    protected $table = 'opcoes_extras';
     protected $fillable = ['tenant_id', 'tipo', 'nome', 'ativo'];
     protected $casts = ['ativo' => 'boolean'];
 

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Profissional extends Model
 {
+    protected $table = 'profissionais';
     protected $fillable = ['tenant_id', 'nome', 'especialidades', 'ativo'];
     protected $casts = ['especialidades' => 'array', 'ativo' => 'boolean'];
 
