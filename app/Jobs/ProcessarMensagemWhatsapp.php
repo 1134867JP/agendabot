@@ -68,9 +68,10 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
 
         // 6. Buscar histórico das últimas 20 mensagens para o Claude
         $historico = $conversa->mensagens()
-            ->orderBy('enviada_em')
+            ->latest('enviada_em')
             ->limit(20)
             ->get()
+            ->reverse()
             ->map(fn ($m) => [
                 'role'    => $m->remetente === 'cliente' ? 'user' : 'assistant',
                 'content' => $m->conteudo,
