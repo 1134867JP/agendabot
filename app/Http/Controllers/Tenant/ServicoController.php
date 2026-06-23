@@ -52,7 +52,7 @@ class ServicoController extends Controller
     public function destroy(Servico $servico): RedirectResponse
     {
         abort_if($servico->tenant_id !== app('tenant')->id, 403);
-        $servico->delete();
+        $servico->update(['ativo' => false]);
         return back()->with('success', 'Serviço removido.');
     }
 }

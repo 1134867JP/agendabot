@@ -43,7 +43,7 @@ class OpcaoExtraController extends Controller
     public function destroy(OpcaoExtra $opcaoExtra): RedirectResponse
     {
         abort_if($opcaoExtra->tenant_id !== app('tenant')->id, 403);
-        $opcaoExtra->delete();
+        $opcaoExtra->update(['ativo' => false]);
         return back()->with('success', 'Opção removida.');
     }
 }

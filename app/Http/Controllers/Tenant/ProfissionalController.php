@@ -48,7 +48,7 @@ class ProfissionalController extends Controller
     public function destroy(Profissional $profissional): RedirectResponse
     {
         abort_if($profissional->tenant_id !== app('tenant')->id, 403);
-        $profissional->delete();
+        $profissional->update(['ativo' => false]);
         return back()->with('success', 'Profissional removido.');
     }
 }
