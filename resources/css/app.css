@@ -5,6 +5,12 @@
 @layer base {
     :root, .dark {
         --bg-app:        #08090f;
+        --amber-text:    #fcd34d;
+        --amber-btn-bg:  rgba(245,158,11,0.20);
+        --amber-btn-bdr: rgba(245,158,11,0.30);
+        --danger-text:   #fca5a5;
+        --danger-btn-bg: rgba(239,68,68,0.20);
+        --danger-btn-bdr:rgba(239,68,68,0.30);
         --bg-sidebar:    #0c0e16;
         --bg-surface:    #111320;
         --bg-surface-2:  #161929;
@@ -20,6 +26,12 @@
 
     .light {
         --bg-app:        #f8f7f5;
+        --amber-text:    #92400e;
+        --amber-btn-bg:  rgba(245,158,11,0.15);
+        --amber-btn-bdr: rgba(245,158,11,0.35);
+        --danger-text:   #991b1b;
+        --danger-btn-bg: rgba(239,68,68,0.12);
+        --danger-btn-bdr:rgba(239,68,68,0.30);
         --bg-sidebar:    #f0eeeb;
         --bg-surface:    #ffffff;
         --bg-surface-2:  #f4f3f0;

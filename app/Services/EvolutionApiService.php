@@ -62,11 +62,16 @@ class EvolutionApiService
 
     public function configurarWebhook(string $instance, string $webhookUrl): bool
     {
+        // Evolution API v2 requires nested 'webhook' object
         $response = Http::withHeaders(['apikey' => $this->globalApiKey])
             ->post("{$this->baseUrl}/webhook/set/{$instance}", [
-                'url'     => $webhookUrl,
-                'enabled' => true,
-                'events'  => ['MESSAGES_UPSERT'],
+                'webhook' => [
+                    'enabled'        => true,
+                    'url'            => $webhookUrl,
+                    'byEvents'       => false,
+                    'base64'         => false,
+                    'events'         => ['MESSAGES_UPSERT'],
+                ],
             ]);
 
         return $response->successful();
