@@ -16,40 +16,34 @@ class EnviarLembreteConsultaV2 implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
-    public array $backoff = [30, 60, 120];
+    public int $timeout = 30;
+
+    public function __construct(
+        public readonly Agendamento $agendamento,
+    ) {}
 
     public function handle(EvolutionApiService $evolution): void
     {
-        $amanha = Carbon::tomorrow();
-
-        $agendamentos = Agendamento::with(['tenant', 'profissional', 'servico', 'cliente'])
-            ->whereDate('data_hora', $amanha)
-            ->whereIn('status', ['agendado', 'confirmado'])
-            ->where('lembrete_enviado', false)
-            ->whereHas('tenant', fn ($q) => $q->where('ativo', true)->where('bot_ativo', true))
-            ->get();
-
-        foreach ($agendamentos as $ag) {
-            $tenant   = $ag->tenant;
-            $telefone = $ag->cliente?->telefone ?? $ag->cliente_telefone;
-
-            if (! $telefone) continue;
-
-            $horario      = Carbon::parse($ag->data_hora)->format('H:i');
-            $profissional = $ag->profissional?->nome ?? '';
-            $servico      = $ag->servico?->nome ?? '';
-            $nomeCliente  = $ag->cliente?->nome ?? $ag->cliente_nome ?? 'cliente';
-            $nomeNegocio  = $tenant->nome;
-
-            $mensagem = "Olá {$nomeCliente}! 😊\n\n"
-                . "Lembrando que você tem " . ($servico ? "*{$servico}*" : "um agendamento") . " amanhã"
-                . ($horario ? " às *{$horario}*" : '')
-                . ($profissional ? " com *{$profissional}*" : '')
-                . " na *{$nomeNegocio}*.\n\n"
-                . "Confirma sua presença? Responda *SIM* para confirmar ou nos avise caso precise remarcar. Até amanhã! 👋";
-
-            $evolution->enviarMensagem($tenant->evolution_instance, $telefone, $mensagem);
-            $ag->update(['lembrete_enviado' => true]);
+        $tenant = $this->agendamento->tenant;
+        if (! $tenant->evolution_instance) {
+            return;
         }
+
+        $inicio = Carbon::parse($this->agendamento->data_hora ?? $this->agendamento->inicio);
+        $recurso = optional($this->agendamento->recurso)->nome
+                 ?? optional($this->agendamento->servico)->nome
+                 ?? 'serviço';
+
+        $mensagem = "Olá, {$this->agendamento->cliente_nome}! 👋\n"
+            . "Lembramos que você tem um agendamento amanhã:\n"
+            . "📍 *{$recurso}*\n"
+            . "⏰ *{$inicio->format('H:i')}*\n"
+            . "Até lá! 😊";
+
+        $evolution->enviarMensagem(
+            $tenant->evolution_instance,
+            $this->agendamento->cliente_telefone,
+            $mensagem,
+        );
     }
 }
