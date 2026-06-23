@@ -29,7 +29,12 @@ class ClaudeAgentService
         $systemPrompt = $this->buildSystemPrompt($tenant, $horariosDisponiveis);
 
         $response = Http::timeout(30)
-            ->retry(2, 1000, fn ($e) => $e->getCode() === 529)
+            ->retry(2, 1000, function ($e) {
+                if ($e instanceof \Illuminate\Http\Client\RequestException) {
+                    return $e->response->status() === 529;
+                }
+                return false;
+            })
             ->withHeaders([
                 'x-api-key'         => $this->apiKey,
                 'anthropic-version' => '2023-06-01',
@@ -49,16 +54,24 @@ class ClaudeAgentService
 
         $content = $response->json('content.0.text', '');
 
-        // Tenta extrair JSON + resposta
-        if (preg_match('/\{[\s\S]*"acao"[\s\S]*\}/u', $content, $matches)) {
-            $json = json_decode($matches[0], true);
-            if (is_array($json) && isset($json['acao'], $json['resposta'])) {
-                return [
-                    'acao'    => $json['acao'],
-                    'resposta' => $json['resposta'],
-                    'dados'   => $json,
-                ];
+        // Tentar extrair JSON: iterar todas as ocorrências e usar o primeiro que decodifica com sucesso
+        $jsonDecoded = null;
+        if (preg_match_all('/\{[\s\S]*?"acao"[\s\S]*?\}/u', $content, $allMatches)) {
+            foreach ($allMatches[0] as $candidate) {
+                $decoded = json_decode($candidate, true);
+                if (is_array($decoded) && isset($decoded['acao'], $decoded['resposta'])) {
+                    $jsonDecoded = $decoded;
+                    break;
+                }
             }
+        }
+
+        if ($jsonDecoded) {
+            return [
+                'acao'    => $jsonDecoded['acao'],
+                'resposta' => $jsonDecoded['resposta'],
+                'dados'   => array_diff_key($jsonDecoded, ['acao' => 1, 'resposta' => 1]),
+            ];
         }
 
         return ['acao' => 'duvida', 'resposta' => $content, 'dados' => []];
