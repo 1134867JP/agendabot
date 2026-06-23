@@ -44,7 +44,9 @@ export default function WhatsAppPage({ tenant }: Props) {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
             });
             const json = await res.json();
-            if (json.qrcode) {
+            if (json.connected) {
+                setConectado(true);
+            } else if (json.qrcode) {
                 setQrcode(json.qrcode);
                 pollingRef.current = setInterval(verificarStatus, 3000);
             } else {

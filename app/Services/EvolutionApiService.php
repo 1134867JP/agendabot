@@ -52,9 +52,12 @@ class EvolutionApiService
             ->get("{$this->baseUrl}/instance/fetchInstances");
 
         $instancias = collect($response->json() ?? []);
-        $found      = $instancias->firstWhere('instance.instanceName', $instance);
 
-        return $found['instance']['state'] ?? 'desconhecido';
+        // Evolution API v2: flat array with 'name' and 'connectionStatus'
+        $found = $instancias->firstWhere('name', $instance);
+
+        return $found['connectionStatus'] ?? 'desconhecido';
+        // open = conectado | close = desconectado | connecting = aguardando
     }
 
     public function configurarWebhook(string $instance, string $webhookUrl): bool

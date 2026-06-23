@@ -28,7 +28,6 @@ class WhatsAppController extends Controller
         $tenant   = app('tenant');
         $instance = $tenant->evolution_instance;
 
-        // Se não tiver instância definida, gerar slug como nome
         if (!$instance) {
             $instance = $tenant->slug . '-instance';
             $tenant->update(['evolution_instance' => $instance]);
@@ -36,21 +35,24 @@ class WhatsAppController extends Controller
 
         $status = $this->evolution->statusInstancia($instance);
 
-        // Se a instância não existe, criá-la e configurar o webhook
+        // Já conectado — avisar o frontend
+        if ($status === 'open') {
+            $tenant->update(['whatsapp_conectado' => true]);
+            return response()->json(['connected' => true]);
+        }
+
+        // Instância não existe — criar e configurar webhook
         if ($status === 'desconhecido') {
             $result = $this->evolution->criarInstancia($instance);
             $this->evolution->configurarWebhook($instance, route('webhook', $tenant->slug));
 
-            // Evolution API pode retornar o QR diretamente na criação
-            $qrcode = data_get($result, 'qrcode.base64')
-                   ?? data_get($result, 'base64');
-
+            $qrcode = data_get($result, 'qrcode.base64') ?? data_get($result, 'base64');
             if ($qrcode) {
                 return response()->json(['qrcode' => $qrcode]);
             }
         }
 
-        // Instância já existe — buscar QR via connect
+        // Instância existe mas não conectada — buscar QR via connect
         $qrcode = $this->evolution->obterQrCode($instance);
         return response()->json(['qrcode' => $qrcode]);
     }
