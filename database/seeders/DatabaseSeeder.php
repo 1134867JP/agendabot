@@ -143,7 +143,7 @@ class DatabaseSeeder extends Seeder
             'cidade'             => 'São Paulo',
             'endereco'           => 'Av. Paulista, 1000',
             'nome_agente'        => 'João',
-            'tom_voz'            => 'descontraído',
+            'tom_voz'            => 'descontraido',
             'instrucoes_extras'  => 'Sempre oferecer produtos de cuidados. Horários preferenciais: terças de manhã.',
             'bot_ativo'          => true,
             'horarios_funcionamento' => ['seg_sex' => '09:00-19:00', 'sab' => '09:00-15:00'],
@@ -196,11 +196,11 @@ class DatabaseSeeder extends Seeder
         // Opções extras da barbearia
         $barbearia->opcoes_extras()->firstOrCreate(
             ['nome' => 'Loção Pós-Barba'],
-            ['tipo' => 'produto', 'ativo' => true]
+            ['tipo' => 'outro', 'ativo' => true]
         );
         $barbearia->opcoes_extras()->firstOrCreate(
             ['nome' => 'Pomada Premium'],
-            ['tipo' => 'produto', 'ativo' => true]
+            ['tipo' => 'outro', 'ativo' => true]
         );
 
         // Agendamentos de exemplo para a barbearia (origens mistas)
@@ -286,15 +286,15 @@ class DatabaseSeeder extends Seeder
         // Opções extras das quadras
         $quadras->opcoes_extras()->firstOrCreate(
             ['nome' => 'Aula com Instrutor'],
-            ['tipo' => 'servico_adicional', 'ativo' => true]
+            ['tipo' => 'outro', 'ativo' => true]
         );
         $quadras->opcoes_extras()->firstOrCreate(
             ['nome' => 'Material Incluso'],
-            ['tipo' => 'servico_adicional', 'ativo' => true]
+            ['tipo' => 'outro', 'ativo' => true]
         );
         $quadras->opcoes_extras()->firstOrCreate(
             ['nome' => 'Desconto Mensal'],
-            ['tipo' => 'promocao', 'ativo' => true]
+            ['tipo' => 'outro', 'ativo' => true]
         );
 
         // Agendamentos de exemplo para as quadras (origens mistas)

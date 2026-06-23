@@ -19,6 +19,10 @@ class Profissional extends Model
     public function slotsDisponiveis(Carbon $data): array
     {
         $diaSemana = (int) $data->format('N'); // 1=seg..7=dom → usar 1..6 para seg..sab
+        // Carbon format('N'): 1=seg..7=dom; banco usa 0=dom..6=sab
+        if ($diaSemana === 7) {
+            $diaSemana = 0;
+        }
         $horario = $this->horarios()->where('dia_semana', $diaSemana)->first();
 
         if (! $horario) {

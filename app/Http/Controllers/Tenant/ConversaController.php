@@ -38,15 +38,14 @@ class ConversaController extends Controller
     {
         abort_if($conversa->tenant_id !== app('tenant')->id, 403);
 
-        return response()->json(
-            $conversa->mensagens()
-                ->orderBy('enviada_em')
-                ->latest('id')
-                ->limit(50)
-                ->get()
-                ->sortBy('enviada_em')
-                ->values()
-        );
+        $mensagens = $conversa->mensagens()
+            ->orderByDesc('enviada_em')
+            ->limit(50)
+            ->get()
+            ->sortBy('enviada_em')
+            ->values();
+
+        return response()->json($mensagens);
     }
 
     public function assumir(Conversa $conversa): RedirectResponse
