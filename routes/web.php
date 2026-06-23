@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\AsaasWebhookController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\OnboardingController;
@@ -15,16 +14,7 @@ use App\Http\Controllers\Tenant\OpcaoExtraController;
 use App\Http\Controllers\Tenant\ProfissionalController;
 use App\Http\Controllers\Tenant\ServicoController;
 use App\Http\Controllers\TenantController;
-use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
-
-// Webhook público — sem auth, sem CSRF (isento em bootstrap/app.php)
-Route::post('/webhook/{tenantSlug}', [WebhookController::class, 'handle'])
-    ->name('webhook');
-
-// Asaas webhook — sem CSRF (isento em bootstrap/app.php)
-Route::post('/asaas/webhook', [AsaasWebhookController::class, 'handle'])
-    ->name('asaas.webhook');
 
 // Site público
 Route::get('/', [LandingController::class, 'index'])->name('home');
