@@ -238,7 +238,7 @@ class DatabaseSeeder extends Seeder
             'cidade'             => 'Rio de Janeiro',
             'endereco'           => 'Av. Beira-Mar, 500',
             'nome_agente'        => 'Roberto',
-            'tom_voz'            => 'entusiasmado',
+            'tom_voz'            => 'descontraido',
             'instrucoes_extras'  => 'Informar sobre os pacotes de aulas. Horários de pico: noites e finais de semana.',
             'bot_ativo'          => true,
             'horarios_funcionamento' => ['seg_dom' => '07:00-22:00'],
