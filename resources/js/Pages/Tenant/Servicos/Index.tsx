@@ -68,14 +68,14 @@ function NovoServicoModal({ onClose }: { onClose: () => void }) {
                 <div className="mb-5 flex items-start justify-between">
                     <h3
                         style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
-                        className="text-xl font-semibold text-white"
+                        className="text-xl font-semibold text-primary"
                     >
                         Novo serviço
                     </h3>
                     <button
                         onClick={onClose}
                         style={{ color: 'var(--text-3)' }}
-                        className="hover:text-white transition-colors"
+                        className="hover:text-primary transition-colors"
                     >
                         ✕
                     </button>
@@ -219,14 +219,14 @@ function EditarServicoModal({
                 <div className="mb-5 flex items-start justify-between">
                     <h3
                         style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
-                        className="text-xl font-semibold text-white"
+                        className="text-xl font-semibold text-primary"
                     >
                         Editar serviço
                     </h3>
                     <button
                         onClick={onClose}
                         style={{ color: 'var(--text-3)' }}
-                        className="hover:text-white transition-colors"
+                        className="hover:text-primary transition-colors"
                     >
                         ✕
                     </button>
@@ -407,7 +407,7 @@ export default function ServicosIndex({ servicos }: Props) {
                             {/* Ícone + info */}
                             <div className="flex items-center gap-4">
                                 <div
-                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-primary"
                                     style={{
                                         background: s.ativo
                                             ? 'var(--accent)'
@@ -418,7 +418,7 @@ export default function ServicosIndex({ servicos }: Props) {
                                 </div>
 
                                 <div>
-                                    <p className="font-semibold text-white">{s.nome}</p>
+                                    <p className="font-semibold text-primary">{s.nome}</p>
 
                                     {s.descricao && (
                                         <p

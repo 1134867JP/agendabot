@@ -74,10 +74,10 @@ function NovaReservaModal({ recursos, onClose }: { recursos: Recurso[]; onClose:
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center px-4">
             <div className="w-full max-w-md rounded-2xl p-7 shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
                 <div className="mb-5 flex items-start justify-between">
-                    <h3 style={{ fontFamily: 'Instrument Serif, Georgia, serif' }} className="text-xl font-semibold text-white">
+                    <h3 style={{ fontFamily: 'Instrument Serif, Georgia, serif' }} className="text-xl font-semibold text-primary">
                         Nova reserva manual
                     </h3>
-                    <button onClick={onClose} style={{ color: 'var(--text-3)' }} className="hover:text-white transition-colors">✕</button>
+                    <button onClick={onClose} style={{ color: 'var(--text-3)' }} className="hover:text-primary transition-colors">✕</button>
                 </div>
 
                 <form onSubmit={submit} className="space-y-4">
@@ -284,11 +284,11 @@ export default function AgendamentosIndex({ agendamentos, recursos, filtros }: P
                                 <tr
                                     key={a.id}
                                     style={{ borderBottom: '1px solid var(--border)' }}
-                                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
+                                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
                                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                 >
                                     <td className="px-4 py-3">
-                                        <p className="font-medium text-white">{a.cliente_nome}</p>
+                                        <p className="font-medium text-primary">{a.cliente_nome}</p>
                                         <p className="text-xs" style={{ color: 'var(--text-3)' }}>{a.cliente_telefone}</p>
                                     </td>
                                     <td className="px-4 py-3" style={{ color: 'var(--text-2)' }}>{a.recurso?.nome}</td>
@@ -360,7 +360,7 @@ export default function AgendamentosIndex({ agendamentos, recursos, filtros }: P
             {/* FAB */}
             <button
                 onClick={() => setModalAberto(true)}
-                className="fixed bottom-7 right-7 flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-white shadow-lg transition-transform hover:scale-105"
+                className="fixed bottom-7 right-7 flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-primary shadow-lg transition-transform hover:scale-105"
                 style={{ background: 'var(--accent)' }}
             >
                 + Nova reserva

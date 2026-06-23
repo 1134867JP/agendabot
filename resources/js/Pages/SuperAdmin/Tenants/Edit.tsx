@@ -77,7 +77,7 @@ export default function TenantEdit({ tenant }: Props) {
                         {dono && (
                             <div className="rounded-xl px-4 py-3" style={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border)' }}>
                                 <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--text-3)' }}>Dono</p>
-                                <p className="text-sm font-medium text-white">{dono.name}</p>
+                                <p className="text-sm font-medium text-primary">{dono.name}</p>
                                 <p className="text-xs" style={{ color: 'var(--text-3)' }}>{dono.email}</p>
                             </div>
                         )}

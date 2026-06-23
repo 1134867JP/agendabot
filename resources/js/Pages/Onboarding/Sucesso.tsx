@@ -43,7 +43,7 @@ export default function OnboardingSucesso({ user }: Props) {
                     ✓
                 </div>
 
-                <h1 className="text-3xl text-white" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                <h1 className="text-3xl text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
                     Tudo pronto, {firstName}!
                 </h1>
                 <p className="mt-2 text-sm" style={{ color: 'var(--text-3)' }}>Seu estabelecimento está configurado.</p>
@@ -52,13 +52,13 @@ export default function OnboardingSucesso({ user }: Props) {
                     {steps.map(s => (
                         <div key={s.n} className="card flex items-start gap-4 p-4">
                             <div
-                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-primary"
                                 style={{ background: 'var(--accent)' }}
                             >
                                 {s.n}
                             </div>
                             <div>
-                                <p className="font-medium text-white">{s.title}</p>
+                                <p className="font-medium text-primary">{s.title}</p>
                                 <p className="mt-0.5 text-sm" style={{ color: 'var(--text-3)' }}>{s.desc}</p>
                             </div>
                         </div>

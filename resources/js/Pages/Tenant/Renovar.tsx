@@ -42,7 +42,7 @@ export default function Renovar({ tenant, plano }: Props) {
                     🔒
                 </div>
 
-                <h1 className="text-3xl text-white" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                <h1 className="text-3xl text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
                     Acesso suspenso
                 </h1>
                 <p className="mt-2 text-sm" style={{ color: 'var(--text-3)' }}>
@@ -53,8 +53,8 @@ export default function Renovar({ tenant, plano }: Props) {
                     <p className="text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
                         {tenant.nome}
                     </p>
-                    <p className="mt-1 font-medium text-white">{plano?.nome ?? 'Básico'}</p>
-                    <p className="mt-1 text-2xl font-bold text-white">
+                    <p className="mt-1 font-medium text-primary">{plano?.nome ?? 'Básico'}</p>
+                    <p className="mt-1 text-2xl font-bold text-primary">
                         R${valorStr}
                         <span className="text-sm font-normal" style={{ color: 'var(--text-3)' }}>/mês</span>
                     </p>

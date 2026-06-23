@@ -62,11 +62,11 @@ export default function TenantsIndex({ tenants }: Props) {
                                     <tr
                                         key={t.id}
                                         style={{ borderBottom: '1px solid var(--border)' }}
-                                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
+                                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
                                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                     >
                                         <td className="px-4 py-3">
-                                            <p className="font-semibold text-white">{t.nome}</p>
+                                            <p className="font-semibold text-primary">{t.nome}</p>
                                             <p className="text-xs" style={{ color: 'var(--text-3)' }}>{t.slug}</p>
                                         </td>
                                         <td className="px-4 py-3">

@@ -46,7 +46,7 @@ export default function AppLayout({ children, title }: Props) {
                     >
                         <MenuIcon />
                     </button>
-                    <span className="text-base text-white" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                    <span className="text-base text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
                         AgendaBot
                     </span>
                     {currentTenant && (

@@ -36,7 +36,7 @@ export default function OnboardingStep1() {
                         <p className="mb-1 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--accent)' }}>
                             Passo 1 de 3
                         </p>
-                        <h1 className="text-3xl text-white" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                        <h1 className="text-3xl text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
                             Crie sua conta
                         </h1>
                         <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>14 dias grátis. Sem cartão para começar.</p>

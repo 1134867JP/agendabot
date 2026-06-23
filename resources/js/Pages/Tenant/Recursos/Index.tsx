@@ -44,7 +44,7 @@ function HorariosEditor({ recurso, onClose }: { recurso: Recurso; onClose: () =>
     };
 
     return (
-        <div className="px-6 pb-5 pt-4" style={{ borderTop: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
+        <div className="px-6 pb-5 pt-4" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface-2)' }}>
             <h4 className="mb-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
                 Horários de funcionamento
             </h4>
@@ -110,10 +110,10 @@ function NovoRecursoModal({ onClose }: { onClose: () => void }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
             <div className="w-full max-w-sm rounded-2xl p-7 shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
                 <div className="mb-5 flex items-start justify-between">
-                    <h3 style={{ fontFamily: 'Instrument Serif, Georgia, serif' }} className="text-xl font-semibold text-white">
+                    <h3 style={{ fontFamily: 'Instrument Serif, Georgia, serif' }} className="text-xl font-semibold text-primary">
                         Novo recurso
                     </h3>
-                    <button onClick={onClose} style={{ color: 'var(--text-3)' }} className="hover:text-white transition-colors">✕</button>
+                    <button onClick={onClose} style={{ color: 'var(--text-3)' }} className="hover:text-primary transition-colors">✕</button>
                 </div>
                 <form onSubmit={submit} className="space-y-4">
                     <div>
@@ -193,13 +193,13 @@ export default function RecursosIndex({ recursos }: Props) {
                         <div className="flex items-center justify-between px-6 py-4">
                             <div className="flex items-center gap-4">
                                 <div
-                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-primary"
                                     style={{ background: r.ativo ? 'var(--accent)' : 'rgba(255,255,255,0.15)' }}
                                 >
                                     {r.nome.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
-                                    <p className="font-semibold text-white">{r.nome}</p>
+                                    <p className="font-semibold text-primary">{r.nome}</p>
                                     {r.descricao && <p className="text-xs" style={{ color: 'var(--text-3)' }}>{r.descricao}</p>}
                                     <div className="mt-1 flex flex-wrap gap-3">
                                         {r.valor_hora > 0 && (

@@ -43,7 +43,7 @@ export default function OnboardingStep2({ planos }: Props) {
                     <p className="mb-1 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--accent)' }}>
                         Passo 2 de 3
                     </p>
-                    <h1 className="text-3xl text-white" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                    <h1 className="text-3xl text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
                         Escolha seu plano
                     </h1>
                     <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>Comece grátis por 14 dias. Cancele quando quiser.</p>
@@ -61,17 +61,17 @@ export default function OnboardingStep2({ planos }: Props) {
                         >
                             {plano.destaque && (
                                 <div
-                                    className="mb-3 self-start rounded-full px-2.5 py-0.5 text-[11px] font-semibold text-white"
+                                    className="mb-3 self-start rounded-full px-2.5 py-0.5 text-[11px] font-semibold text-primary"
                                     style={{ background: 'var(--accent)' }}
                                 >
                                     Mais popular
                                 </div>
                             )}
-                            <h2 className="text-lg text-white" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                            <h2 className="text-lg text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
                                 {plano.nome}
                             </h2>
                             <div className="mt-2 mb-5">
-                                <span className="text-3xl font-bold text-white">
+                                <span className="text-3xl font-bold text-primary">
                                     R${plano.valor.toFixed(2).replace('.', ',')}
                                 </span>
                                 <span className="text-sm" style={{ color: 'var(--text-3)' }}>/mês</span>

@@ -85,7 +85,7 @@ function HorariosEditor({
     return (
         <div
             className="px-6 pb-5 pt-4"
-            style={{ borderTop: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}
+            style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface-2)' }}
         >
             <h4
                 className="mb-4 text-xs font-semibold uppercase tracking-wide"
@@ -214,14 +214,14 @@ function NovoProfissionalModal({ onClose }: { onClose: () => void }) {
                 <div className="mb-5 flex items-start justify-between">
                     <h3
                         style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
-                        className="text-xl font-semibold text-white"
+                        className="text-xl font-semibold text-primary"
                     >
                         Novo profissional
                     </h3>
                     <button
                         onClick={onClose}
                         style={{ color: 'var(--text-3)' }}
-                        className="hover:text-white transition-colors"
+                        className="hover:text-primary transition-colors"
                     >
                         ✕
                     </button>
@@ -355,14 +355,14 @@ function EditarProfissionalModal({
                 <div className="mb-5 flex items-start justify-between">
                     <h3
                         style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
-                        className="text-xl font-semibold text-white"
+                        className="text-xl font-semibold text-primary"
                     >
                         Editar profissional
                     </h3>
                     <button
                         onClick={onClose}
                         style={{ color: 'var(--text-3)' }}
-                        className="hover:text-white transition-colors"
+                        className="hover:text-primary transition-colors"
                     >
                         ✕
                     </button>
@@ -520,7 +520,7 @@ export default function ProfissionaisIndex({ profissionais }: Props) {
                             {/* Avatar + info */}
                             <div className="flex items-center gap-4">
                                 <div
-                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-primary"
                                     style={{
                                         background: p.ativo
                                             ? 'var(--accent)'
@@ -531,7 +531,7 @@ export default function ProfissionaisIndex({ profissionais }: Props) {
                                 </div>
 
                                 <div>
-                                    <p className="font-semibold text-white">{p.nome}</p>
+                                    <p className="font-semibold text-primary">{p.nome}</p>
 
                                     {p.especialidades && p.especialidades.length > 0 && (
                                         <div className="mt-1 flex flex-wrap gap-1">

@@ -39,7 +39,7 @@ export default function AgendamentosTable({ agendamentos, filtros }: Props) {
                     <option value="cancelado">Cancelado</option>
                     <option value="concluido">Concluído</option>
                 </select>
-                <button type="submit" className="rounded-md bg-gray-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800">
+                <button type="submit" className="rounded-md bg-gray-700 px-3 py-1.5 text-sm font-medium text-primary hover:bg-gray-800">
                     Filtrar
                 </button>
             </form>
@@ -91,7 +91,7 @@ export default function AgendamentosTable({ agendamentos, filtros }: Props) {
                     {agendamentos.links.map((link, i) => (
                         <button key={i} disabled={!link.url}
                             onClick={() => link.url && router.get(link.url, filtros, { preserveState: true })}
-                            className={`rounded px-3 py-1 text-sm ${link.active ? 'bg-indigo-600 text-white' : 'border text-gray-600 hover:bg-gray-50 disabled:opacity-40'}`}
+                            className={`rounded px-3 py-1 text-sm ${link.active ? 'bg-indigo-600 text-primary' : 'border text-gray-600 hover:bg-gray-50 disabled:opacity-40'}`}
                             dangerouslySetInnerHTML={{ __html: link.label }}
                         />
                     ))}

@@ -104,7 +104,7 @@ export default function Precos({ planos }: Props) {
                                 key={slug}
                                 className={`flex flex-col rounded-2xl p-6 transition-all ${plano.destaque ? 'ring-2' : ''}`}
                                 style={{
-                                    background: plano.destaque ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.04)',
+                                    background: plano.destaque ? 'rgba(99,102,241,0.1)' : 'var(--bg-surface-2)',
                                     border: `2px solid ${plano.destaque ? INDIGO : 'rgba(255,255,255,0.1)'}`,
                                 }}
                             >
@@ -185,7 +185,7 @@ export default function Precos({ planos }: Props) {
                                     <button
                                         onClick={() => setFaqOpen(faqOpen === i ? null : i)}
                                         className="flex w-full items-center justify-between px-5 py-4 text-left text-sm font-medium transition-colors"
-                                        style={{ background: 'rgba(255,255,255,0.04)' }}
+                                        style={{ background: 'var(--bg-surface-2)' }}
                                     >
                                         {faq.q}
                                         <span

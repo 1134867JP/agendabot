@@ -96,7 +96,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             >
                 {/* Logo */}
                 <div className="px-5 py-5" style={{ borderBottom: '1px solid var(--border)' }}>
-                    <span className="flex items-center gap-2 text-lg text-white" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                    <span className="flex items-center gap-2 text-lg text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
                         <span className="inline-block h-2 w-2 rounded-full" style={{ background: 'var(--emerald)' }} />
                         AgendaBot
                     </span>
@@ -114,7 +114,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                 {impersonando && currentTenant && (
                     <div className="px-4 py-2 text-center text-[11px]" style={{ background: 'rgba(99,102,241,0.12)', borderBottom: '1px solid var(--border)' }}>
                         <span style={{ color: 'var(--accent)' }}>Modo suporte: </span>
-                        <span className="text-white">{currentTenant.nome}</span>
+                        <span className="text-primary">{currentTenant.nome}</span>
                     </div>
                 )}
 
@@ -137,11 +137,11 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                                         onClick={onClose}
                                         className="flex items-center gap-2.5 border-l-2 px-5 py-2 text-[13px] transition-colors"
                                         style={{
-                                            color:       active ? '#ffffff' : 'var(--text-2)',
+                                            color:       active ? 'var(--text-1)' : 'var(--text-2)',
                                             background:  active ? 'var(--accent-light)' : 'transparent',
                                             borderColor: active ? 'var(--accent)' : 'transparent',
                                         }}
-                                        onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.color = 'var(--text-1)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; } }}
+                                        onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.color = 'var(--text-1)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface-2)'; } }}
                                         onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; } }}
                                     >
                                         <span style={{ color: active ? 'var(--accent)' : 'var(--text-3)', flexShrink: 0 }}>
@@ -172,7 +172,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                         onClick={toggle}
                         className="mb-3 flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] transition-colors w-full"
                         style={{ color: 'var(--text-3)', background: 'transparent' }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface-2)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; }}
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'; }}
                         title={theme === 'dark' ? 'Mudar para modo claro' : 'Mudar para modo escuro'}
                     >

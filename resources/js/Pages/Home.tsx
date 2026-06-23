@@ -30,7 +30,7 @@ function ChatMockup() {
             <div className="flex items-center gap-2 px-4 py-3" style={{ background: '#075E54' }}>
                 <div className="h-8 w-8 rounded-full bg-emerald-300 flex items-center justify-center text-xs font-bold text-emerald-900">B</div>
                 <div>
-                    <p className="text-xs font-semibold text-white">Barbearia do João</p>
+                    <p className="text-xs font-semibold text-primary">Barbearia do João</p>
                     <p className="text-xs text-emerald-200">online</p>
                 </div>
             </div>
@@ -128,7 +128,7 @@ export default function Home() {
                         <div className="mt-8 flex flex-wrap gap-3">
                             <Link
                                 href={route('onboarding.step1')}
-                                className="rounded-xl px-6 py-3 font-semibold text-white transition-all hover:brightness-110 hover:scale-105"
+                                className="rounded-xl px-6 py-3 font-semibold text-primary transition-all hover:brightness-110 hover:scale-105"
                                 style={{ background: INDIGO }}
                             >
                                 Começar 14 dias grátis
@@ -158,7 +158,7 @@ export default function Home() {
             </section>
 
             {/* ── Como funciona ── */}
-            <section id="como-funciona" className="px-6 py-24" style={{ background: 'rgba(255,255,255,0.02)' }}>
+            <section id="como-funciona" className="px-6 py-24" style={{ background: 'var(--bg-surface-2)' }}>
                 <div className="mx-auto max-w-4xl">
                     <h2
                         className="mb-2 text-center text-3xl font-bold"
@@ -213,9 +213,9 @@ export default function Home() {
                             <div
                                 key={s.title}
                                 className="flex items-start gap-4 rounded-2xl p-5 transition-all"
-                                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+                                style={{ background: 'var(--bg-surface-2)', border: '1px solid rgba(255,255,255,0.08)' }}
                                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.07)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(99,102,241,0.25)'; }}
-                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface-2)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
                             >
                                 <span className="text-3xl">{s.emoji}</span>
                                 <div>
@@ -229,7 +229,7 @@ export default function Home() {
             </section>
 
             {/* ── Features ── */}
-            <section id="funcionalidades" className="px-6 py-24" style={{ background: 'rgba(255,255,255,0.02)' }}>
+            <section id="funcionalidades" className="px-6 py-24" style={{ background: 'var(--bg-surface-2)' }}>
                 <div className="mx-auto max-w-4xl">
                     <h2
                         className="mb-12 text-center text-3xl font-bold"
@@ -242,7 +242,7 @@ export default function Home() {
                             <div
                                 key={f.title}
                                 className="rounded-2xl p-6"
-                                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+                                style={{ background: 'var(--bg-surface-2)', border: '1px solid rgba(255,255,255,0.08)' }}
                             >
                                 <div
                                     className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl text-2xl"
@@ -275,7 +275,7 @@ export default function Home() {
                     </p>
                     <Link
                         href={route('onboarding.step1')}
-                        className="inline-flex rounded-xl px-8 py-3 font-semibold text-white transition-all hover:brightness-110"
+                        className="inline-flex rounded-xl px-8 py-3 font-semibold text-primary transition-all hover:brightness-110"
                         style={{ background: INDIGO }}
                     >
                         Criar conta grátis

@@ -44,7 +44,7 @@ const HORAS = Array.from({ length: 15 }, (_, i) => i + 7); // 07..21
 
 function slotColor(a: AgendamentoCalendario): { bg: string; border: string; text: string } {
     if (a.status === 'cancelado')  return { bg: 'rgba(239,68,68,0.08)',   border: 'rgba(239,68,68,0.2)',    text: '#f87171' };
-    if (a.status === 'concluido')  return { bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.1)',  text: 'rgba(232,230,225,0.4)' };
+    if (a.status === 'concluido')  return { bg: 'var(--bg-surface-2)', border: 'rgba(255,255,255,0.1)',  text: 'rgba(232,230,225,0.4)' };
     if (a.origem === 'manual')     return { bg: 'rgba(59,130,246,0.1)',   border: 'rgba(59,130,246,0.25)',  text: '#93c5fd' };
     return                                { bg: 'rgba(110,231,183,0.08)', border: 'rgba(110,231,183,0.2)',  text: '#6ee7b7' };
 }
@@ -136,21 +136,21 @@ export default function Agenda({ recursos }: Props) {
                         onClick={() => setSemana(addDays(semana, -7))}
                         className="px-3 py-2 text-sm transition-colors"
                         style={{ color: 'var(--text-3)' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >←</button>
                     <button
                         onClick={() => setSemana(startOfWeek(new Date()))}
                         className="px-3 py-2 text-sm font-medium transition-colors"
                         style={{ color: 'var(--text-2)', borderLeft: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >Hoje</button>
                     <button
                         onClick={() => setSemana(addDays(semana, 7))}
                         className="px-3 py-2 text-sm transition-colors"
                         style={{ color: 'var(--text-3)' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >→</button>
                 </div>
@@ -250,7 +250,7 @@ export default function Agenda({ recursos }: Props) {
                 {[
                     { bg: 'rgba(110,231,183,0.08)', border: 'rgba(110,231,183,0.2)', label: 'WhatsApp' },
                     { bg: 'rgba(59,130,246,0.1)',   border: 'rgba(59,130,246,0.25)', label: 'Manual' },
-                    { bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.1)', label: 'Concluído' },
+                    { bg: 'var(--bg-surface-2)', border: 'rgba(255,255,255,0.1)', label: 'Concluído' },
                     { bg: 'rgba(239,68,68,0.08)',   border: 'rgba(239,68,68,0.2)',   label: 'Cancelado' },
                 ].map(l => (
                     <span key={l.label} className="flex items-center gap-1.5">
@@ -270,17 +270,17 @@ export default function Agenda({ recursos }: Props) {
                     <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
                         <div className="mb-4 flex items-start justify-between">
                             <div>
-                                <h3 style={{ fontFamily: 'Instrument Serif, Georgia, serif' }} className="text-xl font-semibold text-white">
+                                <h3 style={{ fontFamily: 'Instrument Serif, Georgia, serif' }} className="text-xl font-semibold text-primary">
                                     {detalhe.title}
                                 </h3>
                                 <p className="text-sm" style={{ color: 'var(--text-3)' }}>{detalhe.telefone}</p>
                             </div>
-                            <button onClick={() => setDetalhe(null)} style={{ color: 'var(--text-3)' }} className="hover:text-white transition-colors">✕</button>
+                            <button onClick={() => setDetalhe(null)} style={{ color: 'var(--text-3)' }} className="hover:text-primary transition-colors">✕</button>
                         </div>
                         <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                                 <span style={{ color: 'var(--text-3)' }}>Horário</span>
-                                <span className="font-medium text-white">{fmtHora(detalhe.start)} – {fmtHora(detalhe.end)}</span>
+                                <span className="font-medium text-primary">{fmtHora(detalhe.start)} – {fmtHora(detalhe.end)}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span style={{ color: 'var(--text-3)' }}>Origem</span>
@@ -289,7 +289,7 @@ export default function Agenda({ recursos }: Props) {
                             {detalhe.valor_total != null && (
                                 <div className="flex justify-between">
                                     <span style={{ color: 'var(--text-3)' }}>Valor</span>
-                                    <span className="font-medium text-white">
+                                    <span className="font-medium text-primary">
                                         {Number(detalhe.valor_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                     </span>
                                 </div>
@@ -325,10 +325,10 @@ export default function Agenda({ recursos }: Props) {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
                     <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
                         <div className="mb-1 flex items-start justify-between">
-                            <h3 style={{ fontFamily: 'Instrument Serif, Georgia, serif' }} className="text-xl font-semibold text-white">
+                            <h3 style={{ fontFamily: 'Instrument Serif, Georgia, serif' }} className="text-xl font-semibold text-primary">
                                 Nova reserva
                             </h3>
-                            <button onClick={() => setModalNova(null)} style={{ color: 'var(--text-3)' }} className="hover:text-white transition-colors">✕</button>
+                            <button onClick={() => setModalNova(null)} style={{ color: 'var(--text-3)' }} className="hover:text-primary transition-colors">✕</button>
                         </div>
                         <p className="mb-4 text-sm" style={{ color: 'var(--text-3)' }}>
                             {new Date(modalNova.data).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })} às {modalNova.hora}

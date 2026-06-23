@@ -25,8 +25,33 @@ class WhatsAppController extends Controller
 
     public function qrcode(): JsonResponse
     {
-        $tenant = app('tenant');
-        $qrcode = $this->evolution->obterQrCode($tenant->evolution_instance);
+        $tenant   = app('tenant');
+        $instance = $tenant->evolution_instance;
+
+        // Se não tiver instância definida, gerar slug como nome
+        if (!$instance) {
+            $instance = $tenant->slug . '-instance';
+            $tenant->update(['evolution_instance' => $instance]);
+        }
+
+        $status = $this->evolution->statusInstancia($instance);
+
+        // Se a instância não existe, criá-la e configurar o webhook
+        if ($status === 'desconhecido') {
+            $result = $this->evolution->criarInstancia($instance);
+            $this->evolution->configurarWebhook($instance, route('webhook', $tenant->slug));
+
+            // Evolution API pode retornar o QR diretamente na criação
+            $qrcode = data_get($result, 'qrcode.base64')
+                   ?? data_get($result, 'base64');
+
+            if ($qrcode) {
+                return response()->json(['qrcode' => $qrcode]);
+            }
+        }
+
+        // Instância já existe — buscar QR via connect
+        $qrcode = $this->evolution->obterQrCode($instance);
         return response()->json(['qrcode' => $qrcode]);
     }
 

@@ -44,7 +44,7 @@ const STATUS_COLOR: Record<string, { bg: string; color: string }> = {
     ativa:                 { bg: 'rgba(110,231,183,0.12)', color: '#6ee7b7' },
     aguardando_humano:     { bg: 'rgba(251,191,36,0.12)',  color: '#fbbf24' },
     em_atendimento_humano: { bg: 'rgba(99,102,241,0.15)',  color: '#a5b4fc' },
-    encerrada:             { bg: 'rgba(255,255,255,0.05)', color: 'var(--text-3)' },
+    encerrada:             { bg: 'var(--bg-surface-2)', color: 'var(--text-3)' },
 };
 
 const REMETENTE_LABEL: Record<string, string> = {
@@ -71,7 +71,7 @@ function fmtRelativo(iso: string | null) {
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
-    const s = STATUS_COLOR[status] ?? { bg: 'rgba(255,255,255,0.05)', color: 'var(--text-3)' };
+    const s = STATUS_COLOR[status] ?? { bg: 'var(--bg-surface-2)', color: 'var(--text-3)' };
     return (
         <span
             className="rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap"
@@ -249,7 +249,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                         style={{ borderBottom: '1px solid var(--border)' }}
                     >
                         <h2
-                            className="text-base font-semibold text-white"
+                            className="text-base font-semibold text-primary"
                             style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
                         >
                             Conversas WhatsApp
@@ -266,7 +266,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                         className="rounded-full px-2.5 py-1 text-[10px] font-medium transition-colors"
                                         style={ativo
                                             ? { background: 'var(--accent)', color: 'white' }
-                                            : { background: 'rgba(255,255,255,0.05)', color: 'var(--text-3)' }
+                                            : { background: 'var(--bg-surface-2)', color: 'var(--text-3)' }
                                         }
                                     >
                                         {f.label}
@@ -296,12 +296,12 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                         background: ativo ? 'var(--accent-light)' : 'transparent',
                                         borderLeft: ativo ? '2px solid var(--accent)' : '2px solid transparent',
                                     }}
-                                    onMouseEnter={e => { if (!ativo) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; }}
+                                    onMouseEnter={e => { if (!ativo) (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface-2)'; }}
                                     onMouseLeave={e => { if (!ativo) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                                 >
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="min-w-0 flex-1">
-                                            <p className="truncate text-sm font-medium text-white">
+                                            <p className="truncate text-sm font-medium text-primary">
                                                 {nomeConversa(c)}
                                             </p>
                                             <p className="truncate text-[11px]" style={{ color: 'var(--text-3)' }}>
@@ -331,7 +331,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                             style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}
                         >
                             <div>
-                                <p className="font-semibold text-white">{nomeConversa(selecionada)}</p>
+                                <p className="font-semibold text-primary">{nomeConversa(selecionada)}</p>
                                 <div className="flex items-center gap-2 mt-0.5">
                                     <p className="text-xs" style={{ color: 'var(--text-3)' }}>
                                         {selecionada.telefone_cliente}
@@ -345,7 +345,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                 {selecionada.status_v2 === 'aguardando_humano' && (
                                     <button
                                         onClick={assumir}
-                                        className="rounded-lg px-3.5 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-80"
+                                        className="rounded-lg px-3.5 py-1.5 text-xs font-semibold text-primary transition-opacity hover:opacity-80"
                                         style={{ background: 'var(--accent)' }}
                                     >
                                         Assumir atendimento
@@ -414,7 +414,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                 <button
                                     type="submit"
                                     disabled={processing || !data.conteudo.trim()}
-                                    className="flex-shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-40"
+                                    className="flex-shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-primary transition-opacity disabled:opacity-40"
                                     style={{ background: 'var(--accent)' }}
                                 >
                                     {processing ? '…' : 'Enviar'}

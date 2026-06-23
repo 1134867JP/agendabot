@@ -61,7 +61,7 @@ export default function SuperAdminDashboard({ stats, tenants }: Props) {
                                 {s.label}
                             </p>
                             <p
-                                className="mt-2 text-3xl font-bold leading-none text-white"
+                                className="mt-2 text-3xl font-bold leading-none text-primary"
                                 style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
                             >
                                 {s.value}
@@ -73,7 +73,7 @@ export default function SuperAdminDashboard({ stats, tenants }: Props) {
                 {/* Tenants table */}
                 <div className="card overflow-hidden">
                     <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-                        <h2 className="text-sm font-semibold text-white">Tenants</h2>
+                        <h2 className="text-sm font-semibold text-primary">Tenants</h2>
                         <a href={route('superadmin.tenants.create')} className="btn-primary text-xs py-1.5">
                             + Novo tenant
                         </a>
@@ -92,11 +92,11 @@ export default function SuperAdminDashboard({ stats, tenants }: Props) {
                                     <tr
                                         key={t.id}
                                         style={{ borderBottom: '1px solid var(--border)' }}
-                                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
+                                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
                                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                     >
                                         <td className="px-4 py-3">
-                                            <p className="font-medium text-white">{t.nome}</p>
+                                            <p className="font-medium text-primary">{t.nome}</p>
                                             <p className="text-xs" style={{ color: 'var(--text-3)' }}>{t.slug}</p>
                                         </td>
                                         <td className="px-4 py-3" style={{ color: 'var(--text-2)' }}>{TIPO_LABEL[t.tipo_servico] ?? t.tipo_servico}</td>

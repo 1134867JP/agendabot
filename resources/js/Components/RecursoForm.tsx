@@ -99,7 +99,7 @@ export default function RecursoForm({ recurso, onCancel }: Props) {
                 <button
                     type="submit"
                     disabled={processing}
-                    className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                    className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-primary hover:bg-indigo-700 disabled:opacity-50"
                 >
                     {processing ? 'Salvando...' : isEdit ? 'Salvar Alterações' : 'Criar Recurso'}
                 </button>
@@ -161,7 +161,7 @@ function HorariosSection({ recurso }: { recurso: Recurso }) {
                         className="mt-0.5 rounded-md border-gray-300 text-sm shadow-sm" />
                 </div>
                 <button type="submit" disabled={processing}
-                    className="rounded-md bg-gray-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-50">
+                    className="rounded-md bg-gray-700 px-3 py-1.5 text-xs font-medium text-primary hover:bg-gray-800 disabled:opacity-50">
                     Adicionar
                 </button>
             </form>

@@ -86,7 +86,7 @@ export default function WhatsAppPage({ tenant }: Props) {
 
                         <div>
                             <h2
-                                className="text-xl font-semibold text-white"
+                                className="text-xl font-semibold text-primary"
                                 style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
                             >
                                 {conectado ? 'WhatsApp conectado' : 'WhatsApp desconectado'}
@@ -155,7 +155,7 @@ export default function WhatsAppPage({ tenant }: Props) {
                         ].map(item => (
                             <li key={item.n} className="flex items-start gap-3">
                                 <span
-                                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-primary"
                                     style={{ background: 'var(--accent)' }}
                                 >
                                     {item.n}
@@ -172,7 +172,7 @@ export default function WhatsAppPage({ tenant }: Props) {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
                     <div className="w-full max-w-xs rounded-2xl p-7 text-center shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
                         <h3
-                            className="mb-2 text-xl font-semibold text-white"
+                            className="mb-2 text-xl font-semibold text-primary"
                             style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
                         >
                             Escaneie com seu celular

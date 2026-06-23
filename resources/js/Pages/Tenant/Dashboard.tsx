@@ -38,7 +38,7 @@ function StatCard({ label, value, sub, accent = false }: {
                 {label}
             </p>
             <p
-                className="mt-2 text-3xl font-bold leading-none text-white"
+                className="mt-2 text-3xl font-bold leading-none text-primary"
                 style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
             >
                 {value}
@@ -159,7 +159,7 @@ export default function TenantDashboard({ stats, proximos_agendamentos, setup_co
                 {/* Próximos agendamentos */}
                 <div className="card overflow-hidden">
                     <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-                        <h2 className="text-sm font-semibold text-white">Próximos agendamentos</h2>
+                        <h2 className="text-sm font-semibold text-primary">Próximos agendamentos</h2>
                         <Link href={route('tenant.agendamentos.index')} className="text-xs transition-colors" style={{ color: 'var(--accent)' }}>
                             Ver todos →
                         </Link>
@@ -179,23 +179,23 @@ export default function TenantDashboard({ stats, proximos_agendamentos, setup_co
                                     key={a.id}
                                     className="flex items-center justify-between px-6 py-3.5 transition-colors"
                                     style={{ borderBottom: '1px solid var(--border)' }}
-                                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
+                                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
                                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                 >
                                     <div className="flex items-center gap-3">
                                         <div
-                                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-primary"
                                             style={{ background: 'var(--accent)' }}
                                         >
                                             {a.cliente_nome.charAt(0).toUpperCase()}
                                         </div>
                                         <div>
-                                            <p className="text-sm font-medium text-white">{a.cliente_nome}</p>
+                                            <p className="text-sm font-medium text-primary">{a.cliente_nome}</p>
                                             <p className="text-xs" style={{ color: 'var(--text-3)' }}>{a.recurso?.nome}</p>
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-sm text-white">{formatDt(a.inicio)}</p>
+                                        <p className="text-sm text-primary">{formatDt(a.inicio)}</p>
                                         {a.valor_total && (
                                             <p className="text-xs" style={{ color: 'var(--text-3)' }}>{formatBrl(Number(a.valor_total))}</p>
                                         )}
@@ -220,7 +220,7 @@ export default function TenantDashboard({ stats, proximos_agendamentos, setup_co
                             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface2)'; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface)'; }}
                         >
-                            <p className="text-sm font-medium text-white">{link.label}</p>
+                            <p className="text-sm font-medium text-primary">{link.label}</p>
                             <p className="text-xs" style={{ color: 'var(--text-3)' }}>{link.desc}</p>
                         </Link>
                     ))}

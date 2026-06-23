@@ -45,11 +45,11 @@ export default function Login({
                 <div className="mb-8 text-center">
                     <div className="mb-3 flex items-center justify-center gap-2">
                         <span className="inline-block h-2 w-2 rounded-full" style={{ background: 'var(--emerald)' }} />
-                        <span className="text-2xl text-white" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                        <span className="text-2xl text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
                             AgendaBot
                         </span>
                     </div>
-                    <h2 className="text-xl font-semibold text-white">Bem-vindo de volta</h2>
+                    <h2 className="text-xl font-semibold text-primary">Bem-vindo de volta</h2>
                     <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>Entre na sua conta AgendaBot.</p>
                 </div>
 

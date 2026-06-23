@@ -20,7 +20,7 @@ export default function Dashboard({ auth, tenants }: Props) {
 
             <div className="w-full max-w-md">
                 <div className="mb-8 flex items-center justify-between">
-                    <h1 className="text-2xl text-white" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                    <h1 className="text-2xl text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
                         Selecione o estabelecimento
                     </h1>
                     <span className="text-sm" style={{ color: 'var(--text-3)' }}>{auth.user.name}</span>
@@ -43,7 +43,7 @@ export default function Dashboard({ auth, tenants }: Props) {
                                 {TIPO_EMOJI[tenant.tipo_servico] ?? '🏢'}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="font-medium text-white truncate">{tenant.nome}</p>
+                                <p className="font-medium text-primary truncate">{tenant.nome}</p>
                                 <div className="mt-0.5 flex items-center gap-1.5">
                                     <span
                                         className="h-1.5 w-1.5 rounded-full"

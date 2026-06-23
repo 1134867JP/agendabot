@@ -22,7 +22,7 @@ function LandingNavbar({ currentPage, scrolled }: { currentPage?: string; scroll
             <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
                 <Link
                     href={route('home')}
-                    className="text-xl text-white italic"
+                    className="text-xl text-primary italic"
                     style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
                 >
                     AgendaBot
@@ -84,9 +84,9 @@ function LandingFooter() {
                     AgendaBot
                 </span>
                 <div className="flex gap-5 text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                    <Link href={route('precos')}           className="hover:text-white transition-colors">Preços</Link>
-                    <Link href={route('login')}            className="hover:text-white transition-colors">Entrar</Link>
-                    <Link href={route('onboarding.step1')} className="hover:text-white transition-colors">Criar conta</Link>
+                    <Link href={route('precos')}           className="hover:text-primary transition-colors">Preços</Link>
+                    <Link href={route('login')}            className="hover:text-primary transition-colors">Entrar</Link>
+                    <Link href={route('onboarding.step1')} className="hover:text-primary transition-colors">Criar conta</Link>
                 </div>
                 <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
                     © {new Date().getFullYear()} AgendaBot

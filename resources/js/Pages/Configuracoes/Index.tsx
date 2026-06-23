@@ -71,7 +71,7 @@ export default function ConfiguracaoIndex({ auth, tenant, recursos }: Props) {
                                     </select>
                                 </div>
                                 <button type="submit" disabled={processing}
-                                    className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+                                    className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-primary hover:bg-indigo-700 disabled:opacity-50">
                                     {processing ? 'Salvando...' : 'Salvar'}
                                 </button>
                             </form>
