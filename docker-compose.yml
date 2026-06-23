@@ -3,25 +3,23 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: agendabot-app
     container_name: agendabot-app
     restart: always
     volumes:
-      - .:/var/www/html
+      - storage_data:/var/www/html/storage
     networks:
       - web
       - default
       - evolution-net
     depends_on:
       - db
+    env_file: .env
     environment:
       APP_ENV: production
       APP_DEBUG: "false"
-      DB_CONNECTION: pgsql
       DB_HOST: db
       DB_PORT: 5432
-      DB_DATABASE: ${DB_DATABASE}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
       SESSION_DRIVER: file
       CACHE_DRIVER: file
       QUEUE_CONNECTION: database
@@ -38,54 +36,47 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: agendabot-app
     container_name: agendabot-worker
     restart: always
     command: php artisan queue:work --sleep=3 --tries=3 --timeout=45
     volumes:
-      - .:/var/www/html
+      - storage_data:/var/www/html/storage
     networks:
       - default
     depends_on:
       - db
+      - app
+    env_file: .env
     environment:
       APP_ENV: production
       APP_DEBUG: "false"
-      DB_CONNECTION: pgsql
       DB_HOST: db
       DB_PORT: 5432
-      DB_DATABASE: ${DB_DATABASE}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
       QUEUE_CONNECTION: database
 
   scheduler:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: agendabot-app
     container_name: agendabot-scheduler
     restart: always
     command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
     volumes:
-      - .:/var/www/html
+      - storage_data:/var/www/html/storage
     networks:
       - default
     depends_on:
       - db
+      - app
+    env_file: .env
     environment:
       APP_ENV: production
       APP_DEBUG: "false"
-      DB_CONNECTION: pgsql
       DB_HOST: db
       DB_PORT: 5432
-      DB_DATABASE: ${DB_DATABASE}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
 
 volumes:
   pgdata:
+  storage_data:
 
 networks:
   web:
