@@ -13,6 +13,18 @@ class DashboardController extends Controller
     {
         $tenant = app('tenant');
 
+        $profissionalAtivo = $tenant->profissionais()->where('ativo', true)->first();
+
+        $setupCompleto = [
+            'profissionais' => $tenant->profissionais()->where('ativo', true)->exists(),
+            'servicos'      => $tenant->servicos()->where('ativo', true)->exists(),
+            'whatsapp'      => (bool) $tenant->whatsapp_conectado,
+            'bot_config'    => ! empty($tenant->ramo_negocio),
+            'horario'       => $profissionalAtivo
+                ? $profissionalAtivo->horarios()->exists()
+                : false,
+        ];
+
         return Inertia::render('Tenant/Dashboard', [
             'tenant' => $tenant,
             'stats'  => [
@@ -37,6 +49,7 @@ class DashboardController extends Controller
                 ->orderBy('inicio')
                 ->limit(5)
                 ->get(),
+            'setup_completo' => $setupCompleto,
         ]);
     }
 }
