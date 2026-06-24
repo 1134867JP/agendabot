@@ -86,18 +86,25 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         $resultado = $claude->processar($this->tenant, $historico, $horariosDisponiveis);
 
         // 9. Processar ação retornada pelo Claude
+        $agendamentoCriado = true;
         match ($resultado['acao']) {
-            'agendar'    => $this->processarAgendamento($resultado['dados'], $cliente, $agendamentoService),
+            'agendar'    => $agendamentoCriado = $this->processarAgendamento($resultado['dados'], $cliente, $agendamentoService),
             'transferir' => $this->transferirParaHumano($conversa),
             default      => null,
         };
+
+        // Se o agendamento falhou, substituir resposta e transferir para humano
+        if ($resultado['acao'] === 'agendar' && ! $agendamentoCriado) {
+            $resultado['resposta'] = 'Desculpe, houve um problema técnico ao confirmar seu agendamento. Um atendente entrará em contato em breve. 🙏';
+            $this->transferirParaHumano($conversa);
+        }
 
         // 10. Salvar resposta do bot e enviar ao cliente
         $conversa->registrarMensagem('bot', $resultado['resposta']);
         $evolution->enviarMensagem($this->tenant->evolution_instance, $this->telefone, $resultado['resposta']);
     }
 
-    private function processarAgendamento(array $dados, Cliente $cliente, AgendamentoService $service): void
+    private function processarAgendamento(array $dados, Cliente $cliente, AgendamentoService $service): bool
     {
         try {
             // Atualizar nome do cliente se identificado (e não for o placeholder padrão)
@@ -109,12 +116,17 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
                 'cliente_id' => $cliente->id,
                 'origem'     => 'bot',
             ]));
+
+            return true;
         } catch (\Throwable $e) {
-            Log::warning('ProcessarMensagemWhatsapp: falha ao criar agendamento v2', [
+            Log::error('ProcessarMensagemWhatsapp: falha ao criar agendamento', [
                 'error'  => $e->getMessage(),
+                'trace'  => $e->getTraceAsString(),
                 'dados'  => $dados,
                 'tenant' => $this->tenant->id,
             ]);
+
+            return false;
         }
     }
 
