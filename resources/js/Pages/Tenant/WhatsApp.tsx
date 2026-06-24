@@ -29,12 +29,20 @@ export default function WhatsAppPage({ tenant }: Props) {
             if (json.status === 'open') {
                 setConectado(true);
                 setQrcode(null);
-                stopPolling();
+            } else {
+                setConectado(false);
             }
         } catch {
             // silently ignore
         }
     };
+
+    // Polling contínuo sempre ativo: detecta conexão (após QR) e desconexão (celular desconectado)
+    useEffect(() => {
+        pollingRef.current = setInterval(verificarStatus, 5000);
+        return () => stopPolling();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const conectar = async () => {
         setErro('');
@@ -48,7 +56,6 @@ export default function WhatsAppPage({ tenant }: Props) {
                 setConectado(true);
             } else if (json.qrcode) {
                 setQrcode(json.qrcode);
-                pollingRef.current = setInterval(verificarStatus, 3000);
             } else {
                 setErro('Não foi possível gerar o QR Code. Tente novamente em alguns instantes.');
             }
@@ -58,8 +65,6 @@ export default function WhatsAppPage({ tenant }: Props) {
             setLoading(false);
         }
     };
-
-    useEffect(() => () => stopPolling(), []);
 
     return (
         <AppLayout title="WhatsApp">
