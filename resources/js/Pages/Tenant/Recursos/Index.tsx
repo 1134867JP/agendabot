@@ -1,5 +1,5 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { PageProps, Recurso, HorarioFuncionamento } from '@/types';
 import Toggle from '@/Components/Toggle';
@@ -53,100 +53,156 @@ function HorariosEditor({ recurso, onClose }: { recurso: Recurso; onClose: () =>
                 {rows.map((row, i) => (
                     <div key={i} className="flex items-center gap-4">
                         <div className="w-28">
-                            <Toggle
-                                checked={row.ativo}
-                                onChange={() => toggle(i)}
-                                label={DIAS[i].slice(0, 3)}
-                            />
+                            <Toggle checked={row.ativo} onChange={() => toggle(i)} label={DIAS[i].slice(0, 3)} />
                         </div>
-                        <input
-                            type="time"
-                            value={row.abertura}
-                            onChange={e => setHora(i, 'abertura', e.target.value)}
-                            disabled={!row.ativo}
-                            className="input w-28 disabled:opacity-40"
-                        />
+                        <input type="time" value={row.abertura} onChange={e => setHora(i, 'abertura', e.target.value)} disabled={!row.ativo} className="input w-28 disabled:opacity-40" />
                         <span className="text-xs" style={{ color: 'var(--text-3)' }}>até</span>
-                        <input
-                            type="time"
-                            value={row.fechamento}
-                            onChange={e => setHora(i, 'fechamento', e.target.value)}
-                            disabled={!row.ativo}
-                            className="input w-28 disabled:opacity-40"
-                        />
+                        <input type="time" value={row.fechamento} onChange={e => setHora(i, 'fechamento', e.target.value)} disabled={!row.ativo} className="input w-28 disabled:opacity-40" />
                     </div>
                 ))}
             </div>
             <div className="mt-5 flex gap-2">
-                <button onClick={salvar} disabled={saving} className="btn-primary">
-                    {saving ? 'Salvando…' : 'Salvar horários'}
-                </button>
+                <button onClick={salvar} disabled={saving} className="btn-primary">{saving ? 'Salvando…' : 'Salvar horários'}</button>
                 <button onClick={onClose} className="btn-secondary">Fechar</button>
             </div>
         </div>
     );
 }
 
-// ─── Novo recurso modal ───────────────────────────────────────────────────────
+// ─── Formulário novo recurso (inline) ────────────────────────────────────────
 
-function NovoRecursoModal({ onClose }: { onClose: () => void }) {
-    const { data, setData, post, processing, errors } = useForm({
+function NovoRecursoForm({ onClose }: { onClose: () => void }) {
+    const { data, setData, post, processing, errors, reset } = useForm({
         nome: '',
         descricao: '',
         valor_hora: '',
         duracao_padrao_minutos: '60',
     });
-    const nomeRef = useRef<HTMLInputElement>(null);
-
-    useEffect(() => {
-        nomeRef.current?.focus();
-        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-        document.addEventListener('keydown', onKey);
-        return () => document.removeEventListener('keydown', onKey);
-    }, [onClose]);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        post(route('tenant.recursos.store'), { onSuccess: onClose });
+        post(route('tenant.recursos.store'), {
+            onSuccess: () => { reset(); onClose(); },
+            preserveScroll: true,
+        });
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" role="dialog" aria-modal="true" aria-labelledby="modal-novo-recurso">
-            <div className="w-full max-w-sm rounded-2xl p-7 shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
-                <div className="mb-5 flex items-start justify-between">
-                    <h3 id="modal-novo-recurso" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }} className="text-xl font-semibold text-primary">
-                        Novo recurso
-                    </h3>
-                    <button onClick={onClose} style={{ color: 'var(--text-3)' }} className="hover:text-primary transition-colors" aria-label="Fechar">✕</button>
+        <div className="card overflow-hidden" style={{ borderColor: 'var(--accent)' }}>
+            <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+                <h3 className="font-semibold text-primary">Novo recurso</h3>
+            </div>
+            <form onSubmit={submit} className="space-y-4 px-6 py-5">
+                <div>
+                    <label className="label mb-1" htmlFor="novo-recurso-nome">Nome *</label>
+                    <input
+                        id="novo-recurso-nome"
+                        autoFocus
+                        value={data.nome}
+                        onChange={e => setData('nome', e.target.value)}
+                        className="input"
+                        placeholder="Ex: Barbeiro João"
+                        required
+                    />
+                    {errors.nome && <p className="mt-1 text-xs text-red-400">{errors.nome}</p>}
                 </div>
-                <form onSubmit={submit} className="space-y-4">
+                <div>
+                    <label className="label mb-1">Descrição</label>
+                    <textarea value={data.descricao} onChange={e => setData('descricao', e.target.value)} rows={2} className="input" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
                     <div>
-                        <label className="label mb-1" htmlFor="novo-recurso-nome">Nome *</label>
-                        <input id="novo-recurso-nome" ref={nomeRef} value={data.nome} onChange={e => setData('nome', e.target.value)} className="input" placeholder="Ex: Barbeiro João" required />
-                        {errors.nome && <p className="mt-1 text-xs text-red-400">{errors.nome}</p>}
+                        <label className="label mb-1">Valor/hora (R$)</label>
+                        <input type="number" step="0.01" value={data.valor_hora} onChange={e => setData('valor_hora', e.target.value)} className="input" placeholder="60.00" />
                     </div>
                     <div>
-                        <label className="label mb-1">Descrição</label>
-                        <textarea value={data.descricao} onChange={e => setData('descricao', e.target.value)} rows={2} className="input" />
+                        <label className="label mb-1">Duração (min) *</label>
+                        <input type="number" value={data.duracao_padrao_minutos} onChange={e => setData('duracao_padrao_minutos', e.target.value)} className="input" required />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="label mb-1">Valor/hora (R$)</label>
-                            <input type="number" step="0.01" value={data.valor_hora} onChange={e => setData('valor_hora', e.target.value)} className="input" placeholder="60.00" />
-                        </div>
-                        <div>
-                            <label className="label mb-1">Duração (min) *</label>
-                            <input type="number" value={data.duracao_padrao_minutos} onChange={e => setData('duracao_padrao_minutos', e.target.value)} className="input" required />
-                        </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                    <button type="submit" disabled={processing} className="btn-primary">
+                        {processing ? 'Criando…' : 'Criar recurso'}
+                    </button>
+                    <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    );
+}
+
+// ─── Formulário editar recurso (inline) ──────────────────────────────────────
+
+function EditarRecursoForm({ recurso, onClose }: { recurso: Recurso; onClose: () => void }) {
+    const { data, setData, patch, processing, errors } = useForm({
+        nome: recurso.nome,
+        descricao: recurso.descricao ?? '',
+        valor_hora: recurso.valor_hora?.toString() ?? '',
+        duracao_padrao_minutos: recurso.duracao_padrao_minutos?.toString() ?? '60',
+        ativo: recurso.ativo,
+    });
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        patch(route('tenant.recursos.update', recurso.id), {
+            onSuccess: onClose,
+            preserveScroll: true,
+        });
+    };
+
+    const excluir = () => {
+        if (confirm('Remover este recurso?')) {
+            router.delete(route('tenant.recursos.destroy', recurso.id), { preserveScroll: true });
+        }
+    };
+
+    return (
+        <div className="card overflow-hidden" style={{ borderColor: 'var(--accent)' }}>
+            <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+                <h3 className="font-semibold text-primary">Editar recurso</h3>
+            </div>
+            <form onSubmit={submit} className="space-y-4 px-6 py-5">
+                <div>
+                    <label className="label mb-1" htmlFor="editar-recurso-nome">Nome *</label>
+                    <input
+                        id="editar-recurso-nome"
+                        autoFocus
+                        value={data.nome}
+                        onChange={e => setData('nome', e.target.value)}
+                        className="input"
+                        required
+                    />
+                    {errors.nome && <p className="mt-1 text-xs text-red-400">{errors.nome}</p>}
+                </div>
+                <div>
+                    <label className="label mb-1">Descrição</label>
+                    <textarea value={data.descricao} onChange={e => setData('descricao', e.target.value)} rows={2} className="input" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                    <div>
+                        <label className="label mb-1">Valor/hora (R$)</label>
+                        <input type="number" step="0.01" value={data.valor_hora} onChange={e => setData('valor_hora', e.target.value)} className="input" placeholder="60.00" />
                     </div>
-                    <div className="flex justify-end gap-2 pt-1">
+                    <div>
+                        <label className="label mb-1">Duração (min) *</label>
+                        <input type="number" value={data.duracao_padrao_minutos} onChange={e => setData('duracao_padrao_minutos', e.target.value)} className="input" required />
+                    </div>
+                </div>
+
+                <Toggle checked={data.ativo} onChange={v => setData('ativo', v)} label={data.ativo ? 'Ativo' : 'Inativo'} />
+
+                <div className="flex items-center justify-between pt-1">
+                    <button type="button" onClick={excluir} className="text-xs font-medium transition-opacity hover:opacity-70" style={{ color: '#f87171' }}>
+                        Excluir recurso
+                    </button>
+                    <div className="flex gap-2">
                         <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
                         <button type="submit" disabled={processing} className="btn-primary">
-                            {processing ? 'Criando…' : 'Criar recurso'}
+                            {processing ? 'Salvando…' : 'Salvar'}
                         </button>
                     </div>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
     );
 }
@@ -154,8 +210,9 @@ function NovoRecursoModal({ onClose }: { onClose: () => void }) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function RecursosIndex({ recursos }: Props) {
-    const [novoModal, setNovoModal]   = useState(false);
-    const [expandido, setExpandido]   = useState<number | null>(null);
+    const [novoAberto, setNovoAberto] = useState(false);
+    const [editando, setEditando] = useState<number | null>(null);
+    const [expandido, setExpandido] = useState<number | null>(null);
 
     const toggleAtivo = (r: Recurso) => {
         router.patch(route('tenant.recursos.update', r.id), {
@@ -167,94 +224,91 @@ export default function RecursosIndex({ recursos }: Props) {
         });
     };
 
-    const excluir = (id: number) => {
-        if (confirm('Remover este recurso?')) router.delete(route('tenant.recursos.destroy', id));
-    };
-
     return (
-        <AppLayout title="Recursos" subtitle="Quadras, salas e outros itens que podem ser reservados">
+        <AppLayout title="Recursos">
             <Head title="Recursos" />
 
             <div className="mb-5 flex items-center justify-between">
                 <p className="text-sm" style={{ color: 'var(--text-3)' }}>
                     {recursos.length} recurso{recursos.length !== 1 ? 's' : ''} cadastrado{recursos.length !== 1 ? 's' : ''}
                 </p>
-                <button onClick={() => setNovoModal(true)} className="btn-primary">
-                    + Novo recurso
-                </button>
+                {!novoAberto && (
+                    <button onClick={() => { setNovoAberto(true); setEditando(null); }} className="btn-primary">
+                        + Novo recurso
+                    </button>
+                )}
             </div>
 
             <div className="space-y-3">
-                {recursos.length === 0 && (
-                    <div className="card flex flex-col items-center gap-3 p-14 text-center">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: 'var(--bg-surface-2)' }}>
-                            <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
-                                <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-primary">Nenhum recurso cadastrado</p>
-                            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
-                                Adicione as quadras, salas ou itens disponíveis para reserva.
-                            </p>
-                        </div>
-                        <button onClick={() => setNovoModal(true)} className="btn-primary mt-1">
-                            + Adicionar recurso
-                        </button>
+                {novoAberto && (
+                    <NovoRecursoForm onClose={() => setNovoAberto(false)} />
+                )}
+
+                {recursos.length === 0 && !novoAberto && (
+                    <div className="card p-10 text-center" style={{ color: 'var(--text-3)' }}>
+                        <p className="text-sm">Nenhum recurso cadastrado ainda.</p>
+                        <p className="mt-1 text-xs">Crie seus barbeiros, quadras ou serviços.</p>
                     </div>
                 )}
 
                 {recursos.map(r => (
                     <div key={r.id} className="card overflow-hidden">
-                        <div className="flex items-center justify-between px-6 py-4">
-                            <div className="flex items-center gap-4">
-                                <div
-                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-primary"
-                                    style={{ background: r.ativo ? 'var(--accent)' : 'rgba(255,255,255,0.15)' }}
-                                >
-                                    {r.nome.charAt(0).toUpperCase()}
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-primary">{r.nome}</p>
-                                    {r.descricao && <p className="text-xs" style={{ color: 'var(--text-3)' }}>{r.descricao}</p>}
-                                    <div className="mt-1 flex flex-wrap gap-3">
-                                        {r.valor_hora > 0 && (
-                                            <span className="text-xs" style={{ color: 'var(--text-3)' }}>
-                                                {Number(r.valor_hora).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/h
-                                            </span>
-                                        )}
-                                        <span className="text-xs" style={{ color: 'var(--text-3)' }}>{r.duracao_padrao_minutos} min/slot</span>
+                        {editando === r.id ? (
+                            <EditarRecursoForm recurso={r} onClose={() => setEditando(null)} />
+                        ) : (
+                            <>
+                                <div className="flex items-center justify-between px-6 py-4">
+                                    <div className="flex items-center gap-4">
+                                        <div
+                                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-primary"
+                                            style={{ background: r.ativo ? 'var(--accent)' : 'rgba(255,255,255,0.15)' }}
+                                        >
+                                            {r.nome.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-primary">{r.nome}</p>
+                                            {r.descricao && <p className="text-xs" style={{ color: 'var(--text-3)' }}>{r.descricao}</p>}
+                                            <div className="mt-1 flex flex-wrap gap-3">
+                                                {r.valor_hora > 0 && (
+                                                    <span className="text-xs" style={{ color: 'var(--text-3)' }}>
+                                                        {Number(r.valor_hora).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/h
+                                                    </span>
+                                                )}
+                                                <span className="text-xs" style={{ color: 'var(--text-3)' }}>{r.duracao_padrao_minutos} min/slot</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <span className={`badge ${r.ativo ? 'badge-green' : 'badge-gray'}`}>
+                                            {r.ativo ? 'Ativo' : 'Inativo'}
+                                        </span>
+                                        <button
+                                            onClick={() => setExpandido(expandido === r.id ? null : r.id)}
+                                            className="btn-secondary py-1.5 text-xs"
+                                        >
+                                            {expandido === r.id ? 'Fechar' : 'Horários'}
+                                        </button>
+                                        <button
+                                            onClick={() => { setEditando(r.id); setNovoAberto(false); setExpandido(null); }}
+                                            className="btn-secondary py-1.5 text-xs"
+                                        >
+                                            Editar
+                                        </button>
+                                        <button onClick={() => toggleAtivo(r)} className="btn-secondary py-1.5 text-xs">
+                                            {r.ativo ? 'Desativar' : 'Ativar'}
+                                        </button>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="flex items-center gap-2">
-                                <span className={`badge ${r.ativo ? 'badge-green' : 'badge-gray'}`}>
-                                    {r.ativo ? 'Ativo' : 'Inativo'}
-                                </span>
-                                <button
-                                    onClick={() => setExpandido(expandido === r.id ? null : r.id)}
-                                    className="btn-secondary py-1.5 text-xs"
-                                >
-                                    {expandido === r.id ? 'Fechar' : 'Horários'}
-                                </button>
-                                <button onClick={() => toggleAtivo(r)} className="btn-secondary py-1.5 text-xs">
-                                    {r.ativo ? 'Desativar' : 'Ativar'}
-                                </button>
-                                <button onClick={() => excluir(r.id)} className="btn-danger py-1.5 text-xs">
-                                    Excluir
-                                </button>
-                            </div>
-                        </div>
-
-                        {expandido === r.id && (
-                            <HorariosEditor recurso={r} onClose={() => setExpandido(null)} />
+                                {expandido === r.id && (
+                                    <HorariosEditor recurso={r} onClose={() => setExpandido(null)} />
+                                )}
+                            </>
                         )}
                     </div>
                 ))}
             </div>
-
-            {novoModal && <NovoRecursoModal onClose={() => setNovoModal(false)} />}
         </AppLayout>
     );
 }

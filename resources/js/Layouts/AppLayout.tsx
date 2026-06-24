@@ -28,8 +28,17 @@ export default function AppLayout({ children, title, subtitle, fullHeight }: Pro
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
-        <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-app)', color: 'var(--text-1)' }}>
-            {/* Skip link para navegação por teclado */}
+        <div
+            className={
+                fullHeight
+                    // Chat/fullHeight: sempre h-dvh com scroll interno
+                    ? 'flex h-[100dvh] overflow-hidden'
+                    // Demais páginas: mobile usa scroll da janela; desktop usa scroll interno
+                    : 'min-h-[100dvh] lg:flex lg:h-[100dvh] lg:overflow-hidden'
+            }
+            style={{ background: 'var(--bg-app)', color: 'var(--text-1)' }}
+        >
+            {/* Skip link */}
             <a
                 href="#main-content"
                 className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
@@ -41,18 +50,19 @@ export default function AppLayout({ children, title, subtitle, fullHeight }: Pro
             {/* Sidebar */}
             <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-            {/* Main */}
-            <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            {/* Coluna principal */}
+            <div className={`flex min-w-0 flex-1 flex-col ${fullHeight ? 'overflow-hidden' : 'lg:overflow-hidden'}`}>
 
-                {/* Mobile top bar */}
+                {/* Barra mobile — sticky no scroll da janela, oculta no desktop */}
                 <header
-                    className="flex items-center gap-3 px-4 py-3 lg:hidden"
+                    className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 lg:hidden"
                     style={{ background: 'var(--bg-sidebar)', borderBottom: '1px solid var(--border)' }}
                 >
                     <button
                         onClick={() => setSidebarOpen(true)}
                         className="rounded-md p-1 transition-colors"
                         style={{ color: 'var(--text-2)' }}
+                        aria-label="Abrir menu"
                     >
                         <MenuIcon />
                     </button>
@@ -87,8 +97,15 @@ export default function AppLayout({ children, title, subtitle, fullHeight }: Pro
                     </div>
                 )}
 
-                {/* Page content */}
-                <main id="main-content" className={`flex-1 min-h-0 ${fullHeight ? 'overflow-hidden flex flex-col' : 'overflow-y-auto p-6'}`}>
+                {/* Conteúdo */}
+                <main
+                    id="main-content"
+                    className={
+                        fullHeight
+                            ? 'flex flex-1 flex-col overflow-hidden min-h-0'
+                            : 'p-6 lg:flex-1 lg:min-h-0 lg:overflow-y-auto'
+                    }
+                >
                     {!fullHeight && title && (
                         <div className="mb-7">
                             <h1

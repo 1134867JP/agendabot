@@ -33,7 +33,7 @@ export default function TipoServicoSelector({ value, onChange, customValue, onCh
                         onClick={() => onChange(t.value)}
                         className="flex flex-col items-start gap-0.5 rounded-xl border-2 px-3 py-2.5 text-left text-sm transition-all"
                         style={value === t.value
-                            ? { borderColor: 'var(--accent)', background: 'var(--accent-light)', color: 'white' }
+                            ? { borderColor: 'var(--accent)', background: 'var(--accent-light)', color: 'var(--accent)' }
                             : { borderColor: 'var(--border-strong)', background: 'var(--bg-surface-2)', color: 'var(--text-2)' }
                         }
                     >
