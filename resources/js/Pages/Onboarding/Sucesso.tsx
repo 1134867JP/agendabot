@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { PageProps } from '@/types';
+import ForceDark from '@/Components/ForceDark';
 
 interface Props extends PageProps {
     user: { name: string };
@@ -27,6 +28,7 @@ export default function OnboardingSucesso({ user }: Props) {
     const firstName = user.name.split(' ')[0];
 
     return (
+        <ForceDark>
         <div
             className="flex min-h-screen flex-col items-center justify-center px-4"
             style={{ background: 'var(--bg-app)' }}
@@ -73,5 +75,6 @@ export default function OnboardingSucesso({ user }: Props) {
                 </Link>
             </div>
         </div>
+        </ForceDark>
     );
 }

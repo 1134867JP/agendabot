@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
+import ForceDark from '@/Components/ForceDark';
 
 const DARK  = '#08090f';
 const INDIGO = '#6366F1';
@@ -106,10 +107,12 @@ export default function LandingLayout({ children, currentPage }: Props) {
     }, []);
 
     return (
-        <div style={{ background: DARK, color: 'white', fontFamily: "'DM Sans', sans-serif", minHeight: '100vh' }}>
-            <LandingNavbar currentPage={currentPage} scrolled={scrolled} />
-            {children}
-            <LandingFooter />
-        </div>
+        <ForceDark>
+            <div style={{ background: DARK, color: 'white', fontFamily: "'DM Sans', sans-serif", minHeight: '100vh' }}>
+                <LandingNavbar currentPage={currentPage} scrolled={scrolled} />
+                {children}
+                <LandingFooter />
+            </div>
+        </ForceDark>
     );
 }

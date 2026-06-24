@@ -2,6 +2,7 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import { TipoServico } from '@/types';
 import { FormEventHandler } from 'react';
 import TipoServicoSelector from '@/Components/TipoServicoSelector';
+import ForceDark from '@/Components/ForceDark';
 
 export default function OnboardingStep1() {
     const { data, setData, post, processing, errors } = useForm({
@@ -21,6 +22,7 @@ export default function OnboardingStep1() {
     };
 
     return (
+        <ForceDark>
         <div className="flex min-h-screen flex-col" style={{ background: 'var(--bg-app)' }}>
             <Head title="Criar conta" />
 
@@ -124,5 +126,6 @@ export default function OnboardingStep1() {
                 </div>
             </div>
         </div>
+        </ForceDark>
     );
 }
