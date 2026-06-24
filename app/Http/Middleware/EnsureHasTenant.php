@@ -24,12 +24,20 @@ class EnsureHasTenant
         $isImpersonating = session()->has('impersonando_tenant_id');
         $user = $request->user();
 
+        // Tenant inexistente ou sessão obsoleta → limpar e redirecionar
         if (! $tenant) {
-            abort(403);
+            session()->forget('tenant_id');
+            return redirect()->route('dashboard')->with('erro', 'Estabelecimento não encontrado. Selecione novamente.');
         }
 
-        if (! $isImpersonating && ! $user->is_super_admin && ! $user->tenants->contains($tenant)) {
-            abort(403);
+        // Verificar acesso via query explícita (mais confiável que Collection::contains)
+        $temAcesso = $isImpersonating
+            || $user->is_super_admin
+            || $user->tenants()->where('tenants.id', $tenant->id)->exists();
+
+        if (! $temAcesso) {
+            session()->forget('tenant_id');
+            return redirect()->route('dashboard')->with('erro', 'Você não tem acesso a este estabelecimento.');
         }
 
         app()->instance('tenant', $tenant);

@@ -7,6 +7,7 @@ use App\Models\Tenant;
 use App\Services\EvolutionApiService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class TenantController extends Controller
@@ -24,18 +25,20 @@ class TenantController extends Controller
         $slug     = Str::slug($data['nome']) . '-' . Str::random(6);
         $instance = $slug;
 
-        $tenant = Tenant::create([
-            'nome'                       => $data['nome'],
-            'slug'                       => $slug,
-            'tipo_servico'               => $data['tipo_servico'],
-            'tipo_servico_personalizado' => $data['tipo_servico_personalizado'] ?? null,
-            'evolution_instance'         => $instance,
-            'subscription_status'        => 'trial',
-            'trial_ends_at'              => now()->addDays((int) env('TRIAL_DAYS', 14)),
-            'ativo'                      => true,
-        ]);
-
-        $tenant->users()->attach($request->user()->id, ['papel' => 'admin']);
+        $tenant = DB::transaction(function () use ($data, $slug, $instance, $request) {
+            $t = Tenant::create([
+                'nome'                       => $data['nome'],
+                'slug'                       => $slug,
+                'tipo_servico'               => $data['tipo_servico'],
+                'tipo_servico_personalizado' => $data['tipo_servico_personalizado'] ?? null,
+                'evolution_instance'         => $instance,
+                'subscription_status'        => 'trial',
+                'trial_ends_at'              => now()->addDays((int) env('TRIAL_DAYS', 14)),
+                'ativo'                      => true,
+            ]);
+            $t->users()->attach($request->user()->id, ['papel' => 'admin']);
+            return $t;
+        });
 
         CreateEvolutionInstanceJob::dispatch($tenant);
 
