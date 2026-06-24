@@ -1,7 +1,8 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { PageProps, Recurso, HorarioFuncionamento } from '@/types';
+import Toggle from '@/Components/Toggle';
 
 interface Props extends PageProps {
     recursos: Recurso[];
@@ -51,18 +52,13 @@ function HorariosEditor({ recurso, onClose }: { recurso: Recurso; onClose: () =>
             <div className="space-y-2.5">
                 {rows.map((row, i) => (
                     <div key={i} className="flex items-center gap-4">
-                        <label className="flex w-28 cursor-pointer items-center gap-2.5">
-                            <div
-                                onClick={() => toggle(i)}
-                                className="relative flex h-5 w-9 cursor-pointer items-center rounded-full transition-colors"
-                                style={{ background: row.ativo ? 'var(--accent)' : 'rgba(255,255,255,0.15)' }}
-                            >
-                                <span className={`absolute h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${row.ativo ? 'translate-x-4' : 'translate-x-1'}`} />
-                            </div>
-                            <span className="text-sm" style={{ color: row.ativo ? 'var(--text-1)' : 'var(--text-3)' }}>
-                                {DIAS[i].slice(0, 3)}
-                            </span>
-                        </label>
+                        <div className="w-28">
+                            <Toggle
+                                checked={row.ativo}
+                                onChange={() => toggle(i)}
+                                label={DIAS[i].slice(0, 3)}
+                            />
+                        </div>
                         <input
                             type="time"
                             value={row.abertura}
@@ -100,6 +96,14 @@ function NovoRecursoModal({ onClose }: { onClose: () => void }) {
         valor_hora: '',
         duracao_padrao_minutos: '60',
     });
+    const nomeRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        nomeRef.current?.focus();
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -107,18 +111,18 @@ function NovoRecursoModal({ onClose }: { onClose: () => void }) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" role="dialog" aria-modal="true" aria-labelledby="modal-novo-recurso">
             <div className="w-full max-w-sm rounded-2xl p-7 shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
                 <div className="mb-5 flex items-start justify-between">
-                    <h3 style={{ fontFamily: 'Instrument Serif, Georgia, serif' }} className="text-xl font-semibold text-primary">
+                    <h3 id="modal-novo-recurso" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }} className="text-xl font-semibold text-primary">
                         Novo recurso
                     </h3>
-                    <button onClick={onClose} style={{ color: 'var(--text-3)' }} className="hover:text-primary transition-colors">✕</button>
+                    <button onClick={onClose} style={{ color: 'var(--text-3)' }} className="hover:text-primary transition-colors" aria-label="Fechar">✕</button>
                 </div>
                 <form onSubmit={submit} className="space-y-4">
                     <div>
-                        <label className="label mb-1">Nome *</label>
-                        <input value={data.nome} onChange={e => setData('nome', e.target.value)} className="input" placeholder="Ex: Barbeiro João" required />
+                        <label className="label mb-1" htmlFor="novo-recurso-nome">Nome *</label>
+                        <input id="novo-recurso-nome" ref={nomeRef} value={data.nome} onChange={e => setData('nome', e.target.value)} className="input" placeholder="Ex: Barbeiro João" required />
                         {errors.nome && <p className="mt-1 text-xs text-red-400">{errors.nome}</p>}
                     </div>
                     <div>

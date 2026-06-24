@@ -1,7 +1,8 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { PageProps } from '@/types';
+import Toggle from '@/Components/Toggle';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -50,6 +51,14 @@ function NovoServicoModal({ onClose }: { onClose: () => void }) {
         requer_avaliacao: false,
         ativo: true,
     });
+    const nomeRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        nomeRef.current?.focus();
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -60,13 +69,14 @@ function NovoServicoModal({ onClose }: { onClose: () => void }) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" role="dialog" aria-modal="true" aria-labelledby="modal-novo-servico">
             <div
                 className="w-full max-w-md rounded-2xl p-7 shadow-2xl"
                 style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}
             >
                 <div className="mb-5 flex items-start justify-between">
                     <h3
+                        id="modal-novo-servico"
                         style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
                         className="text-xl font-semibold text-primary"
                     >
@@ -76,6 +86,7 @@ function NovoServicoModal({ onClose }: { onClose: () => void }) {
                         onClick={onClose}
                         style={{ color: 'var(--text-3)' }}
                         className="hover:text-primary transition-colors"
+                        aria-label="Fechar"
                     >
                         ✕
                     </button>
@@ -84,8 +95,10 @@ function NovoServicoModal({ onClose }: { onClose: () => void }) {
                 <form onSubmit={submit} className="space-y-4">
                     {/* Nome */}
                     <div>
-                        <label className="label mb-1">Nome *</label>
+                        <label className="label mb-1" htmlFor="novo-servico-nome">Nome *</label>
                         <input
+                            id="novo-servico-nome"
+                            ref={nomeRef}
                             value={data.nome}
                             onChange={e => setData('nome', e.target.value)}
                             className="input"
@@ -152,22 +165,11 @@ function NovoServicoModal({ onClose }: { onClose: () => void }) {
                     </div>
 
                     {/* Requer avaliação */}
-                    <label className="flex cursor-pointer items-center gap-3">
-                        <div
-                            onClick={() => setData('requer_avaliacao', !data.requer_avaliacao)}
-                            className="relative flex h-5 w-9 cursor-pointer items-center rounded-full transition-colors"
-                            style={{ background: data.requer_avaliacao ? 'var(--accent)' : 'rgba(255,255,255,0.15)' }}
-                        >
-                            <span
-                                className={`absolute h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${
-                                    data.requer_avaliacao ? 'translate-x-4' : 'translate-x-1'
-                                }`}
-                            />
-                        </div>
-                        <span className="text-sm" style={{ color: 'var(--text-2)' }}>
-                            Requer avaliação prévia
-                        </span>
-                    </label>
+                    <Toggle
+                        checked={data.requer_avaliacao}
+                        onChange={v => setData('requer_avaliacao', v)}
+                        label="Requer avaliação prévia"
+                    />
 
                     <div className="flex justify-end gap-2 pt-1">
                         <button type="button" onClick={onClose} className="btn-secondary">
@@ -203,6 +205,14 @@ function EditarServicoModal({
         requer_avaliacao: servico.requer_avaliacao,
         ativo: servico.ativo,
     });
+    const nomeRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        nomeRef.current?.focus();
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -213,13 +223,14 @@ function EditarServicoModal({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" role="dialog" aria-modal="true" aria-labelledby="modal-editar-servico">
             <div
                 className="w-full max-w-md rounded-2xl p-7 shadow-2xl"
                 style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}
             >
                 <div className="mb-5 flex items-start justify-between">
                     <h3
+                        id="modal-editar-servico"
                         style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
                         className="text-xl font-semibold text-primary"
                     >
@@ -229,6 +240,7 @@ function EditarServicoModal({
                         onClick={onClose}
                         style={{ color: 'var(--text-3)' }}
                         className="hover:text-primary transition-colors"
+                        aria-label="Fechar"
                     >
                         ✕
                     </button>
@@ -237,8 +249,10 @@ function EditarServicoModal({
                 <form onSubmit={submit} className="space-y-4">
                     {/* Nome */}
                     <div>
-                        <label className="label mb-1">Nome *</label>
+                        <label className="label mb-1" htmlFor="editar-servico-nome">Nome *</label>
                         <input
+                            id="editar-servico-nome"
+                            ref={nomeRef}
                             value={data.nome}
                             onChange={e => setData('nome', e.target.value)}
                             className="input"
@@ -301,41 +315,17 @@ function EditarServicoModal({
                         </div>
                     </div>
 
-                    {/* Requer avaliação */}
-                    <label className="flex cursor-pointer items-center gap-3">
-                        <div
-                            onClick={() => setData('requer_avaliacao', !data.requer_avaliacao)}
-                            className="relative flex h-5 w-9 cursor-pointer items-center rounded-full transition-colors"
-                            style={{ background: data.requer_avaliacao ? 'var(--accent)' : 'rgba(255,255,255,0.15)' }}
-                        >
-                            <span
-                                className={`absolute h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${
-                                    data.requer_avaliacao ? 'translate-x-4' : 'translate-x-1'
-                                }`}
-                            />
-                        </div>
-                        <span className="text-sm" style={{ color: 'var(--text-2)' }}>
-                            Requer avaliação prévia
-                        </span>
-                    </label>
+                    <Toggle
+                        checked={data.requer_avaliacao}
+                        onChange={v => setData('requer_avaliacao', v)}
+                        label="Requer avaliação prévia"
+                    />
 
-                    {/* Status ativo */}
-                    <div className="flex items-center gap-3">
-                        <div
-                            onClick={() => setData('ativo', !data.ativo)}
-                            className="relative flex h-5 w-9 cursor-pointer items-center rounded-full transition-colors"
-                            style={{ background: data.ativo ? 'var(--accent)' : 'rgba(255,255,255,0.15)' }}
-                        >
-                            <span
-                                className={`absolute h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${
-                                    data.ativo ? 'translate-x-4' : 'translate-x-1'
-                                }`}
-                            />
-                        </div>
-                        <span className="text-sm" style={{ color: 'var(--text-2)' }}>
-                            {data.ativo ? 'Ativo' : 'Inativo'}
-                        </span>
-                    </div>
+                    <Toggle
+                        checked={data.ativo}
+                        onChange={v => setData('ativo', v)}
+                        label={data.ativo ? 'Ativo' : 'Inativo'}
+                    />
 
                     <div className="flex items-center justify-between gap-2 pt-1">
                         <button
