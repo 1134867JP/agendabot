@@ -23,8 +23,8 @@ interface Props extends PageProps {
     setup_completo: SetupCompleto;
 }
 
-function StatCard({ label, value, sub, accent = false }: {
-    label: string; value: string | number; sub?: string; accent?: boolean;
+function StatCard({ label, value, sub, accent = false, icon }: {
+    label: string; value: string | number; sub?: string; accent?: boolean; icon?: string;
 }) {
     return (
         <div
@@ -34,16 +34,24 @@ function StatCard({ label, value, sub, accent = false }: {
                 border: accent ? 'none' : '1px solid var(--border)',
             }}
         >
-            <p className="text-[10px] font-medium uppercase tracking-widest" style={{ color: accent ? 'rgba(255,255,255,0.6)' : 'var(--text-3)' }}>
-                {label}
-            </p>
+            <div className="flex items-start justify-between">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: accent ? 'rgba(255,255,255,0.6)' : 'var(--text-3)' }}>
+                    {label}
+                </p>
+                {icon && (
+                    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"
+                        style={{ color: accent ? 'rgba(255,255,255,0.4)' : 'var(--text-3)', flexShrink: 0 }}>
+                        <path d={icon} />
+                    </svg>
+                )}
+            </div>
             <p
-                className="mt-2 text-3xl font-bold leading-none text-primary"
-                style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
+                className="mt-2.5 text-3xl font-bold leading-none"
+                style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: accent ? '#fff' : 'var(--text-1)' }}
             >
                 {value}
             </p>
-            {sub && <p className="mt-1 text-xs" style={{ color: accent ? 'rgba(255,255,255,0.5)' : 'var(--text-3)' }}>{sub}</p>}
+            {sub && <p className="mt-1.5 text-xs" style={{ color: accent ? 'rgba(255,255,255,0.55)' : 'var(--text-3)' }}>{sub}</p>}
         </div>
     );
 }
@@ -102,8 +110,8 @@ export default function TenantDashboard({ stats, proximos_agendamentos, setup_co
             <div className="space-y-6">
                 {/* Setup progress banner */}
                 {!todoConfigurado ? (
-                    <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
-                        <h3 className="mb-2 font-semibold text-yellow-800">
+                    <div className="rounded-xl p-4" style={{ background: 'var(--amber-btn-bg)', border: '1px solid var(--amber-btn-bdr)' }}>
+                        <h3 className="mb-2.5 text-sm font-semibold" style={{ color: 'var(--amber-text)' }}>
                             Complete a configuração do seu negócio
                         </h3>
                         <div className="space-y-1.5">
@@ -111,12 +119,16 @@ export default function TenantDashboard({ stats, proximos_agendamentos, setup_co
                                 <a
                                     key={item.href}
                                     href={item.href}
-                                    className="flex items-center gap-2 text-sm text-yellow-700 hover:underline"
+                                    className="flex items-center gap-2 text-sm transition-opacity hover:opacity-80"
+                                    style={{ color: 'var(--amber-text)', opacity: item.done ? 0.5 : 1 }}
                                 >
-                                    <span className="shrink-0 text-base leading-none">
-                                        {item.done ? '✅' : '⬜'}
-                                    </span>
-                                    <span style={{ textDecoration: item.done ? 'line-through' : 'none', opacity: item.done ? 0.6 : 1 }}>
+                                    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                                        {item.done
+                                            ? <><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>
+                                            : <circle cx="12" cy="12" r="10"/>
+                                        }
+                                    </svg>
+                                    <span style={{ textDecoration: item.done ? 'line-through' : 'none' }}>
                                         {item.label}
                                     </span>
                                 </a>
@@ -124,27 +136,50 @@ export default function TenantDashboard({ stats, proximos_agendamentos, setup_co
                         </div>
                     </div>
                 ) : (
-                    <div className="rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-                        ✅ Tudo configurado! O bot está pronto para receber agendamentos.
+                    <div className="flex items-center gap-2.5 rounded-xl p-3.5" style={{ background: 'var(--jade-light)', border: '1px solid rgba(0,168,132,0.2)' }}>
+                        <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--jade)', flexShrink: 0 }}>
+                            <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                        <p className="text-sm font-medium" style={{ color: 'var(--jade)' }}>
+                            Tudo configurado — o bot está pronto para receber agendamentos.
+                        </p>
                     </div>
                 )}
 
                 {/* Stats grid */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <StatCard label="Agendamentos hoje" value={stats.agendamentos_hoje} />
-                    <StatCard label="Esta semana"       value={stats.agendamentos_semana} />
-                    <StatCard label="Receita no mês"    value={formatBrl(Number(stats.receita_mes))} accent />
+                    <StatCard
+                        label="Agendamentos hoje"
+                        value={stats.agendamentos_hoje}
+                        icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                    <StatCard
+                        label="Esta semana"
+                        value={stats.agendamentos_semana}
+                        icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                    />
+                    <StatCard
+                        label="Receita no mês"
+                        value={formatBrl(Number(stats.receita_mes))}
+                        icon="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        accent
+                    />
                     <div className="rounded-xl p-5" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
-                        <p className="text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>WhatsApp</p>
+                        <div className="flex items-start justify-between">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--text-3)' }}>WhatsApp</p>
+                            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)', flexShrink: 0 }}>
+                                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                            </svg>
+                        </div>
                         <div className="mt-3 flex items-center gap-2">
                             <span
-                                className="h-3 w-3 rounded-full"
+                                className="h-2.5 w-2.5 rounded-full"
                                 style={{
-                                    background: stats.whatsapp_conectado ? 'var(--emerald)' : 'var(--text-3)',
-                                    boxShadow: stats.whatsapp_conectado ? '0 0 0 3px rgba(110,231,183,0.15)' : 'none',
+                                    background: stats.whatsapp_conectado ? 'var(--jade)' : 'var(--text-3)',
+                                    boxShadow: stats.whatsapp_conectado ? '0 0 0 3px var(--jade-light)' : 'none',
                                 }}
                             />
-                            <span className="text-sm font-medium" style={{ color: stats.whatsapp_conectado ? 'var(--emerald)' : 'var(--text-3)' }}>
+                            <span className="text-sm font-medium" style={{ color: stats.whatsapp_conectado ? 'var(--jade)' : 'var(--text-3)' }}>
                                 {stats.whatsapp_conectado ? 'Conectado' : 'Desconectado'}
                             </span>
                         </div>
@@ -184,8 +219,8 @@ export default function TenantDashboard({ stats, proximos_agendamentos, setup_co
                                 >
                                     <div className="flex items-center gap-3">
                                         <div
-                                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-primary"
-                                            style={{ background: 'var(--accent)' }}
+                                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold"
+                                            style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}
                                         >
                                             {a.cliente_nome.charAt(0).toUpperCase()}
                                         </div>
@@ -209,19 +244,29 @@ export default function TenantDashboard({ stats, proximos_agendamentos, setup_co
                 {/* Quick links */}
                 <div className="grid gap-3 sm:grid-cols-3">
                     {[
-                        { href: route('tenant.agenda'),             label: 'Abrir Agenda',   desc: 'Veja os horários da semana' },
-                        { href: route('tenant.agendamentos.index'), label: 'Agendamentos',   desc: 'Gerencie reservas e clientes' },
-                        { href: route('tenant.recursos.index'),     label: 'Recursos',       desc: 'Barbeiros, quadras e horários' },
+                        { href: route('tenant.agenda'),             label: 'Abrir Agenda',   desc: 'Veja os horários da semana',     icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
+                        { href: route('tenant.agendamentos.index'), label: 'Agendamentos',   desc: 'Gerencie reservas e clientes',   icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
+                        { href: route('tenant.recursos.index'),     label: 'Recursos',       desc: 'Barbeiros, quadras e horários',  icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
                     ].map(link => (
                         <Link
                             key={link.href}
                             href={link.href}
-                            className="card flex flex-col gap-1 p-5 transition-all"
-                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface2)'; }}
+                            className="card flex items-start gap-3.5 p-5 transition-all"
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface-2)'; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface)'; }}
                         >
-                            <p className="text-sm font-medium text-primary">{link.label}</p>
-                            <p className="text-xs" style={{ color: 'var(--text-3)' }}>{link.desc}</p>
+                            <span
+                                className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                                style={{ background: 'var(--accent-light)' }}
+                            >
+                                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent)' }}>
+                                    <path d={link.icon} />
+                                </svg>
+                            </span>
+                            <div>
+                                <p className="text-sm font-medium text-primary">{link.label}</p>
+                                <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>{link.desc}</p>
+                            </div>
                         </Link>
                     ))}
                 </div>

@@ -95,13 +95,18 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                 style={{ background: 'var(--bg-sidebar)', borderRight: '1px solid var(--border)' }}
             >
                 {/* Logo */}
-                <div className="px-5 py-5" style={{ borderBottom: '1px solid var(--border)' }}>
-                    <span className="flex items-center gap-2 text-lg text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
-                        <span className="inline-block h-2 w-2 rounded-full" style={{ background: 'var(--emerald)' }} />
+                <div className="px-4 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <span className="flex items-center gap-2 text-[17px] text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif', letterSpacing: '-0.01em' }}>
+                        <span
+                            className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                            style={{ background: 'var(--jade)' }}
+                        >
+                            A
+                        </span>
                         AgendaBot
                     </span>
                     {currentTenant && (
-                        <span className="mt-1 block truncate text-[11px]" style={{ color: 'var(--text-3)' }}>
+                        <span className="mt-1.5 block truncate text-[11px]" style={{ color: 'var(--text-3)' }}>
                             {currentTenant.nome}
                         </span>
                     )}
@@ -119,38 +124,40 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                 )}
 
                 {/* Nav */}
-                <nav className="flex-1 overflow-y-auto py-3">
+                <nav className="flex-1 overflow-y-auto py-2">
                     {sections.map(section => (
-                        <div key={section.label} className="mb-4">
+                        <div key={section.label} className="mb-3">
                             <span
-                                className="mb-1 block px-5 text-[10px] font-medium uppercase tracking-widest"
+                                className="mb-1 block px-4 text-[9px] font-semibold uppercase tracking-[0.12em]"
                                 style={{ color: 'var(--text-3)' }}
                             >
                                 {section.label}
                             </span>
-                            {section.items.map(item => {
-                                const active = isNavActive(item);
-                                return (
-                                    <Link
-                                        key={item.routeName}
-                                        href={route(item.routeName)}
-                                        onClick={onClose}
-                                        className="flex items-center gap-2.5 border-l-2 px-5 py-2 text-[13px] transition-colors"
-                                        style={{
-                                            color:       active ? 'var(--text-1)' : 'var(--text-2)',
-                                            background:  active ? 'var(--accent-light)' : 'transparent',
-                                            borderColor: active ? 'var(--accent)' : 'transparent',
-                                        }}
-                                        onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.color = 'var(--text-1)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface-2)'; } }}
-                                        onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; } }}
-                                    >
-                                        <span style={{ color: active ? 'var(--accent)' : 'var(--text-3)', flexShrink: 0 }}>
-                                            <Icon d={item.icon} />
-                                        </span>
-                                        {item.label}
-                                    </Link>
-                                );
-                            })}
+                            <div className="space-y-0.5 px-2">
+                                {section.items.map(item => {
+                                    const active = isNavActive(item);
+                                    return (
+                                        <Link
+                                            key={item.routeName}
+                                            href={route(item.routeName)}
+                                            onClick={onClose}
+                                            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-all"
+                                            style={{
+                                                color:      active ? 'var(--jade)' : 'var(--text-2)',
+                                                background: active ? 'var(--jade-light)' : 'transparent',
+                                                fontWeight: active ? '500' : '400',
+                                            }}
+                                            onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.color = 'var(--text-1)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface-2)'; } }}
+                                            onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; } }}
+                                        >
+                                            <span style={{ color: active ? 'var(--jade)' : 'var(--text-3)', flexShrink: 0 }}>
+                                                <Icon d={item.icon} />
+                                            </span>
+                                            {item.label}
+                                        </Link>
+                                    );
+                                })}
+                            </div>
                         </div>
                     ))}
                 </nav>

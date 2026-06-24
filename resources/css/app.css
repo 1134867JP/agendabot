@@ -17,6 +17,8 @@
         --accent:        #6366f1;
         --accent-light:  rgba(99, 102, 241, 0.12);
         --emerald:       #6ee7b7;
+        --jade:          #00a884;
+        --jade-light:    rgba(0, 168, 132, 0.12);
         --text-1:        #e8e6e1;
         --text-2:        rgba(232, 230, 225, 0.55);
         --text-3:        rgba(232, 230, 225, 0.25);
@@ -38,6 +40,8 @@
         --accent:        #6366f1;
         --accent-light:  rgba(99, 102, 241, 0.10);
         --emerald:       #059669;
+        --jade:          #068a6c;
+        --jade-light:    rgba(6, 138, 108, 0.10);
         --text-1:        #1a1a2e;
         --text-2:        rgba(26, 26, 46, 0.60);
         --text-3:        rgba(26, 26, 46, 0.35);
