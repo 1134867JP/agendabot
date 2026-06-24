@@ -66,10 +66,10 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         // 5. Salvar mensagem do cliente
         $conversa->registrarMensagem('cliente', $this->mensagem, $this->evolutionMessageId);
 
-        // 6. Buscar histórico das últimas 20 mensagens para o Claude
+        // 6. Buscar histórico das últimas 10 mensagens para o Claude
         $historico = $conversa->mensagens()
             ->latest('enviada_em')
-            ->limit(20)
+            ->limit(10)
             ->get()
             ->reverse()
             ->map(fn ($m) => [
@@ -79,8 +79,8 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             ->values()
             ->all();
 
-        // 7. Buscar slots disponíveis nos próximos 7 dias
-        $horariosDisponiveis = $agendamentoService->buscarHorariosDisponiveis($this->tenant, 7);
+        // 7. Buscar slots disponíveis nos próximos 4 dias
+        $horariosDisponiveis = $agendamentoService->buscarHorariosDisponiveis($this->tenant, 4);
 
         // 8. Chamar Claude
         $resultado = $claude->processar($this->tenant, $historico, $horariosDisponiveis);

@@ -59,7 +59,7 @@ class ClaudeAgentService
             ])
             ->post('https://api.anthropic.com/v1/messages', [
                 'model'      => $this->model,
-                'max_tokens' => 600,
+                'max_tokens' => 350,
                 'system'     => $systemBlocks,
                 'messages'   => $mensagens,
             ]);
@@ -68,6 +68,14 @@ class ClaudeAgentService
             Log::error('ClaudeAgentService error', ['status' => $response->status(), 'body' => $response->body()]);
             return ['acao' => 'erro', 'resposta' => 'Desculpe, tive um problema técnico. Tente novamente em instantes.', 'dados' => []];
         }
+
+        $usage = $response->json('usage', []);
+        Log::debug('ClaudeAgentService usage', [
+            'cache_creation' => $usage['cache_creation_input_tokens'] ?? 0,
+            'cache_read'     => $usage['cache_read_input_tokens']     ?? 0,
+            'input'          => $usage['input_tokens']                ?? 0,
+            'output'         => $usage['output_tokens']               ?? 0,
+        ]);
 
         $content = $response->json('content.0.text', '');
 
@@ -175,7 +183,7 @@ PROMPT;
     {
         $slotsFormatados = $this->formatarSlots($horariosDisponiveis);
 
-        return "HORÁRIOS DISPONÍVEIS — PRÓXIMOS 7 DIAS:\n{$slotsFormatados}";
+        return "HORÁRIOS DISPONÍVEIS — PRÓXIMOS 4 DIAS:\n{$slotsFormatados}";
     }
 
     /** @deprecated Use buildStaticPrompt + buildDynamicPrompt */

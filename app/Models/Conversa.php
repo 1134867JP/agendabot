@@ -30,7 +30,7 @@ class Conversa extends Model
     {
         $historico = $this->historico_mensagens ?? [];
         $historico[] = ['role' => $role, 'content' => $content];
-        $this->historico_mensagens = array_slice($historico, -20);
+        $this->historico_mensagens = array_slice($historico, -10);
         $this->atualizado_em = now();
         $this->save();
     }

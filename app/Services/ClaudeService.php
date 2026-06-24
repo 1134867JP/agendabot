@@ -27,16 +27,29 @@ class ClaudeService
         Conversa $conversa,
         string $mensagemCliente,
     ): array {
-        $systemPrompt = $this->montarSystemPrompt($tenant, $conversa);
+        [$staticPrompt, $dynamicPrompt] = $this->montarSystemPrompt($tenant, $conversa);
+
+        $systemBlocks = [
+            [
+                'type'          => 'text',
+                'text'          => $staticPrompt,
+                'cache_control' => ['type' => 'ephemeral'],
+            ],
+            [
+                'type' => 'text',
+                'text' => $dynamicPrompt,
+            ],
+        ];
 
         $response = Http::withHeaders([
             'x-api-key'         => $this->apiKey,
             'anthropic-version' => '2023-06-01',
+            'anthropic-beta'    => 'prompt-caching-2024-07-31',
             'content-type'      => 'application/json',
         ])->post('https://api.anthropic.com/v1/messages', [
             'model'      => $this->model,
-            'max_tokens' => 500,
-            'system'     => $systemPrompt,
+            'max_tokens' => 300,
+            'system'     => $systemBlocks,
             'messages'   => array_merge(
                 $conversa->historico_mensagens ?? [],
                 [['role' => 'user', 'content' => $mensagemCliente]],
@@ -53,24 +66,19 @@ class ClaudeService
         ];
     }
 
-    private function montarSystemPrompt(Tenant $tenant, Conversa $conversa): string
+    /** @return array{0: string, 1: string} [staticPrompt, dynamicPrompt] */
+    private function montarSystemPrompt(Tenant $tenant, Conversa $conversa): array
     {
         $recursos = $tenant->recursos()->where('ativo', true)->get()
             ->map(fn ($r) => "- ID {$r->id}: {$r->nome} (R$ {$r->valor_hora}/h)")
             ->join("\n");
 
-        $contexto   = json_encode($conversa->contexto ?? [], JSON_UNESCAPED_UNICODE);
-        $etapaAtual = $conversa->etapa;
-
-        return <<<PROMPT
+        $static = <<<PROMPT
 Você é o assistente de agendamento de "{$tenant->nome}", um(a) {$tenant->tipo_servico}.
 Seu objetivo é ajudar o cliente a fazer um agendamento de forma rápida e simpática.
 
 RECURSOS DISPONÍVEIS:
 {$recursos}
-
-ETAPA ATUAL DA CONVERSA: {$etapaAtual}
-CONTEXTO PARCIAL: {$contexto}
 
 FLUXO:
 1. idle → saudação e perguntar o que deseja
@@ -99,5 +107,11 @@ RESPONDA SEMPRE EM JSON com esta estrutura:
   }
 }
 PROMPT;
+
+        $contexto   = json_encode($conversa->contexto ?? [], JSON_UNESCAPED_UNICODE);
+        $etapaAtual = $conversa->etapa;
+        $dynamic    = "ETAPA ATUAL DA CONVERSA: {$etapaAtual}\nCONTEXTO PARCIAL: {$contexto}";
+
+        return [$static, $dynamic];
     }
 }
