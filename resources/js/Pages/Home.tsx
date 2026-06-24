@@ -89,10 +89,10 @@ function ChatMockup() {
 }
 
 // ── Floating notification cards ────────────────────────────────────────────────
-function FloatCard({ icon, text, sub, style }: { icon: string; text: string; sub: string; style: React.CSSProperties }) {
+function FloatCard({ icon, text, sub, style, className = '' }: { icon: string; text: string; sub: string; style: React.CSSProperties; className?: string }) {
     return (
         <div
-            className="absolute flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 shadow-xl"
+            className={`absolute flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 shadow-xl ${className}`}
             style={{
                 background: 'rgba(17,19,32,0.92)',
                 border: '1px solid rgba(255,255,255,0.1)',
@@ -295,19 +295,21 @@ export default function Home() {
                                         icon="✅"
                                         text="Novo agendamento"
                                         sub="Kauê — amanhã às 10:00"
-                                        style={{ top: '8px', right: '-20px', animationDelay: '0s' }}
+                                        style={{ top: '8px', right: '0', animationDelay: '0s' }}
+                                        className="hidden sm:flex"
                                     />
                                     <FloatCard
                                         icon="📅"
                                         text="14 reservas confirmadas"
                                         sub="hoje via WhatsApp"
-                                        style={{ bottom: '40px', left: '-40px', animationDelay: '0.2s' }}
+                                        style={{ bottom: '40px', left: '0', animationDelay: '0.2s' }}
                                     />
                                     <FloatCard
                                         icon="💬"
                                         text="Cliente respondeu"
                                         sub="às 15h fica ótimo"
-                                        style={{ top: '50%', right: '-60px', animationDelay: '0.4s' }}
+                                        style={{ top: '50%', right: '0', animationDelay: '0.4s' }}
+                                        className="hidden sm:flex"
                                     />
                                 </>
                             )}

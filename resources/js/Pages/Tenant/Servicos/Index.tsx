@@ -188,9 +188,11 @@ function NovoServicoModal({ onClose }: { onClose: () => void }) {
 function EditarServicoModal({
     servico,
     onClose,
+    onExcluir,
 }: {
     servico: Servico;
     onClose: () => void;
+    onExcluir: () => void;
 }) {
     const { data, setData, put, processing, errors } = useForm({
         nome: servico.nome,
@@ -335,13 +337,23 @@ function EditarServicoModal({
                         </span>
                     </div>
 
-                    <div className="flex justify-end gap-2 pt-1">
-                        <button type="button" onClick={onClose} className="btn-secondary">
-                            Cancelar
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                        <button
+                            type="button"
+                            onClick={onExcluir}
+                            className="text-xs font-medium transition-colors"
+                            style={{ color: '#f87171' }}
+                        >
+                            Excluir serviço
                         </button>
-                        <button type="submit" disabled={processing} className="btn-primary">
-                            {processing ? 'Salvando…' : 'Salvar alterações'}
-                        </button>
+                        <div className="flex gap-2">
+                            <button type="button" onClick={onClose} className="btn-secondary">
+                                Cancelar
+                            </button>
+                            <button type="submit" disabled={processing} className="btn-primary">
+                                {processing ? 'Salvando…' : 'Salvar'}
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -469,13 +481,6 @@ export default function ServicosIndex({ servicos }: Props) {
                                 >
                                     {s.ativo ? 'Desativar' : 'Ativar'}
                                 </button>
-
-                                <button
-                                    onClick={() => excluir(s.id)}
-                                    className="btn-danger py-1.5 text-xs"
-                                >
-                                    Excluir
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -488,6 +493,7 @@ export default function ServicosIndex({ servicos }: Props) {
                 <EditarServicoModal
                     servico={editando}
                     onClose={() => setEditando(null)}
+                    onExcluir={() => { setEditando(null); excluir(editando.id); }}
                 />
             )}
         </AppLayout>
