@@ -233,14 +233,13 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
     const emAtendimento = selecionada?.status_v2 === 'em_atendimento_humano';
 
     return (
-        <AppLayout title="">
+        <AppLayout title="" fullHeight>
             <Head title="Conversas WhatsApp" />
 
             {/* Layout two-panel — coluna única em mobile */}
             <div
-                className="flex overflow-hidden rounded-xl"
+                className="flex flex-1 min-h-0 overflow-hidden rounded-xl mx-3 mb-3 md:mx-4 md:mb-4"
                 style={{
-                    height: 'calc(100vh - 120px)',
                     border: '1px solid var(--border)',
                     background: 'var(--bg-surface)',
                 }}

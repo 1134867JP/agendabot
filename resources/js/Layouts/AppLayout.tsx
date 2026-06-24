@@ -7,6 +7,7 @@ import SubscriptionBanner from '@/Components/Layout/SubscriptionBanner';
 interface Props {
     children: React.ReactNode;
     title?: string;
+    fullHeight?: boolean;
 }
 
 const MenuIcon = () => (
@@ -15,7 +16,7 @@ const MenuIcon = () => (
     </svg>
 );
 
-export default function AppLayout({ children, title }: Props) {
+export default function AppLayout({ children, title, fullHeight }: Props) {
     const page = usePage<PageProps<{
         currentTenant?: { id: number; nome: string; slug: string } | null;
         flash?: { success?: string; erro?: string };
@@ -78,8 +79,8 @@ export default function AppLayout({ children, title }: Props) {
                 )}
 
                 {/* Page content */}
-                <main className="flex-1 overflow-y-auto p-6">
-                    {title && (
+                <main className={`flex-1 min-h-0 ${fullHeight ? 'overflow-hidden flex flex-col' : 'overflow-y-auto p-6'}`}>
+                    {!fullHeight && title && (
                         <h1 className="mb-6 text-2xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}>
                             {title}
                         </h1>
