@@ -342,10 +342,10 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
 
                             {/* Ações */}
                             <div className="flex gap-2">
-                                {selecionada.status_v2 === 'aguardando_humano' && (
+                                {selecionada.status_v2 !== 'em_atendimento_humano' && selecionada.status_v2 !== 'encerrada' && (
                                     <button
                                         onClick={assumir}
-                                        className="rounded-lg px-3.5 py-1.5 text-xs font-semibold text-primary transition-opacity hover:opacity-80"
+                                        className="rounded-lg px-3.5 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-80"
                                         style={{ background: 'var(--accent)' }}
                                     >
                                         Assumir atendimento
@@ -356,9 +356,9 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                         onClick={devolver}
                                         className="rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors"
                                         style={{
-                                            background: 'rgba(110,231,183,0.1)',
-                                            border: '1px solid rgba(110,231,183,0.25)',
-                                            color: '#6ee7b7',
+                                            background: 'var(--jade-light)',
+                                            border: '1px solid rgba(0,168,132,0.25)',
+                                            color: 'var(--jade)',
                                         }}
                                     >
                                         Devolver ao bot
@@ -422,18 +422,23 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                             </form>
                         ) : (
                             <div
-                                className="flex-shrink-0 px-5 py-3 text-center text-xs"
-                                style={{
-                                    borderTop: '1px solid var(--border)',
-                                    background: 'var(--bg-surface)',
-                                    color: 'var(--text-3)',
-                                }}
+                                className="flex flex-shrink-0 items-center justify-center gap-3 px-5 py-3"
+                                style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface)' }}
                             >
-                                {selecionada.status_v2 === 'aguardando_humano'
-                                    ? 'Assuma o atendimento para enviar mensagens'
-                                    : selecionada.status_v2 === 'encerrada'
+                                <span className="text-xs" style={{ color: 'var(--text-3)' }}>
+                                    {selecionada.status_v2 === 'encerrada'
                                         ? 'Conversa encerrada'
                                         : 'O bot está gerenciando esta conversa'}
+                                </span>
+                                {selecionada.status_v2 !== 'encerrada' && (
+                                    <button
+                                        onClick={assumir}
+                                        className="rounded-md px-3 py-1 text-xs font-medium transition-opacity hover:opacity-80"
+                                        style={{ background: 'var(--accent)', color: 'white' }}
+                                    >
+                                        Assumir
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>

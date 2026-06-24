@@ -24,13 +24,13 @@ class ConversaController extends Controller
             ])
             ->orderByDesc('ultima_mensagem_em');
 
-        if ($status = $request->status) {
+        if ($status = $request->status_v2) {
             $query->where('status_v2', $status);
         }
 
         return Inertia::render('Tenant/Conversas/Index', [
             'conversas' => $query->paginate(30)->withQueryString(),
-            'filtros'   => $request->only('status'),
+            'filtros'   => $request->only('status_v2'),
         ]);
     }
 

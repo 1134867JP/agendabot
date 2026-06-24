@@ -44,6 +44,7 @@ services:
       - storage_data:/var/www/html/storage
     networks:
       - default
+      - evolution-net
     depends_on:
       - db
       - app
