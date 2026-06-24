@@ -67,7 +67,7 @@ export default function WhatsAppPage({ tenant }: Props) {
     };
 
     return (
-        <AppLayout title="WhatsApp">
+        <AppLayout title="WhatsApp" subtitle="Conecte seu número para receber agendamentos automáticos">
             <Head title="WhatsApp" />
 
             <div className="mx-auto max-w-lg">

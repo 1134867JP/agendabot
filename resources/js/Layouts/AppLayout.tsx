@@ -7,6 +7,7 @@ import SubscriptionBanner from '@/Components/Layout/SubscriptionBanner';
 interface Props {
     children: React.ReactNode;
     title?: string;
+    subtitle?: string;
     fullHeight?: boolean;
 }
 
@@ -16,7 +17,7 @@ const MenuIcon = () => (
     </svg>
 );
 
-export default function AppLayout({ children, title, fullHeight }: Props) {
+export default function AppLayout({ children, title, subtitle, fullHeight }: Props) {
     const page = usePage<PageProps<{
         currentTenant?: { id: number; nome: string; slug: string } | null;
         flash?: { success?: string; erro?: string };
@@ -106,9 +107,18 @@ export default function AppLayout({ children, title, fullHeight }: Props) {
                     }
                 >
                     {!fullHeight && title && (
-                        <h1 className="mb-6 text-2xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}>
-                            {title}
-                        </h1>
+                        <div className="mb-7">
+                            <h1
+                                className="text-[28px] leading-tight font-normal"
+                                style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}
+                            >
+                                {title}
+                            </h1>
+                            {subtitle && (
+                                <p className="mt-1.5 text-sm" style={{ color: 'var(--text-3)' }}>{subtitle}</p>
+                            )}
+                            <div className="mt-5 h-px" style={{ background: 'var(--border)' }} />
+                        </div>
                     )}
                     {children}
                 </main>

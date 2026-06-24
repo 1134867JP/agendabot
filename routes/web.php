@@ -117,6 +117,12 @@ Route::middleware(['auth', 'superadmin'])->prefix('superadmin')->name('superadmi
     Route::get('logs',      [SuperAdmin\LogController::class, 'index'])->name('logs');
     Route::get('logs/json', [SuperAdmin\LogController::class, 'json'])->name('logs.json');
 
+    Route::get('jobs',          [SuperAdmin\JobsController::class, 'index'])->name('jobs');
+    Route::post('jobs/{id}/retry',  [SuperAdmin\JobsController::class, 'retry'])->name('jobs.retry');
+    Route::post('jobs/retry-all',   [SuperAdmin\JobsController::class, 'retryAll'])->name('jobs.retry-all');
+    Route::delete('jobs/{id}',      [SuperAdmin\JobsController::class, 'destroy'])->name('jobs.destroy');
+    Route::delete('jobs',           [SuperAdmin\JobsController::class, 'destroyAll'])->name('jobs.destroy-all');
+
     Route::get('tokens', [SuperAdmin\TokenUsageController::class, 'index'])->name('tokens');
 });
 

@@ -75,6 +75,7 @@ type NivelFiltro = 'ALL' | 'ERROR' | 'WARNING' | 'INFO';
 export default function Logs() {
     const [entries,  setEntries]  = useState<LogEntry[]>([]);
     const [nivel,    setNivel]    = useState<NivelFiltro>('ALL');
+    const [busca,    setBusca]    = useState('');
     const [pausado,  setPausado]  = useState(false);
     const [loading,  setLoading]  = useState(true);
     const [tamanho,  setTamanho]  = useState(0);
@@ -113,8 +114,13 @@ export default function Logs() {
 
     const niveis: NivelFiltro[] = ['ALL', 'ERROR', 'WARNING', 'INFO'];
 
+    const buscaLower = busca.toLowerCase();
+    const visiveis = busca
+        ? entries.filter(e => e.message.toLowerCase().includes(buscaLower) || JSON.stringify(e.context).toLowerCase().includes(buscaLower))
+        : entries;
+
     return (
-        <AppLayout title="Logs do sistema">
+        <AppLayout title="Logs do sistema" subtitle="Registro de erros, avisos e eventos da plataforma">
             <Head title="Logs" />
 
             {/* Toolbar */}
@@ -175,9 +181,42 @@ export default function Logs() {
                     Recarregar
                 </button>
 
+                {/* Busca por texto */}
+                <div className="relative flex-1 min-w-[200px] max-w-sm">
+                    <svg
+                        width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+                        style={{ color: 'var(--text-3)' }}
+                    >
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input
+                        type="text"
+                        value={busca}
+                        onChange={e => { setBusca(e.target.value); setExpanded(null); }}
+                        placeholder="Buscar nos logs…"
+                        className="w-full rounded-lg py-2 pl-8 pr-3 text-xs outline-none"
+                        style={{
+                            background: 'var(--bg-surface)',
+                            border:     '1px solid var(--border)',
+                            color:      'var(--text-1)',
+                        }}
+                    />
+                    {busca && (
+                        <button
+                            onClick={() => setBusca('')}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs"
+                            style={{ color: 'var(--text-3)' }}
+                        >
+                            ✕
+                        </button>
+                    )}
+                </div>
+
                 {/* Info do arquivo */}
                 {arquivo && (
-                    <span className="ml-auto text-[11px]" style={{ color: 'var(--text-3)' }}>
+                    <span className="ml-auto shrink-0 text-[11px]" style={{ color: 'var(--text-3)' }}>
                         {arquivo} · {(tamanho / 1024).toFixed(0)} KB
                     </span>
                 )}
@@ -195,14 +234,14 @@ export default function Logs() {
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                         </svg>
                     </div>
-                ) : entries.length === 0 ? (
+                ) : visiveis.length === 0 ? (
                     <div className="py-16 text-center text-sm" style={{ color: 'var(--text-3)' }}>
-                        Nenhuma entrada encontrada
+                        {busca ? `Nenhum resultado para "${busca}"` : 'Nenhuma entrada encontrada'}
                     </div>
                 ) : (
                     <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
-                        {entries.map((e, i) => (
-                            <div key={i} className="group flex items-start gap-0">
+                        {visiveis.map((e, i) => (
+                            <div key={i}>
                                 <button
                                     onClick={() => setExpanded(expanded === i ? null : i)}
                                     className="flex min-w-0 flex-1 items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.02]"
@@ -274,7 +313,7 @@ export default function Logs() {
             </div>
 
             <p className="mt-3 text-center text-[11px]" style={{ color: 'var(--text-3)' }}>
-                Mostrando até 150 entradas mais recentes · Atualização automática a cada 5s
+                {busca ? `${visiveis.length} de ${entries.length} entradas` : `${entries.length} entradas`} · Atualização automática a cada 5s
             </p>
         </AppLayout>
     );

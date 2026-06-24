@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#0e0e1a"/>
+      <stop offset="100%" stop-color="#111124"/>
+    </linearGradient>
+    <linearGradient id="glow1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#6366f1" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="glow2" x1="100%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%"   stop-color="#00a884" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#00a884" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="blur1"><feGaussianBlur stdDeviation="60"/></filter>
+    <filter id="blur2"><feGaussianBlur stdDeviation="80"/></filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Decorative glows -->
+  <circle cx="180" cy="180" r="280" fill="url(#glow1)" filter="url(#blur1)"/>
+  <circle cx="1050" cy="480" r="240" fill="url(#glow2)" filter="url(#blur2)"/>
+
+  <!-- Grid lines (subtle) -->
+  <g stroke="rgba(255,255,255,0.03)" stroke-width="1">
+    <line x1="0" y1="105" x2="1200" y2="105"/>
+    <line x1="0" y1="210" x2="1200" y2="210"/>
+    <line x1="0" y1="315" x2="1200" y2="315"/>
+    <line x1="0" y1="420" x2="1200" y2="420"/>
+    <line x1="0" y1="525" x2="1200" y2="525"/>
+    <line x1="200" y1="0" x2="200" y2="630"/>
+    <line x1="400" y1="0" x2="400" y2="630"/>
+    <line x1="600" y1="0" x2="600" y2="630"/>
+    <line x1="800" y1="0" x2="800" y2="630"/>
+    <line x1="1000" y1="0" x2="1000" y2="630"/>
+  </g>
+
+  <!-- WhatsApp mockup card (right side) -->
+  <g transform="translate(720, 140)">
+    <rect width="360" height="340" rx="20" ry="20" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+
+    <!-- Chat header -->
+    <rect width="360" height="52" rx="20" ry="20" fill="rgba(0,168,132,0.15)"/>
+    <rect width="360" height="32" y="20" fill="rgba(0,168,132,0.15)"/>
+    <circle cx="28" cy="26" r="14" fill="#00a884"/>
+    <text x="28" y="31" text-anchor="middle" font-family="Arial" font-size="13" fill="white" font-weight="bold">A</text>
+    <text x="52" y="22" font-family="Arial" font-size="11" fill="rgba(232,230,225,0.9)" font-weight="600">AgendaBot</text>
+    <text x="52" y="37" font-family="Arial" font-size="9" fill="rgba(0,168,132,0.8)">● online</text>
+
+    <!-- Messages -->
+    <!-- Client msg 1 -->
+    <rect x="100" y="72" width="248" height="40" rx="12" ry="12" fill="rgba(99,102,241,0.18)" stroke="rgba(99,102,241,0.25)" stroke-width="1"/>
+    <text x="112" y="88" font-family="Arial" font-size="11" fill="rgba(232,230,225,0.75)">Oi! Quero marcar um horário</text>
+    <text x="112" y="104" font-family="Arial" font-size="11" fill="rgba(232,230,225,0.75)">com o João pra amanhã 🙏</text>
+
+    <!-- Bot msg 1 -->
+    <rect x="12" y="124" width="260" height="56" rx="12" ry="12" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+    <text x="24" y="141" font-family="Arial" font-size="11" fill="rgba(232,230,225,0.8)">Olá! 😊 Horários disponíveis:</text>
+    <text x="24" y="158" font-family="Arial" font-size="10" fill="rgba(0,168,132,0.9)" font-weight="600">09:00 · 10:00 · 14:00 · 16:30</text>
+    <text x="24" y="172" font-family="Arial" font-size="10" fill="rgba(232,230,225,0.5)">Qual prefere?</text>
+
+    <!-- Client msg 2 -->
+    <rect x="198" y="192" width="150" height="28" rx="10" ry="10" fill="rgba(99,102,241,0.18)" stroke="rgba(99,102,241,0.25)" stroke-width="1"/>
+    <text x="210" y="211" font-family="Arial" font-size="11" fill="rgba(232,230,225,0.75)">10h tá perfeito 👍</text>
+
+    <!-- Bot confirmation -->
+    <rect x="12" y="232" width="240" height="52" rx="12" ry="12" fill="rgba(0,168,132,0.1)" stroke="rgba(0,168,132,0.25)" stroke-width="1"/>
+    <text x="24" y="249" font-family="Arial" font-size="11" fill="rgba(0,168,132,0.9)" font-weight="600">✅ Confirmado!</text>
+    <text x="24" y="265" font-family="Arial" font-size="10" fill="rgba(232,230,225,0.7)">Barbeiro João · amanhã 10:00</text>
+    <text x="24" y="278" font-family="Arial" font-size="10" fill="rgba(232,230,225,0.5)">Até lá! 👋</text>
+
+    <!-- Input bar -->
+    <rect x="12" y="300" width="336" height="30" rx="15" ry="15" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+    <text x="30" y="320" font-family="Arial" font-size="10" fill="rgba(232,230,225,0.25)">Mensagem</text>
+  </g>
+
+  <!-- Left side content -->
+  <!-- Logo mark -->
+  <rect x="80" y="140" width="52" height="52" rx="14" fill="#00a884"/>
+  <text x="106" y="175" text-anchor="middle" font-family="Arial" font-size="26" font-weight="800" fill="white">A</text>
+
+  <!-- App name -->
+  <text x="148" y="175" font-family="Georgia, serif" font-size="32" font-weight="400" fill="#e8e6e1" letter-spacing="-0.5">AgendaBot</text>
+
+  <!-- Badge -->
+  <rect x="80" y="212" width="130" height="22" rx="11" fill="rgba(0,168,132,0.15)" stroke="rgba(0,168,132,0.35)" stroke-width="1"/>
+  <circle cx="97" cy="223" r="4" fill="#00a884"/>
+  <text x="107" y="227" font-family="Arial" font-size="10" fill="#00a884" font-weight="600">IA + WhatsApp</text>
+
+  <!-- Headline -->
+  <text x="80" y="302" font-family="Georgia, serif" font-size="48" font-weight="400" fill="#e8e6e1" letter-spacing="-1">Agendamentos</text>
+  <text x="80" y="356" font-family="Georgia, serif" font-size="48" font-weight="400" fill="rgba(232,230,225,0.45)" font-style="italic" letter-spacing="-1">automáticos</text>
+  <text x="80" y="410" font-family="Georgia, serif" font-size="48" font-weight="400" fill="#e8e6e1" letter-spacing="-1">pelo WhatsApp</text>
+
+  <!-- Description -->
+  <text x="80" y="460" font-family="Arial" font-size="17" fill="rgba(232,230,225,0.45)" letter-spacing="0.1">Clientes mandam mensagem, a IA entende</text>
+  <text x="80" y="482" font-family="Arial" font-size="17" fill="rgba(232,230,225,0.45)" letter-spacing="0.1">e confirma o horário — 24h por dia.</text>
+
+  <!-- Stats -->
+  <g transform="translate(80, 520)">
+    <text font-family="Georgia, serif" font-size="22" fill="#e8e6e1" font-weight="400">24h</text>
+    <text x="0" y="18" font-family="Arial" font-size="11" fill="rgba(232,230,225,0.35)">atendimento</text>
+    <text x="90" font-family="Georgia, serif" font-size="22" fill="#e8e6e1" font-weight="400">5min</text>
+    <text x="90" y="18" font-family="Arial" font-size="11" fill="rgba(232,230,225,0.35)">para configurar</text>
+    <text x="200" font-family="Georgia, serif" font-size="22" fill="#e8e6e1" font-weight="400">0</text>
+    <text x="200" y="18" font-family="Arial" font-size="11" fill="rgba(232,230,225,0.35)">planilha</text>
+  </g>
+
+  <!-- Bottom domain -->
+  <text x="80" y="608" font-family="Arial" font-size="13" fill="rgba(99,102,241,0.7)" letter-spacing="0.5">agendabot.com.br</text>
+</svg>

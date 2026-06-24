@@ -24,10 +24,6 @@ class DashboardController extends Controller
             return redirect()->route('tenant.dashboard');
         }
 
-        if ($tenants->count() === 0) {
-            return redirect()->route('onboarding.step1');
-        }
-
         return Inertia::render('Dashboard', [
             'tenants' => $tenants,
         ]);

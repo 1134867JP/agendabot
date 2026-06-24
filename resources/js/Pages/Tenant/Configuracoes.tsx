@@ -38,9 +38,12 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
     return (
         <div className="card p-7">
             <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>
-                    Bot &amp; IA
-                </h2>
+                <div className="flex items-center gap-3">
+                    <span className="h-4 w-0.5 rounded-full" style={{ background: 'var(--jade)' }} />
+                    <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-2)' }}>
+                        Bot &amp; IA
+                    </h2>
+                </div>
                 {/* Bot ativo toggle */}
                 <label className="flex cursor-pointer items-center gap-2">
                     <span className="text-sm" style={{ color: 'var(--text-2)' }}>
@@ -142,21 +145,27 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                 <div>
                     <label className="label mb-3">Tom de voz</label>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                        {TONS.map(ton => (
-                            <button
-                                key={ton.value}
-                                type="button"
-                                onClick={() => setData('tom_voz', ton.value)}
-                                className={`rounded-xl border-2 p-3 text-left transition-colors ${
-                                    data.tom_voz === ton.value
-                                        ? 'border-blue-500 bg-blue-50'
-                                        : 'border-gray-200 hover:border-gray-300'
-                                }`}
-                            >
-                                <p className="text-sm font-medium">{ton.label}</p>
-                                <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>{ton.desc}</p>
-                            </button>
-                        ))}
+                        {TONS.map(ton => {
+                            const ativo = data.tom_voz === ton.value;
+                            return (
+                                <button
+                                    key={ton.value}
+                                    type="button"
+                                    onClick={() => setData('tom_voz', ton.value)}
+                                    className="rounded-xl p-3 text-left transition-all"
+                                    style={{
+                                        border: ativo ? '1px solid var(--accent)' : '1px solid var(--border-strong)',
+                                        background: ativo ? 'var(--accent-light)' : 'transparent',
+                                        boxShadow: ativo ? '0 0 0 1px var(--accent)' : 'none',
+                                    }}
+                                    onMouseEnter={e => { if (!ativo) (e.currentTarget as HTMLElement).style.borderColor = 'rgba(99,102,241,0.4)'; }}
+                                    onMouseLeave={e => { if (!ativo) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; }}
+                                >
+                                    <p className="text-sm font-medium" style={{ color: ativo ? 'var(--accent)' : 'var(--text-1)' }}>{ton.label}</p>
+                                    <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>{ton.desc}</p>
+                                </button>
+                            );
+                        })}
                     </div>
                     {errors.tom_voz && <p className="mt-1 text-xs text-red-400">{errors.tom_voz}</p>}
                 </div>
@@ -224,7 +233,7 @@ export default function Configuracoes({ tenant }: Props) {
     };
 
     return (
-        <AppLayout title="Configurações">
+        <AppLayout title="Configurações" subtitle="Nome do estabelecimento, tipo de serviço e personalização do bot">
             <Head title="Configurações" />
 
             <div className="mx-auto max-w-lg space-y-6">
@@ -236,9 +245,12 @@ export default function Configuracoes({ tenant }: Props) {
                 )}
 
                 <div className="card p-7">
-                    <h2 className="mb-6 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>
-                        Dados do estabelecimento
-                    </h2>
+                    <div className="mb-6 flex items-center gap-3">
+                        <span className="h-4 w-0.5 rounded-full" style={{ background: 'var(--accent)' }} />
+                        <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-2)' }}>
+                            Dados do estabelecimento
+                        </h2>
+                    </div>
                     <form onSubmit={submit} className="space-y-5">
                         <div>
                             <label className="label mb-1">Nome do estabelecimento</label>
