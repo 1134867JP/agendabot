@@ -32,26 +32,42 @@ class WebhookController extends Controller
             $msgData = $msgData[0]; // v2 às vezes envolve em array
         }
 
-        $tipo = data_get($msgData, 'messageType');
-        if ($tipo !== 'conversation' && $tipo !== 'extendedTextMessage') {
-            Log::info('WEBHOOK_SKIP', ['tipo' => $tipo]);
-            return response('ok');
-        }
-
         if (data_get($msgData, 'key.fromMe')) {
             return response('ok');
         }
 
         // Remover sufixo @s.whatsapp.net (JID format da Evolution API)
         $telefone = str_replace(['@s.whatsapp.net', '@g.us'], '', data_get($msgData, 'key.remoteJid') ?? '');
-        $mensagem = data_get($msgData, 'message.conversation')
-                 ?? data_get($msgData, 'message.extendedTextMessage.text');
 
-        Log::info('WEBHOOK_MSG', ['telefone' => $telefone, 'mensagem' => $mensagem]);
-
-        if (! $telefone || ! $mensagem) {
+        if (! $telefone) {
             return response('ok');
         }
+
+        $tipo = data_get($msgData, 'messageType');
+
+        // Tipos de mídia: converter em texto sintético para o Claude reagir
+        $midiaSintetica = match ($tipo) {
+            'stickerMessage'  => '[figurinha]',
+            'imageMessage'    => '[imagem]',
+            'audioMessage'    => '[áudio]',
+            'videoMessage'    => '[vídeo]',
+            'documentMessage' => '[documento]',
+            default           => null,
+        };
+
+        $mensagem = match (true) {
+            $tipo === 'conversation'         => data_get($msgData, 'message.conversation'),
+            $tipo === 'extendedTextMessage'  => data_get($msgData, 'message.extendedTextMessage.text'),
+            $midiaSintetica !== null         => $midiaSintetica,
+            default                          => null,
+        };
+
+        if (! $mensagem) {
+            Log::info('WEBHOOK_SKIP', ['tipo' => $tipo]);
+            return response('ok');
+        }
+
+        Log::info('WEBHOOK_MSG', ['telefone' => $telefone, 'tipo' => $tipo, 'mensagem' => $mensagem]);
 
         $evolutionMessageId = data_get($msgData, 'key.id');
         ProcessarMensagemWhatsapp::dispatch($tenant, $telefone, $mensagem, $evolutionMessageId);

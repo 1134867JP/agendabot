@@ -26,7 +26,23 @@ class ClaudeAgentService
      */
     public function processar(Tenant $tenant, array $mensagens, array $horariosDisponiveis): array
     {
-        $systemPrompt = $this->buildSystemPrompt($tenant, $horariosDisponiveis);
+        // System prompt em dois blocos:
+        // - Bloco 1 (estático, cacheado): identidade, profissionais, serviços, regras
+        // - Bloco 2 (dinâmico, não cacheado): slots disponíveis (muda a cada consulta)
+        $staticPart  = $this->buildStaticPrompt($tenant);
+        $dynamicPart = $this->buildDynamicPrompt($horariosDisponiveis);
+
+        $systemBlocks = [
+            [
+                'type'          => 'text',
+                'text'          => $staticPart,
+                'cache_control' => ['type' => 'ephemeral'], // TTL 5 min — ~90% desconto em cache hits
+            ],
+            [
+                'type' => 'text',
+                'text' => $dynamicPart,
+            ],
+        ];
 
         $response = Http::timeout(30)
             ->retry(2, 1000, function ($e) {
@@ -38,12 +54,13 @@ class ClaudeAgentService
             ->withHeaders([
                 'x-api-key'         => $this->apiKey,
                 'anthropic-version' => '2023-06-01',
+                'anthropic-beta'    => 'prompt-caching-2024-07-31',
                 'content-type'      => 'application/json',
             ])
             ->post('https://api.anthropic.com/v1/messages', [
                 'model'      => $this->model,
                 'max_tokens' => 600,
-                'system'     => $systemPrompt,
+                'system'     => $systemBlocks,
                 'messages'   => $mensagens,
             ]);
 
@@ -77,7 +94,11 @@ class ClaudeAgentService
         return ['acao' => 'duvida', 'resposta' => $content, 'dados' => []];
     }
 
-    public function buildSystemPrompt(Tenant $tenant, array $horariosDisponiveis): string
+    /**
+     * Parte estática do system prompt — cacheada pela Anthropic (TTL 5min).
+     * Não inclui dados que mudam frequentemente (slots de horário).
+     */
+    public function buildStaticPrompt(Tenant $tenant): string
     {
         $profissionais = $tenant->profissionais()->where('ativo', true)->get()
             ->map(fn ($p) => "- ID {$p->id}: {$p->nome}" . ($p->especialidades ? ' (' . implode(', ', $p->especialidades) . ')' : ''))
@@ -97,15 +118,15 @@ class ClaudeAgentService
 
         $horarios = $this->formatarHorarios($tenant->horarios_funcionamento ?? []);
 
-        $slotsFormatados = $this->formatarSlots($horariosDisponiveis);
-
         $tomInstrucao = match ($tenant->tom_voz) {
-            'formal'      => 'Linguagem profissional e respeitosa. Sem emojis. Use "Senhor/Senhora".',
+            'formal'       => 'Linguagem profissional e respeitosa. Sem emojis. Use "Senhor/Senhora".',
             'descontraido' => 'Linguagem leve e simpática. Emojis liberados. Pode usar gírias suaves.',
-            default       => 'Linguagem clara e amigável. Emojis com moderação. Tratamento informal mas respeitoso.',
+            default        => 'Linguagem clara e amigável. Emojis com moderação. Tratamento informal mas respeitoso.',
         };
 
         $instrucoes = $tenant->instrucoes_extras ? "\nINSTRUÇÕES ESPECÍFICAS DO NEGÓCIO:\n{$tenant->instrucoes_extras}" : '';
+
+        $opcoesPart = $opcoes ? "\n{$opcoes}\n" : '';
 
         return <<<PROMPT
 Você é {$tenant->nome_agente}, assistente virtual de {$tenant->nome}.
@@ -122,15 +143,11 @@ PROFISSIONAIS DISPONÍVEIS:
 
 SERVIÇOS DISPONÍVEIS:
 {$servicos}
-
-{$opcoes}
-
-HORÁRIOS DISPONÍVEIS — PRÓXIMOS 7 DIAS:
-{$slotsFormatados}
-
+{$opcoesPart}
 REGRAS:
-- Nunca invente horários — use apenas os fornecidos acima
+- Nunca invente horários — use apenas os fornecidos no bloco de slots abaixo
 - Mensagens curtas (WhatsApp, não e-mail)
+- Figurinhas/imagens/áudios: responda pedindo gentilmente uma mensagem de texto
 - Após 2 tentativas sem entender o cliente, transfira para humano
 - Não faça diagnósticos ou promessas de resultado
 {$instrucoes}
@@ -149,6 +166,22 @@ Para transferência:
 Para apenas responder (sem ação):
 {"acao":"duvida","resposta":"mensagem para o cliente"}
 PROMPT;
+    }
+
+    /**
+     * Parte dinâmica — slots disponíveis. Não cacheada pois muda com cada novo agendamento.
+     */
+    public function buildDynamicPrompt(array $horariosDisponiveis): string
+    {
+        $slotsFormatados = $this->formatarSlots($horariosDisponiveis);
+
+        return "HORÁRIOS DISPONÍVEIS — PRÓXIMOS 7 DIAS:\n{$slotsFormatados}";
+    }
+
+    /** @deprecated Use buildStaticPrompt + buildDynamicPrompt */
+    public function buildSystemPrompt(Tenant $tenant, array $horariosDisponiveis): string
+    {
+        return $this->buildStaticPrompt($tenant) . "\n\n" . $this->buildDynamicPrompt($horariosDisponiveis);
     }
 
     private function formatarHorarios(array $horarios): string
