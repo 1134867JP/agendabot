@@ -10,7 +10,7 @@ echo "--- git pull ---"
 git pull origin master
 
 echo "--- docker compose build ---"
-docker compose build --no-cache app
+docker compose build app
 
 echo "--- parando containers dependentes (worker/scheduler) ---"
 docker compose stop worker scheduler 2>/dev/null || true
