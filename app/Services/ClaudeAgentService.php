@@ -66,7 +66,7 @@ class ClaudeAgentService
 
         if (! $response->successful()) {
             Log::error('ClaudeAgentService error', ['status' => $response->status(), 'body' => $response->body()]);
-            return ['acao' => 'erro', 'resposta' => 'Desculpe, tive um problema técnico. Tente novamente em instantes.', 'dados' => []];
+            return ['acao' => 'erro', 'resposta' => 'Desculpe, tive um problema técnico. Tente novamente em instantes.', 'dados' => [], 'usage' => null];
         }
 
         $usage = $response->json('usage', []);
@@ -91,15 +91,23 @@ class ClaudeAgentService
             }
         }
 
+        $usageData = [
+            'input_tokens'                => (int) ($usage['input_tokens']                ?? 0),
+            'output_tokens'               => (int) ($usage['output_tokens']               ?? 0),
+            'cache_creation_input_tokens' => (int) ($usage['cache_creation_input_tokens'] ?? 0),
+            'cache_read_input_tokens'     => (int) ($usage['cache_read_input_tokens']     ?? 0),
+        ];
+
         if ($jsonDecoded) {
             return [
                 'acao'    => $jsonDecoded['acao'],
                 'resposta' => $jsonDecoded['resposta'],
                 'dados'   => array_diff_key($jsonDecoded, ['acao' => 1, 'resposta' => 1]),
+                'usage'   => $usageData,
             ];
         }
 
-        return ['acao' => 'duvida', 'resposta' => $content, 'dados' => []];
+        return ['acao' => 'duvida', 'resposta' => $content, 'dados' => [], 'usage' => $usageData];
     }
 
     /**

@@ -116,6 +116,8 @@ Route::middleware(['auth', 'superadmin'])->prefix('superadmin')->name('superadmi
 
     Route::get('logs',      [SuperAdmin\LogController::class, 'index'])->name('logs');
     Route::get('logs/json', [SuperAdmin\LogController::class, 'json'])->name('logs.json');
+
+    Route::get('tokens', [SuperAdmin\TokenUsageController::class, 'index'])->name('tokens');
 });
 
 require __DIR__.'/auth.php';
