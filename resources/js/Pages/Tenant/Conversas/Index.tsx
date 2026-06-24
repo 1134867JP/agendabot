@@ -96,7 +96,7 @@ function Bubble({ msg }: { msg: Mensagem }) {
     return (
         <div className={`flex ${isCliente ? 'justify-start' : 'justify-end'} mb-2`}>
             <div
-                className="max-w-xs rounded-2xl px-3.5 py-2.5 text-sm lg:max-w-sm"
+                className="max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm lg:max-w-sm"
                 style={bubbleStyle}
             >
                 {!isCliente && (
@@ -114,9 +114,12 @@ function Bubble({ msg }: { msg: Mensagem }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ConversasIndex({ conversas, filtros }: Props) {
-    const [selecionada, setSelecionada] = useState<Conversa | null>(null);
-    const [mensagens,   setMensagens]   = useState<Mensagem[]>([]);
-    const [carregando,  setCarregando]  = useState(false);
+    const [selecionada,  setSelecionada]  = useState<Conversa | null>(null);
+    const [mensagens,    setMensagens]    = useState<Mensagem[]>([]);
+    const [carregando,   setCarregando]   = useState(false);
+    const [assumindo,    setAssumindo]    = useState(false);
+    // Mobile: mostrar painel do chat em vez da lista
+    const [showChat,     setShowChat]     = useState(false);
 
     const chatRef     = useRef<HTMLDivElement>(null);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -126,9 +129,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
     // ── Scroll to bottom ──────────────────────────────────────────────────────
     const scrollBottom = () => {
         setTimeout(() => {
-            if (chatRef.current) {
-                chatRef.current.scrollTop = chatRef.current.scrollHeight;
-            }
+            if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
         }, 60);
     };
 
@@ -148,65 +149,69 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
         }
     }, []);
 
-    // ── Iniciar/parar polling ─────────────────────────────────────────────────
+    // ── Polling ───────────────────────────────────────────────────────────────
     const pararPolling = () => {
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
-        }
+        if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
     };
 
     const iniciarPolling = useCallback((conversa: Conversa) => {
         pararPolling();
-        intervalRef.current = setInterval(() => {
-            buscarMensagens(conversa, true);
-        }, 5000);
+        intervalRef.current = setInterval(() => buscarMensagens(conversa, true), 5000);
     }, [buscarMensagens]);
+
+    useEffect(() => () => pararPolling(), []);
 
     // ── Selecionar conversa ───────────────────────────────────────────────────
     const selecionar = (c: Conversa) => {
         pararPolling();
         setSelecionada(c);
         setMensagens([]);
+        setShowChat(true);
         buscarMensagens(c).then(() => scrollBottom());
         iniciarPolling(c);
     };
 
-    // ── Cleanup ao desmontar ──────────────────────────────────────────────────
-    useEffect(() => () => pararPolling(), []);
-
-    // ── Assumir / devolver ────────────────────────────────────────────────────
-    const assumir = () => {
+    // ── Assumir conversa ──────────────────────────────────────────────────────
+    const assumir = (onSuccess?: () => void) => {
         if (!selecionada) return;
+        setAssumindo(true);
         router.post(route('tenant.conversas.assumir', selecionada.id), {}, {
             preserveScroll: true,
-            onSuccess: () => setSelecionada(prev =>
-                prev ? { ...prev, status_v2: 'em_atendimento_humano' } : null
-            ),
+            onSuccess: () => {
+                setSelecionada(prev => prev ? { ...prev, status_v2: 'em_atendimento_humano' } : null);
+                onSuccess?.();
+            },
+            onFinish: () => setAssumindo(false),
         });
     };
 
+    // ── Devolver ao bot ───────────────────────────────────────────────────────
     const devolver = () => {
         if (!selecionada) return;
         router.post(route('tenant.conversas.devolver', selecionada.id), {}, {
             preserveScroll: true,
-            onSuccess: () => setSelecionada(prev =>
-                prev ? { ...prev, status_v2: 'ativa' } : null
-            ),
+            onSuccess: () => setSelecionada(prev => prev ? { ...prev, status_v2: 'ativa' } : null),
         });
     };
 
-    // ── Enviar mensagem humana ────────────────────────────────────────────────
+    // ── Enviar mensagem — auto-assume se necessário ───────────────────────────
     const enviar = (e: React.FormEvent) => {
         e.preventDefault();
         if (!selecionada || !data.conteudo.trim()) return;
-        post(route('tenant.conversas.enviar', selecionada.id), {
+
+        const doPost = () => post(route('tenant.conversas.enviar', selecionada.id), {
             preserveScroll: true,
             onSuccess: () => {
                 reset('conteudo');
                 buscarMensagens(selecionada).then(() => scrollBottom());
             },
         });
+
+        if (selecionada.status_v2 !== 'em_atendimento_humano') {
+            assumir(doPost);
+        } else {
+            doPost();
+        }
     };
 
     // ── Filtrar por status ────────────────────────────────────────────────────
@@ -214,7 +219,6 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
         router.get(route('tenant.conversas.index'), status ? { status_v2: status } : {}, { preserveState: true });
     };
 
-    // ── Nome de exibição ──────────────────────────────────────────────────────
     const nomeConversa = (c: Conversa) => c.cliente?.nome ?? c.telefone_cliente;
 
     const statusFiltros: { label: string; value: string }[] = [
@@ -225,11 +229,14 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
         { label: 'Encerradas',     value: 'encerrada' },
     ];
 
+    const podeEnviar = selecionada?.status_v2 !== 'encerrada';
+    const emAtendimento = selecionada?.status_v2 === 'em_atendimento_humano';
+
     return (
         <AppLayout title="">
             <Head title="Conversas WhatsApp" />
 
-            {/* Layout two-panel */}
+            {/* Layout two-panel — coluna única em mobile */}
             <div
                 className="flex overflow-hidden rounded-xl"
                 style={{
@@ -240,14 +247,11 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
             >
                 {/* ── Left: lista de conversas ────────────────────────────── */}
                 <div
-                    className="flex w-72 flex-shrink-0 flex-col"
+                    className={`flex flex-col flex-shrink-0 w-full md:w-72 ${showChat ? 'hidden md:flex' : 'flex'}`}
                     style={{ borderRight: '1px solid var(--border)' }}
                 >
                     {/* Header lista */}
-                    <div
-                        className="px-4 py-4"
-                        style={{ borderBottom: '1px solid var(--border)' }}
-                    >
+                    <div className="px-4 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
                         <h2
                             className="text-base font-semibold text-primary"
                             style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
@@ -255,7 +259,6 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                             Conversas WhatsApp
                         </h2>
 
-                        {/* Filtros de status */}
                         <div className="mt-3 flex flex-wrap gap-1">
                             {statusFiltros.map(f => {
                                 const ativo = (filtros.status_v2 ?? '') === f.value;
@@ -323,45 +326,59 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
 
                 {/* ── Right: área do chat ──────────────────────────────────── */}
                 {selecionada ? (
-                    <div className="flex flex-1 flex-col min-w-0">
+                    <div className={`flex flex-1 flex-col min-w-0 ${showChat ? 'flex' : 'hidden md:flex'}`}>
 
                         {/* Chat header */}
                         <div
-                            className="flex items-center justify-between px-5 py-3.5 flex-shrink-0"
+                            className="flex items-center justify-between gap-2 px-3 py-3 flex-shrink-0 md:px-5"
                             style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}
                         >
-                            <div>
-                                <p className="font-semibold text-primary">{nomeConversa(selecionada)}</p>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                    <p className="text-xs" style={{ color: 'var(--text-3)' }}>
-                                        {selecionada.telefone_cliente}
-                                    </p>
-                                    <StatusBadge status={selecionada.status_v2} />
+                            {/* Botão voltar (mobile) + info */}
+                            <div className="flex items-center gap-2 min-w-0">
+                                <button
+                                    className="md:hidden flex-shrink-0 rounded-md p-1.5 transition-colors"
+                                    style={{ color: 'var(--text-2)' }}
+                                    onClick={() => setShowChat(false)}
+                                    aria-label="Voltar"
+                                >
+                                    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="15 18 9 12 15 6"/>
+                                    </svg>
+                                </button>
+                                <div className="min-w-0">
+                                    <p className="font-semibold text-primary truncate">{nomeConversa(selecionada)}</p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <p className="text-xs truncate" style={{ color: 'var(--text-3)' }}>
+                                            {selecionada.telefone_cliente}
+                                        </p>
+                                        <StatusBadge status={selecionada.status_v2} />
+                                    </div>
                                 </div>
                             </div>
 
                             {/* Ações */}
-                            <div className="flex gap-2">
-                                {selecionada.status_v2 !== 'em_atendimento_humano' && selecionada.status_v2 !== 'encerrada' && (
+                            <div className="flex gap-2 flex-shrink-0">
+                                {!emAtendimento && selecionada.status_v2 !== 'encerrada' && (
                                     <button
-                                        onClick={assumir}
-                                        className="rounded-lg px-3.5 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-80"
+                                        onClick={() => assumir()}
+                                        disabled={assumindo}
+                                        className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-80 disabled:opacity-50"
                                         style={{ background: 'var(--accent)' }}
                                     >
-                                        Assumir atendimento
+                                        Assumir
                                     </button>
                                 )}
-                                {selecionada.status_v2 === 'em_atendimento_humano' && (
+                                {emAtendimento && (
                                     <button
                                         onClick={devolver}
-                                        className="rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors"
+                                        className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
                                         style={{
                                             background: 'var(--jade-light)',
                                             border: '1px solid rgba(0,168,132,0.25)',
                                             color: 'var(--jade)',
                                         }}
                                     >
-                                        Devolver ao bot
+                                        Bot
                                     </button>
                                 )}
                             </div>
@@ -370,12 +387,12 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                         {/* Mensagens */}
                         <div
                             ref={chatRef}
-                            className="flex-1 overflow-y-auto px-5 py-4"
+                            className="flex-1 overflow-y-auto px-3 py-4 md:px-5"
                             style={{ background: 'var(--bg-app)' }}
                         >
                             {carregando ? (
                                 <div className="flex h-full items-center justify-center">
-                                    <p className="text-sm" style={{ color: 'var(--text-3)' }}>Carregando mensagens…</p>
+                                    <p className="text-sm" style={{ color: 'var(--text-3)' }}>Carregando…</p>
                                 </div>
                             ) : mensagens.length === 0 ? (
                                 <div className="flex h-full items-center justify-center">
@@ -386,64 +403,58 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                             )}
                         </div>
 
-                        {/* Input */}
-                        {selecionada.status_v2 === 'em_atendimento_humano' ? (
+                        {/* Input — sempre visível (exceto encerrada) */}
+                        {podeEnviar ? (
                             <form
                                 onSubmit={enviar}
-                                className="flex items-end gap-2 px-4 py-3 flex-shrink-0"
+                                className="flex-shrink-0 px-3 py-3 md:px-4"
                                 style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface)' }}
                             >
-                                <textarea
-                                    value={data.conteudo}
-                                    onChange={e => setData('conteudo', e.target.value)}
-                                    onKeyDown={e => {
-                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                            e.preventDefault();
-                                            enviar(e as unknown as React.FormEvent);
-                                        }
-                                    }}
-                                    placeholder="Digite uma mensagem… (Enter para enviar)"
-                                    rows={2}
-                                    className="flex-1 resize-none rounded-xl px-3.5 py-2.5 text-sm focus:outline-none"
-                                    style={{
-                                        background: 'var(--bg-app)',
-                                        border: '1px solid var(--border)',
-                                        color: 'var(--text-1)',
-                                    }}
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={processing || !data.conteudo.trim()}
-                                    className="flex-shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-primary transition-opacity disabled:opacity-40"
-                                    style={{ background: 'var(--accent)' }}
-                                >
-                                    {processing ? '…' : 'Enviar'}
-                                </button>
+                                {!emAtendimento && (
+                                    <p className="mb-1.5 text-center text-[11px]" style={{ color: 'var(--text-3)' }}>
+                                        Enviar irá assumir o atendimento automaticamente
+                                    </p>
+                                )}
+                                <div className="flex items-end gap-2">
+                                    <textarea
+                                        value={data.conteudo}
+                                        onChange={e => setData('conteudo', e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                enviar(e as unknown as React.FormEvent);
+                                            }
+                                        }}
+                                        placeholder={emAtendimento ? 'Mensagem… (Enter para enviar)' : 'Escreva para assumir o chat…'}
+                                        rows={2}
+                                        className="flex-1 resize-none rounded-xl px-3.5 py-2.5 text-sm focus:outline-none"
+                                        style={{
+                                            background: 'var(--bg-app)',
+                                            border: '1px solid var(--border)',
+                                            color: 'var(--text-1)',
+                                        }}
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={processing || assumindo || !data.conteudo.trim()}
+                                        className="flex-shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-primary transition-opacity disabled:opacity-40"
+                                        style={{ background: 'var(--accent)' }}
+                                    >
+                                        {(processing || assumindo) ? '…' : 'Enviar'}
+                                    </button>
+                                </div>
                             </form>
                         ) : (
                             <div
-                                className="flex flex-shrink-0 items-center justify-center gap-3 px-5 py-3"
+                                className="flex-shrink-0 flex items-center justify-center px-5 py-3"
                                 style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface)' }}
                             >
-                                <span className="text-xs" style={{ color: 'var(--text-3)' }}>
-                                    {selecionada.status_v2 === 'encerrada'
-                                        ? 'Conversa encerrada'
-                                        : 'O bot está gerenciando esta conversa'}
-                                </span>
-                                {selecionada.status_v2 !== 'encerrada' && (
-                                    <button
-                                        onClick={assumir}
-                                        className="rounded-md px-3 py-1 text-xs font-medium transition-opacity hover:opacity-80"
-                                        style={{ background: 'var(--accent)', color: 'white' }}
-                                    >
-                                        Assumir
-                                    </button>
-                                )}
+                                <span className="text-xs" style={{ color: 'var(--text-3)' }}>Conversa encerrada</span>
                             </div>
                         )}
                     </div>
                 ) : (
-                    <div className="flex flex-1 items-center justify-center" style={{ background: 'var(--bg-app)' }}>
+                    <div className="hidden md:flex flex-1 items-center justify-center" style={{ background: 'var(--bg-app)' }}>
                         <div className="text-center">
                             <p className="text-3xl mb-2" style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-2)' }}>
                                 Conversas
