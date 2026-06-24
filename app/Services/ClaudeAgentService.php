@@ -26,11 +26,14 @@ class ClaudeAgentService
      */
     public function processar(Tenant $tenant, array $mensagens, array $horariosDisponiveis): array
     {
+        // Só incluir slots quando a conversa já tem pelo menos 3 msgs — economiza tokens nas boas-vindas
+        $incluirSlots = count($mensagens) >= 3;
+
         // System prompt em dois blocos:
         // - Bloco 1 (estático, cacheado): identidade, profissionais, serviços, regras
         // - Bloco 2 (dinâmico, não cacheado): slots disponíveis (muda a cada consulta)
         $staticPart  = $this->buildStaticPrompt($tenant);
-        $dynamicPart = $this->buildDynamicPrompt($horariosDisponiveis);
+        $dynamicPart = $this->buildDynamicPrompt($horariosDisponiveis, $incluirSlots);
 
         $systemBlocks = [
             [
@@ -59,7 +62,7 @@ class ClaudeAgentService
             ])
             ->post('https://api.anthropic.com/v1/messages', [
                 'model'      => $this->model,
-                'max_tokens' => 350,
+                'max_tokens' => 250,
                 'system'     => $systemBlocks,
                 'messages'   => $mensagens,
             ]);
@@ -186,12 +189,15 @@ PROMPT;
 
     /**
      * Parte dinâmica — slots disponíveis. Não cacheada pois muda com cada novo agendamento.
+     * Omite slots quando a conversa está no início (< 3 msgs) para economizar tokens.
      */
-    public function buildDynamicPrompt(array $horariosDisponiveis): string
+    public function buildDynamicPrompt(array $horariosDisponiveis, bool $incluirSlots = true): string
     {
-        $slotsFormatados = $this->formatarSlots($horariosDisponiveis);
+        if (! $incluirSlots) {
+            return 'HORÁRIOS: [disponíveis quando o cliente escolher data]';
+        }
 
-        return "HORÁRIOS DISPONÍVEIS — PRÓXIMOS 4 DIAS:\n{$slotsFormatados}";
+        return "HORÁRIOS DISPONÍVEIS — PRÓXIMOS 4 DIAS:\n" . $this->formatarSlots($horariosDisponiveis);
     }
 
     /** @deprecated Use buildStaticPrompt + buildDynamicPrompt */
@@ -208,13 +214,15 @@ PROMPT;
 
     private function formatarSlots(array $slots): string
     {
-        if (empty($slots)) return 'Nenhum horário disponível nos próximos 7 dias.';
+        if (empty($slots)) return 'Nenhum horário disponível.';
 
         $linhas = [];
         foreach ($slots as $profissionalId => $diasSlots) {
             foreach ($diasSlots as $data => $horariosDisponiveis) {
                 if (! empty($horariosDisponiveis)) {
-                    $linhas[] = "Profissional #{$profissionalId} — {$data}: " . implode(', ', $horariosDisponiveis);
+                    // Formato compacto: "#3|24/06: 09:00 09:30 10:00" (menos tokens que vírgulas e "Profissional")
+                    $dataFormatada = \Carbon\Carbon::parse($data)->format('d/m');
+                    $linhas[] = "#{$profissionalId}|{$dataFormatada}: " . implode(' ', $horariosDisponiveis);
                 }
             }
         }
