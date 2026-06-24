@@ -1,7 +1,8 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { PageProps } from '@/types';
+import Toggle from '@/Components/Toggle';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -98,25 +99,13 @@ function HorariosEditor({
                 {rows.map((row, i) => (
                     <div key={i} className="flex flex-wrap items-center gap-4">
                         {/* Toggle + dia */}
-                        <label className="flex w-28 cursor-pointer items-center gap-2.5">
-                            <div
-                                onClick={() => toggle(i)}
-                                className="relative flex h-5 w-9 cursor-pointer items-center rounded-full transition-colors"
-                                style={{ background: row.ativo ? 'var(--accent)' : 'rgba(255,255,255,0.15)' }}
-                            >
-                                <span
-                                    className={`absolute h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${
-                                        row.ativo ? 'translate-x-4' : 'translate-x-1'
-                                    }`}
-                                />
-                            </div>
-                            <span
-                                className="text-sm"
-                                style={{ color: row.ativo ? 'var(--text-1)' : 'var(--text-3)' }}
-                            >
-                                {DIAS[i]}
-                            </span>
-                        </label>
+                        <div className="w-28">
+                            <Toggle
+                                checked={row.ativo}
+                                onChange={() => toggle(i)}
+                                label={DIAS[i]}
+                            />
+                        </div>
 
                         {/* Hora início */}
                         <input
@@ -175,8 +164,15 @@ function NovoProfissionalModal({ onClose }: { onClose: () => void }) {
         especialidades: [] as string[],
         ativo: true,
     });
-
+    const nomeRef = useRef<HTMLInputElement>(null);
     const [novaEsp, setNovaEsp] = useState('');
+
+    useEffect(() => {
+        nomeRef.current?.focus();
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
 
     const addEspecialidade = () => {
         const trimmed = novaEsp.trim();
@@ -203,7 +199,7 @@ function NovoProfissionalModal({ onClose }: { onClose: () => void }) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" role="dialog" aria-modal="true" aria-labelledby="modal-novo-prof">
             <div
                 className="w-full max-w-sm rounded-2xl p-7 shadow-2xl"
                 style={{
@@ -213,6 +209,7 @@ function NovoProfissionalModal({ onClose }: { onClose: () => void }) {
             >
                 <div className="mb-5 flex items-start justify-between">
                     <h3
+                        id="modal-novo-prof"
                         style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
                         className="text-xl font-semibold text-primary"
                     >
@@ -222,6 +219,7 @@ function NovoProfissionalModal({ onClose }: { onClose: () => void }) {
                         onClick={onClose}
                         style={{ color: 'var(--text-3)' }}
                         className="hover:text-primary transition-colors"
+                        aria-label="Fechar"
                     >
                         ✕
                     </button>
@@ -230,8 +228,10 @@ function NovoProfissionalModal({ onClose }: { onClose: () => void }) {
                 <form onSubmit={submit} className="space-y-4">
                     {/* Nome */}
                     <div>
-                        <label className="label mb-1">Nome *</label>
+                        <label className="label mb-1" htmlFor="novo-prof-nome">Nome *</label>
                         <input
+                            id="novo-prof-nome"
+                            ref={nomeRef}
                             value={data.nome}
                             onChange={e => setData('nome', e.target.value)}
                             className="input"
@@ -321,6 +321,14 @@ function EditarProfissionalModal({
     });
 
     const [novaEsp, setNovaEsp] = useState('');
+    const nomeRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        nomeRef.current?.focus();
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
 
     const addEspecialidade = () => {
         const trimmed = novaEsp.trim();
@@ -344,7 +352,7 @@ function EditarProfissionalModal({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" role="dialog" aria-modal="true" aria-labelledby="modal-editar-prof">
             <div
                 className="w-full max-w-sm rounded-2xl p-7 shadow-2xl"
                 style={{
@@ -354,6 +362,7 @@ function EditarProfissionalModal({
             >
                 <div className="mb-5 flex items-start justify-between">
                     <h3
+                        id="modal-editar-prof"
                         style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
                         className="text-xl font-semibold text-primary"
                     >
@@ -363,6 +372,7 @@ function EditarProfissionalModal({
                         onClick={onClose}
                         style={{ color: 'var(--text-3)' }}
                         className="hover:text-primary transition-colors"
+                        aria-label="Fechar"
                     >
                         ✕
                     </button>
@@ -371,8 +381,10 @@ function EditarProfissionalModal({
                 <form onSubmit={submit} className="space-y-4">
                     {/* Nome */}
                     <div>
-                        <label className="label mb-1">Nome *</label>
+                        <label className="label mb-1" htmlFor="editar-prof-nome">Nome *</label>
                         <input
+                            id="editar-prof-nome"
+                            ref={nomeRef}
                             value={data.nome}
                             onChange={e => setData('nome', e.target.value)}
                             className="input"
@@ -431,23 +443,11 @@ function EditarProfissionalModal({
                         )}
                     </div>
 
-                    {/* Status ativo */}
-                    <div className="flex items-center gap-3">
-                        <div
-                            onClick={() => setData('ativo', !data.ativo)}
-                            className="relative flex h-5 w-9 cursor-pointer items-center rounded-full transition-colors"
-                            style={{ background: data.ativo ? 'var(--accent)' : 'rgba(255,255,255,0.15)' }}
-                        >
-                            <span
-                                className={`absolute h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${
-                                    data.ativo ? 'translate-x-4' : 'translate-x-1'
-                                }`}
-                            />
-                        </div>
-                        <span className="text-sm" style={{ color: 'var(--text-2)' }}>
-                            {data.ativo ? 'Ativo' : 'Inativo'}
-                        </span>
-                    </div>
+                    <Toggle
+                        checked={data.ativo}
+                        onChange={v => setData('ativo', v)}
+                        label={data.ativo ? 'Ativo' : 'Inativo'}
+                    />
 
                     <div className="flex justify-end gap-2 pt-1">
                         <button type="button" onClick={onClose} className="btn-secondary">

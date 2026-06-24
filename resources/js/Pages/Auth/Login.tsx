@@ -27,7 +27,7 @@ export default function Login({
 
     return (
         <ForceDark>
-        <div className="flex min-h-screen" style={{ background: 'var(--bg-app)' }}>
+        <div className="flex min-h-[100dvh]" style={{ background: 'var(--bg-app)' }}>
             <Head title="Entrar" />
 
             {/* ── Painel esquerdo — marca ─────────────────────────────────────── */}

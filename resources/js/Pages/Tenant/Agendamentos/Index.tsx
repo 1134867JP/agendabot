@@ -1,5 +1,5 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { PageProps, Agendamento, Recurso, PaginatedData } from '@/types';
 
@@ -44,6 +44,14 @@ function NovaReservaModal({ recursos, onClose }: { recursos: Recurso[]; onClose:
     });
 
     const [slots, setSlots] = useState<string[]>([]);
+    const clienteNomeRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        clienteNomeRef.current?.focus();
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
 
     const buscarSlots = async (recursoId: number | string, data: string) => {
         if (!recursoId || !data) return;
@@ -71,19 +79,20 @@ function NovaReservaModal({ recursos, onClose }: { recursos: Recurso[]; onClose:
     const timePart = (iso: string) => iso?.split('T')[1]?.slice(0, 5) ?? '';
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center px-4">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center px-4" role="dialog" aria-modal="true" aria-labelledby="modal-nova-reserva">
             <div className="w-full max-w-md rounded-2xl p-7 shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
                 <div className="mb-5 flex items-start justify-between">
-                    <h3 style={{ fontFamily: 'Instrument Serif, Georgia, serif' }} className="text-xl font-semibold text-primary">
+                    <h3 id="modal-nova-reserva" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }} className="text-xl font-semibold text-primary">
                         Nova reserva manual
                     </h3>
-                    <button onClick={onClose} style={{ color: 'var(--text-3)' }} className="hover:text-primary transition-colors">✕</button>
+                    <button onClick={onClose} style={{ color: 'var(--text-3)' }} className="hover:text-primary transition-colors" aria-label="Fechar">✕</button>
                 </div>
 
                 <form onSubmit={submit} className="space-y-4">
                     <div>
-                        <label className="label mb-1">Recurso</label>
+                        <label className="label mb-1" htmlFor="nova-reserva-recurso">Recurso</label>
                         <select
+                            id="nova-reserva-recurso"
                             value={data.recurso_id}
                             onChange={e => {
                                 setData('recurso_id', Number(e.target.value));
@@ -98,8 +107,10 @@ function NovaReservaModal({ recursos, onClose }: { recursos: Recurso[]; onClose:
 
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="label mb-1">Nome do cliente</label>
+                            <label className="label mb-1" htmlFor="nova-reserva-nome">Nome do cliente</label>
                             <input
+                                id="nova-reserva-nome"
+                                ref={clienteNomeRef}
                                 value={data.cliente_nome}
                                 onChange={e => setData('cliente_nome', e.target.value)}
                                 className="input"
@@ -109,8 +120,9 @@ function NovaReservaModal({ recursos, onClose }: { recursos: Recurso[]; onClose:
                             {errors.cliente_nome && <p className="mt-1 text-xs text-red-400">{errors.cliente_nome}</p>}
                         </div>
                         <div>
-                            <label className="label mb-1">Telefone</label>
+                            <label className="label mb-1" htmlFor="nova-reserva-telefone">Telefone</label>
                             <input
+                                id="nova-reserva-telefone"
                                 value={data.cliente_telefone}
                                 onChange={e => setData('cliente_telefone', e.target.value)}
                                 className="input"
