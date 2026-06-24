@@ -51,9 +51,8 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                         role="switch"
                         aria-checked={data.bot_ativo}
                         onClick={() => setData('bot_ativo', !data.bot_ativo)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                            data.bot_ativo ? 'bg-green-500' : 'bg-gray-300'
-                        }`}
+                        className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
+                        style={{ background: data.bot_ativo ? 'var(--jade)' : 'rgba(255,255,255,0.12)' }}
                     >
                         <span
                             className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
