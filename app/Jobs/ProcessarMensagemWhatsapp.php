@@ -6,6 +6,7 @@ use App\Models\Cliente;
 use App\Models\Conversa;
 use App\Models\Mensagem;
 use App\Models\Tenant;
+use App\Models\TokenUsage;
 use App\Services\AgendamentoService;
 use App\Services\ClaudeAgentService;
 use App\Services\EvolutionApiService;
@@ -84,6 +85,14 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
 
         // 8. Chamar Claude
         $resultado = $claude->processar($this->tenant, $historico, $horariosDisponiveis);
+
+        // Registrar uso de tokens para controle de custo
+        if (! empty($resultado['usage'])) {
+            TokenUsage::create(array_merge(
+                ['tenant_id' => $this->tenant->id, 'model' => config('services.claude.model')],
+                $resultado['usage'],
+            ));
+        }
 
         // 9. Processar ação retornada pelo Claude
         $agendamentoCriado = true;
