@@ -52,7 +52,8 @@ class WhatsAppController extends Controller
             }
         }
 
-        // Instância existe mas não conectada — buscar QR via connect
+        // Instância existe mas não conectada — garantir webhook atualizado e buscar QR
+        $this->evolution->configurarWebhook($instance, route('webhook', $tenant->slug));
         $qrcode = $this->evolution->obterQrCode($instance);
         return response()->json(['qrcode' => $qrcode]);
     }
