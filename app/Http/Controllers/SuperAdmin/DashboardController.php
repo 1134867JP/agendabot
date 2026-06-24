@@ -5,6 +5,7 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\Agendamento;
 use App\Models\Tenant;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -13,16 +14,89 @@ class DashboardController extends Controller
     public function index(): Response
     {
         return Inertia::render('SuperAdmin/Dashboard', [
-            'stats' => [
-                'total_tenants'      => Tenant::count(),
-                'tenants_ativos'     => Tenant::where('ativo', true)->count(),
-                'tenants_conectados' => Tenant::where('whatsapp_conectado', true)->count(),
-                'agendamentos_hoje'  => Agendamento::whereDate('inicio', today())->count(),
-                'agendamentos_mes'   => Agendamento::whereMonth('inicio', now()->month)->count(),
-            ],
+            'stats'   => $this->stats(),
             'tenants' => Tenant::withCount(['agendamentos', 'recursos'])
                 ->latest()
-                ->paginate(20),
+                ->paginate(25),
         ]);
+    }
+
+    private function stats(): array
+    {
+        $failedJobs = $this->contarFailedJobs();
+        $erros24h   = $this->contarErros24h();
+
+        return [
+            'total_tenants'      => Tenant::count(),
+            'tenants_ativos'     => Tenant::where('ativo', true)->count(),
+            'tenants_conectados' => Tenant::where('whatsapp_conectado', true)->count(),
+            'agendamentos_hoje'  => $this->contarAgendamentosHoje(),
+            'agendamentos_mes'   => $this->contarAgendamentosMes(),
+            'failed_jobs'        => $failedJobs,
+            'erros_24h'          => $erros24h,
+            'tenants_sem_config' => Tenant::where('ativo', true)
+                ->where('whatsapp_conectado', false)
+                ->count(),
+        ];
+    }
+
+    private function contarAgendamentosHoje(): int
+    {
+        try {
+            return Agendamento::whereDate('inicio', today())->count();
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    private function contarAgendamentosMes(): int
+    {
+        try {
+            return Agendamento::whereMonth('inicio', now()->month)
+                ->whereYear('inicio', now()->year)
+                ->count();
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    private function contarFailedJobs(): int
+    {
+        try {
+            return DB::table('failed_jobs')->count();
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    private function contarErros24h(): int
+    {
+        $path = storage_path('logs/laravel.log');
+        if (! file_exists($path)) return 0;
+
+        try {
+            $since  = now()->subDay()->format('Y-m-d H:i:s');
+            $handle = fopen($path, 'rb');
+            $count  = 0;
+
+            // Ler as últimas 500KB do arquivo
+            $size   = filesize($path);
+            $offset = max(0, $size - 512000);
+            fseek($handle, $offset);
+            $content = fread($handle, $size);
+            fclose($handle);
+
+            foreach (explode("\n", $content) as $line) {
+                if (str_contains($line, '].ERROR:') &&
+                    preg_match('/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]/', $line, $m) &&
+                    $m[1] >= $since) {
+                    $count++;
+                }
+            }
+
+            return $count;
+        } catch (\Throwable) {
+            return 0;
+        }
     }
 }
