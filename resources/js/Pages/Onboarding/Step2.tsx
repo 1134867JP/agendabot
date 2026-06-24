@@ -1,6 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import { PageProps } from '@/types';
 import { useState } from 'react';
+import ForceDark from '@/Components/ForceDark';
 
 interface Plano {
     nome: string;
@@ -31,6 +32,7 @@ export default function OnboardingStep2({ planos }: Props) {
     const planoList = Object.entries(planos);
 
     return (
+        <ForceDark>
         <div className="flex min-h-screen flex-col" style={{ background: 'var(--bg-app)' }}>
             <Head title="Escolha seu plano" />
 
@@ -123,5 +125,6 @@ export default function OnboardingStep2({ planos }: Props) {
                 </p>
             </div>
         </div>
+        </ForceDark>
     );
 }

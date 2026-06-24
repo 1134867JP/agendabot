@@ -35,9 +35,10 @@ class WhatsAppController extends Controller
 
         $status = $this->evolution->statusInstancia($instance);
 
-        // Já conectado — avisar o frontend
+        // Já conectado — garantir webhook atualizado e avisar o frontend
         if ($status === 'open') {
             $tenant->update(['whatsapp_conectado' => true]);
+            $this->evolution->configurarWebhook($instance, route('webhook', $tenant->slug));
             return response()->json(['connected' => true]);
         }
 

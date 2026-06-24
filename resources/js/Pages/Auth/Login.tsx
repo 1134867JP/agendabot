@@ -1,5 +1,6 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import { FormEventHandler, useState } from 'react';
+import ForceDark from '@/Components/ForceDark';
 
 const INDIGO = '#6366F1';
 const JADE   = '#00a884';
@@ -25,6 +26,7 @@ export default function Login({
     };
 
     return (
+        <ForceDark>
         <div className="flex min-h-screen" style={{ background: 'var(--bg-app)' }}>
             <Head title="Entrar" />
 
@@ -294,5 +296,6 @@ export default function Login({
                 </div>
             </div>
         </div>
+        </ForceDark>
     );
 }
