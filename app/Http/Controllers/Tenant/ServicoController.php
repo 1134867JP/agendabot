@@ -14,7 +14,10 @@ class ServicoController extends Controller
     public function index(): Response
     {
         return Inertia::render('Tenant/Servicos/Index', [
-            'servicos' => app('tenant')->servicos()->orderBy('nome')->get(),
+            'servicos' => app('tenant')->servicos()
+                ->with('profissionais:id,nome')
+                ->orderBy('nome')
+                ->get(),
         ]);
     }
 

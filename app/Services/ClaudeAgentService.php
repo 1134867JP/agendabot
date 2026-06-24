@@ -119,10 +119,16 @@ class ClaudeAgentService
      */
     public function buildStaticPrompt(Tenant $tenant): string
     {
-        $profissionais = $tenant->profissionais()->where('ativo', true)->get()
-            ->map(fn ($p) => "- ID {$p->id}: {$p->nome}" . ($p->especialidades ? ' (' . implode(', ', $p->especialidades) . ')' : ''))
+        // Profissionais com seus serviços vinculados — mais útil para o bot do que listas separadas
+        $profissionais = $tenant->profissionais()->where('ativo', true)->with('servicos:id,nome')->get()
+            ->map(function ($p) {
+                $servNomes = $p->servicos->pluck('nome')->join(', ');
+                $base = "- ID {$p->id}: {$p->nome}";
+                return $servNomes ? "{$base} → {$servNomes}" : $base;
+            })
             ->join("\n");
 
+        // Serviços com detalhes de valor/duração (sem repetir os profissionais)
         $servicos = $tenant->servicos()->where('ativo', true)->get()
             ->map(fn ($s) => "- ID {$s->id}: {$s->nome}" .
                 ($s->valor_min ? " (R$ {$s->valor_min}" . ($s->valor_max ? "-{$s->valor_max}" : '') . ")" : '') .

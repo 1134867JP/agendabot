@@ -5,6 +5,7 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Profissional extends Model
@@ -16,6 +17,7 @@ class Profissional extends Model
     public function tenant(): BelongsTo { return $this->belongsTo(Tenant::class); }
     public function horarios(): HasMany { return $this->hasMany(HorarioProfissional::class); }
     public function agendamentos(): HasMany { return $this->hasMany(Agendamento::class); }
+    public function servicos(): BelongsToMany { return $this->belongsToMany(Servico::class, 'profissional_servico'); }
 
     public function slotsDisponiveis(Carbon $data): array
     {

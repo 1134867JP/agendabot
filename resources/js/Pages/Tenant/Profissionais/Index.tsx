@@ -16,16 +16,23 @@ interface HorarioProfissional {
     ativo: boolean;
 }
 
+interface ServicoBasico {
+    id: number;
+    nome: string;
+}
+
 interface Profissional {
     id: number;
     nome: string;
     especialidades: string[] | null;
     ativo: boolean;
     horarios: HorarioProfissional[];
+    servicos: ServicoBasico[];
 }
 
 interface Props extends PageProps {
     profissionais: Profissional[];
+    servicos_disponiveis: ServicoBasico[];
 }
 
 const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -86,6 +93,63 @@ function EspecialidadesField({
     );
 }
 
+// ─── ServicosSelector ────────────────────────────────────────────────────────
+
+function ServicosSelector({
+    disponiveis,
+    selecionados,
+    onChange,
+}: {
+    disponiveis: ServicoBasico[];
+    selecionados: number[];
+    onChange: (ids: number[]) => void;
+}) {
+    const toggle = (id: number) =>
+        onChange(selecionados.includes(id) ? selecionados.filter(s => s !== id) : [...selecionados, id]);
+
+    if (disponiveis.length === 0) {
+        return (
+            <div>
+                <label className="label mb-1">Serviços que atende</label>
+                <p className="text-xs" style={{ color: 'var(--text-3)' }}>
+                    Nenhum serviço cadastrado. Crie serviços primeiro na aba Serviços.
+                </p>
+            </div>
+        );
+    }
+
+    return (
+        <div>
+            <label className="label mb-2">Serviços que atende</label>
+            <div className="flex flex-wrap gap-2">
+                {disponiveis.map(s => {
+                    const ativo = selecionados.includes(s.id);
+                    return (
+                        <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => toggle(s.id)}
+                            className="rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
+                            style={{
+                                background:  ativo ? 'var(--accent)'        : 'var(--bg-surface-2)',
+                                color:       ativo ? 'white'                : 'var(--text-2)',
+                                border:      `1px solid ${ativo ? 'var(--accent)' : 'var(--border)'}`,
+                            }}
+                        >
+                            {s.nome}
+                        </button>
+                    );
+                })}
+            </div>
+            {selecionados.length === 0 && (
+                <p className="mt-1.5 text-[11px]" style={{ color: 'var(--text-3)' }}>
+                    Nenhum serviço selecionado — este profissional não aparecerá para nenhum agendamento.
+                </p>
+            )}
+        </div>
+    );
+}
+
 // ─── HorariosEditor ──────────────────────────────────────────────────────────
 
 function HorariosEditor({ profissional, onClose }: { profissional: Profissional; onClose: () => void }) {
@@ -137,10 +201,11 @@ function HorariosEditor({ profissional, onClose }: { profissional: Profissional;
 
 // ─── Formulário novo profissional (inline) ────────────────────────────────────
 
-function NovoProfissionalForm({ onClose }: { onClose: () => void }) {
+function NovoProfissionalForm({ disponiveis, onClose }: { disponiveis: ServicoBasico[]; onClose: () => void }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         nome: '',
         especialidades: [] as string[],
+        servico_ids: [] as number[],
         ativo: true,
     });
 
@@ -174,6 +239,12 @@ function NovoProfissionalForm({ onClose }: { onClose: () => void }) {
 
                 <EspecialidadesField value={data.especialidades} onChange={v => setData('especialidades', v)} />
 
+                <ServicosSelector
+                    disponiveis={disponiveis}
+                    selecionados={data.servico_ids}
+                    onChange={ids => setData('servico_ids', ids)}
+                />
+
                 <div className="flex gap-2 pt-1">
                     <button type="submit" disabled={processing} className="btn-primary">
                         {processing ? 'Criando…' : 'Criar profissional'}
@@ -187,10 +258,11 @@ function NovoProfissionalForm({ onClose }: { onClose: () => void }) {
 
 // ─── Formulário editar profissional (inline) ──────────────────────────────────
 
-function EditarProfissionalForm({ profissional, onClose }: { profissional: Profissional; onClose: () => void }) {
+function EditarProfissionalForm({ profissional, disponiveis, onClose }: { profissional: Profissional; disponiveis: ServicoBasico[]; onClose: () => void }) {
     const { data, setData, put, processing, errors } = useForm({
         nome: profissional.nome,
         especialidades: profissional.especialidades ?? [],
+        servico_ids: profissional.servicos.map(s => s.id),
         ativo: profissional.ativo,
     });
 
@@ -229,6 +301,12 @@ function EditarProfissionalForm({ profissional, onClose }: { profissional: Profi
 
                 <EspecialidadesField value={data.especialidades} onChange={v => setData('especialidades', v)} />
 
+                <ServicosSelector
+                    disponiveis={disponiveis}
+                    selecionados={data.servico_ids}
+                    onChange={ids => setData('servico_ids', ids)}
+                />
+
                 <Toggle checked={data.ativo} onChange={v => setData('ativo', v)} label={data.ativo ? 'Ativo' : 'Inativo'} />
 
                 <div className="flex items-center justify-between pt-1">
@@ -249,7 +327,7 @@ function EditarProfissionalForm({ profissional, onClose }: { profissional: Profi
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function ProfissionaisIndex({ profissionais }: Props) {
+export default function ProfissionaisIndex({ profissionais, servicos_disponiveis }: Props) {
     const [novoAberto, setNovoAberto] = useState(false);
     const [editando, setEditando] = useState<number | null>(null);
     const [expandido, setExpandido] = useState<number | null>(null);
@@ -280,7 +358,7 @@ export default function ProfissionaisIndex({ profissionais }: Props) {
             <div className="space-y-3">
                 {/* Formulário novo profissional inline */}
                 {novoAberto && (
-                    <NovoProfissionalForm onClose={() => setNovoAberto(false)} />
+                    <NovoProfissionalForm disponiveis={servicos_disponiveis} onClose={() => setNovoAberto(false)} />
                 )}
 
                 {profissionais.length === 0 && !novoAberto && (
@@ -293,7 +371,7 @@ export default function ProfissionaisIndex({ profissionais }: Props) {
                 {profissionais.map(p => (
                     <div key={p.id} className="card overflow-hidden">
                         {editando === p.id ? (
-                            <EditarProfissionalForm profissional={p} onClose={() => setEditando(null)} />
+                            <EditarProfissionalForm profissional={p} disponiveis={servicos_disponiveis} onClose={() => setEditando(null)} />
                         ) : (
                             <>
                                 <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
@@ -314,6 +392,17 @@ export default function ProfissionaisIndex({ profissionais }: Props) {
                                                         </span>
                                                     ))}
                                                 </div>
+                                            )}
+                                            {p.servicos.length > 0 ? (
+                                                <div className="mt-1 flex flex-wrap gap-1">
+                                                    {p.servicos.map(s => (
+                                                        <span key={s.id} className="rounded px-1.5 py-0.5 text-[11px]" style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}>
+                                                            {s.nome}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="mt-0.5 text-[11px]" style={{ color: '#f87171' }}>Sem serviços vinculados</p>
                                             )}
                                             <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
                                                 {p.horarios.length > 0

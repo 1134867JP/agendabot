@@ -15,7 +15,8 @@ class ProfissionalController extends Controller
     {
         $tenant = app('tenant');
         return Inertia::render('Tenant/Profissionais/Index', [
-            'profissionais' => $tenant->profissionais()->with('horarios')->get(),
+            'profissionais'        => $tenant->profissionais()->with(['horarios', 'servicos:id,nome'])->get(),
+            'servicos_disponiveis' => $tenant->servicos()->where('ativo', true)->orderBy('nome')->get(['id', 'nome']),
         ]);
     }
 
@@ -27,8 +28,11 @@ class ProfissionalController extends Controller
             'especialidades'   => 'nullable|array',
             'especialidades.*' => 'string|max:100',
             'ativo'            => 'boolean',
+            'servico_ids'      => 'nullable|array',
+            'servico_ids.*'    => 'integer|exists:servicos,id',
         ]);
-        $tenant->profissionais()->create($data);
+        $profissional = $tenant->profissionais()->create($data);
+        $profissional->servicos()->sync($data['servico_ids'] ?? []);
         return back()->with('success', 'Profissional criado.');
     }
 
@@ -40,8 +44,11 @@ class ProfissionalController extends Controller
             'especialidades'   => 'nullable|array',
             'especialidades.*' => 'string|max:100',
             'ativo'            => 'boolean',
+            'servico_ids'      => 'nullable|array',
+            'servico_ids.*'    => 'integer|exists:servicos,id',
         ]);
         $profissional->update($data);
+        $profissional->servicos()->sync($data['servico_ids'] ?? []);
         return back()->with('success', 'Profissional atualizado.');
     }
 
