@@ -11,7 +11,12 @@ class DashboardController extends Controller
 {
     public function index(Request $request): Response|RedirectResponse
     {
-        $user    = $request->user();
+        $user = $request->user();
+
+        if ($user->is_super_admin) {
+            return redirect()->route('superadmin.dashboard');
+        }
+
         $tenants = $user->tenants()->get();
 
         if ($tenants->count() === 1) {
