@@ -34,6 +34,42 @@ function LevelBadge({ level }: { level: string }) {
     );
 }
 
+function CopyButton({ entry }: { entry: LogEntry }) {
+    const [copied, setCopied] = useState(false);
+
+    const copy = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const ctx = entry.context ? '\n\n' + JSON.stringify(entry.context, null, 2) : '';
+        const text = `[${entry.level}] ${entry.at}\n${entry.message}${ctx}`;
+        navigator.clipboard.writeText(text).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+        });
+    };
+
+    return (
+        <button
+            onClick={copy}
+            title="Copiar"
+            className="shrink-0 rounded p-1 transition-colors"
+            style={{ color: copied ? 'var(--jade)' : 'var(--text-3)' }}
+            onMouseEnter={e => { if (!copied) (e.currentTarget as HTMLElement).style.color = 'var(--text-1)'; }}
+            onMouseLeave={e => { if (!copied) (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'; }}
+        >
+            {copied ? (
+                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+            ) : (
+                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                </svg>
+            )}
+        </button>
+    );
+}
+
 type NivelFiltro = 'ALL' | 'ERROR' | 'WARNING' | 'INFO';
 
 export default function Logs() {
@@ -166,10 +202,10 @@ export default function Logs() {
                 ) : (
                     <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
                         {entries.map((e, i) => (
-                            <div key={i}>
+                            <div key={i} className="group flex items-start gap-0">
                                 <button
                                     onClick={() => setExpanded(expanded === i ? null : i)}
-                                    className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.02]"
+                                    className="flex min-w-0 flex-1 items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.02]"
                                 >
                                     <LevelBadge level={e.level} />
                                     <span
@@ -204,6 +240,9 @@ export default function Logs() {
                                         </svg>
                                     )}
                                 </button>
+                                <div className="flex items-center pr-3 pt-2.5">
+                                    <CopyButton entry={e} />
+                                </div>
 
                                 {/* Contexto expandido */}
                                 {expanded === i && e.context && (
