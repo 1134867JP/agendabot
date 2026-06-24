@@ -172,7 +172,7 @@ export default function RecursosIndex({ recursos }: Props) {
     };
 
     return (
-        <AppLayout title="Recursos">
+        <AppLayout title="Recursos" subtitle="Quadras, salas e outros itens que podem ser reservados">
             <Head title="Recursos" />
 
             <div className="mb-5 flex items-center justify-between">
@@ -186,9 +186,21 @@ export default function RecursosIndex({ recursos }: Props) {
 
             <div className="space-y-3">
                 {recursos.length === 0 && (
-                    <div className="card p-10 text-center" style={{ color: 'var(--text-3)' }}>
-                        <p className="text-sm">Nenhum recurso cadastrado ainda.</p>
-                        <p className="mt-1 text-xs">Crie seus barbeiros, quadras ou serviços.</p>
+                    <div className="card flex flex-col items-center gap-3 p-14 text-center">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: 'var(--bg-surface-2)' }}>
+                            <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
+                                <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-primary">Nenhum recurso cadastrado</p>
+                            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
+                                Adicione as quadras, salas ou itens disponíveis para reserva.
+                            </p>
+                        </div>
+                        <button onClick={() => setNovoModal(true)} className="btn-primary mt-1">
+                            + Adicionar recurso
+                        </button>
                     </div>
                 )}
 

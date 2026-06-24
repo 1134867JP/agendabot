@@ -489,7 +489,7 @@ export default function ProfissionaisIndex({ profissionais }: Props) {
     };
 
     return (
-        <AppLayout title="Profissionais">
+        <AppLayout title="Profissionais" subtitle="Gerencie os colaboradores e seus horários de atendimento">
             <Head title="Profissionais" />
 
             <div className="mb-5 flex items-center justify-between">
@@ -506,11 +506,24 @@ export default function ProfissionaisIndex({ profissionais }: Props) {
             {/* Lista */}
             <div className="space-y-3">
                 {profissionais.length === 0 && (
-                    <div className="card p-10 text-center" style={{ color: 'var(--text-3)' }}>
-                        <p className="text-sm">Nenhum profissional cadastrado ainda.</p>
-                        <p className="mt-1 text-xs">
-                            Cadastre seus barbeiros, fisioterapeutas, treinadores, etc.
-                        </p>
+                    <div className="card flex flex-col items-center gap-3 p-14 text-center">
+                        <div
+                            className="flex h-14 w-14 items-center justify-center rounded-2xl"
+                            style={{ background: 'var(--bg-surface-2)' }}
+                        >
+                            <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
+                                <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-primary">Nenhum profissional cadastrado</p>
+                            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
+                                Adicione seus barbeiros, fisioterapeutas ou colaboradores para receber agendamentos.
+                            </p>
+                        </div>
+                        <button onClick={() => setNovoModal(true)} className="btn-primary mt-1">
+                            + Adicionar profissional
+                        </button>
                     </div>
                 )}
 

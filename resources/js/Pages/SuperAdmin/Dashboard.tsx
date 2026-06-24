@@ -72,7 +72,7 @@ export default function SuperAdminDashboard({ stats, tenants }: Props) {
     const temProblemas = stats.failed_jobs > 0 || stats.erros_24h > 0;
 
     return (
-        <AppLayout title="Visão Geral">
+        <AppLayout title="Visão Geral" subtitle="Monitoramento de todos os tenants e da plataforma">
             <Head title="Super Admin" />
 
             <div className="space-y-7">

@@ -237,7 +237,7 @@ export default function AgendamentosIndex({ agendamentos, recursos, filtros }: P
     };
 
     return (
-        <AppLayout title="Agendamentos">
+        <AppLayout title="Agendamentos" subtitle="Reservas confirmadas, concluídas e canceladas">
             <Head title="Agendamentos" />
 
             {/* Filtros */}
@@ -288,8 +288,15 @@ export default function AgendamentosIndex({ agendamentos, recursos, filtros }: P
                         <tbody>
                             {agendamentos.data.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="px-4 py-10 text-center" style={{ color: 'var(--text-3)' }}>
-                                        Nenhum agendamento encontrado.
+                                    <td colSpan={8} className="px-4 py-14 text-center">
+                                        <div className="flex flex-col items-center gap-2">
+                                            <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
+                                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                                <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                                            </svg>
+                                            <p className="text-sm font-medium text-primary">Nenhum agendamento encontrado</p>
+                                            <p className="text-xs" style={{ color: 'var(--text-3)' }}>Ajuste os filtros ou aguarde novos agendamentos via WhatsApp.</p>
+                                        </div>
                                     </td>
                                 </tr>
                             ) : agendamentos.data.map(a => (
@@ -372,8 +379,8 @@ export default function AgendamentosIndex({ agendamentos, recursos, filtros }: P
             {/* FAB */}
             <button
                 onClick={() => setModalAberto(true)}
-                className="fixed bottom-7 right-7 flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-primary shadow-lg transition-transform hover:scale-105"
-                style={{ background: 'var(--accent)' }}
+                className="fixed bottom-7 right-7 flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:scale-105 hover:brightness-110"
+                style={{ background: 'var(--accent)', boxShadow: '0 4px 20px rgba(99,102,241,0.4)' }}
             >
                 + Nova reserva
             </button>

@@ -104,7 +104,7 @@ export default function TenantDashboard({ stats, proximos_agendamentos, setup_co
     ];
 
     return (
-        <AppLayout title="Dashboard">
+        <AppLayout title="Dashboard" subtitle="Resumo das atividades do seu estabelecimento">
             <Head title="Dashboard" />
 
             <div className="space-y-6">
@@ -201,9 +201,25 @@ export default function TenantDashboard({ stats, proximos_agendamentos, setup_co
                     </div>
 
                     {proximos_agendamentos.length === 0 ? (
-                        <div className="px-6 py-10 text-center">
-                            <p className="text-sm" style={{ color: 'var(--text-3)' }}>Nenhum agendamento futuro confirmado.</p>
-                            <Link href={route('tenant.agenda')} className="mt-3 inline-block text-sm transition-colors" style={{ color: 'var(--accent)' }}>
+                        <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+                            <div
+                                className="flex h-12 w-12 items-center justify-center rounded-2xl"
+                                style={{ background: 'var(--bg-surface-2)' }}
+                            >
+                                <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                    <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-primary">Nenhum agendamento confirmado</p>
+                                <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>Os próximos horários aparecerão aqui.</p>
+                            </div>
+                            <Link
+                                href={route('tenant.agenda')}
+                                className="mt-1 text-xs font-medium transition-colors hover:brightness-125"
+                                style={{ color: 'var(--accent)' }}
+                            >
                                 Abrir agenda →
                             </Link>
                         </div>

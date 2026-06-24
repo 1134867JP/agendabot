@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\CreateEvolutionInstanceJob;
 use App\Models\Tenant;
 use App\Services\EvolutionApiService;
 use Illuminate\Http\RedirectResponse;
@@ -15,26 +16,32 @@ class TenantController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'nome'         => ['required', 'string', 'max:255'],
-            'tipo_servico' => ['required', 'in:barbeiro,quadra,estetica,personalizado'],
+            'nome'                       => ['required', 'string', 'max:255'],
+            'tipo_servico'               => ['required', 'in:barbeiro,quadra,estetica,clinica,studio,personalizado'],
+            'tipo_servico_personalizado' => ['nullable', 'required_if:tipo_servico,personalizado', 'string', 'max:100'],
         ]);
 
-        $slug     = Str::slug($data['nome']);
-        $instance = $slug . '-instance';
+        $slug     = Str::slug($data['nome']) . '-' . Str::random(6);
+        $instance = $slug;
 
         $tenant = Tenant::create([
-            'nome'               => $data['nome'],
-            'slug'               => $slug,
-            'tipo_servico'       => $data['tipo_servico'],
-            'evolution_instance' => $instance,
+            'nome'                       => $data['nome'],
+            'slug'                       => $slug,
+            'tipo_servico'               => $data['tipo_servico'],
+            'tipo_servico_personalizado' => $data['tipo_servico_personalizado'] ?? null,
+            'evolution_instance'         => $instance,
+            'subscription_status'        => 'trial',
+            'trial_ends_at'              => now()->addDays((int) env('TRIAL_DAYS', 14)),
+            'ativo'                      => true,
         ]);
 
         $tenant->users()->attach($request->user()->id, ['papel' => 'admin']);
 
-        $this->evolution->criarInstancia($instance);
-        $this->evolution->configurarWebhook($instance, route('webhook', $slug));
+        CreateEvolutionInstanceJob::dispatch($tenant);
 
-        return redirect()->route('dashboard');
+        session(['tenant_id' => $tenant->id]);
+
+        return redirect()->route('tenant.dashboard');
     }
 
     public function selecionar(Request $request, Tenant $tenant): RedirectResponse

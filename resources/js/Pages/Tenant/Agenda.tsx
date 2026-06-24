@@ -119,7 +119,7 @@ export default function Agenda({ recursos }: Props) {
     const hoje = toISO(new Date());
 
     return (
-        <AppLayout title="Agenda">
+        <AppLayout title="Agenda" subtitle="Visualize e gerencie os horários da semana">
             <Head title="Agenda" />
 
             {/* Controls */}
@@ -129,7 +129,11 @@ export default function Agenda({ recursos }: Props) {
                         value={recursoId}
                         onChange={e => setRecursoId(Number(e.target.value))}
                         className="input w-auto"
-                    />
+                    >
+                        {recursos.map(r => (
+                            <option key={r.id} value={r.id}>{r.nome}</option>
+                        ))}
+                    </select>
                 )}
                 <div className="flex items-center rounded-lg overflow-hidden" style={{ border: '1px solid var(--border-strong)' }}>
                     <button

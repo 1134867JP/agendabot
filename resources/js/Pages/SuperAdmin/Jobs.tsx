@@ -67,7 +67,7 @@ export default function Jobs({ failed, queue }: Props) {
     };
 
     return (
-        <AppLayout title="Jobs falhados">
+        <AppLayout title="Jobs falhados" subtitle="Tarefas da fila que encontraram erros durante a execução">
             <Head title="Jobs" />
 
             {/* Stats */}

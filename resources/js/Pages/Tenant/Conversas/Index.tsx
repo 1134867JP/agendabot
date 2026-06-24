@@ -281,9 +281,13 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                     {/* Lista */}
                     <div className="flex-1 overflow-y-auto">
                         {conversas.data.length === 0 ? (
-                            <div className="flex h-full items-center justify-center">
-                                <p className="text-center text-xs" style={{ color: 'var(--text-3)' }}>
-                                    Nenhuma conversa encontrada.
+                            <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
+                                <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
+                                    <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                                </svg>
+                                <p className="text-xs font-medium text-primary">Nenhuma conversa</p>
+                                <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>
+                                    As conversas do WhatsApp aparecem aqui.
                                 </p>
                             </div>
                         ) : conversas.data.map(c => {
@@ -436,7 +440,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                     <button
                                         type="submit"
                                         disabled={processing || assumindo || !data.conteudo.trim()}
-                                        className="flex-shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-primary transition-opacity disabled:opacity-40"
+                                        className="flex-shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-40"
                                         style={{ background: 'var(--accent)' }}
                                     >
                                         {(processing || assumindo) ? '…' : 'Enviar'}

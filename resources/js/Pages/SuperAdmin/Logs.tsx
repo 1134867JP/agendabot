@@ -120,7 +120,7 @@ export default function Logs() {
         : entries;
 
     return (
-        <AppLayout title="Logs do sistema">
+        <AppLayout title="Logs do sistema" subtitle="Registro de erros, avisos e eventos da plataforma">
             <Head title="Logs" />
 
             {/* Toolbar */}

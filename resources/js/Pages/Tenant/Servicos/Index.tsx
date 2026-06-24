@@ -380,7 +380,7 @@ export default function ServicosIndex({ servicos }: Props) {
     };
 
     return (
-        <AppLayout title="Serviços">
+        <AppLayout title="Serviços" subtitle="Cortes, tratamentos e procedimentos que você oferece">
             <Head title="Serviços" />
 
             <div className="mb-5 flex items-center justify-between">
@@ -395,11 +395,21 @@ export default function ServicosIndex({ servicos }: Props) {
             {/* Lista */}
             <div className="space-y-3">
                 {servicos.length === 0 && (
-                    <div className="card p-10 text-center" style={{ color: 'var(--text-3)' }}>
-                        <p className="text-sm">Nenhum serviço cadastrado ainda.</p>
-                        <p className="mt-1 text-xs">
-                            Cadastre os serviços oferecidos pelo seu estabelecimento.
-                        </p>
+                    <div className="card flex flex-col items-center gap-3 p-14 text-center">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: 'var(--bg-surface-2)' }}>
+                            <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
+                                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-primary">Nenhum serviço cadastrado</p>
+                            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
+                                Cadastre os cortes, tratamentos e procedimentos do seu estabelecimento.
+                            </p>
+                        </div>
+                        <button onClick={() => setNovoModal(true)} className="btn-primary mt-1">
+                            + Adicionar serviço
+                        </button>
                     </div>
                 )}
 
