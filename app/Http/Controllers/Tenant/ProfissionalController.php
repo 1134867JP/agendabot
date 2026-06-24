@@ -31,8 +31,9 @@ class ProfissionalController extends Controller
             'servico_ids'      => 'nullable|array',
             'servico_ids.*'    => 'integer|exists:servicos,id',
         ]);
-        $profissional = $tenant->profissionais()->create($data);
-        $profissional->servicos()->sync($data['servico_ids'] ?? []);
+        $servicoIds = $data['servico_ids'] ?? [];
+        $profissional = $tenant->profissionais()->create(\Illuminate\Support\Arr::except($data, ['servico_ids']));
+        $profissional->servicos()->sync($servicoIds);
         return back()->with('success', 'Profissional criado.');
     }
 
@@ -47,8 +48,9 @@ class ProfissionalController extends Controller
             'servico_ids'      => 'nullable|array',
             'servico_ids.*'    => 'integer|exists:servicos,id',
         ]);
-        $profissional->update($data);
-        $profissional->servicos()->sync($data['servico_ids'] ?? []);
+        $servicoIds = $data['servico_ids'] ?? [];
+        $profissional->update(\Illuminate\Support\Arr::except($data, ['servico_ids']));
+        $profissional->servicos()->sync($servicoIds);
         return back()->with('success', 'Profissional atualizado.');
     }
 

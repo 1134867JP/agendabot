@@ -47,8 +47,15 @@ class WebhookController extends Controller
             return response('ok');
         }
 
+        $remoteJid = data_get($msgData, 'key.remoteJid') ?? '';
+
+        // Ignorar mensagens de grupo (JID com @g.us)
+        if (str_contains($remoteJid, '@g.us')) {
+            return response('ok');
+        }
+
         // Remover sufixo @s.whatsapp.net (JID format da Evolution API)
-        $telefone = str_replace(['@s.whatsapp.net', '@g.us'], '', data_get($msgData, 'key.remoteJid') ?? '');
+        $telefone = str_replace('@s.whatsapp.net', '', $remoteJid);
 
         if (! $telefone) {
             return response('ok');
