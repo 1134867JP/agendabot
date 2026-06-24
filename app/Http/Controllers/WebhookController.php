@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\ProcessarMensagemJob;
 use App\Jobs\ProcessarMensagemWhatsapp;
 use App\Models\Tenant;
 use Illuminate\Http\Request;

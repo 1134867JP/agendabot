@@ -50,7 +50,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         // 3. Buscar ou criar conversa
         $conversa = Conversa::firstOrCreate(
             ['tenant_id' => $this->tenant->id, 'telefone_cliente' => $this->telefone],
-            ['status_v2' => 'ativa', 'cliente_id' => $cliente->id, 'etapa' => 'idle'],
+            ['status_v2' => 'ativa', 'cliente_id' => $cliente->id],
         );
 
         if (! $conversa->cliente_id) {
