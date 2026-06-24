@@ -22,6 +22,18 @@ class WebhookController extends Controller
         // Log para debug do formato Evolution v2
         Log::info('WEBHOOK_RAW', ['tenant' => $tenantSlug, 'event' => data_get($data, 'event'), 'keys' => array_keys($data)]);
 
+        // Atualizar status de conexão quando WhatsApp conecta/desconecta
+        $event = data_get($data, 'event');
+        if ($event === 'connection.update' || $event === 'CONNECTION_UPDATE') {
+            $state = data_get($data, 'data.state') ?? data_get($data, 'data.instance.state');
+            $conectado = $state === 'open';
+            if ($tenant->whatsapp_conectado !== $conectado) {
+                $tenant->update(['whatsapp_conectado' => $conectado]);
+                Log::info('WHATSAPP_CONNECTION_UPDATE', ['tenant' => $tenantSlug, 'state' => $state, 'conectado' => $conectado]);
+            }
+            return response('ok');
+        }
+
         if (! $tenant->bot_ativo) {
             return response('ok');
         }
