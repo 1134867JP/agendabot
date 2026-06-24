@@ -42,7 +42,8 @@ class WebhookController extends Controller
             return response('ok');
         }
 
-        $telefone = data_get($msgData, 'key.remoteJid');
+        // Remover sufixo @s.whatsapp.net (JID format da Evolution API)
+        $telefone = str_replace(['@s.whatsapp.net', '@g.us'], '', data_get($msgData, 'key.remoteJid') ?? '');
         $mensagem = data_get($msgData, 'message.conversation')
                  ?? data_get($msgData, 'message.extendedTextMessage.text');
 
