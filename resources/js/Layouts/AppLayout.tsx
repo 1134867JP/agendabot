@@ -27,7 +27,7 @@ export default function AppLayout({ children, title, fullHeight }: Props) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
-        <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-app)', color: 'var(--text-1)' }}>
+        <div className="flex h-[100dvh] overflow-hidden" style={{ background: 'var(--bg-app)', color: 'var(--text-1)' }}>
             {/* Skip link para navegação por teclado */}
             <a
                 href="#main-content"
