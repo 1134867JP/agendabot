@@ -72,7 +72,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         if (item.path === '/painel' || item.path === '/superadmin') {
             return currentUrl === item.path || currentUrl === item.path + '/';
         }
-        return currentUrl.startsWith(item.path);
+        return currentUrl === item.path || currentUrl.startsWith(item.path + '/');
     };
 
     const pararImpersonar = () => router.delete(route('superadmin.impersonar.parar'));

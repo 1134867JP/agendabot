@@ -63,6 +63,14 @@ function LandingNavbar({ currentPage, scrolled }: { currentPage?: string; scroll
                 </nav>
 
                 <Link
+                    href={route('login')}
+                    className="md:hidden text-[13px] font-medium transition-colors"
+                    style={{ color: 'rgba(255,255,255,0.65)' }}
+                >
+                    Entrar
+                </Link>
+
+                <Link
                     href={route('onboarding.step1')}
                     className="rounded-lg px-4 py-2 text-[13px] font-medium transition-all hover:brightness-90"
                     style={{ background: 'white', color: DARK }}

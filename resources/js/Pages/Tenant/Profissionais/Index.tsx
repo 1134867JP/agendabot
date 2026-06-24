@@ -516,7 +516,7 @@ export default function ProfissionaisIndex({ profissionais }: Props) {
 
                 {profissionais.map(p => (
                     <div key={p.id} className="card overflow-hidden">
-                        <div className="flex items-center justify-between px-6 py-4">
+                        <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                             {/* Avatar + info */}
                             <div className="flex items-center gap-4">
                                 <div
@@ -559,7 +559,7 @@ export default function ProfissionaisIndex({ profissionais }: Props) {
                             </div>
 
                             {/* Ações */}
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2 pl-14 sm:pl-0">
                                 <span className={`badge ${p.ativo ? 'badge-green' : 'badge-gray'}`}>
                                     {p.ativo ? 'Ativo' : 'Inativo'}
                                 </span>
