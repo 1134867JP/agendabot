@@ -37,52 +37,336 @@ function fmtHora(iso: string) {
 function fmtDiaHeader(d: Date) {
     return d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' });
 }
+function fmtDiaLongo(d: Date) {
+    return d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+}
 
 const HORAS = Array.from({ length: 15 }, (_, i) => i + 7); // 07..21
 
-// ─── Slot color (dark theme) ──────────────────────────────────────────────────
+// ─── Slot color ───────────────────────────────────────────────────────────────
 
 function slotColor(a: AgendamentoCalendario): { bg: string; border: string; text: string } {
     if (a.status === 'cancelado')  return { bg: 'rgba(239,68,68,0.08)',   border: 'rgba(239,68,68,0.2)',    text: '#f87171' };
-    if (a.status === 'concluido')  return { bg: 'var(--bg-surface-2)', border: 'rgba(255,255,255,0.1)',  text: 'rgba(232,230,225,0.4)' };
-    if (a.origem === 'manual')     return { bg: 'rgba(59,130,246,0.1)',   border: 'rgba(59,130,246,0.25)',  text: '#93c5fd' };
-    return                                { bg: 'rgba(110,231,183,0.08)', border: 'rgba(110,231,183,0.2)',  text: '#6ee7b7' };
+    if (a.status === 'concluido')  return { bg: 'var(--bg-surface-2)',    border: 'rgba(255,255,255,0.1)',  text: 'rgba(232,230,225,0.4)' };
+    if (a.origem === 'manual')     return { bg: 'rgba(59,130,246,0.1)',   border: 'rgba(59,130,246,0.25)', text: '#93c5fd' };
+    return                                { bg: 'rgba(110,231,183,0.08)', border: 'rgba(110,231,183,0.2)', text: '#6ee7b7' };
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Detail Modal ─────────────────────────────────────────────────────────────
 
-export default function Agenda({ recursos }: Props) {
-    const [semana, setSemana]           = useState(() => startOfWeek(new Date()));
-    const [recursoId, setRecursoId]     = useState<number>(recursos[0]?.id ?? 0);
-    const [agendamentos, setAgs]        = useState<AgendamentoCalendario[]>([]);
-    const [loading, setLoading]         = useState(false);
-    const [detalhe, setDetalhe]         = useState<AgendamentoCalendario | null>(null);
-    const [modalNova, setModalNova]     = useState<{ data: string; hora: string } | null>(null);
-    const [novaForm, setNovaForm]       = useState({ nome: '', tel: '', fim: '', obs: '' });
-    const [salvando, setSalvando]       = useState(false);
+function DetalheModal({
+    detalhe,
+    onClose,
+    onConcluir,
+    onCancelar,
+}: {
+    detalhe: AgendamentoCalendario;
+    onClose: () => void;
+    onConcluir: (id: number) => void;
+    onCancelar: (id: number) => void;
+}) {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
+            <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
+                <div className="mb-4 flex items-start justify-between">
+                    <div>
+                        <h3 style={{ fontFamily: 'Instrument Serif, Georgia, serif' }} className="text-xl font-semibold text-primary">
+                            {detalhe.title}
+                        </h3>
+                        <p className="text-sm" style={{ color: 'var(--text-3)' }}>{detalhe.telefone}</p>
+                    </div>
+                    <button onClick={onClose} style={{ color: 'var(--text-3)' }} className="hover:text-primary transition-colors">✕</button>
+                </div>
+                <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                        <span style={{ color: 'var(--text-3)' }}>Horário</span>
+                        <span className="font-medium text-primary">{fmtHora(detalhe.start)} – {fmtHora(detalhe.end)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span style={{ color: 'var(--text-3)' }}>Origem</span>
+                        <span style={{ color: 'var(--text-2)' }}>{detalhe.origem === 'whatsapp' ? '🤖 WhatsApp' : '📋 Manual'}</span>
+                    </div>
+                    {detalhe.valor_total != null && (
+                        <div className="flex justify-between">
+                            <span style={{ color: 'var(--text-3)' }}>Valor</span>
+                            <span className="font-medium text-primary">
+                                {Number(detalhe.valor_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </span>
+                        </div>
+                    )}
+                    <div className="flex justify-between">
+                        <span style={{ color: 'var(--text-3)' }}>Status</span>
+                        <span className={`badge ${detalhe.status === 'confirmado' ? 'badge-green' : detalhe.status === 'cancelado' ? 'badge-red' : 'badge-gray'}`}>
+                            {detalhe.status}
+                        </span>
+                    </div>
+                </div>
+                <div className="mt-5 flex gap-2">
+                    <a href={`tel:${detalhe.telefone}`} className="btn-secondary flex-1 justify-center text-xs py-2">
+                        📞 Ligar
+                    </a>
+                    {detalhe.status === 'confirmado' && (
+                        <>
+                            <button onClick={() => onConcluir(detalhe.id)} className="btn-secondary flex-1 justify-center text-xs py-2">
+                                Concluir
+                            </button>
+                            <button onClick={() => onCancelar(detalhe.id)} className="btn-danger flex-1 justify-center text-xs py-2">
+                                Cancelar
+                            </button>
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
 
-    const dias = Array.from({ length: 7 }, (_, i) => addDays(semana, i));
+// ─── Day List View (mobile) ───────────────────────────────────────────────────
 
-    const carregar = useCallback(() => {
-        if (!recursoId) return;
-        setLoading(true);
-        fetch(
-            route('tenant.agenda.disponibilidade') +
-            `?recurso_id=${recursoId}&data_inicio=${toISO(semana)}&data_fim=${toISO(dias[6])}`,
-            { headers: { 'X-Requested-With': 'XMLHttpRequest' } },
-        )
-            .then(r => r.json())
-            .then(setAgs)
-            .finally(() => setLoading(false));
-    }, [recursoId, semana]);
+function DayListView({
+    dia,
+    agendamentos,
+    onDia,
+    onNovo,
+    onDetalhe,
+    loading,
+}: {
+    dia: Date;
+    agendamentos: AgendamentoCalendario[];
+    onDia: (d: Date) => void;
+    onNovo: (hora: string) => void;
+    onDetalhe: (a: AgendamentoCalendario) => void;
+    loading: boolean;
+}) {
+    const hoje = toISO(new Date());
+    const isHoje = toISO(dia) === hoje;
 
-    useEffect(() => { carregar(); }, [carregar]);
+    // Build hour slots
+    return (
+        <div className="card overflow-hidden">
+            {/* Day header */}
+            <div
+                className="flex items-center justify-between px-4 py-3"
+                style={{ borderBottom: '1px solid var(--border)', background: isHoje ? 'var(--accent-light)' : undefined }}
+            >
+                <button
+                    onClick={() => onDia(addDays(dia, -1))}
+                    className="rounded-lg px-2 py-1 text-lg transition-colors hover:bg-[var(--bg-surface-2)]"
+                    style={{ color: 'var(--text-3)' }}
+                >‹</button>
+                <div className="text-center">
+                    <p className="text-sm font-semibold" style={{ color: isHoje ? 'var(--accent)' : 'var(--text-1)' }}>
+                        {fmtDiaLongo(dia)}
+                    </p>
+                    {isHoje && <p className="text-[10px] font-medium" style={{ color: 'var(--accent)' }}>Hoje</p>}
+                </div>
+                <button
+                    onClick={() => onDia(addDays(dia, 1))}
+                    className="rounded-lg px-2 py-1 text-lg transition-colors hover:bg-[var(--bg-surface-2)]"
+                    style={{ color: 'var(--text-3)' }}
+                >›</button>
+            </div>
+
+            {loading ? (
+                <div className="flex items-center justify-center py-12">
+                    <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24" style={{ color: 'var(--text-3)' }}>
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                </div>
+            ) : (
+                <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                    {HORAS.map(h => {
+                        const ags = agendamentos.filter(a => {
+                            const d = new Date(a.start);
+                            return toISO(d) === toISO(dia) && d.getHours() === h;
+                        });
+                        return (
+                            <div key={h} className="flex gap-3 px-4 py-2.5">
+                                <span
+                                    className="w-10 shrink-0 pt-0.5 text-right font-mono text-xs"
+                                    style={{ color: 'var(--text-3)' }}
+                                >
+                                    {String(h).padStart(2, '0')}:00
+                                </span>
+                                <div className="flex-1">
+                                    {ags.length === 0 ? (
+                                        <button
+                                            onClick={() => onNovo(`${String(h).padStart(2, '0')}:00`)}
+                                            className="h-8 w-full rounded-md transition-colors hover:bg-[var(--accent-light)]"
+                                        />
+                                    ) : ags.map(a => {
+                                        const { bg, border, text } = slotColor(a);
+                                        return (
+                                            <button
+                                                key={a.id}
+                                                onClick={() => onDetalhe(a)}
+                                                className="mb-1 w-full rounded-lg border px-3 py-2 text-left transition-opacity hover:opacity-80"
+                                                style={{ background: bg, borderColor: border }}
+                                            >
+                                                <p className="truncate text-sm font-medium" style={{ color: text }}>{a.title}</p>
+                                                <p className="text-xs opacity-70" style={{ color: text }}>
+                                                    {fmtHora(a.start)} – {fmtHora(a.end)}
+                                                </p>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Week Grid (desktop) ──────────────────────────────────────────────────────
+
+function WeekGrid({
+    dias,
+    agendamentos,
+    loading,
+    onSlotClick,
+    onDetalhe,
+}: {
+    dias: Date[];
+    agendamentos: AgendamentoCalendario[];
+    loading: boolean;
+    onSlotClick: (data: string, hora: string) => void;
+    onDetalhe: (a: AgendamentoCalendario) => void;
+}) {
+    const hoje = toISO(new Date());
 
     const agsNaHora = (diaIdx: number, hora: number) =>
         agendamentos.filter(a => {
             const d = new Date(a.start);
             return toISO(d) === toISO(dias[diaIdx]) && d.getHours() === hora;
         });
+
+    return (
+        <div className="card overflow-x-auto">
+            <table className="min-w-full text-xs" style={{ tableLayout: 'fixed' }}>
+                <colgroup>
+                    <col style={{ width: '52px' }} />
+                    {dias.map((_, i) => <col key={i} />)}
+                </colgroup>
+                <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                        <th style={{ background: 'var(--bg-surface-2)' }} className="px-2 py-2.5" />
+                        {dias.map((d, i) => {
+                            const isHoje = toISO(d) === hoje;
+                            return (
+                                <th
+                                    key={i}
+                                    className="px-2 py-2.5 text-center font-semibold"
+                                    style={{
+                                        background: isHoje ? 'var(--accent-light)' : 'var(--bg-surface-2)',
+                                        color: isHoje ? 'var(--accent)' : 'var(--text-3)',
+                                    }}
+                                >
+                                    <span className="block text-xs uppercase">{fmtDiaHeader(d)}</span>
+                                    {isHoje && (
+                                        <span className="mt-0.5 inline-block h-1.5 w-1.5 rounded-full" style={{ background: 'var(--accent)' }} />
+                                    )}
+                                </th>
+                            );
+                        })}
+                    </tr>
+                </thead>
+                <tbody>
+                    {loading ? (
+                        <tr>
+                            <td colSpan={8} className="py-16 text-center">
+                                <svg className="mx-auto h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24" style={{ color: 'var(--text-3)' }}>
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                </svg>
+                            </td>
+                        </tr>
+                    ) : HORAS.map(h => (
+                        <tr key={h} style={{ borderBottom: '1px solid var(--border)', height: '52px' }}>
+                            <td className="px-2 py-1 text-center text-xs align-top pt-2" style={{ background: 'var(--bg-surface-2)', color: 'var(--text-3)' }}>
+                                {String(h).padStart(2, '0')}:00
+                            </td>
+                            {dias.map((_, dIdx) => {
+                                const ags = agsNaHora(dIdx, h);
+                                const isHoje = toISO(dias[dIdx]) === hoje;
+                                return (
+                                    <td
+                                        key={dIdx}
+                                        onClick={() => ags.length === 0 && onSlotClick(toISO(dias[dIdx]), `${String(h).padStart(2, '0')}:00`)}
+                                        className="px-1 py-1 align-top cursor-pointer"
+                                        style={{
+                                            borderLeft: '1px solid var(--border)',
+                                            background: isHoje ? 'rgba(99,102,241,0.03)' : undefined,
+                                        }}
+                                    >
+                                        {ags.length === 0 ? (
+                                            <div className="h-full w-full rounded transition-colors hover:bg-[var(--accent-light)]" />
+                                        ) : ags.map(a => {
+                                            const { bg, border, text } = slotColor(a);
+                                            return (
+                                                <div
+                                                    key={a.id}
+                                                    onClick={e => { e.stopPropagation(); onDetalhe(a); }}
+                                                    className="mb-0.5 cursor-pointer rounded-md border px-1.5 py-0.5 leading-tight transition-opacity hover:opacity-80"
+                                                    style={{ background: bg, borderColor: border, color: text }}
+                                                >
+                                                    <p className="truncate font-medium text-xs">{a.title}</p>
+                                                    <p className="text-xs opacity-70">{fmtHora(a.start)}–{fmtHora(a.end)}</p>
+                                                </div>
+                                            );
+                                        })}
+                                    </td>
+                                );
+                            })}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+export default function Agenda({ recursos }: Props) {
+    const [semana, setSemana]         = useState(() => startOfWeek(new Date()));
+    const [diaAtivo, setDiaAtivo]     = useState(() => new Date());
+    const [recursoId, setRecursoId]   = useState<number>(recursos[0]?.id ?? 0);
+    const [agendamentos, setAgs]      = useState<AgendamentoCalendario[]>([]);
+    const [loading, setLoading]       = useState(false);
+    const [detalhe, setDetalhe]       = useState<AgendamentoCalendario | null>(null);
+    const [modalNova, setModalNova]   = useState<{ data: string; hora: string } | null>(null);
+    const [novaForm, setNovaForm]     = useState({ nome: '', tel: '', fim: '', obs: '' });
+    const [salvando, setSalvando]     = useState(false);
+
+    const dias = Array.from({ length: 7 }, (_, i) => addDays(semana, i));
+
+    const carregar = useCallback(() => {
+        if (!recursoId) return;
+        setLoading(true);
+        // For mobile day view, fetch just the week containing diaAtivo
+        const inicio = startOfWeek(diaAtivo);
+        const fim    = addDays(inicio, 6);
+        fetch(
+            route('tenant.agenda.disponibilidade') +
+            `?recurso_id=${recursoId}&data_inicio=${toISO(inicio)}&data_fim=${toISO(fim)}`,
+            { headers: { 'X-Requested-With': 'XMLHttpRequest' } },
+        )
+            .then(r => r.json())
+            .then(setAgs)
+            .finally(() => setLoading(false));
+    }, [recursoId, semana, diaAtivo]);
+
+    useEffect(() => { carregar(); }, [carregar]);
+
+    // Keep semana in sync when diaAtivo changes (mobile navigation)
+    const navegarDia = (d: Date) => {
+        setDiaAtivo(d);
+        setSemana(startOfWeek(d));
+    };
 
     const cancelar = (id: number) => {
         router.patch(route('tenant.agendamentos.cancelar', id), {}, {
@@ -116,8 +400,6 @@ export default function Agenda({ recursos }: Props) {
         });
     };
 
-    const hoje = toISO(new Date());
-
     return (
         <AppLayout title="Agenda" subtitle="Visualize e gerencie os horários da semana">
             <Head title="Agenda" />
@@ -135,186 +417,94 @@ export default function Agenda({ recursos }: Props) {
                         ))}
                     </select>
                 )}
-                <div className="flex items-center rounded-lg overflow-hidden" style={{ border: '1px solid var(--border-strong)' }}>
+
+                {/* Week navigator — hidden on mobile (day view has its own nav) */}
+                <div className="hidden md:flex items-center rounded-lg overflow-hidden" style={{ border: '1px solid var(--border-strong)' }}>
                     <button
-                        onClick={() => setSemana(addDays(semana, -7))}
+                        onClick={() => { setSemana(addDays(semana, -7)); setDiaAtivo(addDays(semana, -7)); }}
                         className="px-3 py-2 text-sm transition-colors hover:bg-[var(--bg-surface-2)]"
                         style={{ color: 'var(--text-3)' }}
                     >←</button>
                     <button
-                        onClick={() => setSemana(startOfWeek(new Date()))}
+                        onClick={() => { setSemana(startOfWeek(new Date())); setDiaAtivo(new Date()); }}
                         className="px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--bg-surface-2)]"
                         style={{ color: 'var(--text-2)', borderLeft: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}
                     >Hoje</button>
                     <button
-                        onClick={() => setSemana(addDays(semana, 7))}
+                        onClick={() => { setSemana(addDays(semana, 7)); setDiaAtivo(addDays(semana, 7)); }}
                         className="px-3 py-2 text-sm transition-colors hover:bg-[var(--bg-surface-2)]"
                         style={{ color: 'var(--text-3)' }}
                     >→</button>
                 </div>
-                <span className="text-sm font-medium" style={{ color: 'var(--text-2)' }}>
+
+                {/* Mobile: Hoje button */}
+                <button
+                    onClick={() => { setSemana(startOfWeek(new Date())); setDiaAtivo(new Date()); }}
+                    className="flex md:hidden items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors"
+                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', color: 'var(--text-2)' }}
+                >
+                    Hoje
+                </button>
+
+                <span className="hidden md:inline text-sm font-medium" style={{ color: 'var(--text-2)' }}>
                     {dias[0].toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} –{' '}
                     {dias[6].toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </span>
-                {loading && <span className="text-xs" style={{ color: 'var(--text-3)' }}>Carregando…</span>}
             </div>
 
-            {/* Grid */}
-            <div className="card overflow-x-auto">
-                <table className="min-w-full text-xs" style={{ tableLayout: 'fixed' }}>
-                    <colgroup>
-                        <col style={{ width: '52px' }} />
-                        {dias.map((_, i) => <col key={i} />)}
-                    </colgroup>
-                    <thead>
-                        <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                            <th style={{ background: 'var(--bg-surface-2)' }} className="px-2 py-2.5" />
-                            {dias.map((d, i) => {
-                                const isHoje = toISO(d) === hoje;
-                                return (
-                                    <th
-                                        key={i}
-                                        className="px-2 py-2.5 text-center font-semibold"
-                                        style={{
-                                            background: isHoje ? 'var(--accent-light)' : 'var(--bg-surface-2)',
-                                            color: isHoje ? 'var(--accent)' : 'var(--text-3)',
-                                        }}
-                                    >
-                                        <span className="block text-xs uppercase">{fmtDiaHeader(d)}</span>
-                                        {isHoje && (
-                                            <span
-                                                className="mt-0.5 inline-block h-1.5 w-1.5 rounded-full"
-                                                style={{ background: 'var(--accent)' }}
-                                            />
-                                        )}
-                                    </th>
-                                );
-                            })}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {HORAS.map(h => (
-                            <tr key={h} style={{ borderBottom: '1px solid var(--border)', height: '52px' }}>
-                                <td className="px-2 py-1 text-center text-xs align-top pt-2" style={{ background: 'var(--bg-surface-2)', color: 'var(--text-3)' }}>
-                                    {String(h).padStart(2, '0')}:00
-                                </td>
-                                {dias.map((_, dIdx) => {
-                                    const ags = agsNaHora(dIdx, h);
-                                    const isHoje = toISO(dias[dIdx]) === hoje;
-                                    return (
-                                        <td
-                                            key={dIdx}
-                                            onClick={() => ags.length === 0 && setModalNova({
-                                                data: toISO(dias[dIdx]),
-                                                hora: `${String(h).padStart(2, '0')}:00`,
-                                            })}
-                                            className="px-1 py-1 align-top cursor-pointer"
-                                            style={{
-                                                borderLeft: '1px solid var(--border)',
-                                                background: isHoje ? 'rgba(99,102,241,0.03)' : undefined,
-                                            }}
-                                        >
-                                            {ags.length === 0 ? (
-                                                <div className="h-full w-full rounded transition-colors hover:bg-[var(--accent-light)]" />
-                                            ) : ags.map(a => {
-                                                const { bg, border, text } = slotColor(a);
-                                                return (
-                                                    <div
-                                                        key={a.id}
-                                                        onClick={e => { e.stopPropagation(); setDetalhe(a); }}
-                                                        className="mb-0.5 cursor-pointer rounded-md border px-1.5 py-0.5 leading-tight transition-opacity hover:opacity-80"
-                                                        style={{ background: bg, borderColor: border, color: text }}
-                                                    >
-                                                        <p className="truncate font-medium text-xs">{a.title}</p>
-                                                        <p className="text-xs opacity-70">{fmtHora(a.start)}–{fmtHora(a.end)}</p>
-                                                    </div>
-                                                );
-                                            })}
-                                        </td>
-                                    );
-                                })}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+            {/* Mobile: day list view */}
+            <div className="md:hidden">
+                <DayListView
+                    dia={diaAtivo}
+                    agendamentos={agendamentos}
+                    onDia={navegarDia}
+                    onNovo={hora => setModalNova({ data: toISO(diaAtivo), hora })}
+                    onDetalhe={setDetalhe}
+                    loading={loading}
+                />
             </div>
 
-            {/* Legenda */}
-            <div className="mt-3 flex flex-wrap gap-4 text-xs" style={{ color: 'var(--text-3)' }}>
-                {[
-                    { bg: 'rgba(110,231,183,0.08)', border: 'rgba(110,231,183,0.2)', label: 'WhatsApp' },
-                    { bg: 'rgba(59,130,246,0.1)',   border: 'rgba(59,130,246,0.25)', label: 'Manual' },
-                    { bg: 'var(--bg-surface-2)', border: 'rgba(255,255,255,0.1)', label: 'Concluído' },
-                    { bg: 'rgba(239,68,68,0.08)',   border: 'rgba(239,68,68,0.2)',   label: 'Cancelado' },
-                ].map(l => (
-                    <span key={l.label} className="flex items-center gap-1.5">
-                        <span className="h-3 w-3 rounded-sm border" style={{ background: l.bg, borderColor: l.border }} />
-                        {l.label}
+            {/* Desktop: week grid */}
+            <div className="hidden md:block">
+                <WeekGrid
+                    dias={dias}
+                    agendamentos={agendamentos}
+                    loading={loading}
+                    onSlotClick={(data, hora) => setModalNova({ data, hora })}
+                    onDetalhe={setDetalhe}
+                />
+
+                {/* Legenda */}
+                <div className="mt-3 flex flex-wrap gap-4 text-xs" style={{ color: 'var(--text-3)' }}>
+                    {[
+                        { bg: 'rgba(110,231,183,0.08)', border: 'rgba(110,231,183,0.2)', label: 'WhatsApp' },
+                        { bg: 'rgba(59,130,246,0.1)',   border: 'rgba(59,130,246,0.25)', label: 'Manual' },
+                        { bg: 'var(--bg-surface-2)',    border: 'rgba(255,255,255,0.1)', label: 'Concluído' },
+                        { bg: 'rgba(239,68,68,0.08)',   border: 'rgba(239,68,68,0.2)',   label: 'Cancelado' },
+                    ].map(l => (
+                        <span key={l.label} className="flex items-center gap-1.5">
+                            <span className="h-3 w-3 rounded-sm border" style={{ background: l.bg, borderColor: l.border }} />
+                            {l.label}
+                        </span>
+                    ))}
+                    <span className="flex items-center gap-1.5">
+                        <span className="h-3 w-3 rounded-sm border border-dashed" style={{ background: 'var(--accent-light)', borderColor: 'var(--accent)' }} />
+                        Slot livre (clique para reservar)
                     </span>
-                ))}
-                <span className="flex items-center gap-1.5" style={{ color: 'var(--text-3)' }}>
-                    <span className="h-3 w-3 rounded-sm border border-dashed" style={{ background: 'var(--accent-light)', borderColor: 'var(--accent)' }} />
-                    Slot livre (clique para reservar)
-                </span>
+                </div>
             </div>
 
-            {/* ── Modal detalhe ── */}
+            {/* Detail modal */}
             {detalhe && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
-                    <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
-                        <div className="mb-4 flex items-start justify-between">
-                            <div>
-                                <h3 style={{ fontFamily: 'Instrument Serif, Georgia, serif' }} className="text-xl font-semibold text-primary">
-                                    {detalhe.title}
-                                </h3>
-                                <p className="text-sm" style={{ color: 'var(--text-3)' }}>{detalhe.telefone}</p>
-                            </div>
-                            <button onClick={() => setDetalhe(null)} style={{ color: 'var(--text-3)' }} className="hover:text-primary transition-colors">✕</button>
-                        </div>
-                        <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                                <span style={{ color: 'var(--text-3)' }}>Horário</span>
-                                <span className="font-medium text-primary">{fmtHora(detalhe.start)} – {fmtHora(detalhe.end)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span style={{ color: 'var(--text-3)' }}>Origem</span>
-                                <span style={{ color: 'var(--text-2)' }}>{detalhe.origem === 'whatsapp' ? '🤖 WhatsApp' : '📋 Manual'}</span>
-                            </div>
-                            {detalhe.valor_total != null && (
-                                <div className="flex justify-between">
-                                    <span style={{ color: 'var(--text-3)' }}>Valor</span>
-                                    <span className="font-medium text-primary">
-                                        {Number(detalhe.valor_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                                    </span>
-                                </div>
-                            )}
-                            <div className="flex justify-between">
-                                <span style={{ color: 'var(--text-3)' }}>Status</span>
-                                <span className={`badge ${detalhe.status === 'confirmado' ? 'badge-green' : detalhe.status === 'cancelado' ? 'badge-red' : 'badge-gray'}`}>
-                                    {detalhe.status}
-                                </span>
-                            </div>
-                        </div>
-                        <div className="mt-5 flex gap-2">
-                            <a href={`tel:${detalhe.telefone}`} className="btn-secondary flex-1 justify-center text-xs py-2">
-                                📞 Ligar
-                            </a>
-                            {detalhe.status === 'confirmado' && (
-                                <>
-                                    <button onClick={() => concluir(detalhe.id)} className="btn-secondary flex-1 justify-center text-xs py-2">
-                                        Concluir
-                                    </button>
-                                    <button onClick={() => cancelar(detalhe.id)} className="btn-danger flex-1 justify-center text-xs py-2">
-                                        Cancelar
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                </div>
+                <DetalheModal
+                    detalhe={detalhe}
+                    onClose={() => setDetalhe(null)}
+                    onConcluir={concluir}
+                    onCancelar={cancelar}
+                />
             )}
 
-            {/* ── Modal nova reserva ── */}
+            {/* New booking modal */}
             {modalNova && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
                     <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
