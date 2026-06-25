@@ -11,7 +11,7 @@ class HorarioProfissionalController extends Controller
 {
     public function sync(Request $request, Profissional $profissional): RedirectResponse
     {
-        abort_if($profissional->tenant_id !== app('tenant')->id, 403);
+        abort_if((int)$profissional->tenant_id !== (int)app('tenant')->id, 403);
 
         $request->validate([
             'horarios'                => 'required|array',

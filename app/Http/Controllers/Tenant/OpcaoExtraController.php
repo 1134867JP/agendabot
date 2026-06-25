@@ -31,7 +31,7 @@ class OpcaoExtraController extends Controller
 
     public function update(Request $request, OpcaoExtra $opcaoExtra): RedirectResponse
     {
-        abort_if($opcaoExtra->tenant_id !== app('tenant')->id, 403);
+        abort_if((int)$opcaoExtra->tenant_id !== (int)app('tenant')->id, 403);
         $opcaoExtra->update($request->validate([
             'tipo'  => 'required|in:convenio,pagamento,outro',
             'nome'  => 'required|string|max:255',
@@ -42,7 +42,7 @@ class OpcaoExtraController extends Controller
 
     public function destroy(OpcaoExtra $opcaoExtra): RedirectResponse
     {
-        abort_if($opcaoExtra->tenant_id !== app('tenant')->id, 403);
+        abort_if((int)$opcaoExtra->tenant_id !== (int)app('tenant')->id, 403);
         $opcaoExtra->update(['ativo' => false]);
         return back()->with('success', 'Opção removida.');
     }

@@ -38,7 +38,7 @@ class ServicoController extends Controller
 
     public function update(Request $request, Servico $servico): RedirectResponse
     {
-        abort_if($servico->tenant_id !== app('tenant')->id, 403);
+        abort_if((int)$servico->tenant_id !== (int)app('tenant')->id, 403);
         $data = $request->validate([
             'nome'             => 'required|string|max:255',
             'descricao'        => 'nullable|string',
@@ -54,7 +54,7 @@ class ServicoController extends Controller
 
     public function destroy(Servico $servico): RedirectResponse
     {
-        abort_if($servico->tenant_id !== app('tenant')->id, 403);
+        abort_if((int)$servico->tenant_id !== (int)app('tenant')->id, 403);
         $servico->delete();
         return back()->with('success', 'Serviço excluído.');
     }

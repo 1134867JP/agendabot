@@ -12,7 +12,7 @@ class Profissional extends Model
 {
     protected $table = 'profissionais';
     protected $fillable = ['tenant_id', 'nome', 'especialidades', 'ativo'];
-    protected $casts = ['especialidades' => 'array', 'ativo' => 'boolean'];
+    protected $casts = ['tenant_id' => 'integer', 'especialidades' => 'array', 'ativo' => 'boolean'];
 
     public function tenant(): BelongsTo { return $this->belongsTo(Tenant::class); }
     public function horarios(): HasMany { return $this->hasMany(HorarioProfissional::class); }

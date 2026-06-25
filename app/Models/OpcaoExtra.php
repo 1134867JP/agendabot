@@ -9,7 +9,7 @@ class OpcaoExtra extends Model
 {
     protected $table = 'opcoes_extras';
     protected $fillable = ['tenant_id', 'tipo', 'nome', 'ativo'];
-    protected $casts = ['ativo' => 'boolean'];
+    protected $casts = ['tenant_id' => 'integer', 'ativo' => 'boolean'];
 
     public function tenant(): BelongsTo { return $this->belongsTo(Tenant::class); }
 }

@@ -39,7 +39,7 @@ class ProfissionalController extends Controller
 
     public function update(Request $request, Profissional $profissional): RedirectResponse
     {
-        abort_if($profissional->tenant_id !== app('tenant')->id, 403);
+        abort_if((int)$profissional->tenant_id !== (int)app('tenant')->id, 403);
         $data = $request->validate([
             'nome'             => 'required|string|max:255',
             'especialidades'   => 'nullable|array',
@@ -56,7 +56,7 @@ class ProfissionalController extends Controller
 
     public function destroy(Profissional $profissional): RedirectResponse
     {
-        abort_if($profissional->tenant_id !== app('tenant')->id, 403);
+        abort_if((int)$profissional->tenant_id !== (int)app('tenant')->id, 403);
         $profissional->update(['ativo' => false]);
         return back()->with('success', 'Profissional removido.');
     }

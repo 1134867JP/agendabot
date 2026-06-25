@@ -36,7 +36,7 @@ class ConversaController extends Controller
 
     public function mensagens(Conversa $conversa): JsonResponse
     {
-        abort_if($conversa->tenant_id !== app('tenant')->id, 403);
+        abort_if((int)$conversa->tenant_id !== (int)app('tenant')->id, 403);
 
         $mensagens = $conversa->mensagens()
             ->orderByDesc('enviada_em')
@@ -50,7 +50,7 @@ class ConversaController extends Controller
 
     public function assumir(Conversa $conversa): RedirectResponse
     {
-        abort_if($conversa->tenant_id !== app('tenant')->id, 403);
+        abort_if((int)$conversa->tenant_id !== (int)app('tenant')->id, 403);
 
         $conversa->update(['status_v2' => 'em_atendimento_humano']);
         $conversa->registrarMensagem('bot', '⚠️ Atendimento assumido por um humano.');
@@ -60,7 +60,7 @@ class ConversaController extends Controller
 
     public function devolver(Conversa $conversa): RedirectResponse
     {
-        abort_if($conversa->tenant_id !== app('tenant')->id, 403);
+        abort_if((int)$conversa->tenant_id !== (int)app('tenant')->id, 403);
 
         $conversa->update(['status_v2' => 'ativa']);
         $conversa->registrarMensagem('bot', '🤖 Bot reativado. Continuando atendimento automático.');
@@ -70,7 +70,7 @@ class ConversaController extends Controller
 
     public function enviarMensagem(Request $request, Conversa $conversa, EvolutionApiService $evolution): RedirectResponse
     {
-        abort_if($conversa->tenant_id !== app('tenant')->id, 403);
+        abort_if((int)$conversa->tenant_id !== (int)app('tenant')->id, 403);
 
         $data = $request->validate([
             'conteudo' => 'required|string|max:4000',

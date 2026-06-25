@@ -31,7 +31,7 @@ class ClienteController extends Controller
 
     public function show(Cliente $cliente): Response
     {
-        abort_if($cliente->tenant_id !== app('tenant')->id, 403);
+        abort_if((int)$cliente->tenant_id !== (int)app('tenant')->id, 403);
 
         return Inertia::render('Tenant/Clientes/Show', [
             'cliente'      => $cliente,

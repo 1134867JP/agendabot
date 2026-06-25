@@ -13,6 +13,7 @@ class Conversa extends Model
     ];
 
     protected $casts = [
+        'tenant_id'          => 'integer',
         'ultima_mensagem_em' => 'datetime',
     ];
 

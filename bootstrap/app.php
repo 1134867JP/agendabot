@@ -35,20 +35,5 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->respond(function (\Illuminate\Http\Response $response) {
-            if ($response->getStatusCode() === 403) {
-                \Illuminate\Support\Facades\Log::error('HTTP_403_RESPONSE', [
-                    'url'  => request()->fullUrl(),
-                    'user' => auth()->id(),
-                    'from' => collect(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 15))
-                        ->pluck('file')
-                        ->filter()
-                        ->map(fn ($f) => str_replace('/var/www/html/', '', $f))
-                        ->unique()
-                        ->values()
-                        ->toArray(),
-                ]);
-            }
-            return $response;
-        });
+        //
     })->create();
