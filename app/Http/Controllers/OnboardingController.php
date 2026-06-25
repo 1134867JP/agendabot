@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Jobs\CreateEvolutionInstanceJob;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Services\AsaasService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -76,33 +75,43 @@ class OnboardingController extends Controller
             'plano' => 'required|in:basico,profissional,ilimitado',
         ]);
 
-        $user   = auth()->user();
-        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', $user->id))->firstOrFail();
+        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->firstOrFail();
+        $tenant->update(['plano' => $request->plano]);
 
-        try {
-            $asaas      = app(AsaasService::class);
-            $customerId = $asaas->criarOuBuscarCliente($user, $tenant);
-            $subscription = $asaas->criarAssinatura($customerId, $request->plano);
+        return redirect()->route('onboarding.step3');
+    }
 
-            $tenant->update([
-                'asaas_subscription_id' => $subscription['id'] ?? null,
-                'plano'                 => $request->plano,
-            ]);
+    public function step3(): Response
+    {
+        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->firstOrFail();
 
-            $linkPagamento = $asaas->gerarLinkCheckout($subscription['id'] ?? '');
+        return Inertia::render('Onboarding/Step3', [
+            'tenant' => [
+                'nome'          => $tenant->nome,
+                'tipo_servico'  => $tenant->tipo_servico,
+                'configuracoes' => $tenant->configuracoes ?? [],
+            ],
+        ]);
+    }
 
-            if ($linkPagamento) {
-                return redirect($linkPagamento);
-            }
+    public function step3Store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'bot_nome'       => 'required|string|max:80',
+            'bot_saudacao'   => 'required|string|max:500',
+            'bot_tom'        => 'required|in:casual,profissional,descontraido',
+        ]);
 
-            return redirect()->route('onboarding.sucesso');
-        } catch (\Throwable $e) {
-            report($e);
+        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->firstOrFail();
 
-            return back()->withErrors([
-                'plano' => 'Não foi possível iniciar o checkout no Asaas. Tente novamente em alguns instantes.',
-            ]);
-        }
+        $config = $tenant->configuracoes ?? [];
+        $config['bot_nome']     = $validated['bot_nome'];
+        $config['bot_saudacao'] = $validated['bot_saudacao'];
+        $config['bot_tom']      = $validated['bot_tom'];
+
+        $tenant->update(['configuracoes' => $config]);
+
+        return redirect()->route('onboarding.sucesso');
     }
 
     public function sucesso(): Response
@@ -114,6 +123,6 @@ class OnboardingController extends Controller
 
     public function pularPagamento(): RedirectResponse
     {
-        return redirect()->route('tenant.dashboard');
+        return redirect()->route('onboarding.step3');
     }
 }
