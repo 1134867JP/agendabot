@@ -284,7 +284,7 @@ export default function Configuracoes({ tenant }: Props) {
         <AppLayout title="Configurações" subtitle="Nome do estabelecimento, tipo de serviço e personalização do bot">
             <Head title="Configurações" />
 
-            <div className="mx-auto max-w-lg space-y-6">
+            <div className="mx-auto max-w-2xl space-y-6">
                 {wasSuccessful && (
                     <div className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm text-emerald-400" style={{ background: 'rgba(110,231,183,0.08)', border: '1px solid rgba(110,231,183,0.2)' }}>
                         <span>✓</span>
@@ -320,18 +320,6 @@ export default function Configuracoes({ tenant }: Props) {
                                 onChangeCustom={v => setData('tipo_servico_personalizado', v)}
                                 error={errors.tipo_servico || errors.tipo_servico_personalizado}
                             />
-                        </div>
-
-                        <div>
-                            <label className="label mb-1">Slug (identificador único)</label>
-                            <input
-                                value={tenant.slug}
-                                readOnly
-                                className="input cursor-not-allowed opacity-50"
-                            />
-                            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
-                                O slug não pode ser alterado após a criação do estabelecimento.
-                            </p>
                         </div>
 
                         <div className="pt-2">
