@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Tenant;
 
+use App\Exceptions\HorarioIndisponivelException;
 use App\Http\Controllers\Controller;
 use App\Models\Agendamento;
 use App\Models\Profissional;
@@ -94,7 +95,11 @@ class AgendamentoController extends Controller
             $dados['duracao_minutos']  = (int) Carbon::parse($validated['inicio'])->diffInMinutes($validated['fim']);
         }
 
-        $this->agendamentoService->criar($dados);
+        try {
+            $this->agendamentoService->criar($dados);
+        } catch (HorarioIndisponivelException $e) {
+            return back()->withErrors(['inicio' => $e->getMessage()]);
+        }
 
         return back()->with('success', 'Agendamento criado com sucesso.');
     }
