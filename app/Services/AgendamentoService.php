@@ -73,6 +73,10 @@ class AgendamentoService
             $inicio = Carbon::parse("{$dados['data']} {$dados['horario']}");
             $fim = $inicio->copy()->addMinutes($duracao);
 
+            if ($inicio->isPast()) {
+                throw new HorarioIndisponivelException('Não é possível agendar para datas passadas.');
+            }
+
             // Range overlap: detecta qualquer agendamento que se sobreponha ao slot [inicio, fim)
             $conflito = Agendamento::where('profissional_id', $dados['profissional_id'])
                 ->whereNotIn('status', ['cancelado'])

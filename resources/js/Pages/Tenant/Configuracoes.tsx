@@ -28,6 +28,8 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
         instrucoes_extras: tenant.instrucoes_extras ?? '',
         bot_ativo:         tenant.bot_ativo         ?? true,
         horarios_funcionamento: tenant.horarios_funcionamento ?? '',
+        lembrete_ativo:    (tenant as any).lembrete_ativo    ?? true,
+        lembrete_texto:    (tenant as any).lembrete_texto    ?? '',
     });
 
     const submit = (e: React.FormEvent) => {
@@ -205,6 +207,52 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                     </p>
                     {errors.horarios_funcionamento && (
                         <p className="mt-1 text-xs text-red-400">{errors.horarios_funcionamento}</p>
+                    )}
+                </div>
+
+                {/* Lembretes automáticos */}
+                <div className="rounded-xl p-4" style={{ border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+                    <div className="mb-3 flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-primary">Lembrete automático</p>
+                            <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
+                                Envia uma mensagem WhatsApp 24h antes do agendamento
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            role="switch"
+                            aria-checked={data.lembrete_ativo}
+                            onClick={() => setData('lembrete_ativo', !data.lembrete_ativo)}
+                            className="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none"
+                            style={{ background: data.lembrete_ativo ? 'var(--jade)' : 'rgba(255,255,255,0.12)' }}
+                        >
+                            <span
+                                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                                    data.lembrete_ativo ? 'translate-x-5' : 'translate-x-0.5'
+                                }`}
+                            />
+                        </button>
+                    </div>
+
+                    {data.lembrete_ativo && (
+                        <div className="mt-3">
+                            <label className="label mb-1">
+                                Mensagem personalizada{' '}
+                                <span className="font-normal" style={{ color: 'var(--text-3)' }}>(opcional)</span>
+                            </label>
+                            <textarea
+                                value={data.lembrete_texto}
+                                onChange={e => setData('lembrete_texto', e.target.value)}
+                                rows={3}
+                                className="input resize-none"
+                                placeholder={'Deixe vazio para usar o padrão:\n"Para confirmar, responda: ✅ CONFIRMO\nPara cancelar, responda: ❌ CANCELAR"'}
+                                maxLength={500}
+                            />
+                            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
+                                {(data.lembrete_texto || '').length}/500 — O cabeçalho com nome, data e horário é sempre incluído.
+                            </p>
+                        </div>
                     )}
                 </div>
 

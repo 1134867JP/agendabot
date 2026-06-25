@@ -21,9 +21,12 @@ class EnviarLembretesJob implements ShouldQueue
         $amanha = now()->addDay();
 
         $agendamentos = Agendamento::query()
-            ->with(['recurso', 'tenant'])
-            ->where('status', 'confirmado')
-            ->whereDate('inicio', $amanha->toDateString())
+            ->with(['recurso', 'profissional', 'tenant', 'cliente'])
+            ->whereIn('status', ['agendado', 'confirmado'])
+            ->where(fn ($q) => $q
+                ->whereDate('inicio', $amanha->toDateString())
+                ->orWhereDate('data_hora', $amanha->toDateString())
+            )
             ->where('lembrete_enviado', false)
             ->whereHas('tenant', fn ($q) =>
                 $q->where('whatsapp_conectado', true)
@@ -32,12 +35,24 @@ class EnviarLembretesJob implements ShouldQueue
             ->get();
 
         foreach ($agendamentos as $agendamento) {
+            $cfg = $agendamento->tenant->configuracoes ?? [];
+            if (($cfg['lembrete_ativo'] ?? true) === false) {
+                continue;
+            }
+
+            $telefone = $agendamento->cliente_telefone
+                ?? $agendamento->cliente?->telefone;
+
+            if (! $telefone) {
+                continue;
+            }
+
             try {
-                $mensagem = $this->montarMensagemLembrete($agendamento);
+                $mensagem = $this->montarMensagemLembrete($agendamento, $cfg['lembrete_texto'] ?? null);
 
                 $evolution->enviarMensagem(
                     $agendamento->tenant->evolution_instance,
-                    $agendamento->cliente_telefone,
+                    $telefone,
                     $mensagem,
                 );
 
@@ -49,20 +64,25 @@ class EnviarLembretesJob implements ShouldQueue
         }
     }
 
-    private function montarMensagemLembrete(Agendamento $agendamento): string
+    private function montarMensagemLembrete(Agendamento $agendamento, ?string $textoPersonalizado): string
     {
-        $data    = Carbon::parse($agendamento->inicio)->locale('pt_BR');
-        $horario = $data->format('H:i');
-        $recurso = $agendamento->recurso->nome;
-        $tenant  = $agendamento->tenant->nome;
+        $dataHora   = Carbon::parse($agendamento->data_hora ?? $agendamento->inicio)->locale('pt_BR');
+        $horario    = $dataHora->format('H:i');
+        $nomeCliente = $agendamento->cliente_nome ?? $agendamento->cliente?->nome ?? 'Cliente';
+        $recursoNome = $agendamento->recurso?->nome ?? $agendamento->profissional?->nome ?? '';
+        $tenant      = $agendamento->tenant->nome;
 
-        return "👋 *Olá, {$agendamento->cliente_nome}!*\n\n"
-             . "Lembrando que você tem um agendamento *amanhã*:\n\n"
-             . "📅 *Data:* {$data->translatedFormat('l, d \d\e F')}\n"
-             . "⏰ *Horário:* {$horario}\n"
-             . "📍 *Local/Serviço:* {$recurso} — {$tenant}\n\n"
-             . "Para *confirmar*, responda: ✅ *CONFIRMO*\n"
-             . "Para *cancelar*, responda: ❌ *CANCELAR*\n\n"
-             . "_Até amanhã!_";
+        $cabecalho = "👋 *Olá, {$nomeCliente}!*\n\n"
+                   . "Lembrando que você tem um agendamento *amanhã*:\n\n"
+                   . "📅 *Data:* {$dataHora->translatedFormat('l, d \d\e F')}\n"
+                   . "⏰ *Horário:* {$horario}\n"
+                   . "📍 *Local/Serviço:* {$recursoNome} — {$tenant}\n\n";
+
+        $corpo = $textoPersonalizado
+            ? trim($textoPersonalizado) . "\n\n"
+            : "Para *confirmar*, responda: ✅ *CONFIRMO*\n"
+            . "Para *cancelar*, responda: ❌ *CANCELAR*\n\n";
+
+        return $cabecalho . $corpo . "_Até amanhã!_";
     }
 }
