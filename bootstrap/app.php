@@ -35,5 +35,17 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->respond(function (\Symfony\Component\HttpFoundation\Response $response) {
+            if ($response->getStatusCode() === 403) {
+                \Illuminate\Support\Facades\Log::error('HTTP_403', [
+                    'url'   => request()->fullUrl(),
+                    'user'  => auth()->id(),
+                    'trace' => collect(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 20))
+                        ->pluck('file')->filter()
+                        ->map(fn ($f) => str_replace('/var/www/html/', '', $f))
+                        ->unique()->values()->toArray(),
+                ]);
+            }
+            return $response;
+        });
     })->create();
