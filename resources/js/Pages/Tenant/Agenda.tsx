@@ -14,8 +14,15 @@ interface AgendamentoCalendario {
     origem: 'whatsapp' | 'manual';
 }
 
+interface EntidadeAgenda {
+    id: number;
+    nome: string;
+    tipo: 'recurso' | 'profissional';
+}
+
 interface Props extends PageProps {
     recursos: Recurso[];
+    profissionais: { id: number; nome: string }[];
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -331,34 +338,43 @@ function WeekGrid({
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function Agenda({ recursos }: Props) {
+export default function Agenda({ recursos, profissionais }: Props) {
+    // Montar lista unificada de entidades: recursos têm prioridade, senão usa profissionais
+    const entidades: EntidadeAgenda[] = recursos.length > 0
+        ? recursos.map(r => ({ id: r.id, nome: r.nome, tipo: 'recurso' as const }))
+        : profissionais.map(p => ({ id: p.id, nome: p.nome, tipo: 'profissional' as const }));
+
     const [semana, setSemana]         = useState(() => startOfWeek(new Date()));
     const [diaAtivo, setDiaAtivo]     = useState(() => new Date());
-    const [recursoId, setRecursoId]   = useState<number>(recursos[0]?.id ?? 0);
+    const [entidadeId, setEntidadeId] = useState<number>(entidades[0]?.id ?? 0);
     const [agendamentos, setAgs]      = useState<AgendamentoCalendario[]>([]);
     const [loading, setLoading]       = useState(false);
     const [detalhe, setDetalhe]       = useState<AgendamentoCalendario | null>(null);
     const [modalNova, setModalNova]   = useState<{ data: string; hora: string } | null>(null);
     const [novaForm, setNovaForm]     = useState({ nome: '', tel: '', fim: '', obs: '' });
     const [salvando, setSalvando]     = useState(false);
+    const [erroReserva, setErroReserva] = useState<string | null>(null);
 
+    const entidadeAtiva = entidades.find(e => e.id === entidadeId);
     const dias = Array.from({ length: 7 }, (_, i) => addDays(semana, i));
 
     const carregar = useCallback(() => {
-        if (!recursoId) return;
+        if (!entidadeId || !entidadeAtiva) return;
         setLoading(true);
-        // For mobile day view, fetch just the week containing diaAtivo
         const inicio = startOfWeek(diaAtivo);
         const fim    = addDays(inicio, 6);
+        const param  = entidadeAtiva.tipo === 'recurso'
+            ? `recurso_id=${entidadeId}`
+            : `profissional_id=${entidadeId}`;
         fetch(
             route('tenant.agenda.disponibilidade') +
-            `?recurso_id=${recursoId}&data_inicio=${toISO(inicio)}&data_fim=${toISO(fim)}`,
+            `?${param}&data_inicio=${toISO(inicio)}&data_fim=${toISO(fim)}`,
             { headers: { 'X-Requested-With': 'XMLHttpRequest' } },
         )
             .then(r => r.json())
             .then(setAgs)
             .finally(() => setLoading(false));
-    }, [recursoId, semana, diaAtivo]);
+    }, [entidadeId, entidadeAtiva, semana, diaAtivo]);
 
     useEffect(() => { carregar(); }, [carregar]);
 
@@ -380,21 +396,33 @@ export default function Agenda({ recursos }: Props) {
     };
 
     const criarReserva = () => {
-        if (!modalNova) return;
+        if (!modalNova || !entidadeAtiva) return;
         setSalvando(true);
-        router.post(route('tenant.agendamentos.store'), {
-            recurso_id:        recursoId,
+        setErroReserva(null);
+        const payload: Record<string, unknown> = {
             cliente_nome:      novaForm.nome,
             cliente_telefone:  novaForm.tel,
             inicio:            `${modalNova.data}T${modalNova.hora}:00`,
-            fim:               novaForm.fim ? `${modalNova.data}T${novaForm.fim}:00` : `${modalNova.data}T${modalNova.hora}:00`,
+            fim:               novaForm.fim
+                ? `${modalNova.data}T${novaForm.fim}:00`
+                : `${modalNova.data}T${modalNova.hora}:30`,
             observacoes:       novaForm.obs,
             notificar_cliente: false,
-        }, {
+        };
+        if (entidadeAtiva.tipo === 'recurso') {
+            payload.recurso_id = entidadeId;
+        } else {
+            payload.profissional_id = entidadeId;
+        }
+        router.post(route('tenant.agendamentos.store'), payload, {
             onSuccess: () => {
                 setModalNova(null);
                 setNovaForm({ nome: '', tel: '', fim: '', obs: '' });
                 carregar();
+            },
+            onError: (errors) => {
+                const msg = Object.values(errors)[0] as string;
+                setErroReserva(msg ?? 'Erro ao criar agendamento.');
             },
             onFinish: () => setSalvando(false),
         });
@@ -404,16 +432,26 @@ export default function Agenda({ recursos }: Props) {
         <AppLayout title="Agenda" subtitle="Visualize e gerencie os horários da semana">
             <Head title="Agenda" />
 
+            {/* Empty state */}
+            {entidades.length === 0 && (
+                <div className="mb-6 rounded-xl p-6 text-center" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+                    <p className="font-medium text-primary mb-1">Nenhum profissional ou recurso cadastrado</p>
+                    <p className="text-sm" style={{ color: 'var(--text-3)' }}>
+                        Cadastre um profissional em <strong>Profissionais</strong> para usar a agenda.
+                    </p>
+                </div>
+            )}
+
             {/* Controls */}
             <div className="mb-4 flex flex-wrap items-center gap-3">
-                {recursos.length > 1 && (
+                {entidades.length > 1 && (
                     <select
-                        value={recursoId}
-                        onChange={e => setRecursoId(Number(e.target.value))}
+                        value={entidadeId}
+                        onChange={e => setEntidadeId(Number(e.target.value))}
                         className="input w-auto"
                     >
-                        {recursos.map(r => (
-                            <option key={r.id} value={r.id}>{r.nome}</option>
+                        {entidades.map(e => (
+                            <option key={e.id} value={e.id}>{e.nome}</option>
                         ))}
                     </select>
                 )}
@@ -555,11 +593,16 @@ export default function Agenda({ recursos }: Props) {
                                 />
                             </div>
                         </div>
-                        <div className="mt-5 flex gap-2">
-                            <button onClick={() => setModalNova(null)} className="btn-secondary flex-1 justify-center">Cancelar</button>
+                        {erroReserva && (
+                            <p className="mt-3 rounded-lg px-3 py-2 text-sm" style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171' }}>
+                                {erroReserva}
+                            </p>
+                        )}
+                        <div className="mt-4 flex gap-2">
+                            <button onClick={() => { setModalNova(null); setErroReserva(null); }} className="btn-secondary flex-1 justify-center">Cancelar</button>
                             <button
                                 onClick={criarReserva}
-                                disabled={salvando || !novaForm.nome}
+                                disabled={salvando || !novaForm.nome || !novaForm.tel}
                                 className="btn-primary flex-1 justify-center"
                             >
                                 {salvando ? 'Salvando…' : 'Confirmar'}

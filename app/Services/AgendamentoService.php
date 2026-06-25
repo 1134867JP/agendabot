@@ -14,13 +14,24 @@ class AgendamentoService
     public function criar(array $dados): Agendamento
     {
         return DB::transaction(function () use ($dados) {
-            DB::select('SELECT pg_advisory_xact_lock(?)', [$dados['recurso_id']]);
+            $lockId = $dados['recurso_id'] ?? $dados['profissional_id'] ?? 0;
+            DB::select('SELECT pg_advisory_xact_lock(?)', [$lockId]);
 
-            $conflito = Agendamento::where('recurso_id', $dados['recurso_id'])
-                ->where('status', '!=', 'cancelado')
-                ->where('inicio', '<', $dados['fim'])
-                ->where('fim', '>', $dados['inicio'])
-                ->exists();
+            if (!empty($dados['recurso_id'])) {
+                $conflito = Agendamento::where('recurso_id', $dados['recurso_id'])
+                    ->where('status', '!=', 'cancelado')
+                    ->where('inicio', '<', $dados['fim'])
+                    ->where('fim', '>', $dados['inicio'])
+                    ->exists();
+            } elseif (!empty($dados['profissional_id'])) {
+                $conflito = Agendamento::where('profissional_id', $dados['profissional_id'])
+                    ->where('status', '!=', 'cancelado')
+                    ->where('inicio', '<', $dados['fim'])
+                    ->where('fim', '>', $dados['inicio'])
+                    ->exists();
+            } else {
+                $conflito = false;
+            }
 
             if ($conflito) {
                 throw new HorarioIndisponivelException('Horário não disponível.');

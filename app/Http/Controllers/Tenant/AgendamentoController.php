@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agendamento;
+use App\Models\Profissional;
 use App\Models\Recurso;
 use App\Services\AgendamentoService;
 use Carbon\Carbon;
@@ -55,30 +56,45 @@ class AgendamentoController extends Controller
         $tenant = app('tenant');
 
         $validated = $request->validate([
-            'recurso_id'        => ['required', 'exists:recursos,id'],
+            'recurso_id'        => ['nullable', 'integer', 'exists:recursos,id'],
+            'profissional_id'   => ['nullable', 'integer', 'exists:profissionais,id'],
             'cliente_nome'      => ['required', 'string', 'max:255'],
             'cliente_telefone'  => ['required', 'string', 'max:20'],
-            'inicio'            => ['required', 'date', 'after_or_equal:now'],
+            'inicio'            => ['required', 'date'],
             'fim'               => ['required', 'date', 'after:inicio'],
             'observacoes'       => ['nullable', 'string'],
             'notificar_cliente' => ['boolean'],
         ]);
 
-        $recurso = Recurso::where('tenant_id', $tenant->id)->findOrFail($validated['recurso_id']);
+        if (empty($validated['recurso_id']) && empty($validated['profissional_id'])) {
+            return back()->withErrors(['profissional_id' => 'Selecione um profissional ou recurso.']);
+        }
 
-        $this->agendamentoService->criar([
+        $dados = [
             'tenant_id'        => $tenant->id,
-            'recurso_id'       => $validated['recurso_id'],
             'cliente_nome'     => $validated['cliente_nome'],
             'cliente_telefone' => $validated['cliente_telefone'],
             'inicio'           => $validated['inicio'],
             'fim'              => $validated['fim'],
             'observacoes'      => $validated['observacoes'] ?? null,
             'origem'           => 'manual',
-            'valor_total'      => $recurso->valor_hora
+            'status'           => 'confirmado',
+        ];
+
+        if (!empty($validated['recurso_id'])) {
+            $recurso = Recurso::where('tenant_id', $tenant->id)->findOrFail($validated['recurso_id']);
+            $dados['recurso_id']  = $validated['recurso_id'];
+            $dados['valor_total'] = $recurso->valor_hora
                 ? $recurso->valor_hora * Carbon::parse($validated['inicio'])->diffInMinutes($validated['fim']) / 60
-                : null,
-        ]);
+                : null;
+        } else {
+            Profissional::where('tenant_id', $tenant->id)->findOrFail($validated['profissional_id']);
+            $dados['profissional_id']  = $validated['profissional_id'];
+            $dados['data_hora']        = $validated['inicio'];
+            $dados['duracao_minutos']  = (int) Carbon::parse($validated['inicio'])->diffInMinutes($validated['fim']);
+        }
+
+        $this->agendamentoService->criar($dados);
 
         return back()->with('success', 'Agendamento criado com sucesso.');
     }
