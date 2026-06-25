@@ -399,7 +399,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
         if (!modalNova || !entidadeAtiva) return;
         setSalvando(true);
         setErroReserva(null);
-        const payload: Record<string, unknown> = {
+        const base = {
             cliente_nome:      novaForm.nome,
             cliente_telefone:  novaForm.tel,
             inicio:            `${modalNova.data}T${modalNova.hora}:00`,
@@ -407,13 +407,11 @@ export default function Agenda({ recursos, profissionais }: Props) {
                 ? `${modalNova.data}T${novaForm.fim}:00`
                 : `${modalNova.data}T${modalNova.hora}:30`,
             observacoes:       novaForm.obs,
-            notificar_cliente: false,
+            notificar_cliente: false as boolean,
         };
-        if (entidadeAtiva.tipo === 'recurso') {
-            payload.recurso_id = entidadeId;
-        } else {
-            payload.profissional_id = entidadeId;
-        }
+        const payload = entidadeAtiva.tipo === 'recurso'
+            ? { ...base, recurso_id: entidadeId }
+            : { ...base, profissional_id: entidadeId };
         router.post(route('tenant.agendamentos.store'), payload, {
             onSuccess: () => {
                 setModalNova(null);
