@@ -68,7 +68,7 @@ class AnalyticsController extends Controller
             ->orderByDesc('total')
             ->limit(3)
             ->get()
-            ->map(fn ($r) => ['hora' => sprintf('%02d:00', $r->hora), 'total' => (int) $r->total]);
+            ->map(fn ($r) => ['nome' => sprintf('%02d:00', $r->hora), 'total' => (int) $r->total]);
 
         return Inertia::render('Tenant/Analytics', [
             'stats' => [
