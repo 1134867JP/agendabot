@@ -18,6 +18,7 @@ class VerificarTrialExpiradoJob implements ShouldQueue
 
     public int $tries = 3;
     public array $backoff = [60, 300, 900];
+    public int $timeout = 60;
 
     public function handle(): void
     {
