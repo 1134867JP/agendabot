@@ -90,10 +90,12 @@ class WebhookController extends Controller
             return response('ok');
         }
 
-        Log::info('WEBHOOK_MSG', ['telefone' => $telefone, 'tipo' => $tipo, 'mensagem' => $mensagem]);
-
         $evolutionMessageId = data_get($msgData, 'key.id');
-        ProcessarMensagemWhatsapp::dispatch($tenant, $telefone, $mensagem, $evolutionMessageId);
+        $pushName           = data_get($msgData, 'pushName') ?: null;
+
+        Log::info('WEBHOOK_MSG', ['telefone' => $telefone, 'tipo' => $tipo, 'push_name' => $pushName]);
+
+        ProcessarMensagemWhatsapp::dispatch($tenant, $telefone, $mensagem, $evolutionMessageId, $pushName);
 
         return response('ok');
     }
