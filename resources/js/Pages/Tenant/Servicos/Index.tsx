@@ -6,11 +6,6 @@ import Toggle from '@/Components/Toggle';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-interface ProfissionalBasico {
-    id: number;
-    nome: string;
-}
-
 interface Servico {
     id: number;
     nome: string;
@@ -20,7 +15,6 @@ interface Servico {
     duracao_minutos: number;
     requer_avaliacao: boolean;
     ativo: boolean;
-    profissionais: ProfissionalBasico[];
 }
 
 interface Props extends PageProps {
@@ -358,17 +352,6 @@ export default function ServicosIndex({ servicos }: Props) {
                                                 </span>
                                             )}
                                         </div>
-                                        {s.profissionais.length > 0 ? (
-                                            <div className="mt-1.5 flex flex-wrap gap-1">
-                                                {s.profissionais.map(p => (
-                                                    <span key={p.id} className="rounded px-1.5 py-0.5 text-[11px]" style={{ background: 'var(--bg-surface-2)', color: 'var(--text-2)' }}>
-                                                        {p.nome}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <p className="mt-1 text-[11px]" style={{ color: '#f87171' }}>Nenhum profissional vinculado</p>
-                                        )}
                                     </div>
                                 </div>
 
