@@ -39,14 +39,6 @@ class ProfissionalController extends Controller
 
     public function update(Request $request, Profissional $profissional): RedirectResponse
     {
-        \Illuminate\Support\Facades\Log::info('PROF_UPDATE', [
-            'prof_id'          => $profissional->id,
-            'prof_tenant_id'   => $profissional->tenant_id,
-            'prof_type'        => gettype($profissional->tenant_id),
-            'app_tenant_id'    => app('tenant')->id,
-            'app_type'         => gettype(app('tenant')->id),
-            'will_abort'       => ((int)$profissional->tenant_id !== (int)app('tenant')->id),
-        ]);
         abort_if((int)$profissional->tenant_id !== (int)app('tenant')->id, 403);
         $data = $request->validate([
             'nome'             => 'required|string|max:255',

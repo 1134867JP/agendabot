@@ -68,7 +68,9 @@ Route::middleware('auth')->group(function () {
         Route::post('recursos/{recurso}/horarios', [Tenant\HorarioController::class, 'sync'])->name('horarios.sync');
 
         // Profissionais
-        Route::resource('profissionais', ProfissionalController::class)->except(['show']);
+        Route::resource('profissionais', ProfissionalController::class)
+            ->except(['show'])
+            ->parameters(['profissionais' => 'profissional']);
         Route::post('profissionais/{profissional}/horarios', [HorarioProfissionalController::class, 'sync'])
             ->name('profissionais.horarios.sync');
 
@@ -76,7 +78,9 @@ Route::middleware('auth')->group(function () {
         Route::resource('servicos', ServicoController::class)->except(['show']);
 
         // Opções extras (convênios, pagamentos)
-        Route::resource('opcoes-extras', OpcaoExtraController::class)->except(['show']);
+        Route::resource('opcoes-extras', OpcaoExtraController::class)
+            ->except(['show'])
+            ->parameters(['opcoes-extras' => 'opcaoExtra']);
 
         // Clientes
         Route::get('clientes', [ClienteController::class, 'index'])->name('clientes.index');
