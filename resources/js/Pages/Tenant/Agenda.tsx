@@ -138,24 +138,18 @@ export default function Agenda({ recursos }: Props) {
                 <div className="flex items-center rounded-lg overflow-hidden" style={{ border: '1px solid var(--border-strong)' }}>
                     <button
                         onClick={() => setSemana(addDays(semana, -7))}
-                        className="px-3 py-2 text-sm transition-colors"
+                        className="px-3 py-2 text-sm transition-colors hover:bg-[var(--bg-surface-2)]"
                         style={{ color: 'var(--text-3)' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >←</button>
                     <button
                         onClick={() => setSemana(startOfWeek(new Date()))}
-                        className="px-3 py-2 text-sm font-medium transition-colors"
+                        className="px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--bg-surface-2)]"
                         style={{ color: 'var(--text-2)', borderLeft: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >Hoje</button>
                     <button
                         onClick={() => setSemana(addDays(semana, 7))}
-                        className="px-3 py-2 text-sm transition-colors"
+                        className="px-3 py-2 text-sm transition-colors hover:bg-[var(--bg-surface-2)]"
                         style={{ color: 'var(--text-3)' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >→</button>
                 </div>
                 <span className="text-sm font-medium" style={{ color: 'var(--text-2)' }}>
@@ -221,11 +215,7 @@ export default function Agenda({ recursos }: Props) {
                                             }}
                                         >
                                             {ags.length === 0 ? (
-                                                <div
-                                                    className="h-full w-full rounded transition-colors"
-                                                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-light)')}
-                                                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                                                />
+                                                <div className="h-full w-full rounded transition-colors hover:bg-[var(--accent-light)]" />
                                             ) : ags.map(a => {
                                                 const { bg, border, text } = slotColor(a);
                                                 return (

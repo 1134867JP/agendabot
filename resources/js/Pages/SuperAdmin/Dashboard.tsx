@@ -140,9 +140,8 @@ export default function SuperAdminDashboard({ stats, tenants }: Props) {
                                     return (
                                         <tr
                                             key={t.id}
+                                            className="table-row-hover"
                                             style={{ borderBottom: '1px solid var(--border)' }}
-                                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
-                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                         >
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-2">
@@ -183,28 +182,22 @@ export default function SuperAdminDashboard({ stats, tenants }: Props) {
                                                 <div className="flex gap-1.5">
                                                     <button
                                                         onClick={() => impersonar(t)}
-                                                        className="rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all"
+                                                        className="rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all hover:brightness-125"
                                                         style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}
-                                                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.22)')}
-                                                        onMouseLeave={e => (e.currentTarget.style.background = 'var(--accent-light)')}
                                                     >
                                                         Entrar
                                                     </button>
                                                     <button
                                                         onClick={() => toggleAtivo(t)}
-                                                        className="rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all"
+                                                        className="rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all hover:brightness-125"
                                                         style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
-                                                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.09)')}
-                                                        onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
                                                     >
                                                         {t.ativo ? 'Desativar' : 'Ativar'}
                                                     </button>
                                                     <a
                                                         href={route('superadmin.tenants.edit', t.id)}
-                                                        className="rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all"
+                                                        className="rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all hover:brightness-125"
                                                         style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
-                                                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.09)')}
-                                                        onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
                                                     >
                                                         Editar
                                                     </a>

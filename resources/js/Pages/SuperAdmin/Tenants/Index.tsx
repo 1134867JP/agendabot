@@ -61,9 +61,8 @@ export default function TenantsIndex({ tenants }: Props) {
                                 return (
                                     <tr
                                         key={t.id}
+                                        className="table-row-hover"
                                         style={{ borderBottom: '1px solid var(--border)' }}
-                                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
-                                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                     >
                                         <td className="px-4 py-3">
                                             <p className="font-semibold text-primary">{t.nome}</p>
@@ -95,28 +94,22 @@ export default function TenantsIndex({ tenants }: Props) {
                                             <div className="flex flex-wrap gap-1.5">
                                                 <button
                                                     onClick={() => impersonar(t)}
-                                                    className="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
+                                                    className="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors hover:brightness-125"
                                                     style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}
-                                                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.2)')}
-                                                    onMouseLeave={e => (e.currentTarget.style.background = 'var(--accent-light)')}
                                                 >
                                                     Entrar
                                                 </button>
                                                 <a
                                                     href={route('superadmin.tenants.edit', t.id)}
-                                                    className="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
+                                                    className="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors hover:brightness-125"
                                                     style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
-                                                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
-                                                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
                                                 >
                                                     Editar
                                                 </a>
                                                 <button
                                                     onClick={() => toggleAtivo(t)}
-                                                    className="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
+                                                    className="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors hover:brightness-125"
                                                     style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
-                                                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
-                                                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
                                                 >
                                                     {t.ativo ? 'Desativar' : 'Ativar'}
                                                 </button>
