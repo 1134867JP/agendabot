@@ -59,9 +59,13 @@ Route::middleware('auth')->group(function () {
 
         // Agendamentos
         Route::get('agendamentos', [Tenant\AgendamentoController::class, 'index'])->name('agendamentos.index');
+        Route::get('agendamentos/exportar', [Tenant\AgendamentoController::class, 'exportar'])->name('agendamentos.exportar');
         Route::post('agendamentos', [Tenant\AgendamentoController::class, 'store'])->name('agendamentos.store');
         Route::patch('agendamentos/{agendamento}/cancelar', [Tenant\AgendamentoController::class, 'cancelar'])->name('agendamentos.cancelar');
         Route::patch('agendamentos/{agendamento}/concluir', [Tenant\AgendamentoController::class, 'concluir'])->name('agendamentos.concluir');
+
+        // Analytics
+        Route::get('analytics', [Tenant\AnalyticsController::class, 'index'])->name('analytics');
 
         // Recursos
         Route::resource('recursos', Tenant\RecursoController::class)->except(['show']);

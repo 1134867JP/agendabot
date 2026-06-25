@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Jobs\CreateEvolutionInstanceJob;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\AsaasService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -75,8 +76,24 @@ class OnboardingController extends Controller
             'plano' => 'required|in:basico,profissional,ilimitado',
         ]);
 
-        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->firstOrFail();
+        $user   = auth()->user();
+        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', $user->id))->firstOrFail();
         $tenant->update(['plano' => $request->plano]);
+
+        try {
+            $asaas        = app(AsaasService::class);
+            $customerId   = $asaas->criarOuBuscarCliente($user, $tenant);
+            $subscription = $asaas->criarAssinatura($customerId, $request->plano);
+
+            $tenant->update(['asaas_subscription_id' => $subscription['id'] ?? null]);
+
+            $link = $asaas->gerarLinkCheckout($subscription['id'] ?? '');
+            if ($link) {
+                return redirect($link);
+            }
+        } catch (\Throwable) {
+            // Asaas indisponível — continua o onboarding normalmente
+        }
 
         return redirect()->route('onboarding.step3');
     }
