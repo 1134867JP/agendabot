@@ -136,7 +136,7 @@ export default function Analytics({ stats, por_dia, top_servicos, pico_horario }
                     </div>
                     <div className="card p-5">
                         <p className="mb-4 text-sm font-medium text-primary">Horários de pico</p>
-                        <RankingList items={pico_horario.map(h => ({ nome: h.hora, total: h.total }))} emptyText="Sem dados suficientes." />
+                        <RankingList items={pico_horario} emptyText="Sem dados suficientes." />
                     </div>
                 </div>
 
