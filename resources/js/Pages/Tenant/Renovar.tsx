@@ -75,10 +75,8 @@ export default function Renovar({ tenant, plano }: Props) {
                 {!confirmarCancelamento ? (
                     <button
                         onClick={() => setConfirmarCancelamento(true)}
-                        className="mt-4 text-xs transition-colors"
+                        className="mt-4 text-xs transition-colors hover:text-[var(--text-2)]"
                         style={{ color: 'var(--text-3)' }}
-                        onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-2)')}
-                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
                     >
                         Cancelar assinatura definitivamente
                     </button>

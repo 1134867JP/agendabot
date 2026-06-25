@@ -101,7 +101,7 @@ export default function Analytics({ stats, por_dia, top_servicos, pico_horario }
     const receita = stats.receita_mes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
     return (
-        <AppLayout>
+        <AppLayout title="Analytics" subtitle="Métricas e desempenho do seu estabelecimento">
             <Head title="Analytics" />
             <div className="mx-auto max-w-5xl space-y-6 p-6">
 

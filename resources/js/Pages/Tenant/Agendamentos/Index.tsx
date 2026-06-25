@@ -302,9 +302,8 @@ export default function AgendamentosIndex({ agendamentos, recursos, filtros }: P
                             ) : agendamentos.data.map(a => (
                                 <tr
                                     key={a.id}
+                                    className="table-row-hover"
                                     style={{ borderBottom: '1px solid var(--border)' }}
-                                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
-                                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                 >
                                     <td className="px-4 py-3">
                                         <p className="font-medium text-primary">{a.cliente_nome}</p>
@@ -333,10 +332,8 @@ export default function AgendamentosIndex({ agendamentos, recursos, filtros }: P
                                             <div className="flex gap-1">
                                                 <button
                                                     onClick={() => concluir(a.id)}
-                                                    className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
+                                                    className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors hover:brightness-125"
                                                     style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
-                                                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
-                                                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
                                                 >
                                                     Concluir
                                                 </button>
