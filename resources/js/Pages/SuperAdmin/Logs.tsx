@@ -244,44 +244,41 @@ export default function Logs() {
                             <div key={i}>
                                 <button
                                     onClick={() => setExpanded(expanded === i ? null : i)}
-                                    className="flex min-w-0 flex-1 items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.02]"
+                                    className="w-full px-4 py-3 text-left transition-colors hover:bg-white/[0.02]"
                                 >
-                                    <LevelBadge level={e.level} />
-                                    <span
-                                        className="shrink-0 font-mono text-[11px]"
-                                        style={{ color: 'var(--text-3)', minWidth: '140px' }}
-                                    >
-                                        {e.at}
-                                    </span>
-                                    <span
-                                        className="min-w-0 flex-1 truncate text-[13px]"
-                                        style={{ color: 'var(--text-1)' }}
+                                    {/* Meta row: badge + timestamp + copy + chevron */}
+                                    <div className="flex items-center gap-2">
+                                        <LevelBadge level={e.level} />
+                                        <span
+                                            className="flex-1 font-mono text-[11px]"
+                                            style={{ color: 'var(--text-3)' }}
+                                        >
+                                            {e.at}
+                                        </span>
+                                        <CopyButton entry={e} />
+                                        {e.context && (
+                                            <svg
+                                                width={13} height={13} viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" strokeWidth="2"
+                                                strokeLinecap="round" strokeLinejoin="round"
+                                                className="shrink-0 transition-transform duration-200"
+                                                style={{
+                                                    color: 'var(--text-3)',
+                                                    transform: expanded === i ? 'rotate(180deg)' : 'rotate(0)',
+                                                }}
+                                            >
+                                                <polyline points="6 9 12 15 18 9"/>
+                                            </svg>
+                                        )}
+                                    </div>
+                                    {/* Message: full width, wraps */}
+                                    <p
+                                        className="mt-1.5 text-[13px] leading-snug"
+                                        style={{ color: 'var(--text-1)', wordBreak: 'break-word' }}
                                     >
                                         {e.message}
-                                    </span>
-                                    {e.context && (
-                                        <svg
-                                            width={14}
-                                            height={14}
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            className="ml-1 shrink-0 transition-transform duration-200"
-                                            style={{
-                                                color: 'var(--text-3)',
-                                                transform: expanded === i ? 'rotate(180deg)' : 'rotate(0)',
-                                            }}
-                                        >
-                                            <polyline points="6 9 12 15 18 9"/>
-                                        </svg>
-                                    )}
+                                    </p>
                                 </button>
-                                <div className="flex items-center pr-3 pt-2.5">
-                                    <CopyButton entry={e} />
-                                </div>
 
                                 {/* Contexto expandido */}
                                 {expanded === i && e.context && (
