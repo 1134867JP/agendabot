@@ -4,13 +4,22 @@ import { PageProps, SubscriptionInfo } from '@/types';
 import Sidebar from '@/Components/Layout/Sidebar';
 import SubscriptionBanner from '@/Components/Layout/SubscriptionBanner';
 
-// Keeps --app-height in sync with the visual viewport so the chat layout
-// shrinks properly when the iOS virtual keyboard opens.
+// Tracks the visual viewport so the fullHeight chat layout stays pinned
+// to the area above the iOS virtual keyboard.
+//
+// Strategy: use position:fixed + height:--app-height + translateY:--app-top.
+// When iOS opens the keyboard it scrolls the layout viewport (pageTop > 0)
+// to reveal the focused input. A fixed element ignores that scroll, but its
+// height shrinks via --app-height (= visualViewport.height). The translateY
+// compensates for any residual pageTop offset so nothing goes offscreen.
 function useAppHeight() {
     useEffect(() => {
         const set = () => {
-            const h = window.visualViewport?.height ?? window.innerHeight;
+            const vv  = window.visualViewport;
+            const h   = vv?.height  ?? window.innerHeight;
+            const top = vv?.pageTop ?? 0;
             document.documentElement.style.setProperty('--app-height', `${h}px`);
+            document.documentElement.style.setProperty('--app-top',    `${top}px`);
         };
         set();
         window.visualViewport?.addEventListener('resize', set);
@@ -54,8 +63,18 @@ export default function AppLayout({ children, title, subtitle, fullHeight }: Pro
                     ? 'flex overflow-hidden'
                     : 'min-h-[100dvh] lg:flex lg:h-[100dvh] lg:overflow-hidden'
             }
-            style={{
-                height: fullHeight ? 'var(--app-height, 100dvh)' : undefined,
+            style={fullHeight ? {
+                // Fixed positioning keeps the chat anchored to the visual
+                // viewport regardless of iOS scrolling the layout viewport.
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 'var(--app-height, 100dvh)',
+                transform: 'translateY(var(--app-top, 0px))',
+                background: 'var(--bg-app)',
+                color: 'var(--text-1)',
+            } : {
                 background: 'var(--bg-app)',
                 color: 'var(--text-1)',
             }}
