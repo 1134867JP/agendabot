@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { PageProps, Recurso } from '@/types';
 
@@ -339,31 +339,38 @@ function WeekGrid({
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Agenda({ recursos, profissionais }: Props) {
-    // Montar lista unificada de entidades: recursos têm prioridade, senão usa profissionais
-    const entidades: EntidadeAgenda[] = recursos.length > 0
-        ? recursos.map(r => ({ id: r.id, nome: r.nome, tipo: 'recurso' as const }))
-        : profissionais.map(p => ({ id: p.id, nome: p.nome, tipo: 'profissional' as const }));
+    // Estável entre renders — só muda se recursos/profissionais mudarem (props do servidor)
+    const entidades = useMemo<EntidadeAgenda[]>(() =>
+        recursos.length > 0
+            ? recursos.map(r => ({ id: r.id, nome: r.nome, tipo: 'recurso' as const }))
+            : profissionais.map(p => ({ id: p.id, nome: p.nome, tipo: 'profissional' as const })),
+    [recursos, profissionais]);
 
-    const [semana, setSemana]         = useState(() => startOfWeek(new Date()));
-    const [diaAtivo, setDiaAtivo]     = useState(() => new Date());
-    const [entidadeId, setEntidadeId] = useState<number>(entidades[0]?.id ?? 0);
-    const [agendamentos, setAgs]      = useState<AgendamentoCalendario[]>([]);
-    const [loading, setLoading]       = useState(false);
-    const [detalhe, setDetalhe]       = useState<AgendamentoCalendario | null>(null);
-    const [modalNova, setModalNova]   = useState<{ data: string; hora: string } | null>(null);
-    const [novaForm, setNovaForm]     = useState({ nome: '', tel: '', fim: '', obs: '' });
-    const [salvando, setSalvando]     = useState(false);
+    const [semana, setSemana]           = useState(() => startOfWeek(new Date()));
+    const [diaAtivo, setDiaAtivo]       = useState(() => new Date());
+    const [entidadeId, setEntidadeId]   = useState<number>(() => entidades[0]?.id ?? 0);
+    const [agendamentos, setAgs]        = useState<AgendamentoCalendario[]>([]);
+    const [loading, setLoading]         = useState(false);
+    const [detalhe, setDetalhe]         = useState<AgendamentoCalendario | null>(null);
+    const [modalNova, setModalNova]     = useState<{ data: string; hora: string } | null>(null);
+    const [novaForm, setNovaForm]       = useState({ nome: '', tel: '', fim: '', obs: '' });
+    const [salvando, setSalvando]       = useState(false);
     const [erroReserva, setErroReserva] = useState<string | null>(null);
 
-    const entidadeAtiva = entidades.find(e => e.id === entidadeId);
+    // Tipo da entidade selecionada — derivado de entidadeId sem criar novo objeto
+    const tipoEntidade = useMemo(
+        () => entidades.find(e => e.id === entidadeId)?.tipo ?? 'profissional',
+        [entidades, entidadeId],
+    );
+
     const dias = Array.from({ length: 7 }, (_, i) => addDays(semana, i));
 
     const carregar = useCallback(() => {
-        if (!entidadeId || !entidadeAtiva) return;
+        if (!entidadeId) return;
         setLoading(true);
         const inicio = startOfWeek(diaAtivo);
         const fim    = addDays(inicio, 6);
-        const param  = entidadeAtiva.tipo === 'recurso'
+        const param  = tipoEntidade === 'recurso'
             ? `recurso_id=${entidadeId}`
             : `profissional_id=${entidadeId}`;
         fetch(
@@ -374,7 +381,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
             .then(r => r.json())
             .then(setAgs)
             .finally(() => setLoading(false));
-    }, [entidadeId, entidadeAtiva, semana, diaAtivo]);
+    }, [entidadeId, tipoEntidade, semana, diaAtivo]);
 
     useEffect(() => { carregar(); }, [carregar]);
 
@@ -396,7 +403,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
     };
 
     const criarReserva = () => {
-        if (!modalNova || !entidadeAtiva) return;
+        if (!modalNova || !entidadeId) return;
         setSalvando(true);
         setErroReserva(null);
         const base = {
@@ -409,7 +416,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
             observacoes:       novaForm.obs,
             notificar_cliente: false as boolean,
         };
-        const payload = entidadeAtiva.tipo === 'recurso'
+        const payload = tipoEntidade === 'recurso'
             ? { ...base, recurso_id: entidadeId }
             : { ...base, profissional_id: entidadeId };
         router.post(route('tenant.agendamentos.store'), payload, {
