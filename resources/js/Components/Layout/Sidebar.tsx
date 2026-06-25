@@ -154,16 +154,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                                             key={item.routeName}
                                             href={route(item.routeName)}
                                             onClick={onClose}
-                                            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-all"
-                                            style={{
-                                                color:      active ? 'var(--jade)' : 'var(--text-2)',
-                                                background: active ? 'var(--jade-light)' : 'transparent',
-                                                fontWeight: active ? '500' : '400',
-                                            }}
-                                            onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.color = 'var(--text-1)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface-2)'; } }}
-                                            onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; } }}
+                                            className={`nav-item${active ? ' active' : ''}`}
                                         >
-                                            <span style={{ color: active ? 'var(--jade)' : 'var(--text-3)', flexShrink: 0 }}>
+                                            <span style={{ flexShrink: 0 }}>
                                                 <Icon d={item.icon} />
                                             </span>
                                             {item.label}
@@ -180,20 +173,15 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                     {impersonando && (
                         <button
                             onClick={pararImpersonar}
-                            className="mb-3 w-full rounded-md border py-1.5 text-[11px] transition-colors"
+                            className="mb-3 w-full rounded-md border py-1.5 text-[11px] transition-colors hover:bg-accent/10"
                             style={{ borderColor: 'rgba(99,102,241,0.3)', color: 'var(--accent)' }}
-                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-light)')}
-                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                         >
                             ← Sair da impersonação
                         </button>
                     )}
                     <button
                         onClick={toggle}
-                        className="mb-3 flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] transition-colors w-full"
-                        style={{ color: 'var(--text-3)', background: 'transparent' }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface-2)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'; }}
+                        className="sidebar-btn mb-3 flex items-center gap-2 px-2 py-1.5 text-[11px] w-full"
                         title={theme === 'dark' ? 'Mudar para modo claro' : 'Mudar para modo escuro'}
                     >
                         {theme === 'dark' ? (
@@ -221,10 +209,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                         href={route('logout')}
                         method="post"
                         as="button"
-                        className="flex items-center gap-1.5 text-[11px] transition-colors"
-                        style={{ color: 'var(--text-3)' }}
-                        onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-2)')}
-                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
+                        className="sidebar-btn flex items-center gap-1.5 px-2 py-1 text-[11px]"
                     >
                         <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                             <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
