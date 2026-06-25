@@ -26,6 +26,8 @@ Route::post('/cadastro', [OnboardingController::class, 'step1Store']);
 Route::middleware('auth')->group(function () {
     Route::get('/cadastro/plano', [OnboardingController::class, 'step2'])->name('onboarding.step2');
     Route::post('/cadastro/checkout', [OnboardingController::class, 'checkout'])->name('onboarding.checkout');
+    Route::get('/cadastro/personalizar', [OnboardingController::class, 'step3'])->name('onboarding.step3');
+    Route::post('/cadastro/personalizar', [OnboardingController::class, 'step3Store'])->name('onboarding.step3.store');
     Route::get('/cadastro/sucesso', [OnboardingController::class, 'sucesso'])->name('onboarding.sucesso');
     Route::post('/cadastro/pular', [OnboardingController::class, 'pularPagamento'])->name('onboarding.pular');
 });
