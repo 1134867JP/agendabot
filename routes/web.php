@@ -91,6 +91,7 @@ Route::middleware('auth')->group(function () {
         // Clientes
         Route::get('clientes', [ClienteController::class, 'index'])->name('clientes.index');
         Route::get('clientes/{cliente}', [ClienteController::class, 'show'])->name('clientes.show');
+        Route::delete('clientes/{cliente}', [ClienteController::class, 'destroy'])->name('clientes.destroy');
 
         // Conversas WhatsApp
         Route::get('conversas', [ConversaController::class, 'index'])->name('conversas.index');

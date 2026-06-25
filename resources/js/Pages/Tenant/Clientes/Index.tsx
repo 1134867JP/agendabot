@@ -25,12 +25,12 @@ const AVATAR_COLORS = [
     ['#06b6d4', 'rgba(6,182,212,0.15)'],
 ];
 
-function Avatar({ nome, size = 36 }: { nome: string; size?: number }) {
+function Avatar({ nome, size = 40 }: { nome: string; size?: number }) {
     const [fg, bg] = AVATAR_COLORS[(nome.charCodeAt(0) || 0) % AVATAR_COLORS.length];
     const initials = nome.trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('');
     return (
         <div
-            className="flex shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+            className="flex shrink-0 items-center justify-center rounded-full font-semibold"
             style={{ width: size, height: size, background: bg, color: fg, fontSize: size * 0.35 }}
         >
             {initials}
@@ -38,8 +38,13 @@ function Avatar({ nome, size = 36 }: { nome: string; size?: number }) {
     );
 }
 
-function fmtData(iso: string) {
-    return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+function fmtTelefone(tel: string): string {
+    const digits = tel.replace(/\D/g, '');
+    // Remove código do país 55 se presente + formata como (DDD) 9 XXXX-XXXX
+    const local = digits.startsWith('55') && digits.length >= 12 ? digits.slice(2) : digits;
+    if (local.length === 11) return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
+    if (local.length === 10) return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
+    return digits;
 }
 
 export default function ClientesIndex({ clientes, filtros }: Props) {
@@ -55,12 +60,12 @@ export default function ClientesIndex({ clientes, filtros }: Props) {
     };
 
     return (
-        <AppLayout title="Clientes" subtitle="Histórico de clientes que agendaram via WhatsApp ou painel">
+        <AppLayout title="Clientes" subtitle={`${clientes.total} cliente${clientes.total !== 1 ? 's' : ''} cadastrado${clientes.total !== 1 ? 's' : ''}`}>
             <Head title="Clientes" />
 
             {/* Search */}
-            <div className="mb-5">
-                <div className="relative max-w-xs">
+            <div className="mb-4">
+                <div className="relative">
                     <svg
                         className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
                         width={14} height={14} viewBox="0 0 24 24" fill="none"
@@ -73,7 +78,7 @@ export default function ClientesIndex({ clientes, filtros }: Props) {
                         type="text"
                         value={busca}
                         onChange={e => pesquisar(e.target.value)}
-                        placeholder="Buscar por nome ou telefone"
+                        placeholder="Buscar por nome ou telefone…"
                         className="input pl-9"
                     />
                 </div>
@@ -82,64 +87,52 @@ export default function ClientesIndex({ clientes, filtros }: Props) {
             <div className="card overflow-hidden">
                 {clientes.data.length === 0 ? (
                     <div className="flex flex-col items-center gap-2 py-16">
-                        <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
+                        <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
                             <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 110 8 4 4 0 010-8z"/>
                         </svg>
                         <p className="text-sm font-medium text-primary">Nenhum cliente encontrado</p>
                         <p className="text-xs" style={{ color: 'var(--text-3)' }}>
-                            {busca ? 'Tente outra busca.' : 'Os clientes aparecem aqui após o primeiro agendamento.'}
+                            {busca ? 'Tente outra busca.' : 'Os clientes aparecem aqui após o primeiro contato via WhatsApp.'}
                         </p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full text-sm">
-                            <thead>
-                                <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface-2)' }}>
-                                    {['Cliente', 'Telefone', 'Agendamentos', 'Desde'].map(h => (
-                                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
-                                            {h}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {clientes.data.map(c => (
-                                    <tr
-                                        key={c.id}
-                                        className="table-row-hover cursor-pointer"
-                                        style={{ borderBottom: '1px solid var(--border)' }}
-                                        onClick={() => router.visit(route('tenant.clientes.show', c.id))}
-                                    >
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-3">
-                                                <Avatar nome={c.nome} />
-                                                <span className="font-medium text-primary">{c.nome}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3" style={{ color: 'var(--text-2)' }}>
-                                            {c.telefone}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span
-                                                className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-                                                style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}
-                                            >
-                                                {c.agendamentos_count}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-3)' }}>
-                                            {fmtData(c.created_at)}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                    <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                        {clientes.data.map(c => (
+                            <button
+                                key={c.id}
+                                onClick={() => router.visit(route('tenant.clientes.show', c.id))}
+                                className="table-row-hover flex w-full items-center gap-3.5 px-4 py-3.5 text-left"
+                            >
+                                <Avatar nome={c.nome} size={40} />
+
+                                <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-medium text-primary">{c.nome}</p>
+                                    <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
+                                        {fmtTelefone(c.telefone)}
+                                    </p>
+                                </div>
+
+                                <div className="flex shrink-0 items-center gap-3">
+                                    {c.agendamentos_count > 0 && (
+                                        <span
+                                            className="rounded-full px-2 py-0.5 text-xs font-medium"
+                                            style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}
+                                        >
+                                            {c.agendamentos_count} ag.
+                                        </span>
+                                    )}
+                                    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
+                                        <polyline points="9 18 15 12 9 6"/>
+                                    </svg>
+                                </div>
+                            </button>
+                        ))}
                     </div>
                 )}
 
                 {/* Pagination */}
                 {clientes.last_page > 1 && (
-                    <div className="flex gap-1 px-4 py-3" style={{ borderTop: '1px solid var(--border)' }}>
+                    <div className="flex flex-wrap gap-1 px-4 py-3" style={{ borderTop: '1px solid var(--border)' }}>
                         {clientes.links.map((link, i) => (
                             <button
                                 key={i}
@@ -156,12 +149,6 @@ export default function ClientesIndex({ clientes, filtros }: Props) {
                     </div>
                 )}
             </div>
-
-            {clientes.total > 0 && (
-                <p className="mt-3 text-xs" style={{ color: 'var(--text-3)' }}>
-                    {clientes.total} cliente{clientes.total !== 1 ? 's' : ''} no total
-                </p>
-            )}
         </AppLayout>
     );
 }
