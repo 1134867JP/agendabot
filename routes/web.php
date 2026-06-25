@@ -8,6 +8,7 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Tenant;
 use App\Http\Controllers\Tenant\ClienteController;
+use App\Http\Controllers\Tenant\EquipeController;
 use App\Http\Controllers\Tenant\ConversaController;
 use App\Http\Controllers\Tenant\HorarioProfissionalController;
 use App\Http\Controllers\Tenant\OpcaoExtraController;
@@ -87,6 +88,11 @@ Route::middleware('auth')->group(function () {
         Route::resource('opcoes-extras', OpcaoExtraController::class)
             ->except(['show'])
             ->parameters(['opcoes-extras' => 'opcaoExtra']);
+
+        // Equipe
+        Route::get('equipe', [EquipeController::class, 'index'])->name('equipe.index');
+        Route::post('equipe', [EquipeController::class, 'store'])->name('equipe.store');
+        Route::delete('equipe/{user}', [EquipeController::class, 'destroy'])->name('equipe.destroy');
 
         // Clientes
         Route::get('clientes', [ClienteController::class, 'index'])->name('clientes.index');
