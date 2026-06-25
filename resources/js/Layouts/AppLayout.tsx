@@ -1,8 +1,26 @@
 import { usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PageProps, SubscriptionInfo } from '@/types';
 import Sidebar from '@/Components/Layout/Sidebar';
 import SubscriptionBanner from '@/Components/Layout/SubscriptionBanner';
+
+// Keeps --app-height in sync with the visual viewport so the chat layout
+// shrinks properly when the iOS virtual keyboard opens.
+function useAppHeight() {
+    useEffect(() => {
+        const set = () => {
+            const h = window.visualViewport?.height ?? window.innerHeight;
+            document.documentElement.style.setProperty('--app-height', `${h}px`);
+        };
+        set();
+        window.visualViewport?.addEventListener('resize', set);
+        window.visualViewport?.addEventListener('scroll', set);
+        return () => {
+            window.visualViewport?.removeEventListener('resize', set);
+            window.visualViewport?.removeEventListener('scroll', set);
+        };
+    }, []);
+}
 
 interface Props {
     children: React.ReactNode;
@@ -18,6 +36,8 @@ const MenuIcon = () => (
 );
 
 export default function AppLayout({ children, title, subtitle, fullHeight }: Props) {
+    useAppHeight();
+
     const page = usePage<PageProps<{
         currentTenant?: { id: number; nome: string; slug: string } | null;
         flash?: { success?: string; erro?: string };
@@ -31,12 +51,14 @@ export default function AppLayout({ children, title, subtitle, fullHeight }: Pro
         <div
             className={
                 fullHeight
-                    // Chat/fullHeight: sempre h-dvh com scroll interno
-                    ? 'flex h-[100dvh] overflow-hidden'
-                    // Demais páginas: mobile usa scroll da janela; desktop usa scroll interno
+                    ? 'flex overflow-hidden'
                     : 'min-h-[100dvh] lg:flex lg:h-[100dvh] lg:overflow-hidden'
             }
-            style={{ background: 'var(--bg-app)', color: 'var(--text-1)' }}
+            style={{
+                height: fullHeight ? 'var(--app-height, 100dvh)' : undefined,
+                background: 'var(--bg-app)',
+                color: 'var(--text-1)',
+            }}
         >
             {/* Skip link */}
             <a
