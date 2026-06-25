@@ -49,13 +49,18 @@ class WebhookController extends Controller
 
         $remoteJid = data_get($msgData, 'key.remoteJid') ?? '';
 
-        // Ignorar mensagens de grupo (JID com @g.us)
+        // Ignorar grupos: formato novo (@g.us) e formato antigo ({phone}-{timestamp}@s.whatsapp.net)
         if (str_contains($remoteJid, '@g.us')) {
             return response('ok');
         }
 
         // Remover sufixo @s.whatsapp.net (JID format da Evolution API)
         $telefone = str_replace('@s.whatsapp.net', '', $remoteJid);
+
+        // Grupos no formato antigo ficam como "555491234567-1580740050" (com hífen)
+        if (str_contains($telefone, '-')) {
+            return response('ok');
+        }
 
         if (! $telefone) {
             return response('ok');
