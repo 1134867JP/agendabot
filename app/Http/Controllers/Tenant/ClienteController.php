@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cliente;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -45,5 +46,16 @@ class ClienteController extends Controller
                 ->limit(20)
                 ->get(),
         ]);
+    }
+
+    public function destroy(Cliente $cliente): RedirectResponse
+    {
+        abort_if((int)$cliente->tenant_id !== (int)app('tenant')->id, 403);
+
+        $cliente->conversas()->delete();
+        $cliente->agendamentos()->delete();
+        $cliente->delete();
+
+        return redirect()->route('tenant.clientes.index');
     }
 }

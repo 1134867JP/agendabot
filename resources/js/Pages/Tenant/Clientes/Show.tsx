@@ -1,4 +1,5 @@
 import { Head, router } from '@inertiajs/react';
+import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { PageProps } from '@/types';
 
@@ -55,6 +56,14 @@ function Avatar({ nome, size = 44 }: { nome: string; size?: number }) {
     );
 }
 
+function fmtTelefone(tel: string): string {
+    const digits = tel.replace(/\D/g, '');
+    const local = digits.startsWith('55') && digits.length >= 12 ? digits.slice(2) : digits;
+    if (local.length === 11) return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
+    if (local.length === 10) return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
+    return digits;
+}
+
 const STATUS_BADGE: Record<string, string> = {
     agendado:   'badge-green',
     confirmado: 'badge-green',
@@ -69,10 +78,17 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const CONVERSA_STATUS_LABEL: Record<string, string> = {
-    ativa:               'Ativa',
-    aguardando_humano:   'Aguardando humano',
-    em_atendimento_humano: 'Em atendimento',
-    encerrada:           'Encerrada',
+    ativa:                    'Ativa',
+    aguardando_humano:        'Aguardando humano',
+    em_atendimento_humano:    'Em atendimento',
+    encerrada:                'Encerrada',
+};
+
+const CONVERSA_STATUS_BADGE: Record<string, string> = {
+    ativa:                    'badge-green',
+    aguardando_humano:        'badge-yellow',
+    em_atendimento_humano:    'badge-blue',
+    encerrada:                'badge-gray',
 };
 
 function fmtDt(iso: string | null) {
@@ -94,125 +110,208 @@ function fmtRelativo(iso: string | null) {
     return `${Math.floor(h / 24)}d atrás`;
 }
 
+function DeleteModal({ nome, onConfirm, onCancel }: { nome: string; onConfirm: () => void; onCancel: () => void }) {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
+            <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
+                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full" style={{ background: 'rgba(239,68,68,0.1)' }}>
+                    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-red-400">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+                    </svg>
+                </div>
+                <h3 className="text-base font-semibold text-primary">Excluir cliente?</h3>
+                <p className="mt-1.5 text-sm" style={{ color: 'var(--text-3)' }}>
+                    <strong className="text-primary">{nome}</strong> e todas as suas conversas serão excluídos permanentemente. Esta ação não pode ser desfeita.
+                </p>
+                <div className="mt-5 flex gap-2.5">
+                    <button
+                        onClick={onConfirm}
+                        className="flex-1 rounded-xl py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                        style={{ background: '#ef4444' }}
+                    >
+                        Excluir
+                    </button>
+                    <button
+                        onClick={onCancel}
+                        className="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors"
+                        style={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border-strong)', color: 'var(--text-2)' }}
+                    >
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function ClienteShow({ cliente, agendamentos, conversas }: Props) {
+    const [showDelete, setShowDelete] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+
     const totalAgendamentos = agendamentos.length;
-    const confirmados = agendamentos.filter(a => ['agendado', 'confirmado', 'concluido'].includes(a.status)).length;
+    const realizados = agendamentos.filter(a => ['agendado', 'confirmado', 'concluido'].includes(a.status)).length;
+
+    const handleDelete = () => {
+        setDeleting(true);
+        router.delete(route('tenant.clientes.destroy', cliente.id), {
+            onFinish: () => setDeleting(false),
+        });
+    };
 
     return (
         <AppLayout title={cliente.nome} subtitle={`Cliente desde ${new Date(cliente.created_at).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`}>
             <Head title={cliente.nome} />
 
-            {/* Back */}
-            <button
-                onClick={() => router.visit(route('tenant.clientes.index'))}
-                className="mb-5 flex items-center gap-1.5 text-xs transition-colors hover:text-[var(--text-1)]"
-                style={{ color: 'var(--text-3)' }}
-            >
-                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="15 18 9 12 15 6"/>
-                </svg>
-                Voltar para clientes
-            </button>
+            {/* Back + Delete row */}
+            <div className="mb-5 flex items-center justify-between">
+                <button
+                    onClick={() => router.visit(route('tenant.clientes.index'))}
+                    className="flex items-center gap-1.5 text-xs transition-colors hover:text-[var(--text-1)]"
+                    style={{ color: 'var(--text-3)' }}
+                >
+                    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="15 18 9 12 15 6"/>
+                    </svg>
+                    Voltar
+                </button>
+
+                <button
+                    onClick={() => setShowDelete(true)}
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-400/10"
+                >
+                    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+                    </svg>
+                    Excluir
+                </button>
+            </div>
 
             {/* Header card */}
-            <div className="card mb-5 flex items-center gap-5 p-6">
-                <Avatar nome={cliente.nome} size={56} />
-                <div className="flex-1 min-w-0">
-                    <h2 className="text-xl font-semibold text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
-                        {cliente.nome}
-                    </h2>
-                    <p className="mt-0.5 text-sm" style={{ color: 'var(--text-3)' }}>{cliente.telefone}</p>
+            <div className="card mb-5 p-5">
+                <div className="flex items-center gap-4">
+                    <Avatar nome={cliente.nome} size={52} />
+                    <div className="min-w-0 flex-1">
+                        <h2 className="truncate text-lg font-semibold text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                            {cliente.nome}
+                        </h2>
+                        <p className="mt-0.5 text-sm" style={{ color: 'var(--text-3)' }}>{fmtTelefone(cliente.telefone)}</p>
+                    </div>
                 </div>
-                <div className="hidden sm:flex gap-6 text-center">
-                    <div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="rounded-xl p-3 text-center" style={{ background: 'var(--bg-surface-2)' }}>
                         <p className="text-2xl font-bold text-primary">{totalAgendamentos}</p>
-                        <p className="text-xs" style={{ color: 'var(--text-3)' }}>agendamentos</p>
+                        <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>agendamentos</p>
                     </div>
-                    <div>
-                        <p className="text-2xl font-bold text-primary">{confirmados}</p>
-                        <p className="text-xs" style={{ color: 'var(--text-3)' }}>realizados</p>
+                    <div className="rounded-xl p-3 text-center" style={{ background: 'var(--bg-surface-2)' }}>
+                        <p className="text-2xl font-bold text-primary">{realizados}</p>
+                        <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>realizados</p>
                     </div>
                 </div>
             </div>
 
-            <div className="grid gap-5 lg:grid-cols-2">
-                {/* Agendamentos */}
-                <div className="card overflow-hidden">
-                    <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-                        <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
-                            Agendamentos recentes
-                        </h3>
-                    </div>
+            {/* Agendamentos */}
+            <div className="card mb-4 overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
+                        Agendamentos
+                    </h3>
+                    <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'var(--bg-surface-2)', color: 'var(--text-3)' }}>
+                        {totalAgendamentos}
+                    </span>
+                </div>
 
-                    {agendamentos.length === 0 ? (
-                        <div className="flex flex-col items-center gap-2 py-10">
-                            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
-                                <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                            </svg>
-                            <p className="text-xs" style={{ color: 'var(--text-3)' }}>Nenhum agendamento</p>
-                        </div>
-                    ) : (
-                        <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
-                            {agendamentos.map(a => (
-                                <div key={a.id} className="flex items-start justify-between gap-3 px-5 py-3">
-                                    <div className="min-w-0">
-                                        <p className="text-sm font-medium text-primary truncate">
-                                            {a.servico?.nome ?? a.profissional?.nome ?? 'Serviço'}
-                                        </p>
-                                        <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
-                                            {fmtDt(a.data_hora ?? a.inicio)}
-                                            {a.duracao_minutos ? ` · ${a.duracao_minutos}min` : ''}
-                                        </p>
-                                    </div>
-                                    <span className={`badge shrink-0 ${STATUS_BADGE[a.status] ?? 'badge-gray'}`}>
-                                        {STATUS_LABEL[a.status] ?? a.status}
+                {agendamentos.length === 0 ? (
+                    <div className="flex flex-col items-center gap-2 py-10">
+                        <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
+                            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                        <p className="text-xs" style={{ color: 'var(--text-3)' }}>Nenhum agendamento</p>
+                    </div>
+                ) : (
+                    <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                        {agendamentos.map(a => (
+                            <div key={a.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                                <div className="min-w-0">
+                                    <p className="truncate text-sm font-medium text-primary">
+                                        {a.servico?.nome ?? a.profissional?.nome ?? 'Serviço'}
+                                    </p>
+                                    <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
+                                        {fmtDt(a.data_hora ?? a.inicio)}
+                                        {a.duracao_minutos ? ` · ${a.duracao_minutos}min` : ''}
+                                    </p>
+                                </div>
+                                <span className={`badge shrink-0 ${STATUS_BADGE[a.status] ?? 'badge-gray'}`}>
+                                    {STATUS_LABEL[a.status] ?? a.status}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Conversas */}
+            <div className="card overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
+                        Conversas
+                    </h3>
+                    <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'var(--bg-surface-2)', color: 'var(--text-3)' }}>
+                        {conversas.length}
+                    </span>
+                </div>
+
+                {conversas.length === 0 ? (
+                    <div className="flex flex-col items-center gap-2 py-10">
+                        <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
+                            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                        </svg>
+                        <p className="text-xs" style={{ color: 'var(--text-3)' }}>Nenhuma conversa</p>
+                    </div>
+                ) : (
+                    <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                        {conversas.map(c => (
+                            <button
+                                key={c.id}
+                                className="table-row-hover flex w-full items-center justify-between gap-3 px-5 py-3 text-left"
+                                onClick={() => router.visit(route('tenant.conversas.index', { conversa_id: c.id }))}
+                            >
+                                <div className="min-w-0">
+                                    <span className={`badge ${CONVERSA_STATUS_BADGE[c.status_v2] ?? 'badge-gray'}`}>
+                                        {CONVERSA_STATUS_LABEL[c.status_v2] ?? c.status_v2}
                                     </span>
+                                    <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
+                                        {fmtRelativo(c.ultima_mensagem_em ?? c.updated_at)}
+                                    </p>
                                 </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                {/* Conversas */}
-                <div className="card overflow-hidden">
-                    <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-                        <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
-                            Conversas
-                        </h3>
+                                <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)', flexShrink: 0 }}>
+                                    <polyline points="9 18 15 12 9 6"/>
+                                </svg>
+                            </button>
+                        ))}
                     </div>
-
-                    {conversas.length === 0 ? (
-                        <div className="flex flex-col items-center gap-2 py-10">
-                            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
-                                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-                            </svg>
-                            <p className="text-xs" style={{ color: 'var(--text-3)' }}>Nenhuma conversa</p>
-                        </div>
-                    ) : (
-                        <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
-                            {conversas.map(c => (
-                                <div
-                                    key={c.id}
-                                    className="table-row-hover flex cursor-pointer items-center justify-between gap-3 px-5 py-3"
-                                    onClick={() => router.visit(route('tenant.conversas.index', { conversa_id: c.id }))}
-                                >
-                                    <div>
-                                        <p className="text-sm text-primary">
-                                            {CONVERSA_STATUS_LABEL[c.status_v2] ?? c.status_v2}
-                                        </p>
-                                        <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
-                                            {fmtRelativo(c.ultima_mensagem_em ?? c.updated_at)}
-                                        </p>
-                                    </div>
-                                    <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)', flexShrink: 0 }}>
-                                        <polyline points="9 18 15 12 9 6"/>
-                                    </svg>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
+                )}
             </div>
+
+            {showDelete && (
+                <DeleteModal
+                    nome={cliente.nome}
+                    onConfirm={handleDelete}
+                    onCancel={() => setShowDelete(false)}
+                />
+            )}
+
+            {deleting && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+                    <div className="rounded-2xl p-6" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
+                        <svg className="mx-auto h-6 w-6 animate-spin" fill="none" viewBox="0 0 24 24" style={{ color: 'var(--accent)' }}>
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        <p className="mt-3 text-sm" style={{ color: 'var(--text-3)' }}>Excluindo…</p>
+                    </div>
+                </div>
+            )}
         </AppLayout>
     );
 }
