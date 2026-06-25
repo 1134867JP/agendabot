@@ -38,9 +38,11 @@ class ClienteController extends Controller
             'agendamentos' => $cliente->agendamentos()
                 ->with('profissional', 'servico')
                 ->orderByDesc('data_hora')
+                ->limit(30)
                 ->get(),
             'conversas'    => $cliente->conversas()
                 ->orderByDesc('ultima_mensagem_em')
+                ->limit(20)
                 ->get(),
         ]);
     }

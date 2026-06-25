@@ -154,48 +154,21 @@ class ClaudeAgentService
         $opcoesPart = $opcoes ? "\n{$opcoes}\n" : '';
 
         return <<<PROMPT
-Você é {$tenant->nome_agente}, assistente virtual de {$tenant->nome}.
+Você é {$tenant->nome_agente} de {$tenant->nome} ({$tenant->ramo_negocio}).
 {$tenant->descricao_negocio}
+Local: {$tenant->endereco}, {$tenant->cidade} | Horários: {$horarios}
+Tom: {$tomInstrucao}
 
-Ramo: {$tenant->ramo_negocio}
-Endereço: {$tenant->endereco}, {$tenant->cidade}
-Horários de funcionamento: {$horarios}
+PROFISSIONAIS:{$profissionais}
+SERVIÇOS:{$servicos}{$opcoesPart}{$instrucoes}
+REGRAS: mensagens curtas; não invente horários; mídia→peça texto; 2 tentativas sem entender→transfira; irritado/pediu humano→transfira.
 
-TOM DE VOZ: {$tomInstrucao}
-
-PROFISSIONAIS DISPONÍVEIS:
-{$profissionais}
-
-SERVIÇOS DISPONÍVEIS:
-{$servicos}
-{$opcoesPart}
-REGRAS:
-- Nunca invente horários — use apenas os fornecidos no bloco de slots abaixo
-- Mensagens curtas (WhatsApp, não e-mail)
-- Figurinhas/imagens/áudios: responda pedindo gentilmente uma mensagem de texto
-- Após 2 tentativas sem entender o cliente, transfira para humano
-- Não faça diagnósticos ou promessas de resultado
-{$instrucoes}
-
-QUANDO TRANSFERIR PARA HUMANO:
-- Cliente irritado ou reclamando
-- Dúvida fora do seu escopo após 2 tentativas
-- Cliente pedir explicitamente para falar com pessoa
-
-QUANDO UMA AÇÃO FOR CONFIRMADA, retorne PRIMEIRO o JSON depois a mensagem:
-{"acao":"agendar","cliente_nome":"...","profissional_id":123,"servico_id":456,"data":"YYYY-MM-DD","horario":"HH:MM","opcao_extra":null,"observacoes":"...","resposta":"mensagem para o cliente"}
-
-Para transferência:
-{"acao":"transferir","resposta":"mensagem para o cliente"}
-
-Para confirmar agendamento pendente (cliente disse "confirmo", "sim", "✅" ou equivalente):
-{"acao":"confirmar","resposta":"mensagem para o cliente"}
-
-Para cancelar agendamento pendente (cliente disse "cancelo", "não vou", "❌" ou equivalente):
-{"acao":"cancelar","resposta":"mensagem para o cliente"}
-
-Para apenas responder (sem ação):
-{"acao":"duvida","resposta":"mensagem para o cliente"}
+RESPONDA SEMPRE EM JSON:
+Agendar: {"acao":"agendar","cliente_nome":"...","profissional_id":0,"servico_id":0,"data":"YYYY-MM-DD","horario":"HH:MM","opcao_extra":null,"observacoes":null,"resposta":"..."}
+Confirmar pendente: {"acao":"confirmar","resposta":"..."}
+Cancelar pendente: {"acao":"cancelar","resposta":"..."}
+Transferir: {"acao":"transferir","resposta":"..."}
+Só responder: {"acao":"duvida","resposta":"..."}
 PROMPT;
     }
 
@@ -208,22 +181,14 @@ PROMPT;
         $parts = [];
 
         if ($agendamentoPendenteInfo) {
-            $parts[] = "AGENDAMENTO PENDENTE (aguardando confirmação/cancelamento do cliente):\n{$agendamentoPendenteInfo}\nSe o cliente confirmar ou cancelar, use acao \"confirmar\" ou \"cancelar\".";
+            $parts[] = "PENDENTE: {$agendamentoPendenteInfo} — use acao confirmar/cancelar conforme resposta do cliente.";
         }
 
-        if (! $incluirSlots) {
-            $parts[] = 'HORÁRIOS: [disponíveis quando o cliente escolher data]';
-        } else {
-            $parts[] = "HORÁRIOS DISPONÍVEIS — PRÓXIMOS 4 DIAS:\n" . $this->formatarSlots($horariosDisponiveis);
+        if ($incluirSlots) {
+            $parts[] = "SLOTS:\n" . $this->formatarSlots($horariosDisponiveis);
         }
 
         return implode("\n\n", $parts);
-    }
-
-    /** @deprecated Use buildStaticPrompt + buildDynamicPrompt */
-    public function buildSystemPrompt(Tenant $tenant, array $horariosDisponiveis): string
-    {
-        return $this->buildStaticPrompt($tenant) . "\n\n" . $this->buildDynamicPrompt($horariosDisponiveis);
     }
 
     private function formatarHorarios(array $horarios): string
