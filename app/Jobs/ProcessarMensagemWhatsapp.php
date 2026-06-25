@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\Agendamento;
 use App\Models\Cliente;
 use App\Models\Conversa;
 use App\Models\Mensagem;
@@ -10,6 +11,7 @@ use App\Models\TokenUsage;
 use App\Services\AgendamentoService;
 use App\Services\ClaudeAgentService;
 use App\Services\EvolutionApiService;
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -80,13 +82,18 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             ->values()
             ->all();
 
-        // 7. Buscar slots apenas quando a conversa já tem trocas suficientes (economiza query + tokens)
+        // 7. Buscar slots e agendamento pendente em paralelo
         $horariosDisponiveis = count($historico) >= 3
             ? $agendamentoService->buscarHorariosDisponiveis($this->tenant, 4)
             : [];
 
+        $agendamentoPendente       = $this->buscarAgendamentoPendente($cliente);
+        $agendamentoPendenteInfo   = $agendamentoPendente
+            ? $this->formatarAgendamentoPendente($agendamentoPendente)
+            : null;
+
         // 8. Chamar Claude
-        $resultado = $claude->processar($this->tenant, $historico, $horariosDisponiveis);
+        $resultado = $claude->processar($this->tenant, $historico, $horariosDisponiveis, $agendamentoPendenteInfo);
 
         // Registrar uso de tokens para controle de custo
         if (! empty($resultado['usage'])) {
@@ -100,6 +107,8 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         $agendamentoCriado = true;
         match ($resultado['acao']) {
             'agendar'    => $agendamentoCriado = $this->processarAgendamento($resultado['dados'], $cliente, $agendamentoService),
+            'confirmar'  => $this->confirmarAgendamento($agendamentoPendente),
+            'cancelar'   => $this->cancelarAgendamento($agendamentoPendente, $agendamentoService),
             'transferir' => $this->transferirParaHumano($conversa),
             default      => null,
         };
@@ -113,6 +122,49 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         // 10. Salvar resposta do bot e enviar ao cliente
         $conversa->registrarMensagem('bot', $resultado['resposta']);
         $evolution->enviarMensagem($this->tenant->evolution_instance, $this->telefone, $resultado['resposta']);
+    }
+
+    private function buscarAgendamentoPendente(Cliente $cliente): ?Agendamento
+    {
+        return Agendamento::where('tenant_id', $this->tenant->id)
+            ->where('status', 'agendado')
+            ->where(function ($q) use ($cliente) {
+                $q->where('cliente_id', $cliente->id)
+                  ->orWhere('cliente_telefone', $this->telefone);
+            })
+            ->where(function ($q) {
+                $q->where(fn ($q2) => $q2->whereNotNull('data_hora')->where('data_hora', '>', now()))
+                  ->orWhere(fn ($q2) => $q2->whereNull('data_hora')->where('inicio', '>', now()));
+            })
+            ->orderByRaw('COALESCE(data_hora, inicio)')
+            ->first();
+    }
+
+    private function formatarAgendamentoPendente(Agendamento $agendamento): string
+    {
+        $dataHora = Carbon::parse($agendamento->data_hora ?? $agendamento->inicio)
+            ->locale('pt_BR')
+            ->translatedFormat('d/m/Y \à\s H:i');
+
+        $servico = $agendamento->profissional?->nome
+            ?? $agendamento->recurso?->nome
+            ?? 'serviço';
+
+        return "📅 {$dataHora} — {$servico}";
+    }
+
+    private function confirmarAgendamento(?Agendamento $agendamento): void
+    {
+        if ($agendamento) {
+            $agendamento->update(['status' => 'confirmado']);
+        }
+    }
+
+    private function cancelarAgendamento(?Agendamento $agendamento, AgendamentoService $service): void
+    {
+        if ($agendamento) {
+            $service->cancelar($agendamento);
+        }
     }
 
     private function processarAgendamento(array $dados, Cliente $cliente, AgendamentoService $service): bool

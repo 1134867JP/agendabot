@@ -13,9 +13,10 @@ class ConfiguracaoController extends Controller
     public function index(): Response
     {
         $tenant = app('tenant');
+        $cfg    = $tenant->configuracoes ?? [];
 
         return Inertia::render('Tenant/Configuracoes', [
-            'tenant' => $tenant->only([
+            'tenant' => array_merge($tenant->only([
                 'id',
                 'nome',
                 'tipo_servico',
@@ -29,6 +30,9 @@ class ConfiguracaoController extends Controller
                 'cidade',
                 'endereco',
                 'horarios_funcionamento',
+            ]), [
+                'lembrete_ativo' => $cfg['lembrete_ativo'] ?? true,
+                'lembrete_texto' => $cfg['lembrete_texto'] ?? '',
             ]),
         ]);
     }
@@ -62,9 +66,18 @@ class ConfiguracaoController extends Controller
             'tom_voz'                   => 'required|in:formal,semiformal,descontraido',
             'instrucoes_extras'         => 'nullable|string|max:1000',
             'bot_ativo'                 => 'boolean',
+            'lembrete_ativo'            => 'boolean',
+            'lembrete_texto'            => 'nullable|string|max:500',
         ]);
 
-        $tenant->update($data);
+        $configuracoes = array_merge($tenant->configuracoes ?? [], [
+            'lembrete_ativo' => $data['lembrete_ativo'] ?? true,
+            'lembrete_texto' => $data['lembrete_texto'] ?? null,
+        ]);
+
+        unset($data['lembrete_ativo'], $data['lembrete_texto']);
+
+        $tenant->update(array_merge($data, ['configuracoes' => $configuracoes]));
 
         return back()->with('success', 'Configurações do bot salvas.');
     }

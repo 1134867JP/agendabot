@@ -24,7 +24,7 @@ class ClaudeAgentService
      * @param array $horariosDisponiveis resultado de AgendamentoService::buscarHorariosDisponiveis()
      * @return array{acao: string, resposta: string, dados: array}
      */
-    public function processar(Tenant $tenant, array $mensagens, array $horariosDisponiveis): array
+    public function processar(Tenant $tenant, array $mensagens, array $horariosDisponiveis, ?string $agendamentoPendenteInfo = null): array
     {
         // Só incluir slots quando a conversa já tem pelo menos 3 msgs — economiza tokens nas boas-vindas
         $incluirSlots = count($mensagens) >= 3;
@@ -33,7 +33,7 @@ class ClaudeAgentService
         // - Bloco 1 (estático, cacheado): identidade, profissionais, serviços, regras
         // - Bloco 2 (dinâmico, não cacheado): slots disponíveis (muda a cada consulta)
         $staticPart  = $this->buildStaticPrompt($tenant);
-        $dynamicPart = $this->buildDynamicPrompt($horariosDisponiveis, $incluirSlots);
+        $dynamicPart = $this->buildDynamicPrompt($horariosDisponiveis, $incluirSlots, $agendamentoPendenteInfo);
 
         $systemBlocks = [
             [
@@ -188,6 +188,12 @@ QUANDO UMA AÇÃO FOR CONFIRMADA, retorne PRIMEIRO o JSON depois a mensagem:
 Para transferência:
 {"acao":"transferir","resposta":"mensagem para o cliente"}
 
+Para confirmar agendamento pendente (cliente disse "confirmo", "sim", "✅" ou equivalente):
+{"acao":"confirmar","resposta":"mensagem para o cliente"}
+
+Para cancelar agendamento pendente (cliente disse "cancelo", "não vou", "❌" ou equivalente):
+{"acao":"cancelar","resposta":"mensagem para o cliente"}
+
 Para apenas responder (sem ação):
 {"acao":"duvida","resposta":"mensagem para o cliente"}
 PROMPT;
@@ -197,13 +203,21 @@ PROMPT;
      * Parte dinâmica — slots disponíveis. Não cacheada pois muda com cada novo agendamento.
      * Omite slots quando a conversa está no início (< 3 msgs) para economizar tokens.
      */
-    public function buildDynamicPrompt(array $horariosDisponiveis, bool $incluirSlots = true): string
+    public function buildDynamicPrompt(array $horariosDisponiveis, bool $incluirSlots = true, ?string $agendamentoPendenteInfo = null): string
     {
-        if (! $incluirSlots) {
-            return 'HORÁRIOS: [disponíveis quando o cliente escolher data]';
+        $parts = [];
+
+        if ($agendamentoPendenteInfo) {
+            $parts[] = "AGENDAMENTO PENDENTE (aguardando confirmação/cancelamento do cliente):\n{$agendamentoPendenteInfo}\nSe o cliente confirmar ou cancelar, use acao \"confirmar\" ou \"cancelar\".";
         }
 
-        return "HORÁRIOS DISPONÍVEIS — PRÓXIMOS 4 DIAS:\n" . $this->formatarSlots($horariosDisponiveis);
+        if (! $incluirSlots) {
+            $parts[] = 'HORÁRIOS: [disponíveis quando o cliente escolher data]';
+        } else {
+            $parts[] = "HORÁRIOS DISPONÍVEIS — PRÓXIMOS 4 DIAS:\n" . $this->formatarSlots($horariosDisponiveis);
+        }
+
+        return implode("\n\n", $parts);
     }
 
     /** @deprecated Use buildStaticPrompt + buildDynamicPrompt */

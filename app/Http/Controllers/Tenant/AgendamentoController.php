@@ -58,7 +58,7 @@ class AgendamentoController extends Controller
             'recurso_id'        => ['required', 'exists:recursos,id'],
             'cliente_nome'      => ['required', 'string', 'max:255'],
             'cliente_telefone'  => ['required', 'string', 'max:20'],
-            'inicio'            => ['required', 'date'],
+            'inicio'            => ['required', 'date', 'after_or_equal:now'],
             'fim'               => ['required', 'date', 'after:inicio'],
             'observacoes'       => ['nullable', 'string'],
             'notificar_cliente' => ['boolean'],
