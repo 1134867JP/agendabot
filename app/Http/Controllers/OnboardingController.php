@@ -116,8 +116,8 @@ class OnboardingController extends Controller
     public function step3Store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'bot_nome'     => 'required|string|max:80',
-            'bot_saudacao' => 'required|string|max:500',
+            'bot_nome'     => 'required|string|min:2|max:80',
+            'bot_saudacao' => 'required|string|min:10|max:500',
             'bot_tom'      => 'required|in:formal,semiformal,descontraido',
         ]);
 
