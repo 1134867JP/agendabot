@@ -7,8 +7,10 @@ use App\Models\Agendamento;
 use App\Models\Recurso;
 use App\Services\AgendamentoService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -93,5 +95,56 @@ class AgendamentoController extends Controller
         abort_unless($agendamento->tenant_id === app('tenant')->id, 403);
         $agendamento->update(['status' => 'concluido']);
         return back()->with('success', 'Agendamento concluído.');
+    }
+
+    public function exportar(Request $request): StreamedResponse
+    {
+        $tenant = app('tenant');
+
+        $query = Agendamento::where('tenant_id', $tenant->id)
+            ->with(['recurso', 'profissional', 'servico'])
+            ->orderBy('inicio', 'desc');
+
+        if ($request->filled('data_inicio')) {
+            $query->where(fn ($q) => $q->where('inicio', '>=', $request->data_inicio)->orWhere('data_hora', '>=', $request->data_inicio));
+        }
+        if ($request->filled('data_fim')) {
+            $query->where(fn ($q) => $q->where('inicio', '<=', $request->data_fim)->orWhere('data_hora', '<=', $request->data_fim));
+        }
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $filename = 'agendamentos-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($query) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['ID', 'Cliente', 'Telefone', 'Serviço / Recurso', 'Data/Hora', 'Duração (min)', 'Valor', 'Status', 'Origem'], ';');
+
+            $query->chunk(500, function ($agendamentos) use ($handle) {
+                foreach ($agendamentos as $ag) {
+                    $dataHora = $ag->data_hora ?? $ag->inicio;
+                    $servico = $ag->servico?->nome ?? $ag->recurso?->nome ?? '–';
+                    $duracao = $ag->duracao_minutos ?? (
+                        ($ag->inicio && $ag->fim)
+                            ? Carbon::parse($ag->inicio)->diffInMinutes($ag->fim)
+                            : '–'
+                    );
+                    fputcsv($handle, [
+                        $ag->id,
+                        $ag->cliente_nome ?? $ag->cliente?->nome ?? '–',
+                        $ag->cliente_telefone ?? $ag->cliente?->telefone ?? '–',
+                        $servico,
+                        $dataHora ? Carbon::parse($dataHora)->format('d/m/Y H:i') : '–',
+                        $duracao,
+                        $ag->valor_total ? number_format($ag->valor_total, 2, ',', '.') : '–',
+                        $ag->status,
+                        $ag->origem ?? 'manual',
+                    ], ';');
+                }
+            });
+
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 }
