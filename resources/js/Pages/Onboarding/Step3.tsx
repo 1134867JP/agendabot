@@ -7,19 +7,21 @@ interface Props extends PageProps {
     tenant: {
         nome: string;
         tipo_servico: string;
-        configuracoes: Record<string, string>;
+        nome_agente: string | null;
+        tom_voz: string | null;
+        instrucoes_extras: string | null;
     };
 }
 
 const TOM_OPTIONS = [
     {
-        value: 'casual',
+        value: 'semiformal',
         label: 'Casual',
         desc: 'Simpático e próximo',
         exemplo: '"Oi! Que bom ter você por aqui 😊 Como posso ajudar?"',
     },
     {
-        value: 'profissional',
+        value: 'formal',
         label: 'Profissional',
         desc: 'Cordial e objetivo',
         exemplo: '"Olá! Seja bem-vindo. Em que posso ajudá-lo hoje?"',
@@ -33,12 +35,10 @@ const TOM_OPTIONS = [
 ];
 
 export default function OnboardingStep3({ tenant }: Props) {
-    const cfg = tenant.configuracoes ?? {};
-
     const { data, setData, post, processing, errors } = useForm({
-        bot_nome:     (cfg.bot_nome as string)     || `Assistente da ${tenant.nome}`,
-        bot_saudacao: (cfg.bot_saudacao as string) || `Olá! Bem-vindo à ${tenant.nome}. Como posso ajudar?`,
-        bot_tom:      (cfg.bot_tom as string)      || 'casual',
+        bot_nome:     tenant.nome_agente     || `Assistente da ${tenant.nome}`,
+        bot_saudacao: tenant.instrucoes_extras || `Olá! Bem-vindo à ${tenant.nome}. Como posso ajudar?`,
+        bot_tom:      tenant.tom_voz         || 'semiformal',
     });
 
     const submit: FormEventHandler = (e) => {
