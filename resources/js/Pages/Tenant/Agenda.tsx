@@ -369,7 +369,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
         if (!entidadeId) return;
         setLoading(true);
         const inicio = startOfWeek(diaAtivo);
-        const fim    = addDays(inicio, 6);
+        const fim    = addDays(addDays(inicio, 6), 1); // inclui até o fim do último dia
         const param  = tipoEntidade === 'recurso'
             ? `recurso_id=${entidadeId}`
             : `profissional_id=${entidadeId}`;

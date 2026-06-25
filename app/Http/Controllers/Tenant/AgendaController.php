@@ -37,15 +37,22 @@ class AgendaController extends Controller
         $query = Agendamento::where('tenant_id', $tenant->id)
             ->where('status', '!=', 'cancelado');
 
+        $dataFim = Carbon::parse($request->data_fim)->endOfDay()->toIso8601String();
+
         if ($request->filled('recurso_id')) {
             $query->where('recurso_id', $request->recurso_id)
-                  ->whereBetween('inicio', [$request->data_inicio, $request->data_fim]);
-        } elseif ($request->filled('profissional_id')) {
-            $query->where('profissional_id', $request->profissional_id)
-                  ->where(function ($q) use ($request) {
-                      $q->whereBetween('inicio', [$request->data_inicio, $request->data_fim])
-                        ->orWhereBetween('data_hora', [$request->data_inicio, $request->data_fim]);
+                  ->where(function ($q) use ($request, $dataFim) {
+                      $q->whereBetween('inicio', [$request->data_inicio, $dataFim]);
                   });
+        } elseif ($request->filled('profissional_id')) {
+            // Inclui agendamentos do profissional OU sem profissional associado (dados legados)
+            $query->where(function ($q) use ($request) {
+                $q->where('profissional_id', $request->profissional_id)
+                  ->orWhereNull('profissional_id');
+            })->where(function ($q) use ($request, $dataFim) {
+                $q->whereBetween('inicio', [$request->data_inicio, $dataFim])
+                  ->orWhereBetween('data_hora', [$request->data_inicio, $dataFim]);
+            });
         } else {
             return response()->json([]);
         }
