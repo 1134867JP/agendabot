@@ -11,19 +11,20 @@ interface Cliente {
     telefone: string;
 }
 
+interface Mensagem {
+    id: number;
+    remetente: 'cliente' | 'bot' | 'humano';
+    conteudo: string;
+    enviada_em: string;
+}
+
 interface Conversa {
     id: number;
     cliente: Cliente | null;
     telefone_cliente: string;
     status_v2: 'ativa' | 'aguardando_humano' | 'em_atendimento_humano' | 'encerrada';
     ultima_mensagem_em: string | null;
-}
-
-interface Mensagem {
-    id: number;
-    remetente: 'cliente' | 'bot' | 'humano';
-    conteudo: string;
-    enviada_em: string;
+    mensagens?: Mensagem[];
 }
 
 interface Props extends PageProps {
@@ -40,16 +41,11 @@ const STATUS_LABEL: Record<string, string> = {
     encerrada:             'Encerrada',
 };
 
-const STATUS_COLOR: Record<string, { bg: string; color: string }> = {
-    ativa:                 { bg: 'rgba(110,231,183,0.12)', color: '#6ee7b7' },
-    aguardando_humano:     { bg: 'rgba(251,191,36,0.12)',  color: '#fbbf24' },
-    em_atendimento_humano: { bg: 'rgba(99,102,241,0.15)',  color: '#a5b4fc' },
-    encerrada:             { bg: 'var(--bg-surface-2)', color: 'var(--text-3)' },
-};
-
-const REMETENTE_LABEL: Record<string, string> = {
-    bot:    '🤖 Bot',
-    humano: '🧑 Atendente',
+const STATUS_DOT: Record<string, string> = {
+    ativa:                 '#34d399',
+    aguardando_humano:     '#fbbf24',
+    em_atendimento_humano: '#a5b4fc',
+    encerrada:             'var(--text-3)',
 };
 
 function fmtHora(iso: string) {
@@ -68,72 +64,115 @@ function fmtRelativo(iso: string | null) {
     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
+// ─── Avatar ───────────────────────────────────────────────────────────────────
+
+const AVATAR_PALETTES = [
+    { bg: 'rgba(99,102,241,0.22)',  color: '#a5b4fc' },
+    { bg: 'rgba(0,168,132,0.20)',   color: '#34d399' },
+    { bg: 'rgba(251,191,36,0.20)',  color: '#fbbf24' },
+    { bg: 'rgba(239,68,68,0.18)',   color: '#f87171' },
+    { bg: 'rgba(168,85,247,0.20)',  color: '#c084fc' },
+    { bg: 'rgba(59,130,246,0.20)',  color: '#93c5fd' },
+];
+
+function Avatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' | 'lg' }) {
+    const letter = name.charAt(0).toUpperCase();
+    const palette = AVATAR_PALETTES[name.charCodeAt(0) % AVATAR_PALETTES.length];
+    const dim = size === 'sm' ? 'h-8 w-8 text-[12px]' : size === 'lg' ? 'h-11 w-11 text-base' : 'h-10 w-10 text-sm';
+    return (
+        <div
+            className={`flex shrink-0 items-center justify-center rounded-full font-semibold ${dim}`}
+            style={{ background: palette.bg, color: palette.color }}
+        >
+            {letter}
+        </div>
+    );
+}
+
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
-    const s = STATUS_COLOR[status] ?? { bg: 'var(--bg-surface-2)', color: 'var(--text-3)' };
+    const dot = STATUS_DOT[status] ?? 'var(--text-3)';
     return (
-        <span
-            className="rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap"
-            style={{ background: s.bg, color: s.color }}
-        >
+        <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap" style={{ background: 'var(--bg-surface-2)', color: dot }}>
+            <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: dot }} />
             {STATUS_LABEL[status] ?? status}
         </span>
     );
 }
 
-// ─── Bubble de mensagem ───────────────────────────────────────────────────────
+// ─── Bubble ───────────────────────────────────────────────────────────────────
 
-function Bubble({ msg }: { msg: Mensagem }) {
+function Bubble({ msg, prevRemetente }: { msg: Mensagem; prevRemetente?: string }) {
     const isCliente = msg.remetente === 'cliente';
+    const isBot = msg.remetente === 'bot';
+    const showLabel = !isCliente && msg.remetente !== prevRemetente;
 
-    const bubbleStyle: React.CSSProperties = isCliente
-        ? { background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-1)' }
-        : msg.remetente === 'bot'
-            ? { background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.25)', color: 'var(--text-1)' }
-            : { background: 'rgba(110,231,183,0.15)', border: '1px solid rgba(110,231,183,0.25)', color: 'var(--text-1)' };
+    let bg: string, border: string, radius: string, labelColor: string;
+    if (isCliente) {
+        bg = 'var(--bg-surface)';
+        border = '1px solid var(--border-strong)';
+        radius = '4px 18px 18px 18px';
+        labelColor = '';
+    } else if (isBot) {
+        bg = 'rgba(99,102,241,0.15)';
+        border = '1px solid rgba(99,102,241,0.22)';
+        radius = '18px 4px 18px 18px';
+        labelColor = 'rgba(165,180,252,0.85)';
+    } else {
+        bg = 'rgba(0,168,132,0.14)';
+        border = '1px solid rgba(0,168,132,0.22)';
+        radius = '18px 4px 18px 18px';
+        labelColor = 'rgba(52,211,153,0.85)';
+    }
 
     return (
-        <div className={`flex ${isCliente ? 'justify-start' : 'justify-end'} mb-2`}>
+        <div className={`flex ${isCliente ? 'justify-start' : 'justify-end'} ${showLabel ? 'mt-3' : 'mt-1'}`}>
             <div
-                className="max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm lg:max-w-sm"
-                style={bubbleStyle}
+                className="max-w-[75%] px-3.5 py-2.5 text-sm shadow-sm lg:max-w-[60%]"
+                style={{ background: bg, border, borderRadius: radius, color: 'var(--text-1)', wordBreak: 'break-word' }}
             >
-                {!isCliente && (
-                    <p className="mb-1 text-[10px] font-medium opacity-60">
-                        {REMETENTE_LABEL[msg.remetente]}
+                {showLabel && (
+                    <p className="mb-1 text-[10px] font-semibold" style={{ color: labelColor }}>
+                        {isBot ? '🤖 Bot' : '👤 Atendente'}
                     </p>
                 )}
-                <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{msg.conteudo}</p>
-                <p className="mt-1 text-right text-[10px] opacity-50">{fmtHora(msg.enviada_em)}</p>
+                <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>{msg.conteudo}</p>
+                <p className="mt-1 text-right text-[10px] opacity-40">{fmtHora(msg.enviada_em)}</p>
             </div>
         </div>
     );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Send icon ────────────────────────────────────────────────────────────────
+
+function SendIcon() {
+    return (
+        <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+    );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function ConversasIndex({ conversas, filtros }: Props) {
-    const [selecionada,  setSelecionada]  = useState<Conversa | null>(null);
-    const [mensagens,    setMensagens]    = useState<Mensagem[]>([]);
-    const [carregando,   setCarregando]   = useState(false);
-    const [assumindo,    setAssumindo]    = useState(false);
-    // Mobile: mostrar painel do chat em vez da lista
-    const [showChat,     setShowChat]     = useState(false);
+    const [selecionada, setSelecionada]  = useState<Conversa | null>(null);
+    const [mensagens,   setMensagens]    = useState<Mensagem[]>([]);
+    const [carregando,  setCarregando]   = useState(false);
+    const [assumindo,   setAssumindo]    = useState(false);
+    const [showChat,    setShowChat]     = useState(false);
 
     const chatRef     = useRef<HTMLDivElement>(null);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const { data, setData, post, processing, reset } = useForm<{ conteudo: string }>({ conteudo: '' });
 
-    // ── Scroll to bottom ──────────────────────────────────────────────────────
     const scrollBottom = () => {
-        setTimeout(() => {
-            if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
-        }, 60);
+        setTimeout(() => { if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight; }, 60);
     };
 
-    // ── Fetch mensagens ───────────────────────────────────────────────────────
     const buscarMensagens = useCallback(async (conversa: Conversa, silent = false) => {
         if (!silent) setCarregando(true);
         try {
@@ -141,27 +180,24 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                 headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
             });
             if (!res.ok) return;
-            const json: Mensagem[] = await res.json();
-            setMensagens(json);
+            setMensagens(await res.json());
             if (!silent) scrollBottom();
-        } catch { /* ignore network errors */ } finally {
+        } catch { /* ignore */ } finally {
             if (!silent) setCarregando(false);
         }
     }, []);
 
-    // ── Polling ───────────────────────────────────────────────────────────────
     const pararPolling = () => {
         if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
     };
 
-    const iniciarPolling = useCallback((conversa: Conversa) => {
+    const iniciarPolling = useCallback((c: Conversa) => {
         pararPolling();
-        intervalRef.current = setInterval(() => buscarMensagens(conversa, true), 5000);
+        intervalRef.current = setInterval(() => buscarMensagens(c, true), 5000);
     }, [buscarMensagens]);
 
     useEffect(() => () => pararPolling(), []);
 
-    // ── Selecionar conversa ───────────────────────────────────────────────────
     const selecionar = (c: Conversa) => {
         pararPolling();
         setSelecionada(c);
@@ -171,57 +207,47 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
         iniciarPolling(c);
     };
 
-    // ── Assumir conversa ──────────────────────────────────────────────────────
     const assumir = (onSuccess?: () => void) => {
         if (!selecionada) return;
         setAssumindo(true);
         router.post(route('tenant.conversas.assumir', selecionada.id), {}, {
             preserveScroll: true,
-            onSuccess: () => {
-                setSelecionada(prev => prev ? { ...prev, status_v2: 'em_atendimento_humano' } : null);
-                onSuccess?.();
-            },
+            onSuccess: () => { setSelecionada(p => p ? { ...p, status_v2: 'em_atendimento_humano' } : null); onSuccess?.(); },
             onFinish: () => setAssumindo(false),
         });
     };
 
-    // ── Devolver ao bot ───────────────────────────────────────────────────────
     const devolver = () => {
         if (!selecionada) return;
         router.post(route('tenant.conversas.devolver', selecionada.id), {}, {
             preserveScroll: true,
-            onSuccess: () => setSelecionada(prev => prev ? { ...prev, status_v2: 'ativa' } : null),
+            onSuccess: () => setSelecionada(p => p ? { ...p, status_v2: 'ativa' } : null),
         });
     };
 
-    // ── Enviar mensagem — auto-assume se necessário ───────────────────────────
     const enviar = (e: React.FormEvent) => {
         e.preventDefault();
         if (!selecionada || !data.conteudo.trim()) return;
-
         const doPost = () => post(route('tenant.conversas.enviar', selecionada.id), {
             preserveScroll: true,
-            onSuccess: () => {
-                reset('conteudo');
-                buscarMensagens(selecionada).then(() => scrollBottom());
-            },
+            onSuccess: () => { reset('conteudo'); buscarMensagens(selecionada).then(() => scrollBottom()); },
         });
-
-        if (selecionada.status_v2 !== 'em_atendimento_humano') {
-            assumir(doPost);
-        } else {
-            doPost();
-        }
+        if (selecionada.status_v2 !== 'em_atendimento_humano') assumir(doPost);
+        else doPost();
     };
 
-    // ── Filtrar por status ────────────────────────────────────────────────────
     const filtrarStatus = (status: string) => {
         router.get(route('tenant.conversas.index'), status ? { status_v2: status } : {}, { preserveState: true });
     };
 
-    const nomeConversa = (c: Conversa) => c.cliente?.nome ?? c.telefone_cliente;
+    const nomeDe = (c: Conversa) => c.cliente?.nome ?? c.telefone_cliente;
+    const previewDe = (c: Conversa) => {
+        const texto = c.mensagens?.[0]?.conteudo;
+        if (!texto) return c.telefone_cliente;
+        return texto.length > 48 ? texto.slice(0, 48) + '…' : texto;
+    };
 
-    const statusFiltros: { label: string; value: string }[] = [
+    const statusFiltros = [
         { label: 'Todas',          value: '' },
         { label: 'Ativas',         value: 'ativa' },
         { label: 'Aguardando',     value: 'aguardando_humano' },
@@ -229,36 +255,29 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
         { label: 'Encerradas',     value: 'encerrada' },
     ];
 
-    const podeEnviar = selecionada?.status_v2 !== 'encerrada';
+    const podeEnviar  = selecionada?.status_v2 !== 'encerrada';
     const emAtendimento = selecionada?.status_v2 === 'em_atendimento_humano';
+    const dotColor = selecionada ? (STATUS_DOT[selecionada.status_v2] ?? 'var(--text-3)') : '';
 
     return (
         <AppLayout title="" fullHeight>
             <Head title="Conversas WhatsApp" />
 
-            {/* Layout two-panel — coluna única em mobile */}
             <div
                 className="flex flex-1 min-h-0 overflow-hidden rounded-xl mx-3 mb-3 md:mx-4 md:mb-4"
-                style={{
-                    border: '1px solid var(--border)',
-                    background: 'var(--bg-surface)',
-                }}
+                style={{ border: '1px solid var(--border)', background: 'var(--bg-surface)' }}
             >
-                {/* ── Left: lista de conversas ────────────────────────────── */}
+                {/* ── Painel esquerdo — lista de conversas ────────────────── */}
                 <div
                     className={`flex flex-col flex-shrink-0 w-full md:w-72 ${showChat ? 'hidden md:flex' : 'flex'}`}
                     style={{ borderRight: '1px solid var(--border)' }}
                 >
-                    {/* Header lista */}
-                    <div className="px-4 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-                        <h2
-                            className="text-base font-semibold text-primary"
-                            style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
-                        >
-                            Conversas WhatsApp
+                    {/* Header */}
+                    <div className="px-4 py-3.5" style={{ borderBottom: '1px solid var(--border)' }}>
+                        <h2 className="text-[15px] font-semibold text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                            Conversas
                         </h2>
-
-                        <div className="mt-3 flex flex-wrap gap-1">
+                        <div className="mt-2.5 flex flex-wrap gap-1">
                             {statusFiltros.map(f => {
                                 const ativo = (filtros.status_v2 ?? '') === f.value;
                                 return (
@@ -281,14 +300,12 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                     {/* Lista */}
                     <div className="flex-1 overflow-y-auto">
                         {conversas.data.length === 0 ? (
-                            <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
-                                <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
+                            <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+                                <svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
                                     <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                                 </svg>
                                 <p className="text-xs font-medium text-primary">Nenhuma conversa</p>
-                                <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>
-                                    As conversas do WhatsApp aparecem aqui.
-                                </p>
+                                <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>As mensagens do WhatsApp aparecerão aqui.</p>
                             </div>
                         ) : conversas.data.map(c => {
                             const ativo = selecionada?.id === c.id;
@@ -296,29 +313,28 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                 <button
                                     key={c.id}
                                     onClick={() => selecionar(c)}
-                                    className="w-full px-4 py-3 text-left transition-colors"
+                                    className="table-row-hover w-full px-3 py-3 text-left"
                                     style={{
                                         borderBottom: '1px solid var(--border)',
                                         background: ativo ? 'var(--accent-light)' : 'transparent',
-                                        borderLeft: ativo ? '2px solid var(--accent)' : '2px solid transparent',
+                                        borderLeft: `3px solid ${ativo ? 'var(--accent)' : 'transparent'}`,
                                     }}
-                                    onMouseEnter={e => { if (!ativo) (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface-2)'; }}
-                                    onMouseLeave={e => { if (!ativo) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                                 >
-                                    <div className="flex items-start justify-between gap-2">
+                                    <div className="flex items-center gap-3">
+                                        <Avatar name={nomeDe(c)} />
                                         <div className="min-w-0 flex-1">
-                                            <p className="truncate text-sm font-medium text-primary">
-                                                {nomeConversa(c)}
-                                            </p>
-                                            <p className="truncate text-[11px]" style={{ color: 'var(--text-3)' }}>
-                                                {c.telefone_cliente}
-                                            </p>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                                            <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>
-                                                {fmtRelativo(c.ultima_mensagem_em)}
-                                            </span>
-                                            <StatusBadge status={c.status_v2} />
+                                            <div className="flex items-center justify-between gap-1">
+                                                <p className="truncate text-[13px] font-semibold text-primary">{nomeDe(c)}</p>
+                                                <span className="shrink-0 text-[10px]" style={{ color: 'var(--text-3)' }}>
+                                                    {fmtRelativo(c.ultima_mensagem_em)}
+                                                </span>
+                                            </div>
+                                            <div className="mt-0.5 flex items-center justify-between gap-1">
+                                                <p className="truncate text-[11px]" style={{ color: 'var(--text-3)' }}>
+                                                    {previewDe(c)}
+                                                </p>
+                                                <StatusBadge status={c.status_v2} />
+                                            </div>
                                         </div>
                                     </div>
                                 </button>
@@ -327,19 +343,18 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                     </div>
                 </div>
 
-                {/* ── Right: área do chat ──────────────────────────────────── */}
+                {/* ── Painel direito — chat ────────────────────────────────── */}
                 {selecionada ? (
                     <div className={`flex flex-1 flex-col min-w-0 ${showChat ? 'flex' : 'hidden md:flex'}`}>
 
                         {/* Chat header */}
                         <div
-                            className="flex items-center justify-between gap-2 px-3 py-3 flex-shrink-0 md:px-5"
+                            className="flex items-center justify-between gap-3 px-4 py-3 flex-shrink-0"
                             style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}
                         >
-                            {/* Botão voltar (mobile) + info */}
-                            <div className="flex items-center gap-2 min-w-0">
+                            <div className="flex items-center gap-3 min-w-0">
                                 <button
-                                    className="md:hidden flex-shrink-0 rounded-md p-1.5 transition-colors"
+                                    className="md:hidden flex-shrink-0 rounded-md p-1.5 transition-colors hover:bg-surface-2"
                                     style={{ color: 'var(--text-2)' }}
                                     onClick={() => setShowChat(false)}
                                     aria-label="Voltar"
@@ -348,40 +363,39 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                         <polyline points="15 18 9 12 15 6"/>
                                     </svg>
                                 </button>
+
+                                <Avatar name={nomeDe(selecionada)} size="lg" />
+
                                 <div className="min-w-0">
-                                    <p className="font-semibold text-primary truncate">{nomeConversa(selecionada)}</p>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                        <p className="text-xs truncate" style={{ color: 'var(--text-3)' }}>
-                                            {selecionada.telefone_cliente}
+                                    <p className="truncate text-[15px] font-semibold text-primary">{nomeDe(selecionada)}</p>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                        <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: dotColor }} />
+                                        <p className="text-[11px]" style={{ color: dotColor }}>
+                                            {STATUS_LABEL[selecionada.status_v2]}
                                         </p>
-                                        <StatusBadge status={selecionada.status_v2} />
+                                        <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>· {selecionada.telefone_cliente}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Ações */}
                             <div className="flex gap-2 flex-shrink-0">
                                 {!emAtendimento && selecionada.status_v2 !== 'encerrada' && (
                                     <button
                                         onClick={() => assumir()}
                                         disabled={assumindo}
-                                        className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-80 disabled:opacity-50"
+                                        className="rounded-full px-4 py-1.5 text-xs font-semibold text-white transition-all hover:brightness-110 disabled:opacity-50"
                                         style={{ background: 'var(--accent)' }}
                                     >
-                                        Assumir
+                                        {assumindo ? '…' : 'Assumir'}
                                     </button>
                                 )}
                                 {emAtendimento && (
                                     <button
                                         onClick={devolver}
-                                        className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
-                                        style={{
-                                            background: 'var(--jade-light)',
-                                            border: '1px solid rgba(0,168,132,0.25)',
-                                            color: 'var(--jade)',
-                                        }}
+                                        className="rounded-full px-4 py-1.5 text-xs font-semibold transition-colors"
+                                        style={{ background: 'var(--jade-light)', border: '1px solid rgba(0,168,132,0.25)', color: 'var(--jade)' }}
                                     >
-                                        Bot
+                                        Devolver ao bot
                                     </button>
                                 )}
                             </div>
@@ -390,81 +404,102 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                         {/* Mensagens */}
                         <div
                             ref={chatRef}
-                            className="flex-1 overflow-y-auto px-3 py-4 md:px-5"
-                            style={{ background: 'var(--bg-app)' }}
+                            className="flex-1 overflow-y-auto px-4 py-5 md:px-6"
+                            style={{
+                                background: 'var(--bg-app)',
+                                backgroundImage: 'radial-gradient(circle, var(--border) 1px, transparent 1px)',
+                                backgroundSize: '24px 24px',
+                            }}
                         >
                             {carregando ? (
                                 <div className="flex h-full items-center justify-center">
-                                    <p className="text-sm" style={{ color: 'var(--text-3)' }}>Carregando…</p>
+                                    <div className="flex gap-1.5">
+                                        {[0,1,2].map(i => (
+                                            <span key={i} className="h-2 w-2 rounded-full animate-bounce" style={{ background: 'var(--text-3)', animationDelay: `${i * 0.15}s` }} />
+                                        ))}
+                                    </div>
                                 </div>
                             ) : mensagens.length === 0 ? (
                                 <div className="flex h-full items-center justify-center">
                                     <p className="text-sm" style={{ color: 'var(--text-3)' }}>Nenhuma mensagem ainda.</p>
                                 </div>
                             ) : (
-                                mensagens.map(m => <Bubble key={m.id} msg={m} />)
+                                mensagens.map((m, i) => (
+                                    <Bubble key={m.id} msg={m} prevRemetente={mensagens[i - 1]?.remetente} />
+                                ))
                             )}
                         </div>
 
-                        {/* Input — sempre visível (exceto encerrada) */}
+                        {/* Input */}
                         {podeEnviar ? (
                             <form
                                 onSubmit={enviar}
-                                className="flex-shrink-0 px-3 py-3 md:px-4"
+                                className="flex-shrink-0 flex items-end gap-2.5 px-4 py-3 md:px-5"
                                 style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface)' }}
                             >
                                 {!emAtendimento && (
-                                    <p className="mb-1.5 text-center text-[11px]" style={{ color: 'var(--text-3)' }}>
-                                        Enviar irá assumir o atendimento automaticamente
+                                    <p className="absolute mb-1 text-[10px] text-center w-full" style={{ color: 'var(--text-3)' }}>
                                     </p>
                                 )}
-                                <div className="flex items-end gap-2">
-                                    <textarea
-                                        value={data.conteudo}
-                                        onChange={e => setData('conteudo', e.target.value)}
-                                        onKeyDown={e => {
-                                            if (e.key === 'Enter' && !e.shiftKey) {
-                                                e.preventDefault();
-                                                enviar(e as unknown as React.FormEvent);
-                                            }
-                                        }}
-                                        placeholder={emAtendimento ? 'Mensagem… (Enter para enviar)' : 'Escreva para assumir o chat…'}
-                                        rows={2}
-                                        className="flex-1 resize-none rounded-xl px-3.5 py-2.5 text-sm focus:outline-none"
-                                        style={{
-                                            background: 'var(--bg-app)',
-                                            border: '1px solid var(--border)',
-                                            color: 'var(--text-1)',
-                                        }}
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={processing || assumindo || !data.conteudo.trim()}
-                                        className="flex-shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-40"
-                                        style={{ background: 'var(--accent)' }}
-                                    >
-                                        {(processing || assumindo) ? '…' : 'Enviar'}
-                                    </button>
-                                </div>
+                                <textarea
+                                    value={data.conteudo}
+                                    onChange={e => setData('conteudo', e.target.value)}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            enviar(e as unknown as React.FormEvent);
+                                        }
+                                    }}
+                                    placeholder={emAtendimento ? 'Mensagem… (Enter para enviar)' : 'Escrever para assumir o atendimento…'}
+                                    rows={1}
+                                    className="flex-1 resize-none rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent/40"
+                                    style={{
+                                        background: 'var(--bg-surface-2)',
+                                        border: '1px solid var(--border-strong)',
+                                        color: 'var(--text-1)',
+                                        maxHeight: '120px',
+                                        lineHeight: '1.5',
+                                    }}
+                                    onInput={e => {
+                                        const el = e.currentTarget;
+                                        el.style.height = 'auto';
+                                        el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+                                    }}
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={processing || assumindo || !data.conteudo.trim()}
+                                    className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-full text-white transition-all hover:brightness-110 disabled:opacity-40"
+                                    style={{ background: data.conteudo.trim() ? 'var(--jade)' : 'var(--text-3)' }}
+                                >
+                                    {(processing || assumindo)
+                                        ? <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                                        : <SendIcon />
+                                    }
+                                </button>
                             </form>
                         ) : (
                             <div
-                                className="flex-shrink-0 flex items-center justify-center px-5 py-3"
+                                className="flex-shrink-0 flex items-center justify-center px-5 py-3.5"
                                 style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface)' }}
                             >
-                                <span className="text-xs" style={{ color: 'var(--text-3)' }}>Conversa encerrada</span>
+                                <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>Conversa encerrada</span>
                             </div>
                         )}
                     </div>
                 ) : (
-                    <div className="hidden md:flex flex-1 items-center justify-center" style={{ background: 'var(--bg-app)' }}>
+                    <div className="hidden md:flex flex-1 items-center justify-center flex-col gap-3" style={{ background: 'var(--bg-app)', backgroundImage: 'radial-gradient(circle, var(--border) 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
+                        <div
+                            className="flex h-16 w-16 items-center justify-center rounded-full"
+                            style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+                        >
+                            <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
+                                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                            </svg>
+                        </div>
                         <div className="text-center">
-                            <p className="text-3xl mb-2" style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-2)' }}>
-                                Conversas
-                            </p>
-                            <p className="text-sm" style={{ color: 'var(--text-3)' }}>
-                                Selecione uma conversa para ver o histórico
-                            </p>
+                            <p className="text-base font-medium text-primary">Selecione uma conversa</p>
+                            <p className="mt-0.5 text-sm" style={{ color: 'var(--text-3)' }}>O histórico aparece aqui</p>
                         </div>
                     </div>
                 )}

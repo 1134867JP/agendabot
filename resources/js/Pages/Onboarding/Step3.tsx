@@ -55,16 +55,24 @@ export default function OnboardingStep3({ tenant }: Props) {
         <div className="flex min-h-screen flex-col" style={{ background: 'var(--bg-app)' }}>
             <Head title="Personalize seu bot" />
 
-            <div className="h-0.5 w-full" style={{ background: 'var(--border)' }}>
-                <div className="h-0.5 w-full transition-all" style={{ background: 'var(--accent)' }} />
+            {/* Step indicator */}
+            <div className="flex items-center justify-center gap-2 px-6 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+                {[{ n: 1, label: 'Conta' }, { n: 2, label: 'Plano' }, { n: 3, label: 'Bot' }].map((s, i) => (
+                    <div key={s.n} className="flex items-center gap-2">
+                        {i > 0 && <div className="h-px w-8" style={{ background: 'var(--accent)' }} />}
+                        <div className="flex items-center gap-1.5">
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold text-white" style={{ background: 'var(--accent)' }}>
+                                {s.n < 3 ? '✓' : s.n}
+                            </div>
+                            <span className="hidden text-[11px] sm:block text-primary">{s.label}</span>
+                        </div>
+                    </div>
+                ))}
             </div>
 
             <div className="flex flex-1 items-start justify-center px-4 py-10">
                 <div className="w-full max-w-lg">
                     <div className="mb-8">
-                        <p className="mb-1 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--accent)' }}>
-                            Passo 3 de 3
-                        </p>
                         <h1 className="text-3xl text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
                             Personalize seu bot
                         </h1>

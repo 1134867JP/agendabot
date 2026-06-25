@@ -228,10 +228,8 @@ export default function TenantDashboard({ stats, proximos_agendamentos, setup_co
                             {proximos_agendamentos.map(a => (
                                 <li
                                     key={a.id}
-                                    className="flex items-center justify-between px-6 py-3.5 transition-colors"
+                                    className="table-row-hover flex items-center justify-between px-6 py-3.5"
                                     style={{ borderBottom: '1px solid var(--border)' }}
-                                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-surface-2)')}
-                                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                 >
                                     <div className="flex items-center gap-3">
                                         <div
@@ -267,9 +265,7 @@ export default function TenantDashboard({ stats, proximos_agendamentos, setup_co
                         <Link
                             key={link.href}
                             href={link.href}
-                            className="card flex items-start gap-3.5 p-5 transition-all"
-                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface-2)'; }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface)'; }}
+                            className="card-hover flex items-start gap-3.5 p-5"
                         >
                             <span
                                 className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
