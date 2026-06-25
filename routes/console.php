@@ -2,6 +2,7 @@
 
 use App\Jobs\EnviarLembretesJob;
 use App\Jobs\EnviarLembreteConsultaV2;
+use App\Jobs\ExpirarConversasInativasJob;
 use App\Jobs\VerificarTrialExpiradoJob;
 use App\Models\Agendamento;
 use App\Models\Tenant;
@@ -42,3 +43,6 @@ Schedule::call(function () {
 
 // Verificar trials expirados diariamente (00:30)
 Schedule::job(new VerificarTrialExpiradoJob)->dailyAt('00:30');
+
+// Encerrar conversas sem atividade há mais de 30 minutos
+Schedule::job(new ExpirarConversasInativasJob)->everyFifteenMinutes();

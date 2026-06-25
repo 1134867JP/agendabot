@@ -87,9 +87,11 @@ class OnboardingController extends Controller
 
         return Inertia::render('Onboarding/Step3', [
             'tenant' => [
-                'nome'          => $tenant->nome,
-                'tipo_servico'  => $tenant->tipo_servico,
-                'configuracoes' => $tenant->configuracoes ?? [],
+                'nome'               => $tenant->nome,
+                'tipo_servico'       => $tenant->tipo_servico,
+                'nome_agente'        => $tenant->nome_agente,
+                'tom_voz'            => $tenant->tom_voz,
+                'instrucoes_extras'  => $tenant->instrucoes_extras,
             ],
         ]);
     }
@@ -97,19 +99,18 @@ class OnboardingController extends Controller
     public function step3Store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'bot_nome'       => 'required|string|max:80',
-            'bot_saudacao'   => 'required|string|max:500',
-            'bot_tom'        => 'required|in:casual,profissional,descontraido',
+            'bot_nome'     => 'required|string|max:80',
+            'bot_saudacao' => 'required|string|max:500',
+            'bot_tom'      => 'required|in:formal,semiformal,descontraido',
         ]);
 
         $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->firstOrFail();
 
-        $config = $tenant->configuracoes ?? [];
-        $config['bot_nome']     = $validated['bot_nome'];
-        $config['bot_saudacao'] = $validated['bot_saudacao'];
-        $config['bot_tom']      = $validated['bot_tom'];
-
-        $tenant->update(['configuracoes' => $config]);
+        $tenant->update([
+            'nome_agente'       => $validated['bot_nome'],
+            'tom_voz'           => $validated['bot_tom'],
+            'instrucoes_extras' => $validated['bot_saudacao'],
+        ]);
 
         return redirect()->route('onboarding.sucesso');
     }
