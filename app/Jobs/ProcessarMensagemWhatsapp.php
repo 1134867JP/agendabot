@@ -32,6 +32,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         private string $telefone,
         private string $mensagem,
         private ?string $evolutionMessageId = null,
+        private ?string $pushName = null,
     ) {}
 
     public function handle(
@@ -44,11 +45,17 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             return;
         }
 
-        // 2. Buscar ou criar cliente
+        // 2. Buscar ou criar cliente — usa pushName do WhatsApp se disponível
+        $nomeInicial = $this->pushName ?? 'Cliente WhatsApp';
         $cliente = Cliente::firstOrCreate(
             ['tenant_id' => $this->tenant->id, 'telefone' => $this->telefone],
-            ['nome' => 'Cliente WhatsApp'],
+            ['nome' => $nomeInicial],
         );
+
+        // Atualizar nome se veio como placeholder e agora temos o pushName real
+        if ($this->pushName && $cliente->nome === 'Cliente WhatsApp') {
+            $cliente->update(['nome' => $this->pushName]);
+        }
 
         // 3. Buscar ou criar conversa
         $conversa = Conversa::firstOrCreate(
