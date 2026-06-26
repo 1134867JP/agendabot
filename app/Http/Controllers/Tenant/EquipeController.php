@@ -14,6 +14,7 @@ class EquipeController extends Controller
 {
     private function apenasAdmin(): void
     {
+        if (auth()->user()->is_super_admin) return;
         $tenant = app('tenant');
         $papel  = $tenant->users()->where('user_id', auth()->id())->value('papel');
         abort_if($papel !== 'admin', 403);
