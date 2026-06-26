@@ -11,6 +11,7 @@ interface Plano {
     valor: number;
     taxa_agendamento_bot: number;
     profissionais: number | null;
+    limite_bot_mes: number | null;
     descricao: string;
     destaque: boolean;
     features: string[];
@@ -29,6 +30,10 @@ const faqs = [
     {
         q: 'Como funciona a cobrança variável?',
         a: 'No dia 1 de cada mês geramos automaticamente uma cobrança via PIX com o total de agendamentos feitos pelo bot no mês anterior. Você acompanha em tempo real no painel quantos agendamentos foram realizados e qual será a estimativa da fatura.',
+    },
+    {
+        q: 'O que acontece quando atinjo o limite de agendamentos?',
+        a: 'Quando você chegar em 80% do limite, o dono do estabelecimento recebe um aviso via WhatsApp. Ao atingir 100%, o bot para de criar novos agendamentos automaticamente e responde ao cliente pedindo para entrar em contato diretamente. Os agendamentos já realizados continuam normalmente. Você pode fazer upgrade a qualquer momento pelo painel para reativar o bot imediatamente.',
     },
     {
         q: 'Preciso de cartão de crédito para o trial?',
@@ -86,7 +91,7 @@ export default function Precos({ planos }: Props) {
                     </span>
                 </h1>
                 <p className="mx-auto mt-4 max-w-md text-[16px]" style={{ color: 'rgba(232,230,225,0.45)' }}>
-                    Mensalidade fixa + R$&nbsp;0,20–0,40 por agendamento realizado via bot.
+                    Mensalidade fixa com limite mensal de agendamentos via bot incluídos.
                     Agendamentos manuais pelo painel são sempre grátis.
                 </p>
 
@@ -180,18 +185,26 @@ export default function Precos({ planos }: Props) {
                                 </p>
                             )}
 
-                            {/* Bot fee badge */}
+                            {/* Bot limit + fee badge */}
                             <div
                                 className="mb-4 mt-3 inline-flex w-fit items-center gap-1.5 rounded-lg px-2.5 py-1.5"
                                 style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)' }}
                             >
-                                <span className="text-[10px]" style={{ color: 'rgba(232,230,225,0.4)' }}>+</span>
-                                <span className="text-[12px] font-semibold" style={{ color: plano.destaque ? JADE : 'rgba(232,230,225,0.7)' }}>
-                                    R$ {plano.taxa_agendamento_bot.toFixed(2).replace('.', ',')}
-                                </span>
-                                <span className="text-[11px]" style={{ color: 'rgba(232,230,225,0.35)' }}>
-                                    por agendamento via bot
-                                </span>
+                                {plano.limite_bot_mes !== null ? (
+                                    <>
+                                        <span className="text-[12px] font-semibold" style={{ color: plano.destaque ? JADE : 'rgba(232,230,225,0.7)' }}>
+                                            {plano.limite_bot_mes} agend./mês via bot
+                                        </span>
+                                        <span className="text-[11px]" style={{ color: 'rgba(232,230,225,0.3)' }}>·</span>
+                                        <span className="text-[11px]" style={{ color: 'rgba(232,230,225,0.35)' }}>
+                                            R$ {plano.taxa_agendamento_bot.toFixed(2).replace('.', ',')} cada
+                                        </span>
+                                    </>
+                                ) : (
+                                    <span className="text-[12px] font-semibold" style={{ color: JADE }}>
+                                        Agendamentos via bot ilimitados
+                                    </span>
+                                )}
                             </div>
 
                             <div className="mb-5 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
@@ -235,21 +248,27 @@ export default function Precos({ planos }: Props) {
                     <p className="mb-4 text-center text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'rgba(232,230,225,0.3)' }}>
                         Exemplo de custo mensal
                     </p>
-                    <div className="grid gap-4 text-center sm:grid-cols-3">
+                    <div className="grid gap-6 text-center sm:grid-cols-3">
                         {[
-                            { plano: 'Starter', base: 49.90, taxa: 0.40, agendamentos: 80 },
-                            { plano: 'Pro',     base: 99.90, taxa: 0.30, agendamentos: 200 },
-                            { plano: 'Business',base: 179.90,taxa: 0.20, agendamentos: 500 },
+                            { plano: 'Starter', base: 49.90, taxa: 0.40, limite: 100, agendamentos: 80, label: '80 agend. — dentro do limite' },
+                            { plano: 'Pro',     base: 99.90, taxa: 0.30, limite: 350, agendamentos: 280, label: '280 agend. — dentro do limite' },
+                            { plano: 'Business',base: 179.90,taxa: 0.20, limite: null, agendamentos: 600, label: '600 agend. — sem limite' },
                         ].map(ex => {
                             const variavel = ex.agendamentos * ex.taxa;
                             const total = ex.base + variavel;
                             return (
                                 <div key={ex.plano}>
-                                    <p className="mb-1 text-[12px] font-semibold" style={{ color: 'rgba(232,230,225,0.6)' }}>{ex.plano}</p>
-                                    <p className="text-[11px]" style={{ color: 'rgba(232,230,225,0.35)' }}>
-                                        {ex.agendamentos} agendamentos via bot
-                                    </p>
-                                    <p className="mt-2 text-[11px]" style={{ color: 'rgba(232,230,225,0.3)' }}>
+                                    <p className="mb-0.5 text-[12px] font-semibold" style={{ color: 'rgba(232,230,225,0.6)' }}>{ex.plano}</p>
+                                    <p className="text-[11px]" style={{ color: 'rgba(232,230,225,0.35)' }}>{ex.label}</p>
+                                    {ex.limite && (
+                                        <div className="mx-auto my-2 h-1.5 w-24 overflow-hidden rounded-full" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                                            <div
+                                                className="h-full rounded-full"
+                                                style={{ width: `${Math.round((ex.agendamentos / ex.limite) * 100)}%`, background: JADE }}
+                                            />
+                                        </div>
+                                    )}
+                                    <p className="mt-1 text-[11px]" style={{ color: 'rgba(232,230,225,0.3)' }}>
                                         R$ {ex.base.toFixed(2).replace('.', ',')} + R$ {variavel.toFixed(2).replace('.', ',')}
                                     </p>
                                     <p className="mt-0.5 text-lg font-bold" style={{ color: 'rgba(232,230,225,0.85)', fontFamily: 'Instrument Serif, Georgia, serif' }}>
@@ -259,8 +278,8 @@ export default function Precos({ planos }: Props) {
                             );
                         })}
                     </div>
-                    <p className="mt-4 text-center text-[11px]" style={{ color: 'rgba(232,230,225,0.2)' }}>
-                        Agendamentos manuais pelo painel não são cobrados.
+                    <p className="mt-5 text-center text-[11px]" style={{ color: 'rgba(232,230,225,0.2)' }}>
+                        Ao atingir o limite, o bot é pausado e você recebe um aviso para fazer upgrade. Agendamentos manuais sempre grátis.
                     </p>
                 </div>
 
