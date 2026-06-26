@@ -14,7 +14,7 @@ class Tenant extends Model
         'telefone_whatsapp', 'evolution_instance', 'whatsapp_conectado',
         'configuracoes', 'ativo',
         'subscription_status', 'trial_ends_at', 'subscription_ends_at',
-        'asaas_customer_id', 'asaas_subscription_id', 'plano', 'taxa_agendamento_bot',
+        'asaas_customer_id', 'asaas_subscription_id', 'plano', 'taxa_agendamento_bot', 'isento_cobranca',
         // v2
         'ramo_negocio', 'descricao_negocio', 'cidade', 'endereco',
         'horarios_funcionamento', 'nome_agente', 'tom_voz', 'instrucoes_extras', 'bot_ativo',
@@ -26,6 +26,7 @@ class Tenant extends Model
         'whatsapp_conectado'     => 'boolean',
         'ativo'                  => 'boolean',
         'bot_ativo'              => 'boolean',
+        'isento_cobranca'        => 'boolean',
         'trial_ends_at'          => 'datetime',
         'subscription_ends_at'   => 'datetime',
     ];
