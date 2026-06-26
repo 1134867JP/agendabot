@@ -20,7 +20,7 @@ class ExpirarConversasInativasJob implements ShouldQueue
     public function handle(): void
     {
         $expiradas = Conversa::where('status_v2', 'ativa')
-            ->where('ultima_mensagem_em', '<', now()->subMinutes(30))
+            ->where('ultima_mensagem_em', '<', now()->subMinutes(15))
             ->update(['status_v2' => 'encerrada']);
 
         if ($expiradas > 0) {

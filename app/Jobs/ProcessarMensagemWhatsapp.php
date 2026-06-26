@@ -11,6 +11,7 @@ use App\Models\TokenUsage;
 use App\Services\AgendamentoService;
 use App\Services\ClaudeAgentService;
 use App\Services\EvolutionApiService;
+use App\Services\IntencaoService;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -39,6 +40,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         ClaudeAgentService $claude,
         AgendamentoService $agendamentoService,
         EvolutionApiService $evolution,
+        IntencaoService $intencao,
     ): void {
         // 1. Evitar duplicata por evolution_message_id
         if ($this->evolutionMessageId && Mensagem::where('evolution_message_id', $this->evolutionMessageId)->exists()) {
@@ -76,10 +78,10 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         // 5. Salvar mensagem do cliente
         $conversa->registrarMensagem('cliente', $this->mensagem, $this->evolutionMessageId);
 
-        // 6. Buscar histórico das últimas 6 mensagens para o Claude (economiza tokens)
+        // 6. Buscar histórico das últimas 4 mensagens para o Claude (economiza tokens)
         $historico = $conversa->mensagens()
             ->latest('enviada_em')
-            ->limit(6)
+            ->limit(4)
             ->get()
             ->reverse()
             ->map(fn ($m) => [
@@ -99,15 +101,30 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             ? $this->formatarAgendamentoPendente($agendamentoPendente)
             : null;
 
-        // 8. Chamar Claude
-        $resultado = $claude->processar($this->tenant, $historico, $horariosDisponiveis, $agendamentoPendenteInfo);
+        // 8. Pré-filtro de intenções simples — evita chamada ao Claude quando há agendamento
+        //    pendente e o cliente apenas confirma ou cancela com palavras simples
+        $intencaoDetectada = $agendamentoPendente
+            ? $intencao->detectarConfirmacao($this->mensagem)
+            : null;
 
-        // Registrar uso de tokens para controle de custo
-        if (! empty($resultado['usage'])) {
-            TokenUsage::create(array_merge(
-                ['tenant_id' => $this->tenant->id, 'model' => config('services.claude.model')],
-                $resultado['usage'],
-            ));
+        if ($intencaoDetectada) {
+            $resultado = [
+                'acao'    => $intencaoDetectada,
+                'resposta' => $intencaoDetectada === 'confirmar'
+                    ? 'Perfeito! Agendamento confirmado. ✅'
+                    : 'Entendido, agendamento cancelado.',
+                'dados'   => [],
+                'usage'   => null,
+            ];
+        } else {
+            $resultado = $claude->processar($this->tenant, $historico, $horariosDisponiveis, $agendamentoPendenteInfo);
+
+            if (! empty($resultado['usage'])) {
+                TokenUsage::create(array_merge(
+                    ['tenant_id' => $this->tenant->id, 'model' => config('services.claude.model')],
+                    $resultado['usage'],
+                ));
+            }
         }
 
         // 9. Processar ação retornada pelo Claude
