@@ -75,8 +75,8 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             return;
         }
 
-        // 4b. Verificar limite de agendamentos via bot do plano
-        $limiteBot = config("plans.{$this->tenant->plano}.limite_bot_mes");
+        // 4b. Verificar limite de agendamentos via bot do plano (isentos não têm limite)
+        $limiteBot = $this->tenant->isento_cobranca ? null : config("plans.{$this->tenant->plano}.limite_bot_mes");
         if ($limiteBot !== null) {
             $agendamentosMes = Agendamento::where('tenant_id', $this->tenant->id)
                 ->where('origem', 'bot')

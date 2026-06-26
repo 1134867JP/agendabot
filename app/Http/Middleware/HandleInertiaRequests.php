@@ -54,6 +54,7 @@ class HandleInertiaRequests extends Middleware
                     'trial_ends_at'     => $tenant->trial_ends_at?->toIso8601String(),
                     'subscription_ends_at' => $tenant->subscription_ends_at?->toIso8601String(),
                     'plano'             => $tenant->plano,
+                    'isento_cobranca'   => $tenant->isento_cobranca,
                 ];
             },
         ];

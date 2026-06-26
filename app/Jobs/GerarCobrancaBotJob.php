@@ -47,9 +47,29 @@ class GerarCobrancaBotJob implements ShouldQueue
 
                 $taxa       = (float) $tenant->taxa_agendamento_bot;
                 $valorTotal = round($quantidade * $taxa, 2);
-                $vencimento = now()->addDays(5); // 5 dias para pagar
 
-                $descricao = "AgendaBot — Taxa bot {$periodoAnterior}: {$quantidade} agendamento(s) × R$ " . number_format($taxa, 2, ',', '.');
+                // Tenant isento: registrar uso mas não cobrar
+                if ($tenant->isento_cobranca) {
+                    CobrancaBot::create([
+                        'tenant_id'               => $tenant->id,
+                        'periodo'                 => $periodoAnterior,
+                        'quantidade_agendamentos' => $quantidade,
+                        'valor_total'             => $valorTotal,
+                        'asaas_charge_id'         => null,
+                        'status'                  => 'isento',
+                    ]);
+
+                    Log::info('GerarCobrancaBotJob: tenant isento, sem cobrança', [
+                        'tenant'     => $tenant->id,
+                        'periodo'    => $periodoAnterior,
+                        'quantidade' => $quantidade,
+                        'valor_ref'  => $valorTotal,
+                    ]);
+                    return;
+                }
+
+                $vencimento = now()->addDays(5);
+                $descricao  = "AgendaBot — Taxa bot {$periodoAnterior}: {$quantidade} agendamento(s) × R$ " . number_format($taxa, 2, ',', '.');
 
                 $chargeId = $asaas->criarCobrancaAvulsa(
                     $tenant->asaas_customer_id,

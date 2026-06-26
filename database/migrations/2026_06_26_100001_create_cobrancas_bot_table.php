@@ -15,7 +15,7 @@ return new class extends Migration
             $table->unsignedInteger('quantidade_agendamentos');
             $table->decimal('valor_total', 8, 2);
             $table->string('asaas_charge_id')->nullable();
-            $table->enum('status', ['pendente', 'pago', 'falhou'])->default('pendente');
+            $table->enum('status', ['pendente', 'pago', 'falhou', 'isento'])->default('pendente');
             $table->timestamps();
 
             $table->unique(['tenant_id', 'periodo']);

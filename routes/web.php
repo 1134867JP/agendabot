@@ -129,6 +129,7 @@ Route::middleware(['auth', 'superadmin'])->prefix('superadmin')->name('superadmi
 
     Route::resource('tenants', SuperAdmin\TenantController::class);
     Route::patch('tenants/{tenant}/toggle-ativo', [SuperAdmin\TenantController::class, 'toggleAtivo'])->name('tenants.toggle-ativo');
+    Route::patch('tenants/{tenant}/toggle-isento', [SuperAdmin\TenantController::class, 'toggleIsento'])->name('tenants.toggle-isento');
     Route::post('tenants/{tenant}/impersonar', [SuperAdmin\TenantController::class, 'impersonar'])->name('tenants.impersonar');
     Route::delete('impersonar', [SuperAdmin\TenantController::class, 'pararImpersonar'])->name('impersonar.parar');
 

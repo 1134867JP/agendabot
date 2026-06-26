@@ -5,6 +5,7 @@ import { PageProps, Tenant, PaginatedData } from '@/types';
 interface TenantWithCounts extends Tenant {
     agendamentos_count: number;
     recursos_count: number;
+    isento_cobranca: boolean;
     users: { id: number; name: string; email: string }[];
 }
 
@@ -22,6 +23,10 @@ export default function TenantsIndex({ tenants }: Props) {
     };
     const toggleAtivo = (t: TenantWithCounts) => {
         router.patch(route('superadmin.tenants.toggle-ativo', t.id));
+    };
+    const toggleIsento = (t: TenantWithCounts) => {
+        const acao = t.isento_cobranca ? 'Remover isenção de' : 'Marcar como isento de cobrança:';
+        if (confirm(`${acao} "${t.nome}"?`)) router.patch(route('superadmin.tenants.toggle-isento', t.id));
     };
     const excluir = (t: TenantWithCounts) => {
         if (confirm(`Excluir "${t.nome}"? Esta ação não pode ser desfeita.`)) {
@@ -47,14 +52,14 @@ export default function TenantsIndex({ tenants }: Props) {
                     <table className="min-w-full text-sm">
                         <thead>
                             <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface-2)' }}>
-                                {['Tenant', 'Dono', 'Tipo', 'WhatsApp', 'Recursos', 'Agendamentos', 'Status', 'Ações'].map(h => (
+                                {['Tenant', 'Dono', 'Tipo', 'WhatsApp', 'Recursos', 'Agendamentos', 'Status', 'Cobrança', 'Ações'].map(h => (
                                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>{h}</th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody>
                             {tenants.data.length === 0 && (
-                                <tr><td colSpan={8} className="px-4 py-10 text-center" style={{ color: 'var(--text-3)' }}>Nenhum tenant cadastrado.</td></tr>
+                                <tr><td colSpan={9} className="px-4 py-10 text-center" style={{ color: 'var(--text-3)' }}>Nenhum tenant cadastrado.</td></tr>
                             )}
                             {tenants.data.map(t => {
                                 const dono = t.users?.[0];
@@ -91,6 +96,12 @@ export default function TenantsIndex({ tenants }: Props) {
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
+                                            {t.isento_cobranca
+                                                ? <span className="badge badge-yellow">Isento</span>
+                                                : <span className="text-xs" style={{ color: 'var(--text-3)' }}>Normal</span>
+                                            }
+                                        </td>
+                                        <td className="px-4 py-3">
                                             <div className="flex flex-wrap gap-1.5">
                                                 <button
                                                     onClick={() => impersonar(t)}
@@ -112,6 +123,16 @@ export default function TenantsIndex({ tenants }: Props) {
                                                     style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
                                                 >
                                                     {t.ativo ? 'Desativar' : 'Ativar'}
+                                                </button>
+                                                <button
+                                                    onClick={() => toggleIsento(t)}
+                                                    className="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors hover:brightness-125"
+                                                    style={t.isento_cobranca
+                                                        ? { background: 'rgba(234,179,8,0.12)', color: '#ca8a04', border: '1px solid rgba(234,179,8,0.3)' }
+                                                        : { background: 'rgba(255,255,255,0.06)', color: 'var(--text-2)', border: '1px solid var(--border)' }
+                                                    }
+                                                >
+                                                    {t.isento_cobranca ? 'Remover Isenção' : 'Isentar'}
                                                 </button>
                                                 <button
                                                     onClick={() => excluir(t)}
