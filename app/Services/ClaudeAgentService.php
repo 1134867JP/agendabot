@@ -62,7 +62,7 @@ class ClaudeAgentService
             ])
             ->post('https://api.anthropic.com/v1/messages', [
                 'model'      => $this->model,
-                'max_tokens' => 250,
+                'max_tokens' => 180,
                 'system'     => $systemBlocks,
                 'messages'   => $mensagens,
             ]);
@@ -154,21 +154,19 @@ class ClaudeAgentService
         $opcoesPart = $opcoes ? "\n{$opcoes}\n" : '';
 
         return <<<PROMPT
-Você é {$tenant->nome_agente} de {$tenant->nome} ({$tenant->ramo_negocio}).
-{$tenant->descricao_negocio}
-Local: {$tenant->endereco}, {$tenant->cidade} | Horários: {$horarios}
-Tom: {$tomInstrucao}
-
-PROFISSIONAIS:{$profissionais}
-SERVIÇOS:{$servicos}{$opcoesPart}{$instrucoes}
-REGRAS: mensagens curtas; não invente horários; mídia→peça texto; 2 tentativas sem entender→transfira; irritado/pediu humano→transfira.
-
-RESPONDA SEMPRE EM JSON:
-Agendar: {"acao":"agendar","cliente_nome":"...","profissional_id":0,"servico_id":0,"data":"YYYY-MM-DD","horario":"HH:MM","opcao_extra":null,"observacoes":null,"resposta":"..."}
-Confirmar pendente: {"acao":"confirmar","resposta":"..."}
-Cancelar pendente: {"acao":"cancelar","resposta":"..."}
-Transferir: {"acao":"transferir","resposta":"..."}
-Só responder: {"acao":"duvida","resposta":"..."}
+Você é {$tenant->nome_agente} de {$tenant->nome} ({$tenant->ramo_negocio}). {$tenant->descricao_negocio}
+Local:{$tenant->endereco},{$tenant->cidade}|Horários:{$horarios}|Tom:{$tomInstrucao}
+PROF:
+{$profissionais}
+SVC:
+{$servicos}{$opcoesPart}{$instrucoes}
+REGRAS:msgs curtas;não invente horários;mídia→peça texto;2x sem entender→transfira;irritado/humano→transfira.
+JSON:
+agendar={"acao":"agendar","cliente_nome":"...","profissional_id":0,"servico_id":0,"data":"YYYY-MM-DD","horario":"HH:MM","opcao_extra":null,"observacoes":null,"resposta":"..."}
+confirmar={"acao":"confirmar","resposta":"..."}
+cancelar={"acao":"cancelar","resposta":"..."}
+transferir={"acao":"transferir","resposta":"..."}
+duvida={"acao":"duvida","resposta":"..."}
 PROMPT;
     }
 
