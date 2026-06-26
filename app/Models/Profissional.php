@@ -32,9 +32,10 @@ class Profissional extends Model
             return [];
         }
 
-        $slots = [];
-        $inicio = Carbon::parse($data->format('Y-m-d') . ' ' . $horario->hora_inicio);
-        $fim    = Carbon::parse($data->format('Y-m-d') . ' ' . $horario->hora_fim);
+        $tz     = config('app.timezone', 'America/Sao_Paulo');
+        $slots  = [];
+        $inicio = Carbon::createFromFormat('Y-m-d H:i', $data->format('Y-m-d') . ' ' . $horario->hora_inicio, $tz);
+        $fim    = Carbon::createFromFormat('Y-m-d H:i', $data->format('Y-m-d') . ' ' . $horario->hora_fim, $tz);
         $duracao = $horario->duracao_slot;
 
         $inicioDia = $data->copy()->startOfDay();
@@ -44,7 +45,7 @@ class Profissional extends Model
             ->whereBetween('data_hora', [$inicioDia, $fimDia])
             ->whereNotIn('status', ['cancelado'])
             ->pluck('data_hora')
-            ->map(fn ($dt) => Carbon::parse($dt)->format('H:i'))
+            ->map(fn ($dt) => Carbon::parse($dt, $tz)->format('H:i'))
             ->toArray();
 
         $cursor = $inicio->copy();
