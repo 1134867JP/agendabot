@@ -70,26 +70,51 @@ class AgendamentoService
 
     public function criarAgendamentoV2(Tenant $tenant, array $dados): Agendamento
     {
+        // Validar campos obrigatórios antes de entrar na transação
+        if (empty($dados['data']) || empty($dados['horario'])) {
+            throw new \InvalidArgumentException('Data e horário são obrigatórios.');
+        }
+        if (empty($dados['profissional_id'])) {
+            throw new \InvalidArgumentException('Profissional é obrigatório.');
+        }
+        if (empty($dados['cliente_nome'])) {
+            throw new \InvalidArgumentException('Nome do cliente é obrigatório.');
+        }
+        if (empty($dados['cliente_telefone'])) {
+            throw new \InvalidArgumentException('Telefone do cliente é obrigatório.');
+        }
+
         return DB::transaction(function () use ($tenant, $dados) {
-            // Tenant isolation: garantir que o profissional pertence ao tenant
-            $profissional = Profissional::where('id', $dados['profissional_id'])
+            $profissionalId = (int) $dados['profissional_id'];
+
+            // Tenant isolation: garantir que o profissional pertence ao tenant e está ativo
+            $profissional = Profissional::where('id', $profissionalId)
                 ->where('tenant_id', $tenant->id)
+                ->where('ativo', true)
                 ->firstOrFail();
 
-            DB::select('SELECT pg_advisory_xact_lock(?)', [$dados['profissional_id']]);
+            DB::select('SELECT pg_advisory_xact_lock(?)', [$profissionalId]);
 
-            $servico = \App\Models\Servico::find($dados['servico_id'] ?? null);
+            // Tenant isolation: garantir que o serviço pertence ao tenant
+            $servico = null;
+            if (! empty($dados['servico_id'])) {
+                $servico = \App\Models\Servico::where('id', $dados['servico_id'])
+                    ->where('tenant_id', $tenant->id)
+                    ->first();
+            }
             $duracao = $servico?->duracao_minutos ?? $dados['duracao_minutos'] ?? 30;
 
-            $inicio = Carbon::parse("{$dados['data']} {$dados['horario']}");
-            $fim = $inicio->copy()->addMinutes($duracao);
+            // Timezone explícito para garantir que "10:00" seja interpretado como horário local
+            $tz    = config('app.timezone', 'America/Sao_Paulo');
+            $inicio = Carbon::createFromFormat('Y-m-d H:i', "{$dados['data']} {$dados['horario']}", $tz);
+            $fim    = $inicio->copy()->addMinutes($duracao);
 
             if ($inicio->isPast()) {
                 throw new HorarioIndisponivelException('Não é possível agendar para datas passadas.');
             }
 
             // Range overlap: detecta qualquer agendamento que se sobreponha ao slot [inicio, fim)
-            $conflito = Agendamento::where('profissional_id', $dados['profissional_id'])
+            $conflito = Agendamento::where('profissional_id', $profissionalId)
                 ->whereNotIn('status', ['cancelado'])
                 ->where('data_hora', '<', $fim)
                 ->whereRaw("(data_hora + (duracao_minutos * INTERVAL '1 minute')) > ?", [$inicio])
@@ -102,10 +127,10 @@ class AgendamentoService
             return Agendamento::create([
                 'tenant_id'        => $tenant->id,
                 'cliente_id'       => $dados['cliente_id'],
-                'cliente_nome'     => $dados['cliente_nome'] ?? null,
-                'cliente_telefone' => $dados['cliente_telefone'] ?? null,
+                'cliente_nome'     => $dados['cliente_nome'],
+                'cliente_telefone' => $dados['cliente_telefone'],
                 'profissional_id'  => $profissional->id,
-                'servico_id'       => $dados['servico_id'] ?? null,
+                'servico_id'       => $servico?->id,
                 'data_hora'        => $inicio,
                 'inicio'           => $inicio,
                 'fim'              => $fim,
