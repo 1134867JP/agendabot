@@ -73,12 +73,13 @@ class OnboardingController extends Controller
     public function checkout(Request $request): RedirectResponse
     {
         $request->validate([
-            'plano' => 'required|in:basico,profissional,ilimitado',
+            'plano' => 'required|in:starter,pro,business',
         ]);
 
         $user   = auth()->user();
         $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', $user->id))->firstOrFail();
-        $tenant->update(['plano' => $request->plano]);
+        $taxa = config("plans.{$request->plano}.taxa_agendamento_bot", 0.40);
+        $tenant->update(['plano' => $request->plano, 'taxa_agendamento_bot' => $taxa]);
 
         try {
             $asaas        = app(AsaasService::class);
