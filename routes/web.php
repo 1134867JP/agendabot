@@ -117,6 +117,9 @@ Route::middleware('auth')->group(function () {
         // Configurações
         Route::get('configuracoes', [Tenant\ConfiguracaoController::class, 'index'])->name('configuracoes.index');
         Route::put('configuracoes', [Tenant\ConfiguracaoController::class, 'update'])->name('configuracoes.update');
+
+        // Cobrança variável bot
+        Route::get('cobranca/resumo', [Tenant\CobrancaController::class, 'resumo'])->name('cobranca.resumo');
     });
 });
 

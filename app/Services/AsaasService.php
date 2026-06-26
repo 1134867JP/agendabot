@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Tenant;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -77,5 +78,28 @@ class AsaasService
         $response = $this->http()->get("/subscriptions/{$subscriptionId}");
 
         return $response->json('status') ?? 'desconhecido';
+    }
+
+    /**
+     * Cria uma cobrança avulsa (PIX) para a taxa variável mensal de agendamentos via bot.
+     * Retorna o ID da cobrança no Asaas, ou null em caso de falha.
+     */
+    public function criarCobrancaAvulsa(string $customerId, float $valor, string $descricao, Carbon $vencimento): ?string
+    {
+        $response = $this->http()->post('/payments', [
+            'customer'          => $customerId,
+            'billingType'       => 'PIX',
+            'value'             => round($valor, 2),
+            'dueDate'           => $vencimento->format('Y-m-d'),
+            'description'       => $descricao,
+            'externalReference' => 'taxa_bot_' . now()->format('Ym') . '_' . $customerId,
+        ]);
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $id = $response->json('id');
+        return is_string($id) && $id !== '' ? $id : null;
     }
 }

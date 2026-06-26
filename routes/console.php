@@ -3,6 +3,7 @@
 use App\Jobs\EnviarLembretesJob;
 use App\Jobs\EnviarLembreteConsultaV2;
 use App\Jobs\ExpirarConversasInativasJob;
+use App\Jobs\GerarCobrancaBotJob;
 use App\Jobs\VerificarTrialExpiradoJob;
 use App\Models\Agendamento;
 use App\Models\Tenant;
@@ -46,3 +47,6 @@ Schedule::job(new VerificarTrialExpiradoJob)->dailyAt('00:30');
 
 // Encerrar conversas sem atividade há mais de 30 minutos
 Schedule::job(new ExpirarConversasInativasJob)->everyFifteenMinutes();
+
+// Gerar cobrança variável de agendamentos via bot (todo dia 1 às 08:00)
+Schedule::job(new GerarCobrancaBotJob)->monthlyOn(1, '08:00');

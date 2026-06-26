@@ -7,6 +7,8 @@ interface Stats {
     agendamentos_semana: number;
     receita_mes: number;
     whatsapp_conectado: boolean;
+    bot_agendamentos_mes: number;
+    bot_taxa: number;
 }
 
 interface SetupCompleto {
@@ -17,10 +19,18 @@ interface SetupCompleto {
     horario: boolean;
 }
 
+interface UltimaCobranca {
+    periodo: string;
+    quantidade_agendamentos: number;
+    valor_total: string;
+    status: 'pendente' | 'pago' | 'falhou';
+}
+
 interface Props extends PageProps {
     stats: Stats;
     proximos_agendamentos: Agendamento[];
     setup_completo: SetupCompleto;
+    ultima_cobranca_bot: UltimaCobranca | null;
 }
 
 function StatCard({ label, value, sub, accent = false, icon }: {
@@ -72,7 +82,7 @@ function formatBrl(value: number) {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-export default function TenantDashboard({ stats, proximos_agendamentos, setup_completo }: Props) {
+export default function TenantDashboard({ stats, proximos_agendamentos, setup_completo, ultima_cobranca_bot }: Props) {
     const todoConfigurado =
         setup_completo.bot_config &&
         setup_completo.profissionais &&
@@ -189,6 +199,52 @@ export default function TenantDashboard({ stats, proximos_agendamentos, setup_co
                             </Link>
                         )}
                     </div>
+                </div>
+
+                {/* Card de cobrança variável bot */}
+                <div className="rounded-xl p-5" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--text-3)' }}>
+                                Taxa bot — {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                            </p>
+                            <p className="mt-2 text-2xl font-bold leading-none" style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}>
+                                {stats.bot_agendamentos_mes} agendamento{stats.bot_agendamentos_mes !== 1 ? 's' : ''} via bot
+                            </p>
+                            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
+                                Estimativa:{' '}
+                                <span style={{ color: 'var(--text-2)', fontWeight: 600 }}>
+                                    {(stats.bot_agendamentos_mes * stats.bot_taxa).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                </span>
+                                {' '}(R$ {stats.bot_taxa.toFixed(2).replace('.', ',')} por agendamento — cobrado no dia 1)
+                            </p>
+                        </div>
+                        <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)', flexShrink: 0, marginTop: 2 }}>
+                            <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    {ultima_cobranca_bot && (
+                        <div className="mt-3 flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--bg-surface-2)' }}>
+                            <span
+                                className="h-1.5 w-1.5 rounded-full flex-shrink-0"
+                                style={{
+                                    background: ultima_cobranca_bot.status === 'pago'
+                                        ? 'var(--jade)'
+                                        : ultima_cobranca_bot.status === 'falhou'
+                                        ? 'var(--red)'
+                                        : 'var(--amber)',
+                                }}
+                            />
+                            <p className="text-xs" style={{ color: 'var(--text-3)' }}>
+                                Última cobrança ({ultima_cobranca_bot.periodo}):{' '}
+                                <span style={{ color: 'var(--text-2)' }}>
+                                    {Number(ultima_cobranca_bot.valor_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                </span>
+                                {' — '}
+                                {ultima_cobranca_bot.status === 'pago' ? 'Pago' : ultima_cobranca_bot.status === 'falhou' ? 'Falhou' : 'Pendente'}
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Próximos agendamentos */}
