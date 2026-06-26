@@ -161,6 +161,10 @@
     .sidebar-btn { color: var(--text-3); background: transparent; @apply transition-colors rounded-md; }
     .sidebar-btn:hover { color: var(--text-2); background: var(--bg-surface-2); }
 
+    /* ── Scrollbar invisível mas funcional ───────────────────────────────── */
+    .scroll-hidden { scrollbar-width: none; -ms-overflow-style: none; }
+    .scroll-hidden::-webkit-scrollbar { display: none; }
+
     /* ── Linhas de tabela com hover ──────────────────────────────────────── */
     .table-row-hover { @apply transition-colors; }
     .table-row-hover:hover { background: var(--bg-surface-2); }
