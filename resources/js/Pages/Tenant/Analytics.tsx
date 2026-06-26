@@ -101,14 +101,9 @@ export default function Analytics({ stats, por_dia, top_servicos, pico_horario }
     const receita = stats.receita_mes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
     return (
-        <AppLayout title="Analytics" subtitle="Métricas e desempenho do seu estabelecimento">
+        <AppLayout title="Analytics" subtitle="Desempenho do mês atual">
             <Head title="Analytics" />
-            <div className="mx-auto max-w-5xl space-y-6 p-6">
-
-                <div>
-                    <h1 className="text-xl font-semibold text-primary">Analytics</h1>
-                    <p className="mt-0.5 text-sm" style={{ color: 'var(--text-3)' }}>Desempenho do mês atual</p>
-                </div>
+            <div className="space-y-6">
 
                 {/* Stat cards */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
