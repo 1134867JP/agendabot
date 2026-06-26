@@ -6,7 +6,9 @@ interface Props {
 }
 
 export default function SubscriptionBanner({ subscription }: Props) {
-    const { status, trial_ends_at, subscription_ends_at } = subscription;
+    const { status, trial_ends_at, subscription_ends_at, isento_cobranca } = subscription;
+
+    if (isento_cobranca) return null;
 
     if (status === 'trial' && trial_ends_at) {
         const dias = Math.max(0, Math.ceil(

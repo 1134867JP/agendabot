@@ -42,6 +42,7 @@ export interface SubscriptionInfo {
     trial_ends_at: string | null;
     subscription_ends_at: string | null;
     plano: string;
+    isento_cobranca: boolean;
 }
 
 export interface HorarioFuncionamento {
