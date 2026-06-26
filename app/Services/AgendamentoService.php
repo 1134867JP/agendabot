@@ -107,6 +107,8 @@ class AgendamentoService
                 'profissional_id'  => $profissional->id,
                 'servico_id'       => $dados['servico_id'] ?? null,
                 'data_hora'        => $inicio,
+                'inicio'           => $inicio,
+                'fim'              => $fim,
                 'duracao_minutos'  => $duracao,
                 'status'           => 'agendado',
                 'opcao_extra'      => $dados['opcao_extra'] ?? null,
