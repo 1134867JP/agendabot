@@ -6,11 +6,13 @@ return [
         'valor'                  => 49.90,
         'taxa_agendamento_bot'   => 0.40,
         'profissionais'          => 3,
+        'limite_bot_mes'         => 100,  // bot pausa ao atingir
         'descricao'              => 'Perfeito para começar',
         'destaque'               => false,
         'features'               => [
             'Até 3 profissionais',
             'Bot WhatsApp com IA',
+            'Até 100 agendamentos via bot/mês',
             'Agenda visual',
             'Reserva manual pelo painel (grátis)',
             'Histórico de 30 dias',
@@ -26,11 +28,13 @@ return [
         'valor'                  => 99.90,
         'taxa_agendamento_bot'   => 0.30,
         'profissionais'          => 10,
+        'limite_bot_mes'         => 350,
         'descricao'              => 'Para negócios em crescimento',
         'destaque'               => true,
         'features'               => [
             'Até 10 profissionais',
             'Bot WhatsApp com IA',
+            'Até 350 agendamentos via bot/mês',
             'Agenda visual',
             'Reserva manual pelo painel (grátis)',
             'Histórico de 90 dias',
@@ -45,11 +49,13 @@ return [
         'valor'                  => 179.90,
         'taxa_agendamento_bot'   => 0.20,
         'profissionais'          => null,
+        'limite_bot_mes'         => null,  // ilimitado
         'descricao'              => 'Para operações de alto volume',
         'destaque'               => false,
         'features'               => [
             'Profissionais ilimitados',
             'Bot WhatsApp com IA',
+            'Agendamentos via bot ilimitados',
             'Agenda visual',
             'Reserva manual pelo painel (grátis)',
             'Histórico completo',

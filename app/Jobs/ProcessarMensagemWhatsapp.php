@@ -75,6 +75,37 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             return;
         }
 
+        // 4b. Verificar limite de agendamentos via bot do plano
+        $limiteBot = config("plans.{$this->tenant->plano}.limite_bot_mes");
+        if ($limiteBot !== null) {
+            $agendamentosMes = Agendamento::where('tenant_id', $this->tenant->id)
+                ->where('origem', 'bot')
+                ->where('status', '!=', 'cancelado')
+                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count();
+
+            // Alerta em 80% do limite (enviado uma única vez por mês via flag no tenant)
+            $alertaKey = "alerta_limite_80_{$this->tenant->id}_" . now()->format('Ym');
+            if ($agendamentosMes >= (int) ($limiteBot * 0.8) && ! cache()->has($alertaKey)) {
+                cache()->put($alertaKey, true, now()->endOfMonth());
+                $evolution->enviarMensagem(
+                    $this->tenant->evolution_instance,
+                    $this->tenant->telefone_whatsapp,
+                    "⚠️ *AgendaBot — Aviso de limite*\n\nVocê atingiu 80% do limite de agendamentos via bot do seu plano ({$agendamentosMes}/{$limiteBot} este mês).\n\nFaça upgrade para continuar recebendo agendamentos automaticamente: " . url('/renovar'),
+                );
+            }
+
+            // Bloqueio total ao atingir o limite
+            if ($agendamentosMes >= $limiteBot) {
+                $conversa->registrarMensagem('cliente', $this->mensagem, $this->evolutionMessageId);
+                $aviso = "Olá! 😕 Nosso sistema de agendamento automático está temporariamente pausado este mês.\nPor favor, entre em contato diretamente para agendar.";
+                $conversa->registrarMensagem('bot', $aviso);
+                $evolution->enviarMensagem($this->tenant->evolution_instance, $this->telefone, $aviso);
+                return;
+            }
+        }
+
         // 5. Salvar mensagem do cliente
         $conversa->registrarMensagem('cliente', $this->mensagem, $this->evolutionMessageId);
 
