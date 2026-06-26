@@ -183,8 +183,10 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             }
 
             $service->criarAgendamentoV2($this->tenant, array_merge($dados, [
-                'cliente_id' => $cliente->id,
-                'origem'     => 'bot',
+                'cliente_id'       => $cliente->id,
+                'cliente_nome'     => $cliente->nome,
+                'cliente_telefone' => $cliente->telefone,
+                'origem'           => 'bot',
             ]));
 
             return true;

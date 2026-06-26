@@ -100,16 +100,18 @@ class AgendamentoService
             }
 
             return Agendamento::create([
-                'tenant_id'       => $tenant->id,
-                'cliente_id'      => $dados['cliente_id'],
-                'profissional_id' => $profissional->id,
-                'servico_id'      => $dados['servico_id'] ?? null,
-                'data_hora'       => $inicio,
-                'duracao_minutos' => $duracao,
-                'status'          => 'agendado',
-                'opcao_extra'     => $dados['opcao_extra'] ?? null,
-                'observacoes'     => $dados['observacoes'] ?? null,
-                'origem'          => $dados['origem'] ?? 'bot',
+                'tenant_id'        => $tenant->id,
+                'cliente_id'       => $dados['cliente_id'],
+                'cliente_nome'     => $dados['cliente_nome'] ?? null,
+                'cliente_telefone' => $dados['cliente_telefone'] ?? null,
+                'profissional_id'  => $profissional->id,
+                'servico_id'       => $dados['servico_id'] ?? null,
+                'data_hora'        => $inicio,
+                'duracao_minutos'  => $duracao,
+                'status'           => 'agendado',
+                'opcao_extra'      => $dados['opcao_extra'] ?? null,
+                'observacoes'      => $dados['observacoes'] ?? null,
+                'origem'           => $dados['origem'] ?? 'bot',
             ]);
         });
     }
