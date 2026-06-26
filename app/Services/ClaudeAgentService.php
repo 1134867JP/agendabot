@@ -41,11 +41,15 @@ class ClaudeAgentService
                 'text'          => $staticPart,
                 'cache_control' => ['type' => 'ephemeral'], // TTL 5 min — ~90% desconto em cache hits
             ],
-            [
+        ];
+
+        // Só adiciona o bloco dinâmico se tiver conteúdo — API rejeita blocos com texto vazio
+        if ($dynamicPart !== '') {
+            $systemBlocks[] = [
                 'type' => 'text',
                 'text' => $dynamicPart,
-            ],
-        ];
+            ];
+        }
 
         $response = Http::timeout(30)
             ->retry(2, 1000, function ($e) {
