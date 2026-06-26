@@ -105,8 +105,9 @@ class AgendamentoService
             $duracao = $servico?->duracao_minutos ?? $dados['duracao_minutos'] ?? 30;
 
             // Timezone explícito para garantir que "10:00" seja interpretado como horário local
-            $tz    = config('app.timezone', 'America/Sao_Paulo');
-            $inicio = Carbon::createFromFormat('Y-m-d H:i', "{$dados['data']} {$dados['horario']}", $tz);
+            $tz      = config('app.timezone', 'America/Sao_Paulo');
+            $horario = substr($dados['horario'], 0, 5); // garante formato HH:MM (descarta segundos se vierem)
+            $inicio  = Carbon::createFromFormat('Y-m-d H:i', "{$dados['data']} {$horario}", $tz);
             $fim    = $inicio->copy()->addMinutes($duracao);
 
             if ($inicio->isPast()) {
