@@ -187,16 +187,15 @@ export default function Precos({ planos }: Props) {
 
                             {/* Bot limit + fee badge */}
                             <div
-                                className="mb-4 mt-3 inline-flex w-fit items-center gap-1.5 rounded-lg px-2.5 py-1.5"
+                                className="mb-4 mt-3 flex w-full items-center justify-between rounded-lg px-3 py-2"
                                 style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)' }}
                             >
                                 {plano.limite_bot_mes !== null ? (
                                     <>
-                                        <span className="text-[12px] font-semibold" style={{ color: plano.destaque ? JADE : 'rgba(232,230,225,0.7)' }}>
-                                            {plano.limite_bot_mes} agend./mês via bot
+                                        <span className="text-[12px] font-semibold whitespace-nowrap" style={{ color: plano.destaque ? JADE : 'rgba(232,230,225,0.75)' }}>
+                                            Até {plano.limite_bot_mes} agend./mês
                                         </span>
-                                        <span className="text-[11px]" style={{ color: 'rgba(232,230,225,0.3)' }}>·</span>
-                                        <span className="text-[11px]" style={{ color: 'rgba(232,230,225,0.35)' }}>
+                                        <span className="text-[11px] whitespace-nowrap ml-3" style={{ color: 'rgba(232,230,225,0.4)' }}>
                                             R$ {plano.taxa_agendamento_bot.toFixed(2).replace('.', ',')} cada
                                         </span>
                                     </>
