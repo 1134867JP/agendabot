@@ -418,45 +418,90 @@ export default function Home() {
             </section>
 
             {/* ── Para quem ─────────────────────────────────────────────────── */}
-            <section id="para-quem" className="px-6 py-20" style={{ background: 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+            <section id="para-quem" className="px-6 py-20" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                 <div className="mx-auto max-w-4xl">
-                    <div className="mb-12 text-center">
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: JADE }}>Para quem é</p>
-                        <h2
-                            className="text-4xl"
-                            style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'rgba(232,230,225,0.9)' }}
-                        >
-                            Qualquer negócio que agenda.
-                        </h2>
+                    <div className="mb-14 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: JADE }}>Para quem é</p>
+                            <h2
+                                className="text-4xl"
+                                style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'rgba(232,230,225,0.9)' }}
+                            >
+                                Qualquer negócio que agenda.
+                            </h2>
+                        </div>
+                        <p className="max-w-xs text-sm leading-relaxed" style={{ color: 'rgba(232,230,225,0.35)' }}>
+                            Se o seu cliente precisa de horário, o AgendaBot resolve.
+                        </p>
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-2">
-                        {segments.map(s => (
+                    {/* Tabela editorial — linha por segmento */}
+                    <div style={{ border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', overflow: 'hidden' }}>
+                        {segments.map((s, i) => (
                             <div
                                 key={s.title}
-                                className="group flex items-start gap-4 rounded-2xl p-5 transition-all duration-200"
+                                className="group flex items-center gap-6 px-6 py-5 transition-colors duration-150"
                                 style={{
-                                    background: 'rgba(255,255,255,0.03)',
-                                    border: '1px solid rgba(255,255,255,0.07)',
+                                    borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                                    background: 'rgba(255,255,255,0.02)',
+                                    cursor: 'default',
                                 }}
-                                onMouseEnter={e => {
-                                    (e.currentTarget as HTMLElement).style.background = `${JADE}08`;
-                                    (e.currentTarget as HTMLElement).style.borderColor = `${JADE}30`;
-                                }}
-                                onMouseLeave={e => {
-                                    (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)';
-                                    (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.07)';
-                                }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${JADE}07`; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)'; }}
                             >
-                                <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                                    {s.icon}
+                                {/* Index marker */}
+                                <span
+                                    className="hidden sm:block shrink-0 text-[11px] font-semibold tabular-nums"
+                                    style={{ color: 'rgba(232,230,225,0.15)', fontFamily: 'Instrument Serif, Georgia, serif', fontSize: '13px', width: '20px' }}
+                                >
+                                    {String(i + 1).padStart(2, '0')}
                                 </span>
-                                <div>
-                                    <h3 className="font-semibold text-[15px]" style={{ color: 'rgba(232,230,225,0.9)' }}>{s.title}</h3>
-                                    <p className="mt-1 text-sm leading-relaxed" style={{ color: 'rgba(232,230,225,0.45)' }}>{s.desc}</p>
-                                </div>
+
+                                {/* Title */}
+                                <h3
+                                    className="w-40 shrink-0 text-[15px] font-semibold leading-tight"
+                                    style={{ color: 'rgba(232,230,225,0.88)' }}
+                                >
+                                    {s.title}
+                                </h3>
+
+                                {/* Divider */}
+                                <div className="hidden h-px flex-1 sm:block" style={{ background: 'rgba(255,255,255,0.06)' }} />
+
+                                {/* Desc */}
+                                <p className="flex-1 text-sm leading-relaxed sm:text-right" style={{ color: 'rgba(232,230,225,0.42)' }}>
+                                    {s.desc}
+                                </p>
                             </div>
                         ))}
+                    </div>
+
+                    {/* Marquee de tipos de negócio */}
+                    <div className="mt-10 overflow-hidden" style={{ maskImage: 'linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)' }}>
+                        <div className="marquee-track flex w-max gap-2.5">
+                            {[
+                                'Barbearias', 'Salões', 'Clínicas odontológicas', 'Quadras de futsal',
+                                'Beach tennis', 'Padel', 'Psicólogos', 'Fisioterapeutas',
+                                'Manicures', 'Depilação', 'Massagem', 'Pilates', 'Personal trainer',
+                                'Tatuagem', 'Nutricionistas', 'Esteticistas',
+                                'Barbearias', 'Salões', 'Clínicas odontológicas', 'Quadras de futsal',
+                                'Beach tennis', 'Padel', 'Psicólogos', 'Fisioterapeutas',
+                                'Manicures', 'Depilação', 'Massagem', 'Pilates', 'Personal trainer',
+                                'Tatuagem', 'Nutricionistas', 'Esteticistas',
+                            ].map((item, i) => (
+                                <span
+                                    key={i}
+                                    className="flex-none whitespace-nowrap rounded-full px-3.5 py-1.5 text-[12px] font-medium"
+                                    style={{
+                                        color: 'rgba(232,230,225,0.45)',
+                                        border: '1px solid rgba(255,255,255,0.07)',
+                                        background: 'rgba(255,255,255,0.025)',
+                                    }}
+                                >
+                                    {item}
+                                </span>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </section>
@@ -475,7 +520,7 @@ export default function Home() {
                         </h2>
                     </div>
 
-                    <div className="grid gap-5 md:grid-cols-3">
+                    <div className="grid gap-4 md:grid-cols-3">
                         {features.map(f => (
                             <div
                                 key={f.title}
@@ -483,23 +528,21 @@ export default function Home() {
                                 style={{
                                     background: 'rgba(255,255,255,0.03)',
                                     border: '1px solid rgba(255,255,255,0.07)',
+                                    borderTop: `2px solid ${f.color}`,
                                 }}
                                 onMouseEnter={e => {
-                                    (e.currentTarget as HTMLElement).style.borderColor = `${f.color}35`;
-                                    (e.currentTarget as HTMLElement).style.background = `${f.color}08`;
+                                    (e.currentTarget as HTMLElement).style.background = `${f.color}06`;
+                                    (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 32px -8px ${f.color}20`;
                                 }}
                                 onMouseLeave={e => {
-                                    (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.07)';
                                     (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)';
+                                    (e.currentTarget as HTMLElement).style.boxShadow = 'none';
                                 }}
                             >
-                                <div
-                                    className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl"
-                                    style={{ background: `${f.color}15`, color: f.color }}
-                                >
+                                <div className="mb-5" style={{ color: f.color }}>
                                     <FeatureIcon path={f.icon} />
                                 </div>
-                                <h3 className="mb-2 text-[15px] font-semibold" style={{ color: 'rgba(232,230,225,0.9)' }}>
+                                <h3 className="mb-2 text-[15px] font-semibold leading-snug" style={{ color: 'rgba(232,230,225,0.9)' }}>
                                     {f.title}
                                 </h3>
                                 <p className="text-sm leading-relaxed" style={{ color: 'rgba(232,230,225,0.45)' }}>
@@ -585,8 +628,12 @@ export default function Home() {
             </section>
 
             {/* ── CTA final ─────────────────────────────────────────────────── */}
-            <section className="px-6 py-24" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                <div className="mx-auto max-w-2xl text-center">
+            <section className="relative px-6 py-28 overflow-hidden" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                {/* Mesh gradient background */}
+                <div className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(ellipse 60% 70% at 50% 50%, ${INDIGO}0d 0%, transparent 70%)` }} />
+                <div className="pointer-events-none absolute left-1/4 top-0 h-64 w-64 -translate-y-1/2 rounded-full blur-3xl" style={{ background: `${JADE}08` }} />
+                <div className="pointer-events-none absolute right-1/4 bottom-0 h-48 w-48 translate-y-1/2 rounded-full blur-3xl" style={{ background: `${INDIGO}0a` }} />
+                <div className="relative mx-auto max-w-2xl text-center">
                     <p className="mb-4 text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: JADE }}>Comece hoje</p>
                     <h2
                         className="mb-4 text-5xl leading-tight"
@@ -601,8 +648,8 @@ export default function Home() {
 
                     <Link
                         href={route('onboarding.step1')}
-                        className="inline-flex items-center gap-2.5 rounded-2xl px-8 py-4 text-base font-semibold text-white shadow-2xl transition-all hover:brightness-110 hover:-translate-y-0.5"
-                        style={{ background: INDIGO, boxShadow: `0 20px 40px -10px ${INDIGO}50` }}
+                        className="inline-flex items-center gap-2.5 rounded-2xl px-8 py-4 text-base font-semibold text-white transition-all hover:brightness-110 hover:-translate-y-0.5"
+                        style={{ background: `linear-gradient(135deg, ${INDIGO} 0%, #8b5cf6 100%)`, boxShadow: `0 20px 48px -10px ${INDIGO}60` }}
                     >
                         Criar minha conta grátis
                         <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -626,3 +673,4 @@ export default function Home() {
         </LandingLayout>
     );
 }
+

@@ -121,19 +121,23 @@ export default function AppLayout({ children, title, subtitle, fullHeight }: Pro
                 {/* Flash messages */}
                 {flash?.success && (
                     <div
-                        className="mx-5 mt-4 flex items-center gap-2.5 rounded-lg px-4 py-3 text-sm"
+                        className="flash-msg mx-5 mt-4 flex items-center gap-2.5 rounded-lg px-4 py-3 text-sm"
                         style={{ background: 'rgba(110,231,183,0.08)', border: '1px solid rgba(110,231,183,0.2)', color: '#6ee7b7' }}
                     >
-                        <span>✓</span>
+                        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
                         {flash.success}
                     </div>
                 )}
                 {flash?.erro && (
                     <div
-                        className="mx-5 mt-4 flex items-center gap-2.5 rounded-lg px-4 py-3 text-sm"
+                        className="flash-msg mx-5 mt-4 flex items-center gap-2.5 rounded-lg px-4 py-3 text-sm"
                         style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171' }}
                     >
-                        <span>⚠</span>
+                        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
                         {flash.erro}
                     </div>
                 )}
@@ -149,12 +153,15 @@ export default function AppLayout({ children, title, subtitle, fullHeight }: Pro
                 >
                     {!fullHeight && title && (
                         <div className="mb-7">
-                            <h1
-                                className="text-[28px] leading-tight font-normal"
-                                style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}
-                            >
-                                {title}
-                            </h1>
+                            <div className="flex items-baseline gap-3">
+                                <h1
+                                    className="text-[28px] leading-tight font-normal"
+                                    style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}
+                                >
+                                    {title}
+                                </h1>
+                                <div className="h-1.5 w-8 rounded-full" style={{ background: 'var(--jade)', opacity: 0.7, marginBottom: '4px', flexShrink: 0 }} />
+                            </div>
                             {subtitle && (
                                 <p className="mt-1.5 text-sm" style={{ color: 'var(--text-3)' }}>{subtitle}</p>
                             )}

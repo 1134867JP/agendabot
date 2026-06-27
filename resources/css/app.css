@@ -152,7 +152,12 @@
         @apply flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-all;
     }
     .nav-item:hover { color: var(--text-1); background: var(--bg-surface-2); }
-    .nav-item.active { color: var(--jade); background: var(--jade-light); font-weight: 500; }
+    .nav-item.active {
+        color: var(--jade);
+        background: var(--jade-light);
+        font-weight: 500;
+        box-shadow: inset 3px 0 0 var(--jade);
+    }
     .nav-item svg { color: var(--text-3); }
     .nav-item:hover svg { color: var(--text-2); }
     .nav-item.active svg { color: var(--jade); }
@@ -172,4 +177,27 @@
     /* ── Cards clicáveis ─────────────────────────────────────────────────── */
     .card-hover { background: var(--bg-surface); border: 1px solid var(--border); @apply rounded-xl transition-all; }
     .card-hover:hover { background: var(--bg-surface-2); border-color: var(--border-strong); }
+
+    /* ── Texto gradiente ─────────────────────────────────────────────────── */
+    .gradient-text {
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    /* ── Flash message slide-in ──────────────────────────────────────────── */
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-8px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .flash-msg { animation: slideDown 0.2s ease-out; }
+
+    /* ── Marquee (landing) ───────────────────────────────────────────────── */
+    @keyframes marquee {
+        0%   { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+    }
+    .marquee-track { animation: marquee 28s linear infinite; }
+    .marquee-track:hover { animation-play-state: paused; }
 }

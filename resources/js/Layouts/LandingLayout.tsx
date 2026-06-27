@@ -72,10 +72,20 @@ function LandingNavbar({ currentPage, scrolled }: { currentPage?: string; scroll
 
                 <Link
                     href={route('onboarding.step1')}
-                    className="rounded-lg px-4 py-2 text-[13px] font-medium transition-all hover:brightness-90"
-                    style={{ background: 'white', color: DARK }}
+                    className="hidden md:inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-[13px] font-semibold text-white transition-all hover:brightness-110 hover:-translate-y-px"
+                    style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', boxShadow: '0 4px 14px rgba(99,102,241,0.35)' }}
                 >
                     Começar grátis
+                    <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                </Link>
+                <Link
+                    href={route('onboarding.step1')}
+                    className="md:hidden rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white transition-all"
+                    style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
+                >
+                    Começar
                 </Link>
             </div>
         </header>
