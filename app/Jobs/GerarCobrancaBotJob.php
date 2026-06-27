@@ -59,7 +59,7 @@ class GerarCobrancaBotJob implements ShouldQueue
                         'status'                  => 'isento',
                     ]);
 
-                    Log::info('GerarCobrancaBotJob: tenant isento, sem cobrança', [
+                    Log::channel('jobs')->info('GerarCobrancaBotJob: tenant isento, sem cobrança', [
                         'tenant'     => $tenant->id,
                         'periodo'    => $periodoAnterior,
                         'quantidade' => $quantidade,
@@ -87,7 +87,7 @@ class GerarCobrancaBotJob implements ShouldQueue
                     'status'                  => $chargeId ? 'pendente' : 'falhou',
                 ]);
 
-                Log::info('GerarCobrancaBotJob', [
+                Log::channel('jobs')->info('GerarCobrancaBotJob', [
                     'tenant'      => $tenant->id,
                     'periodo'     => $periodoAnterior,
                     'quantidade'  => $quantidade,
