@@ -45,6 +45,7 @@ class ConfiguracaoController extends Controller
             'nome'                       => ['required', 'string', 'max:255'],
             'tipo_servico'               => ['required', 'in:barbeiro,quadra,estetica,clinica,studio,personalizado'],
             'tipo_servico_personalizado' => ['nullable', 'required_if:tipo_servico,personalizado', 'string', 'max:100'],
+            'horarios_funcionamento'     => ['nullable', 'string', 'max:255'],
         ]);
 
         $tenant->update($data);
@@ -61,7 +62,6 @@ class ConfiguracaoController extends Controller
             'descricao_negocio'         => 'nullable|string|max:500',
             'cidade'                    => 'nullable|string|max:100',
             'endereco'                  => 'nullable|string|max:255',
-            'horarios_funcionamento'    => 'nullable|string|max:255',
             'nome_agente'               => 'required|string|max:50',
             'tom_voz'                   => 'required|in:formal,semiformal,descontraido',
             'instrucoes_extras'         => 'nullable|string|max:1000',
