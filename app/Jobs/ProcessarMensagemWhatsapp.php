@@ -127,6 +127,23 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             array_shift($historico);
         }
 
+        // Mesclar mensagens consecutivas com o mesmo role — Claude rejeita sequências duplicadas.
+        $historico = array_values(array_reduce($historico, function (array $carry, array $msg): array {
+            if (! empty($carry) && end($carry)['role'] === $msg['role']) {
+                $carry[array_key_last($carry)]['content'] .= "\n" . $msg['content'];
+            } else {
+                $carry[] = $msg;
+            }
+            return $carry;
+        }, []));
+
+        Log::channel('jobs')->debug('BOT_HISTORICO', [
+            'tenant'     => $this->tenant->id,
+            'telefone'   => $this->telefone,
+            'total_msgs' => count($historico),
+            'roles'      => array_column($historico, 'role'),
+        ]);
+
         // 7. Buscar agendamento pendente
         $agendamentoPendente = $this->buscarAgendamentoPendente($cliente);
 

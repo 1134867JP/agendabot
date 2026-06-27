@@ -80,7 +80,17 @@ class ClaudeAgentService
                 ]);
 
             if (! $response->successful()) {
-                Log::channel('jobs')->error('ClaudeAgentService error', ['status' => $response->status(), 'body' => $response->body()]);
+                Log::channel('jobs')->error('ClaudeAgentService error', [
+                    'status'         => $response->status(),
+                    'body'           => $response->body(),
+                    'error_type'     => $response->json('error.type'),
+                    'error_message'  => $response->json('error.message'),
+                    'model'          => $this->model,
+                    'total_messages' => count($messages),
+                    'first_role'     => $messages[0]['role'] ?? null,
+                    'last_role'      => ! empty($messages) ? end($messages)['role'] : null,
+                    'roles_sequence' => array_map(fn ($m) => $m['role'] ?? '?', $messages),
+                ]);
                 return ['resposta' => 'Desculpe, tive um problema técnico. Tente novamente em instantes.', 'transferir' => false, 'usage' => $totalUsage];
             }
 
