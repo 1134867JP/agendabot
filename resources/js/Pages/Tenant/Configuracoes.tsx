@@ -7,7 +7,7 @@ interface Props extends PageProps {
     tenant: Tenant;
 }
 
-// ─── Bot & IA form ────────────────────────────────────────────────────────────
+// ─── Bot & IA form ────────────────────────────────────────────────────────────────────────────────
 
 type TomVoz = 'formal' | 'semiformal' | 'descontraido';
 
@@ -27,7 +27,6 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
         tom_voz:           (tenant.tom_voz          ?? 'semiformal') as TomVoz,
         instrucoes_extras: tenant.instrucoes_extras ?? '',
         bot_ativo:         tenant.bot_ativo         ?? true,
-        horarios_funcionamento: tenant.horarios_funcionamento ?? '',
         lembrete_ativo:    (tenant as any).lembrete_ativo    ?? true,
         lembrete_texto:    (tenant as any).lembrete_texto    ?? '',
     });
@@ -189,27 +188,6 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                     {errors.instrucoes_extras && <p className="mt-1 text-xs text-red-400">{errors.instrucoes_extras}</p>}
                 </div>
 
-                {/* Horários de funcionamento (campo livre opcional) */}
-                <div>
-                    <label className="label mb-1">
-                        Horários de funcionamento{' '}
-                        <span className="font-normal" style={{ color: 'var(--text-3)' }}>(opcional)</span>
-                    </label>
-                    <textarea
-                        value={data.horarios_funcionamento}
-                        onChange={e => setData('horarios_funcionamento', e.target.value)}
-                        rows={2}
-                        className="input resize-none"
-                        placeholder="Ex: Seg–Sex 09:00–19:00, Sáb 09:00–13:00"
-                    />
-                    <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
-                        Informação exibida para o cliente quando perguntar sobre horários.
-                    </p>
-                    {errors.horarios_funcionamento && (
-                        <p className="mt-1 text-xs text-red-400">{errors.horarios_funcionamento}</p>
-                    )}
-                </div>
-
                 {/* Lembretes automáticos */}
                 <div className="rounded-xl p-4" style={{ border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
                     <div className="mb-3 flex items-center justify-between">
@@ -266,13 +244,14 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
     );
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+// ─── Main page ────────────────────────────────────────────────────────────────────────────────
 
 export default function Configuracoes({ tenant }: Props) {
     const { data, setData, put, processing, errors, wasSuccessful } = useForm({
         nome:                       tenant.nome,
         tipo_servico:               tenant.tipo_servico,
         tipo_servico_personalizado: tenant.tipo_servico_personalizado ?? '',
+        horarios_funcionamento:     (tenant as any).horarios_funcionamento ?? '',
     });
 
     const submit = (e: React.FormEvent) => {
@@ -320,6 +299,23 @@ export default function Configuracoes({ tenant }: Props) {
                                 onChangeCustom={v => setData('tipo_servico_personalizado', v)}
                                 error={errors.tipo_servico || errors.tipo_servico_personalizado}
                             />
+                        </div>
+
+                        <div>
+                            <label className="label mb-1">
+                                Horários de funcionamento{' '}
+                                <span className="font-normal" style={{ color: 'var(--text-3)' }}>(opcional)</span>
+                            </label>
+                            <input
+                                value={data.horarios_funcionamento}
+                                onChange={e => setData('horarios_funcionamento', e.target.value)}
+                                className="input"
+                                placeholder="Ex: Seg–Sex 09:00–19:00, Sáb 09:00–13:00"
+                                maxLength={255}
+                            />
+                            {errors.horarios_funcionamento && (
+                                <p className="mt-1 text-xs text-red-400">{errors.horarios_funcionamento}</p>
+                            )}
                         </div>
 
                         <div className="pt-2">
