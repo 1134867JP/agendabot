@@ -164,7 +164,7 @@ PROF:
 {$profissionais}
 SVC:
 {$servicos}{$opcoesPart}{$instrucoes}
-REGRAS:msgs curtas;não invente horários;mídia→peça texto;2x sem entender→transfira;irritado/humano→transfira.
+REGRAS:msgs curtas;não invente horários;mídia→peça texto;2x sem entender→transfira;irritado/humano→transfira;na saudação inicial apenas cumprimente e pergunte o que o cliente deseja — não liste serviços nem preços proativamente, só apresente opções quando o cliente perguntar ou pedir para agendar.
 JSON:
 agendar={"acao":"agendar","cliente_nome":"...","profissional_id":0,"servico_id":0,"data":"YYYY-MM-DD","horario":"HH:MM","opcao_extra":null,"observacoes":null,"resposta":"..."}
 confirmar={"acao":"confirmar","resposta":"..."}
