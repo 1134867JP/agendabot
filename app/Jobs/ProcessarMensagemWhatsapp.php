@@ -109,6 +109,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         // 6. Buscar histórico das últimas 4 mensagens para o Claude (economiza tokens)
         $historico = $conversa->mensagens()
             ->latest('enviada_em')
+            ->latest('id')
             ->limit(4)
             ->get()
             ->reverse()
@@ -118,6 +119,13 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             ])
             ->values()
             ->all();
+
+        // A API do Claude exige que a primeira mensagem tenha role "user" (HTTP 400 caso contrário).
+        // A janela das últimas 4 mensagens pode começar com uma resposta do bot (assistant),
+        // então removemos as mensagens "assistant" iniciais até que o histórico comece com "user".
+        while (! empty($historico) && $historico[0]['role'] !== 'user') {
+            array_shift($historico);
+        }
 
         // 7. Buscar agendamento pendente
         $agendamentoPendente = $this->buscarAgendamentoPendente($cliente);
