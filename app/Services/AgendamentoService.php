@@ -115,6 +115,21 @@ class AgendamentoService
                 throw new HorarioIndisponivelException('Não é possível agendar para datas passadas.');
             }
 
+            // Validar que o horário está dentro do expediente do profissional
+            $diaSemana = (int) $inicio->format('N');
+            if ($diaSemana === 7) $diaSemana = 0;
+            $horarioDia = $profissional->horarios()->where('dia_semana', $diaSemana)->first();
+            if (! $horarioDia) {
+                throw new HorarioIndisponivelException('Profissional não atende neste dia da semana.');
+            }
+            $expedienteInicio = Carbon::createFromFormat('Y-m-d H:i:s', $inicio->format('Y-m-d') . ' ' . $horarioDia->hora_inicio, $tz);
+            $expedienteFim    = Carbon::createFromFormat('Y-m-d H:i:s', $inicio->format('Y-m-d') . ' ' . $horarioDia->hora_fim, $tz);
+            if ($inicio->lt($expedienteInicio) || $fim->gt($expedienteFim)) {
+                throw new HorarioIndisponivelException(
+                    "Horário fora do expediente ({$horarioDia->hora_inicio}–{$horarioDia->hora_fim})."
+                );
+            }
+
             // Range overlap: detecta qualquer agendamento que se sobreponha ao slot [inicio, fim)
             $conflito = Agendamento::where('profissional_id', $profissionalId)
                 ->whereNotIn('status', ['cancelado'])

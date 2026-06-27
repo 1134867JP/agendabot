@@ -50,10 +50,13 @@ class Profissional extends Model
             ->map(fn ($dt) => Carbon::parse($dt, $tz)->format('H:i'))
             ->toArray();
 
+        $agora  = Carbon::now($tz);
         $cursor = $inicio->copy();
         while ($cursor->copy()->addMinutes($duracao)->lte($fim)) {
             $hora = $cursor->format('H:i');
-            $slots[] = ['hora' => $hora, 'disponivel' => ! in_array($hora, $agendados)];
+            if ($cursor->gt($agora)) {
+                $slots[] = ['hora' => $hora, 'disponivel' => ! in_array($hora, $agendados)];
+            }
             $cursor->addMinutes($duracao);
         }
 
