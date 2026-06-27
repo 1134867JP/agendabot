@@ -1,6 +1,8 @@
 import { Head } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
+import { usePage } from '@inertiajs/react';
+import { PageProps } from '@/types';
 
 interface LogEntry {
     at:      string;
@@ -79,10 +81,16 @@ const CANAL_LABELS: Record<Canal, string> = {
     db:      'DB Inserts',
 };
 
+interface Tenant { id: number; nome: string; slug: string; }
+interface LogsProps extends PageProps { tenants: Tenant[]; }
+
 export default function Logs() {
+    const { tenants } = usePage<LogsProps>().props;
+
     const [entries,  setEntries]  = useState<LogEntry[]>([]);
     const [nivel,    setNivel]    = useState<NivelFiltro>('ALL');
     const [canal,    setCanal]    = useState<Canal>('jobs');
+    const [tenantId, setTenantId] = useState<string>('');
     const [busca,    setBusca]    = useState('');
     const [pausado,  setPausado]  = useState(false);
     const [loading,  setLoading]  = useState(true);
@@ -91,9 +99,11 @@ export default function Logs() {
     const [expanded, setExpanded] = useState<number | null>(null);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    const buscar = async (n: NivelFiltro, c: Canal) => {
+    const buscar = async (n: NivelFiltro, c: Canal, tid: string) => {
         try {
-            const res  = await fetch(route('superadmin.logs.json') + `?nivel=${n}&canal=${c}`, {
+            const params = new URLSearchParams({ nivel: n, canal: c });
+            if (tid) params.set('tenant_id', tid);
+            const res  = await fetch(route('superadmin.logs.json') + '?' + params.toString(), {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
             });
             const data: ApiResponse = await res.json();
@@ -109,17 +119,17 @@ export default function Logs() {
 
     useEffect(() => {
         setLoading(true);
-        buscar(nivel, canal);
-    }, [nivel, canal]);
+        buscar(nivel, canal, tenantId);
+    }, [nivel, canal, tenantId]);
 
     useEffect(() => {
         if (pausado) {
             if (intervalRef.current) clearInterval(intervalRef.current);
             return;
         }
-        intervalRef.current = setInterval(() => buscar(nivel, canal), 5000);
+        intervalRef.current = setInterval(() => buscar(nivel, canal, tenantId), 5000);
         return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-    }, [pausado, nivel, canal]);
+    }, [pausado, nivel, canal, tenantId]);
 
     const niveis: NivelFiltro[] = ['ALL', 'ERROR', 'WARNING', 'INFO'];
     const canais: Canal[]       = ['jobs', 'db', 'laravel'];
@@ -132,23 +142,6 @@ export default function Logs() {
     return (
         <AppLayout title="Logs do sistema" subtitle="Registro de erros, avisos e eventos da plataforma">
             <Head title="Logs" />
-
-            {/* Tabs */}
-            <div className="mb-5 flex gap-1 border-b" style={{ borderColor: 'var(--border)' }}>
-                <span
-                    className="px-4 py-2 text-sm font-medium border-b-2 -mb-px"
-                    style={{ borderColor: 'var(--accent)', color: 'var(--accent)' }}
-                >
-                    Sistema
-                </span>
-                <a
-                    href={route('superadmin.logs.conversas')}
-                    className="px-4 py-2 text-sm font-medium border-b-2 border-transparent"
-                    style={{ color: 'var(--text-3)' }}
-                >
-                    Conversas do bot
-                </a>
-            </div>
 
             {/* Toolbar */}
             <div className="mb-5 flex flex-wrap items-center gap-3">
@@ -172,6 +165,19 @@ export default function Logs() {
                         </button>
                     ))}
                 </div>
+
+                {/* Filtro por tenant */}
+                <select
+                    value={tenantId}
+                    onChange={e => { setTenantId(e.target.value); setExpanded(null); }}
+                    className="rounded-lg px-3 py-2 text-xs font-medium outline-none"
+                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+                >
+                    <option value="">Todos os tenants</option>
+                    {tenants.map(t => (
+                        <option key={t.id} value={String(t.id)}>{t.nome}</option>
+                    ))}
+                </select>
 
                 {/* Filtro de nível */}
                 <div

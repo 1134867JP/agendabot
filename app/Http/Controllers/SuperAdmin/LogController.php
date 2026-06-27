@@ -17,14 +17,23 @@ class LogController extends Controller
 
     public function index(): Response
     {
-        return Inertia::render('SuperAdmin/Logs');
+        $tenants = Tenant::where('ativo', true)->orderBy('nome')->get(['id', 'nome', 'slug']);
+        return Inertia::render('SuperAdmin/Logs', ['tenants' => $tenants]);
     }
 
     public function json(Request $request): JsonResponse
     {
-        $nivel  = strtoupper($request->query('nivel', 'all'));
-        $canal  = $request->query('canal', 'laravel'); // laravel | jobs | db
-        $hoje   = now()->format('Y-m-d');
+        $nivel     = strtoupper($request->query('nivel', 'all'));
+        $canal     = $request->query('canal', 'laravel'); // laravel | jobs | db
+        $tenantId  = $request->query('tenant_id');
+        $hoje      = now()->format('Y-m-d');
+
+        // Buscar slug/nome do tenant para filtrar nas linhas de log
+        $tenantFiltro = null;
+        if ($tenantId) {
+            $tenant = Tenant::find($tenantId);
+            $tenantFiltro = $tenant ? $tenant->slug : null;
+        }
 
         $path = match ($canal) {
             'jobs' => storage_path("logs/jobs-{$hoje}.log"),
@@ -63,6 +72,11 @@ class LogController extends Controller
                 if (json_last_error() === JSON_ERROR_NONE) {
                     $context = $decoded;
                 }
+            }
+
+            // Filtro por tenant: busca slug no texto da linha
+            if ($tenantFiltro && ! str_contains(strtolower($line), strtolower($tenantFiltro))) {
+                continue;
             }
 
             $entries[] = [
