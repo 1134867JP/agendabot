@@ -7,6 +7,7 @@ use App\Models\Cliente;
 use App\Models\Conversa;
 use App\Models\Mensagem;
 use App\Models\Tenant;
+use App\Exceptions\HorarioIndisponivelException;
 use App\Models\TokenUsage;
 use App\Services\AgendamentoService;
 use App\Services\ClaudeAgentService;
@@ -160,18 +161,23 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
 
         // 9. Processar ação retornada pelo Claude
         $agendamentoCriado = true;
+        $erroAgendamento   = null;
         match ($resultado['acao']) {
-            'agendar'    => $agendamentoCriado = $this->processarAgendamento($resultado['dados'], $cliente, $agendamentoService),
+            'agendar'    => [$agendamentoCriado, $erroAgendamento] = $this->processarAgendamento($resultado['dados'], $cliente, $agendamentoService),
             'confirmar'  => $this->confirmarAgendamento($agendamentoPendente),
             'cancelar'   => $this->cancelarAgendamento($agendamentoPendente, $agendamentoService),
             'transferir' => $this->transferirParaHumano($conversa),
             default      => null,
         };
 
-        // Se o agendamento falhou, substituir resposta e transferir para humano
+        // Se o agendamento falhou, substituir resposta com mensagem adequada
         if ($resultado['acao'] === 'agendar' && ! $agendamentoCriado) {
-            $resultado['resposta'] = 'Desculpe, houve um problema técnico ao confirmar seu agendamento. Um atendente entrará em contato em breve. 🙏';
-            $this->transferirParaHumano($conversa);
+            if ($erroAgendamento === 'horario_indisponivel') {
+                $resultado['resposta'] = 'Esse horário não está disponível. Por favor, escolha outro horário nos slots disponíveis.';
+            } else {
+                $resultado['resposta'] = 'Desculpe, houve um problema técnico ao confirmar seu agendamento. Um atendente entrará em contato em breve. 🙏';
+                $this->transferirParaHumano($conversa);
+            }
         }
 
         // 10. Salvar resposta do bot e enviar ao cliente
@@ -223,7 +229,8 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         }
     }
 
-    private function processarAgendamento(array $dados, Cliente $cliente, AgendamentoService $service): bool
+    /** @return array{bool, string|null} [sucesso, tipo_erro] */
+    private function processarAgendamento(array $dados, Cliente $cliente, AgendamentoService $service): array
     {
         try {
             // Atualizar nome do cliente se identificado (e não for o placeholder padrão)
@@ -238,7 +245,14 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
                 'origem'           => 'bot',
             ]));
 
-            return true;
+            return [true, null];
+        } catch (HorarioIndisponivelException $e) {
+            Log::channel('jobs')->warning('ProcessarMensagemWhatsapp: horário indisponível', [
+                'error'  => $e->getMessage(),
+                'dados'  => $dados,
+                'tenant' => $this->tenant->id,
+            ]);
+            return [false, 'horario_indisponivel'];
         } catch (\Throwable $e) {
             Log::channel('jobs')->error('ProcessarMensagemWhatsapp: falha ao criar agendamento', [
                 'error'  => $e->getMessage(),
@@ -246,8 +260,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
                 'dados'  => $dados,
                 'tenant' => $this->tenant->id,
             ]);
-
-            return false;
+            return [false, 'erro_tecnico'];
         }
     }
 

@@ -174,10 +174,10 @@ PROF:
 {$profissionais}
 SVC:
 {$servicos}{$opcoesPart}{$instrucoes}
-REGRAS:texto simples sem markdown;saudação=cumprimente+pergunte o que quer,não liste serviços proativamente;serviço escolhido=já é agendamento,não ofereça "agendar" separado;sem horários inventados;mídia→peça texto;2x sem entender/irritado→transfira.
-JSON:
-agendar={"acao":"agendar","cliente_nome":"...","profissional_id":0,"servico_id":0,"data":"YYYY-MM-DD","horario":"HH:MM","opcao_extra":null,"observacoes":null,"resposta":"..."}
-confirmar={"acao":"confirmar","resposta":"..."}
+REGRAS:texto simples sem markdown;saudação=cumprimente+pergunte o que quer,não liste serviços proativamente;serviço escolhido=já é agendamento,não ofereça "agendar" separado;sem horários inventados;mídia→peça texto;2x sem entender/irritado→transfira;datas sempre futuras (use o ano correto);dia da semana+data devem ser coerentes.
+JSON — use EXATAMENTE uma destas ações:
+agendar=CRIAR NOVO agendamento (quando tiver nome+profissional+serviço+data+horário coletados):{"acao":"agendar","cliente_nome":"...","profissional_id":0,"servico_id":0,"data":"YYYY-MM-DD","horario":"HH:MM","opcao_extra":null,"observacoes":null,"resposta":"..."}
+confirmar=APENAS para confirmar agendamento PENDENTE já existente no sistema (indicado em PENDENTE):{"acao":"confirmar","resposta":"..."}
 cancelar={"acao":"cancelar","resposta":"..."}
 transferir={"acao":"transferir","resposta":"..."}
 duvida={"acao":"duvida","resposta":"..."}
