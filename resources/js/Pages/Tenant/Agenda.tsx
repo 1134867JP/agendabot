@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { PageProps, Recurso } from '@/types';
 
@@ -37,15 +37,31 @@ function startOfWeek(d: Date) {
     r.setHours(0, 0, 0, 0);
     return r;
 }
-function toISO(d: Date) { return d.toISOString().split('T')[0]; }
+// Usa componentes locais para evitar discrepância UTC vs local
+function toISO(d: Date) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
 function fmtHora(iso: string) {
-    return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
 }
 function fmtDiaHeader(d: Date) {
     return d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' });
 }
 function fmtDiaLongo(d: Date) {
     return d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+}
+// Extrai horas no fuso de São Paulo (independente do timezone do browser)
+function getHoraSP(iso: string): number {
+    const d = new Date(iso);
+    return parseInt(d.toLocaleString('en-US', { hour: '2-digit', hour12: false, timeZone: 'America/Sao_Paulo' }), 10);
+}
+// Extrai data local no fuso São Paulo
+function getDateSP(iso: string): string {
+    const d = new Date(iso);
+    return d.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }); // sv-SE gives YYYY-MM-DD
 }
 
 const HORAS = Array.from({ length: 15 }, (_, i) => i + 7); // 07..21
@@ -59,6 +75,13 @@ function slotColor(a: AgendamentoCalendario): { bg: string; border: string; text
     return                                { bg: 'rgba(110,231,183,0.08)', border: 'rgba(110,231,183,0.2)', text: '#6ee7b7' };
 }
 
+// Retorna "YYYY-MM-DDTHH:MM" em São Paulo para input datetime-local
+function toLocalDateTimeInput(iso: string): string {
+    const d = new Date(iso);
+    const sp = d.toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }); // "2024-01-15 08:00:00"
+    return sp.slice(0, 16).replace(' ', 'T');
+}
+
 // ─── Detail Modal ─────────────────────────────────────────────────────────────
 
 function DetalheModal({
@@ -66,63 +89,147 @@ function DetalheModal({
     onClose,
     onConcluir,
     onCancelar,
+    onSalvar,
 }: {
     detalhe: AgendamentoCalendario;
     onClose: () => void;
     onConcluir: (id: number) => void;
     onCancelar: (id: number) => void;
+    onSalvar: (id: number, dados: { cliente_nome: string; cliente_telefone: string; inicio: string; fim: string }) => void;
 }) {
+    const [editando, setEditando] = useState(false);
+    const [form, setForm] = useState({
+        cliente_nome:     detalhe.title,
+        cliente_telefone: detalhe.telefone,
+        inicio:           toLocalDateTimeInput(detalhe.start),
+        fim:              detalhe.end ? toLocalDateTimeInput(detalhe.end) : '',
+    });
+    const [salvando, setSalvando] = useState(false);
+    const nomeRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (editando) nomeRef.current?.focus();
+    }, [editando]);
+
+    const salvar = () => {
+        setSalvando(true);
+        onSalvar(detalhe.id, {
+            cliente_nome:     form.cliente_nome,
+            cliente_telefone: form.cliente_telefone,
+            inicio:           form.inicio + ':00',
+            fim:              form.fim + ':00',
+        });
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
             <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
                 <div className="mb-4 flex items-start justify-between">
                     <div>
                         <h3 style={{ fontFamily: 'Instrument Serif, Georgia, serif' }} className="text-xl font-semibold text-primary">
-                            {detalhe.title}
+                            {editando ? 'Editar agendamento' : detalhe.title}
                         </h3>
-                        <p className="text-sm" style={{ color: 'var(--text-3)' }}>{detalhe.telefone}</p>
+                        {!editando && <p className="text-sm" style={{ color: 'var(--text-3)' }}>{detalhe.telefone}</p>}
                     </div>
                     <button onClick={onClose} style={{ color: 'var(--text-3)' }} className="hover:text-primary transition-colors">✕</button>
                 </div>
-                <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                        <span style={{ color: 'var(--text-3)' }}>Horário</span>
-                        <span className="font-medium text-primary">{fmtHora(detalhe.start)} – {fmtHora(detalhe.end)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span style={{ color: 'var(--text-3)' }}>Origem</span>
-                        <span style={{ color: 'var(--text-2)' }}>{detalhe.origem === 'whatsapp' ? '🤖 WhatsApp' : '📋 Manual'}</span>
-                    </div>
-                    {detalhe.valor_total != null && (
-                        <div className="flex justify-between">
-                            <span style={{ color: 'var(--text-3)' }}>Valor</span>
-                            <span className="font-medium text-primary">
-                                {Number(detalhe.valor_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                            </span>
+
+                {editando ? (
+                    <div className="space-y-3">
+                        <div>
+                            <label className="label mb-1">Nome do cliente</label>
+                            <input
+                                ref={nomeRef}
+                                value={form.cliente_nome}
+                                onChange={e => setForm(f => ({ ...f, cliente_nome: e.target.value }))}
+                                className="input"
+                            />
                         </div>
-                    )}
-                    <div className="flex justify-between">
-                        <span style={{ color: 'var(--text-3)' }}>Status</span>
-                        <span className={`badge ${detalhe.status === 'confirmado' ? 'badge-green' : detalhe.status === 'cancelado' ? 'badge-red' : 'badge-gray'}`}>
-                            {detalhe.status}
-                        </span>
+                        <div>
+                            <label className="label mb-1">Telefone</label>
+                            <input
+                                value={form.cliente_telefone}
+                                onChange={e => setForm(f => ({ ...f, cliente_telefone: e.target.value }))}
+                                className="input"
+                            />
+                        </div>
+                        <div>
+                            <label className="label mb-1">Início</label>
+                            <input
+                                type="datetime-local"
+                                value={form.inicio}
+                                onChange={e => setForm(f => ({ ...f, inicio: e.target.value }))}
+                                className="input"
+                            />
+                        </div>
+                        <div>
+                            <label className="label mb-1">Término</label>
+                            <input
+                                type="datetime-local"
+                                value={form.fim}
+                                onChange={e => setForm(f => ({ ...f, fim: e.target.value }))}
+                                className="input"
+                            />
+                        </div>
+                        <div className="flex gap-2 pt-1">
+                            <button onClick={() => setEditando(false)} className="btn-secondary flex-1 justify-center text-xs py-2">
+                                Voltar
+                            </button>
+                            <button
+                                onClick={salvar}
+                                disabled={salvando || !form.cliente_nome || !form.inicio || !form.fim}
+                                className="btn-primary flex-1 justify-center text-xs py-2"
+                            >
+                                {salvando ? 'Salvando…' : 'Salvar'}
+                            </button>
+                        </div>
                     </div>
-                </div>
-                <div className="mt-5 flex gap-2">
-                    <a href={`tel:${detalhe.telefone}`} className="btn-secondary flex-1 justify-center text-xs py-2">
-                        📞 Ligar
-                    </a>
-                    {detalhe.status === 'confirmado' && (
-                        <>
-                            <button onClick={() => onConcluir(detalhe.id)} className="btn-secondary flex-1 justify-center text-xs py-2">
-                                Concluir
-                            </button>
-                            <button onClick={() => onCancelar(detalhe.id)} className="btn-danger flex-1 justify-center text-xs py-2">
-                                Cancelar
-                            </button>
-                        </>
-                    )}
-                </div>
+                ) : (
+                    <>
+                        <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                                <span style={{ color: 'var(--text-3)' }}>Horário</span>
+                                <span className="font-medium text-primary">{fmtHora(detalhe.start)} – {fmtHora(detalhe.end)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span style={{ color: 'var(--text-3)' }}>Origem</span>
+                                <span style={{ color: 'var(--text-2)' }}>{detalhe.origem === 'whatsapp' ? '🤖 WhatsApp' : '📋 Manual'}</span>
+                            </div>
+                            {detalhe.valor_total != null && (
+                                <div className="flex justify-between">
+                                    <span style={{ color: 'var(--text-3)' }}>Valor</span>
+                                    <span className="font-medium text-primary">
+                                        {Number(detalhe.valor_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                    </span>
+                                </div>
+                            )}
+                            <div className="flex justify-between">
+                                <span style={{ color: 'var(--text-3)' }}>Status</span>
+                                <span className={`badge ${detalhe.status === 'confirmado' ? 'badge-green' : detalhe.status === 'cancelado' ? 'badge-red' : 'badge-gray'}`}>
+                                    {detalhe.status}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="mt-5 flex gap-2 flex-wrap">
+                            <a href={`tel:${detalhe.telefone}`} className="btn-secondary flex-1 justify-center text-xs py-2">
+                                📞 Ligar
+                            </a>
+                            {detalhe.status === 'confirmado' && (
+                                <>
+                                    <button onClick={() => setEditando(true)} className="btn-secondary flex-1 justify-center text-xs py-2">
+                                        ✏️ Editar
+                                    </button>
+                                    <button onClick={() => onConcluir(detalhe.id)} className="btn-secondary flex-1 justify-center text-xs py-2">
+                                        Concluir
+                                    </button>
+                                    <button onClick={() => onCancelar(detalhe.id)} className="btn-danger flex-1 justify-center text-xs py-2">
+                                        Cancelar
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );
@@ -184,10 +291,9 @@ function DayListView({
             ) : (
                 <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
                     {HORAS.map(h => {
-                        const ags = agendamentos.filter(a => {
-                            const d = new Date(a.start);
-                            return toISO(d) === toISO(dia) && d.getHours() === h;
-                        });
+                        const ags = agendamentos.filter(a =>
+                            getDateSP(a.start) === toISO(dia) && getHoraSP(a.start) === h
+                        );
                         return (
                             <div key={h} className="flex gap-3 px-4 py-2.5">
                                 <span
@@ -246,10 +352,9 @@ function WeekGrid({
     const hoje = toISO(new Date());
 
     const agsNaHora = (diaIdx: number, hora: number) =>
-        agendamentos.filter(a => {
-            const d = new Date(a.start);
-            return toISO(d) === toISO(dias[diaIdx]) && d.getHours() === hora;
-        });
+        agendamentos.filter(a =>
+            getDateSP(a.start) === toISO(dias[diaIdx]) && getHoraSP(a.start) === hora
+        );
 
     return (
         <div className="card overflow-x-auto">
@@ -401,6 +506,11 @@ export default function Agenda({ recursos, profissionais }: Props) {
             onSuccess: () => { setDetalhe(null); carregar(); },
         });
     };
+    const salvarEdicao = (id: number, dados: { cliente_nome: string; cliente_telefone: string; inicio: string; fim: string }) => {
+        router.put(route('tenant.agendamentos.update', id), dados, {
+            onSuccess: () => { setDetalhe(null); carregar(); },
+        });
+    };
 
     const criarReserva = () => {
         if (!modalNova || !entidadeId) return;
@@ -544,6 +654,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
                     onClose={() => setDetalhe(null)}
                     onConcluir={concluir}
                     onCancelar={cancelar}
+                    onSalvar={salvarEdicao}
                 />
             )}
 

@@ -57,17 +57,24 @@ class AgendaController extends Controller
             return response()->json([]);
         }
 
+        $tz = new \DateTimeZone('America/Sao_Paulo');
+
         return response()->json(
-            $query->get()->map(function ($a) {
+            $query->get()->map(function ($a) use ($tz) {
                 $inicio = $a->inicio ?? $a->data_hora;
-                $fim    = $a->fim ?? ($a->data_hora
-                    ? Carbon::parse($a->data_hora)->addMinutes($a->duracao_minutos ?? 30)->toIso8601String()
+                $fimRaw = $a->fim ?? ($a->data_hora
+                    ? Carbon::parse($a->data_hora)->addMinutes($a->duracao_minutos ?? 30)
                     : null);
+
+                $fmtSP = fn ($dt) => $dt
+                    ? Carbon::parse($dt)->setTimezone($tz)->format('Y-m-d\TH:i:s')
+                    : null;
+
                 return [
                     'id'          => $a->id,
                     'title'       => $a->cliente_nome,
-                    'start'       => $inicio,
-                    'end'         => $fim,
+                    'start'       => $fmtSP($inicio),
+                    'end'         => $fmtSP($fimRaw),
                     'telefone'    => $a->cliente_telefone,
                     'status'      => in_array($a->status, ['confirmado', 'agendado']) ? 'confirmado' : $a->status,
                     'valor_total' => $a->valor_total,

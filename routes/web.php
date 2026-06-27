@@ -62,6 +62,7 @@ Route::middleware('auth')->group(function () {
         Route::get('agendamentos', [Tenant\AgendamentoController::class, 'index'])->name('agendamentos.index');
         Route::get('agendamentos/exportar', [Tenant\AgendamentoController::class, 'exportar'])->name('agendamentos.exportar');
         Route::post('agendamentos', [Tenant\AgendamentoController::class, 'store'])->name('agendamentos.store');
+        Route::put('agendamentos/{agendamento}', [Tenant\AgendamentoController::class, 'update'])->name('agendamentos.update');
         Route::patch('agendamentos/{agendamento}/cancelar', [Tenant\AgendamentoController::class, 'cancelar'])->name('agendamentos.cancelar');
         Route::patch('agendamentos/{agendamento}/concluir', [Tenant\AgendamentoController::class, 'concluir'])->name('agendamentos.concluir');
 

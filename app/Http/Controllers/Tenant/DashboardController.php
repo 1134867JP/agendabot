@@ -50,9 +50,9 @@ class DashboardController extends Controller
                     ->count(),
                 'bot_taxa'             => (float) $tenant->taxa_agendamento_bot,
             ],
-            'ultima_cobranca_bot' => CobrancaBot::where('tenant_id', $tenant->id)
-                ->orderByDesc('periodo')
-                ->first(['periodo', 'quantidade_agendamentos', 'valor_total', 'status']),
+            'ultima_cobranca_bot' => \Illuminate\Support\Facades\Schema::hasTable('cobrancas_bot')
+                ? CobrancaBot::where('tenant_id', $tenant->id)->orderByDesc('periodo')->first(['periodo', 'quantidade_agendamentos', 'valor_total', 'status'])
+                : null,
             'proximos_agendamentos' => Agendamento::where('tenant_id', $tenant->id)
                 ->with('recurso')
                 ->where('inicio', '>=', now())

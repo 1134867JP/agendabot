@@ -104,6 +104,47 @@ class AgendamentoController extends Controller
         return back()->with('success', 'Agendamento criado com sucesso.');
     }
 
+    public function update(Request $request, Agendamento $agendamento): RedirectResponse
+    {
+        abort_unless($agendamento->tenant_id === app('tenant')->id, 403);
+
+        $validated = $request->validate([
+            'cliente_nome'     => ['required', 'string', 'max:255'],
+            'cliente_telefone' => ['required', 'string', 'max:20'],
+            'inicio'           => ['required', 'date'],
+            'fim'              => ['required', 'date', 'after:inicio'],
+            'observacoes'      => ['nullable', 'string'],
+        ]);
+
+        // Verificar conflito excluindo o próprio agendamento
+        $chave = $agendamento->recurso_id
+            ? ['recurso_id', $agendamento->recurso_id]
+            : ['profissional_id', $agendamento->profissional_id];
+
+        $conflito = Agendamento::where($chave[0], $chave[1])
+            ->where('id', '!=', $agendamento->id)
+            ->where('status', '!=', 'cancelado')
+            ->where('inicio', '<', $validated['fim'])
+            ->where('fim', '>', $validated['inicio'])
+            ->exists();
+
+        if ($conflito) {
+            return back()->withErrors(['inicio' => 'Horário não disponível.']);
+        }
+
+        $agendamento->update([
+            'cliente_nome'     => $validated['cliente_nome'],
+            'cliente_telefone' => $validated['cliente_telefone'],
+            'inicio'           => $validated['inicio'],
+            'fim'              => $validated['fim'],
+            'data_hora'        => $validated['inicio'],
+            'duracao_minutos'  => (int) Carbon::parse($validated['inicio'])->diffInMinutes($validated['fim']),
+            'observacoes'      => $validated['observacoes'] ?? null,
+        ]);
+
+        return back()->with('success', 'Agendamento atualizado.');
+    }
+
     public function cancelar(Agendamento $agendamento): RedirectResponse
     {
         abort_unless($agendamento->tenant_id === app('tenant')->id, 403);

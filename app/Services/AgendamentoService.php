@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Exceptions\HorarioIndisponivelException;
 use App\Models\Agendamento;
 use App\Models\Profissional;
+use App\Models\Servico;
 use App\Models\Tenant;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -98,7 +99,7 @@ class AgendamentoService
             // Tenant isolation: garantir que o serviço pertence ao tenant
             $servico = null;
             if (! empty($dados['servico_id'])) {
-                $servico = \App\Models\Servico::where('id', $dados['servico_id'])
+                $servico = Servico::where('id', $dados['servico_id'])
                     ->where('tenant_id', $tenant->id)
                     ->first();
             }
