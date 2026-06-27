@@ -34,24 +34,27 @@ class AgendaController extends Controller
             'data_fim'        => ['required', 'date'],
         ]);
 
+        $query = Agendamento::where('tenant_id', $tenant->id)
+            ->where('status', '!=', 'cancelado');
+
         $dataFim = Carbon::parse($request->data_fim)->endOfDay()->toIso8601String();
 
-        $query = Agendamento::where('tenant_id', $tenant->id)
-            ->where('status', '!=', 'cancelado')
-            ->with(['recurso', 'profissional'])
-            ->where(function ($q) use ($request, $dataFim) {
-                $q->whereBetween('inicio', [$request->data_inicio, $dataFim])
-                  ->orWhereBetween('data_hora', [$request->data_inicio, $dataFim]);
-            });
-
-        // Filtro opcional de entidade (usado ao criar, mas não obrigatório na listagem)
         if ($request->filled('recurso_id')) {
-            $query->where('recurso_id', $request->recurso_id);
+            $query->where('recurso_id', $request->recurso_id)
+                  ->where(function ($q) use ($request, $dataFim) {
+                      $q->whereBetween('inicio', [$request->data_inicio, $dataFim]);
+                  });
         } elseif ($request->filled('profissional_id')) {
+            // Inclui agendamentos do profissional OU sem profissional associado (dados legados)
             $query->where(function ($q) use ($request) {
                 $q->where('profissional_id', $request->profissional_id)
                   ->orWhereNull('profissional_id');
+            })->where(function ($q) use ($request, $dataFim) {
+                $q->whereBetween('inicio', [$request->data_inicio, $dataFim])
+                  ->orWhereBetween('data_hora', [$request->data_inicio, $dataFim]);
             });
+        } else {
+            return response()->json([]);
         }
 
         $tz = new \DateTimeZone('America/Sao_Paulo');
@@ -68,15 +71,14 @@ class AgendaController extends Controller
                     : null;
 
                 return [
-                    'id'            => $a->id,
-                    'title'         => $a->cliente_nome,
-                    'start'         => $fmtSP($inicio),
-                    'end'           => $fmtSP($fimRaw),
-                    'telefone'      => $a->cliente_telefone,
-                    'status'        => in_array($a->status, ['confirmado', 'agendado']) ? 'confirmado' : $a->status,
-                    'valor_total'   => $a->valor_total,
-                    'origem'        => $a->origem ?? 'manual',
-                    'entidade_nome' => $a->recurso?->nome ?? $a->profissional?->nome,
+                    'id'          => $a->id,
+                    'title'       => $a->cliente_nome,
+                    'start'       => $fmtSP($inicio),
+                    'end'         => $fmtSP($fimRaw),
+                    'telefone'    => $a->cliente_telefone,
+                    'status'      => in_array($a->status, ['confirmado', 'agendado']) ? 'confirmado' : $a->status,
+                    'valor_total' => $a->valor_total,
+                    'origem'      => $a->origem ?? 'manual',
                 ];
             })
         );

@@ -12,7 +12,6 @@ interface AgendamentoCalendario {
     status: 'confirmado' | 'cancelado' | 'concluido';
     valor_total: number | null;
     origem: 'whatsapp' | 'manual';
-    entidade_nome?: string | null;
 }
 
 interface EntidadeAgenda {
@@ -321,7 +320,6 @@ function DayListView({
                                                 <p className="truncate text-sm font-medium" style={{ color: text }}>{a.title}</p>
                                                 <p className="text-xs opacity-70" style={{ color: text }}>
                                                     {fmtHora(a.start)} – {fmtHora(a.end)}
-                                                    {a.entidade_nome ? ` · ${a.entidade_nome}` : ''}
                                                 </p>
                                             </button>
                                         );
@@ -428,10 +426,7 @@ function WeekGrid({
                                                     style={{ background: bg, borderColor: border, color: text }}
                                                 >
                                                     <p className="truncate font-medium text-xs">{a.title}</p>
-                                                    <p className="text-xs opacity-70">
-                                                        {fmtHora(a.start)}–{fmtHora(a.end)}
-                                                        {a.entidade_nome ? ` · ${a.entidade_nome}` : ''}
-                                                    </p>
+                                                    <p className="text-xs opacity-70">{fmtHora(a.start)}–{fmtHora(a.end)}</p>
                                                 </div>
                                             );
                                         })}
@@ -476,18 +471,22 @@ export default function Agenda({ recursos, profissionais }: Props) {
     const dias = Array.from({ length: 7 }, (_, i) => addDays(semana, i));
 
     const carregar = useCallback(() => {
+        if (!entidadeId) return;
         setLoading(true);
-        const inicio = startOfWeek(semana);
-        const fim    = addDays(inicio, 7);
+        const inicio = startOfWeek(diaAtivo);
+        const fim    = addDays(addDays(inicio, 6), 1); // inclui até o fim do último dia
+        const param  = tipoEntidade === 'recurso'
+            ? `recurso_id=${entidadeId}`
+            : `profissional_id=${entidadeId}`;
         fetch(
             route('tenant.agenda.disponibilidade') +
-            `?data_inicio=${toISO(inicio)}&data_fim=${toISO(fim)}`,
+            `?${param}&data_inicio=${toISO(inicio)}&data_fim=${toISO(fim)}`,
             { headers: { 'X-Requested-With': 'XMLHttpRequest' } },
         )
             .then(r => r.json())
             .then(setAgs)
             .finally(() => setLoading(false));
-    }, [semana]);
+    }, [entidadeId, tipoEntidade, semana, diaAtivo]);
 
     useEffect(() => { carregar(); }, [carregar]);
 
