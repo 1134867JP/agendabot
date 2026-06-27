@@ -74,15 +74,15 @@ class ClaudeAgentService
                 ->withHeaders([
                     'x-api-key'         => $this->apiKey,
                     'anthropic-version' => '2023-06-01',
-                    'anthropic-beta'    => 'prompt-caching-2024-07-31',
                     'content-type'      => 'application/json',
                 ])
                 ->post('https://api.anthropic.com/v1/messages', [
-                    'model'      => $this->model,
-                    'max_tokens' => 1024,
-                    'system'     => $systemBlocks,
-                    'tools'      => $tools,
-                    'messages'   => $messages,
+                    'model'         => $this->model,
+                    'max_tokens'    => 1024,
+                    'cache_control' => ['type' => 'ephemeral'],
+                    'system'        => $systemBlocks,
+                    'tools'         => $tools,
+                    'messages'      => $messages,
                 ]);
 
             if (! $response->successful()) {
@@ -283,9 +283,10 @@ class ClaudeAgentService
                 'input_schema' => ['type' => 'object', 'properties' => new \stdClass()],
             ],
             [
-                'name'         => 'transferir_para_humano',
-                'description'  => 'Transfere a conversa para um atendente humano. Use quando não entender o cliente após 2 tentativas, quando pedir humano ou ficar irritado.',
-                'input_schema' => ['type' => 'object', 'properties' => new \stdClass()],
+                'name'          => 'transferir_para_humano',
+                'description'   => 'Transfere a conversa para um atendente humano. Use quando não entender o cliente após 2 tentativas, quando pedir humano ou ficar irritado.',
+                'input_schema'  => ['type' => 'object', 'properties' => new \stdClass()],
+                'cache_control' => ['type' => 'ephemeral'],
             ],
         ];
     }
