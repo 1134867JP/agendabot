@@ -42,6 +42,7 @@ const SECTIONS_SUPER_ADMIN: { label: string; items: NavItem[] }[] = [
         items: [
             { label: 'Dashboard', routeName: 'superadmin.dashboard',     path: '/superadmin',         icon: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
             { label: 'Tenants',   routeName: 'superadmin.tenants.index', path: '/superadmin/tenants', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+            { label: 'Financeiro',   routeName: 'superadmin.financeiro',   path: '/superadmin/financeiro',   icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
             { label: 'Logs',         routeName: 'superadmin.logs',         path: '/superadmin/logs',         icon: 'M4 6h16M4 10h16M4 14h16M4 18h7' },
             { label: 'Jobs',         routeName: 'superadmin.jobs',         path: '/superadmin/jobs',         icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
             { label: 'Tokens IA',    routeName: 'superadmin.tokens',       path: '/superadmin/tokens',       icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z M9 11l3-3 3 3' },
