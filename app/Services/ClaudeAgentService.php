@@ -86,9 +86,15 @@ class ClaudeAgentService
 
         $content = $response->json('content.0.text', '');
 
-        // Tentar extrair JSON: iterar todas as ocorrências e usar o primeiro que decodifica com sucesso
+        // Tentar parse direto primeiro (caminho feliz — Claude retornou JSON puro)
         $jsonDecoded = null;
-        if (preg_match_all('/\{[\s\S]*?"acao"[\s\S]*?\}/u', $content, $allMatches)) {
+        $direct = json_decode(trim($content), true);
+        if (is_array($direct) && isset($direct['acao'], $direct['resposta'])) {
+            $jsonDecoded = $direct;
+        }
+
+        // Fallback: extrair JSON embutido no texto (quando Claude adiciona texto antes/depois)
+        if (! $jsonDecoded && preg_match_all('/\{[^{}]*"acao"[^{}]*\}/u', $content, $allMatches)) {
             foreach ($allMatches[0] as $candidate) {
                 $decoded = json_decode($candidate, true);
                 if (is_array($decoded) && isset($decoded['acao'], $decoded['resposta'])) {
@@ -96,6 +102,10 @@ class ClaudeAgentService
                     break;
                 }
             }
+        }
+
+        if (! $jsonDecoded) {
+            Log::warning('ClaudeAgentService: falha ao parsear JSON da resposta', ['content' => mb_substr($content, 0, 500)]);
         }
 
         $usageData = [
@@ -164,7 +174,7 @@ PROF:
 {$profissionais}
 SVC:
 {$servicos}{$opcoesPart}{$instrucoes}
-REGRAS:msgs curtas;não invente horários;mídia→peça texto;2x sem entender→transfira;irritado/humano→transfira.
+REGRAS:texto simples sem markdown;saudação=cumprimente+pergunte o que quer;serviço escolhido=já é agendamento,não ofereça "agendar" separado;sem horários inventados;mídia→peça texto;2x sem entender/irritado→transfira.
 JSON:
 agendar={"acao":"agendar","cliente_nome":"...","profissional_id":0,"servico_id":0,"data":"YYYY-MM-DD","horario":"HH:MM","opcao_extra":null,"observacoes":null,"resposta":"..."}
 confirmar={"acao":"confirmar","resposta":"..."}
