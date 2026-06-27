@@ -177,7 +177,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         // 10. Salvar resposta do bot e enviar ao cliente
         $conversa->registrarMensagem('bot', $resultado['resposta']);
         $evolution->enviarMensagem($this->tenant->evolution_instance, $this->telefone, $resultado['resposta']);
-        Log::info('BOT_RESPOSTA', ['telefone' => $this->telefone, 'acao' => $resultado['acao'], 'resposta' => mb_substr($resultado['resposta'], 0, 200)]);
+        Log::channel('jobs')->info('BOT_RESPOSTA', ['telefone' => $this->telefone, 'acao' => $resultado['acao'], 'resposta' => mb_substr($resultado['resposta'], 0, 200)]);
     }
 
     private function buscarAgendamentoPendente(Cliente $cliente): ?Agendamento
@@ -240,7 +240,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
 
             return true;
         } catch (\Throwable $e) {
-            Log::error('ProcessarMensagemWhatsapp: falha ao criar agendamento', [
+            Log::channel('jobs')->error('ProcessarMensagemWhatsapp: falha ao criar agendamento', [
                 'error'  => $e->getMessage(),
                 'trace'  => $e->getTraceAsString(),
                 'dados'  => $dados,

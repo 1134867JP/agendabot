@@ -127,6 +127,22 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        // Log separado para queries DML (INSERT/UPDATE/DELETE)
+        'db' => [
+            'driver' => 'daily',
+            'path'   => storage_path('logs/db.log'),
+            'level'  => 'debug',
+            'days'   => 7,
+        ],
+
+        // Log separado para Jobs e integrações (WhatsApp, Claude, Asaas)
+        'jobs' => [
+            'driver' => 'daily',
+            'path'   => storage_path('logs/jobs.log'),
+            'level'  => 'debug',
+            'days'   => 14,
+        ],
+
     ],
 
 ];

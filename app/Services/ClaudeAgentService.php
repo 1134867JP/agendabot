@@ -72,12 +72,12 @@ class ClaudeAgentService
             ]);
 
         if (! $response->successful()) {
-            Log::error('ClaudeAgentService error', ['status' => $response->status(), 'body' => $response->body()]);
+            Log::channel('jobs')->error('ClaudeAgentService error', ['status' => $response->status(), 'body' => $response->body()]);
             return ['acao' => 'erro', 'resposta' => 'Desculpe, tive um problema técnico. Tente novamente em instantes.', 'dados' => [], 'usage' => null];
         }
 
         $usage = $response->json('usage', []);
-        Log::debug('ClaudeAgentService usage', [
+        Log::channel('jobs')->debug('ClaudeAgentService usage', [
             'cache_creation' => $usage['cache_creation_input_tokens'] ?? 0,
             'cache_read'     => $usage['cache_read_input_tokens']     ?? 0,
             'input'          => $usage['input_tokens']                ?? 0,
@@ -105,7 +105,7 @@ class ClaudeAgentService
         }
 
         if (! $jsonDecoded) {
-            Log::warning('ClaudeAgentService: falha ao parsear JSON da resposta', ['content' => mb_substr($content, 0, 500)]);
+            Log::channel('jobs')->warning('ClaudeAgentService: falha ao parsear JSON da resposta', ['content' => mb_substr($content, 0, 500)]);
         }
 
         $usageData = [
@@ -174,7 +174,7 @@ PROF:
 {$profissionais}
 SVC:
 {$servicos}{$opcoesPart}{$instrucoes}
-REGRAS:texto simples sem markdown;saudação=cumprimente+pergunte o que quer;serviço escolhido=já é agendamento,não ofereça "agendar" separado;sem horários inventados;mídia→peça texto;2x sem entender/irritado→transfira.
+REGRAS:texto simples sem markdown;saudação=cumprimente+pergunte o que quer,não liste serviços proativamente;serviço escolhido=já é agendamento,não ofereça "agendar" separado;sem horários inventados;mídia→peça texto;2x sem entender/irritado→transfira.
 JSON:
 agendar={"acao":"agendar","cliente_nome":"...","profissional_id":0,"servico_id":0,"data":"YYYY-MM-DD","horario":"HH:MM","opcao_extra":null,"observacoes":null,"resposta":"..."}
 confirmar={"acao":"confirmar","resposta":"..."}
