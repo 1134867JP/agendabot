@@ -253,17 +253,17 @@ class ClaudeAgentService
             [
                 'name'         => 'confirmar_agendamento',
                 'description'  => 'Confirma o agendamento pendente existente quando o cliente expressa confirmação.',
-                'input_schema' => ['type' => 'object', 'properties' => []],
+                'input_schema' => ['type' => 'object', 'properties' => new \stdClass()],
             ],
             [
                 'name'         => 'cancelar_agendamento',
                 'description'  => 'Cancela o agendamento pendente existente quando o cliente solicita cancelamento.',
-                'input_schema' => ['type' => 'object', 'properties' => []],
+                'input_schema' => ['type' => 'object', 'properties' => new \stdClass()],
             ],
             [
                 'name'         => 'transferir_para_humano',
                 'description'  => 'Transfere a conversa para um atendente humano. Use quando não entender o cliente após 2 tentativas, quando pedir humano ou ficar irritado.',
-                'input_schema' => ['type' => 'object', 'properties' => []],
+                'input_schema' => ['type' => 'object', 'properties' => new \stdClass()],
             ],
         ];
     }
