@@ -148,31 +148,6 @@ export default function WhatsAppPage({ tenant, webhook_url }: Props) {
                     )}
                 </div>
 
-                {/* Webhook URL */}
-                <div className="card mt-6 p-6">
-                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
-                        URL do Webhook
-                    </h3>
-                    <p className="mb-3 text-xs" style={{ color: 'var(--text-3)' }}>
-                        Configure esta URL na Evolution API para receber mensagens.
-                    </p>
-                    <div className="flex items-center gap-2 rounded-lg px-3 py-2.5" style={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border)' }}>
-                        <code className="flex-1 truncate text-xs" style={{ color: 'var(--text-2)' }}>{webhook_url}</code>
-                        <button
-                            onClick={() => navigator.clipboard.writeText(webhook_url)}
-                            title="Copiar URL"
-                            className="shrink-0 rounded-md p-1.5 transition-colors hover:bg-[var(--bg-surface)]"
-                            style={{ color: 'var(--text-3)' }}
-                        >
-                            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                {/* How it works */}
                 <div className="card mt-6 p-6">
                     <h3 className="mb-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
                         Como funciona
