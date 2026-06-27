@@ -384,7 +384,7 @@ class ClaudeAgentService
             ->map(fn ($grupo, $tipo) => strtoupper($tipo) . ': ' . $grupo->pluck('nome')->join(', '))
             ->join("\n");
 
-        $horarios = $this->formatarHorarios($tenant->horarios_funcionamento ?? []);
+        $horarios = $this->formatarHorarios($tenant->horarios_funcionamento ?? '');
 
         $tomInstrucao = match ($tenant->tom_voz) {
             'formal'       => 'Linguagem profissional e respeitosa. Sem emojis. Use "Senhor/Senhora".',
@@ -417,9 +417,10 @@ INSTRUÇÕES:
 PROMPT;
     }
 
-    private function formatarHorarios(array $horarios): string
+    private function formatarHorarios(mixed $horarios): string
     {
         if (empty($horarios)) return 'Consultar pelo WhatsApp';
+        if (is_string($horarios)) return $horarios;
         return collect($horarios)->map(fn ($h, $k) => "{$k}: {$h}")->join(' | ');
     }
 }

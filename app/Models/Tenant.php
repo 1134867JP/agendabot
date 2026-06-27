@@ -20,13 +20,12 @@ class Tenant extends Model
     ];
 
     protected $casts = [
-        'configuracoes'          => 'array',
-        'horarios_funcionamento' => 'array',
-        'whatsapp_conectado'     => 'boolean',
-        'ativo'                  => 'boolean',
-        'bot_ativo'              => 'boolean',
-        'trial_ends_at'          => 'datetime',
-        'subscription_ends_at'   => 'datetime',
+        'configuracoes'      => 'array',
+        'whatsapp_conectado' => 'boolean',
+        'ativo'              => 'boolean',
+        'bot_ativo'          => 'boolean',
+        'trial_ends_at'      => 'datetime',
+        'subscription_ends_at' => 'datetime',
     ];
 
     public function recursos(): HasMany { return $this->hasMany(Recurso::class); }
