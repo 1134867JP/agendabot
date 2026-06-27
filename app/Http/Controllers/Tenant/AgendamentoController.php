@@ -25,8 +25,8 @@ class AgendamentoController extends Controller
         $tenant = app('tenant');
 
         $query = Agendamento::where('tenant_id', $tenant->id)
-            ->with('recurso')
-            ->orderBy('inicio', 'desc');
+            ->with(['recurso', 'profissional', 'servico'])
+            ->orderByRaw('COALESCE(inicio, data_hora) DESC');
 
         if ($request->filled('data')) {
             $query->whereDate('inicio', $request->data);

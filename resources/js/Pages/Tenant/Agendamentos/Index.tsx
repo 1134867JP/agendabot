@@ -11,11 +11,13 @@ interface Props extends PageProps {
 
 const STATUS_BADGE: Record<string, string> = {
     confirmado: 'badge-green',
+    agendado:   'badge-green',
     cancelado:  'badge-red',
     concluido:  'badge-gray',
 };
 const STATUS_LABEL: Record<string, string> = {
     confirmado: 'Confirmado',
+    agendado:   'Confirmado',
     cancelado:  'Cancelado',
     concluido:  'Concluído',
 };
@@ -310,17 +312,22 @@ export default function AgendamentosIndex({ agendamentos, recursos, filtros }: P
                                         <p className="font-medium text-primary">{a.cliente_nome}</p>
                                         <p className="text-xs" style={{ color: 'var(--text-3)' }}>{a.cliente_telefone}</p>
                                     </td>
-                                    <td className="px-4 py-3" style={{ color: 'var(--text-2)' }}>{a.recurso?.nome}</td>
-                                    <td className="px-4 py-3 whitespace-nowrap" style={{ color: 'var(--text-2)' }}>{fmtDt(a.inicio)}</td>
-                                    <td className="px-4 py-3" style={{ color: 'var(--text-3)' }}>{duracaoMin(a.inicio, a.fim)} min</td>
+                                    <td className="px-4 py-3" style={{ color: 'var(--text-2)' }}>
+                                        <p>{a.recurso?.nome ?? (a as any).profissional?.nome ?? '—'}</p>
+                                        {(a as any).servico?.nome && <p className="text-xs" style={{ color: 'var(--text-3)' }}>{(a as any).servico.nome}</p>}
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap" style={{ color: 'var(--text-2)' }}>{fmtDt((a as any).data_hora ?? a.inicio)}</td>
+                                    <td className="px-4 py-3" style={{ color: 'var(--text-3)' }}>
+                                        {a.fim ? duracaoMin(a.inicio, a.fim) : ((a as any).duracao_minutos ?? '—')} min
+                                    </td>
                                     <td className="px-4 py-3" style={{ color: 'var(--text-2)' }}>
                                         {a.valor_total
                                             ? Number(a.valor_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                                             : '—'}
                                     </td>
                                     <td className="px-4 py-3">
-                                        <span className={`badge ${a.origem === 'whatsapp' ? 'badge-green' : 'badge-gray'}`}>
-                                            {a.origem === 'whatsapp' ? '🤖 WhatsApp' : '📋 Manual'}
+                                        <span className={`badge ${(a.origem === 'bot' || a.origem === 'whatsapp') ? 'badge-green' : 'badge-gray'}`}>
+                                            {(a.origem === 'bot' || a.origem === 'whatsapp') ? '🤖 WhatsApp' : '📋 Manual'}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3">
@@ -329,7 +336,7 @@ export default function AgendamentosIndex({ agendamentos, recursos, filtros }: P
                                         </span>
                                     </td>
                                     <td className="px-4 py-3">
-                                        {a.status === 'confirmado' && (
+                                        {(a.status === 'confirmado' || a.status === 'agendado') && (
                                             <div className="flex gap-1">
                                                 <button
                                                     onClick={() => concluir(a.id)}
