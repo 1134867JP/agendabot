@@ -92,7 +92,7 @@ export default function LogsConversas() {
             </div>
 
             {/* Lista */}
-            <div className="card divide-y" style={{ divideColor: 'var(--border)' }}>
+            <div className="card divide-y">
                 {loading && (
                     <div className="px-4 py-8 text-center text-sm" style={{ color: 'var(--text-3)' }}>Carregando...</div>
                 )}
