@@ -1,6 +1,7 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
+import { useConfirm } from '@/hooks/useConfirm';
 import { PageProps } from '@/types';
 import Toggle from '@/Components/Toggle';
 
@@ -193,6 +194,7 @@ function EditarProfissionalForm({ profissional, onClose }: { profissional: Profi
         especialidades: profissional.especialidades ?? [],
         ativo: profissional.ativo,
     });
+    const { confirm, modal: confirmModal } = useConfirm();
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -202,13 +204,14 @@ function EditarProfissionalForm({ profissional, onClose }: { profissional: Profi
         });
     };
 
-    const excluir = () => {
-        if (confirm('Desativar este profissional?')) {
-            router.delete(route('tenant.profissionais.destroy', profissional.id), { preserveScroll: true });
-        }
+    const excluir = async () => {
+        const ok = await confirm({ title: 'Desativar profissional', message: `Desativar "${profissional.nome}"? Ele não aceitará novos agendamentos.`, confirmLabel: 'Desativar', variant: 'warning' });
+        if (ok) router.delete(route('tenant.profissionais.destroy', profissional.id), { preserveScroll: true });
     };
 
     return (
+        <>
+        {confirmModal}
         <div className="card overflow-hidden" style={{ borderColor: 'var(--accent)' }}>
             <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
                 <h3 className="font-semibold text-primary">Editar profissional</h3>
@@ -244,6 +247,7 @@ function EditarProfissionalForm({ profissional, onClose }: { profissional: Profi
                 </div>
             </form>
         </div>
+        </>
     );
 }
 

@@ -2,6 +2,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { PageProps, Agendamento, Recurso, PaginatedData } from '@/types';
+import { useConfirm } from '@/hooks/useConfirm';
 
 interface Props extends PageProps {
     agendamentos: PaginatedData<Agendamento>;
@@ -218,6 +219,7 @@ function NovaReservaModal({ recursos, onClose }: { recursos: Recurso[]; onClose:
 
 export default function AgendamentosIndex({ agendamentos, recursos, filtros }: Props) {
     const [modalAberto, setModalAberto] = useState(false);
+    const { confirm, modal: confirmModal } = useConfirm();
 
     const filtrar = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -227,27 +229,25 @@ export default function AgendamentosIndex({ agendamentos, recursos, filtros }: P
         router.get(route('tenant.agendamentos.index'), params, { preserveState: true });
     };
 
-    const cancelar = (id: number) => {
-        if (confirm('Cancelar este agendamento?')) {
-            router.patch(route('tenant.agendamentos.cancelar', id));
-        }
+    const cancelar = async (id: number) => {
+        const ok = await confirm({ title: 'Cancelar agendamento', message: 'O agendamento será marcado como cancelado. Deseja continuar?', confirmLabel: 'Cancelar agendamento', variant: 'warning' });
+        if (ok) router.patch(route('tenant.agendamentos.cancelar', id));
     };
 
-    const concluir = (id: number) => {
-        if (confirm('Marcar como concluído?')) {
-            router.patch(route('tenant.agendamentos.concluir', id));
-        }
+    const concluir = async (id: number) => {
+        const ok = await confirm({ title: 'Marcar como concluído', message: 'Confirmar que este atendimento foi realizado?', confirmLabel: 'Concluir', variant: 'default' });
+        if (ok) router.patch(route('tenant.agendamentos.concluir', id));
     };
 
-    const excluir = (id: number) => {
-        if (confirm('Excluir este agendamento permanentemente? Esta ação não pode ser desfeita.')) {
-            router.delete(route('tenant.agendamentos.destroy', id));
-        }
+    const excluir = async (id: number) => {
+        const ok = await confirm({ title: 'Excluir agendamento', message: 'Esta ação remove o registro permanentemente e não pode ser desfeita.', confirmLabel: 'Excluir', variant: 'danger' });
+        if (ok) router.delete(route('tenant.agendamentos.destroy', id));
     };
 
     return (
         <AppLayout title="Agendamentos" subtitle="Reservas confirmadas, concluídas e canceladas">
             <Head title="Agendamentos" />
+            {confirmModal}
 
             {/* Filtros */}
             <form onSubmit={filtrar} className="card mb-5 flex flex-wrap items-end gap-3 p-4">

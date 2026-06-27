@@ -1,5 +1,6 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState, useRef } from 'react';
+import { useConfirm } from '@/hooks/useConfirm';
 import AppLayout from '@/Layouts/AppLayout';
 import { PageProps } from '@/types';
 import Toggle from '@/Components/Toggle';
@@ -168,13 +169,16 @@ function EditarServicoForm({
         });
     };
 
-    const excluir = () => {
-        if (confirm('Remover este serviço?')) {
-            router.delete(route('tenant.servicos.destroy', servico.id), { preserveScroll: true });
-        }
+    const { confirm, modal: confirmModal } = useConfirm();
+
+    const excluir = async () => {
+        const ok = await confirm({ title: 'Remover serviço', message: `Remover "${servico.nome}"? Esta ação não pode ser desfeita.`, confirmLabel: 'Remover', variant: 'danger' });
+        if (ok) router.delete(route('tenant.servicos.destroy', servico.id), { preserveScroll: true });
     };
 
     return (
+        <>
+        {confirmModal}
         <div className="card overflow-hidden" style={{ borderColor: 'var(--accent)' }}>
             <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
                 <h3 className="font-semibold text-primary">Editar serviço</h3>
@@ -266,6 +270,7 @@ function EditarServicoForm({
                 </div>
             </form>
         </div>
+        </>
     );
 }
 
