@@ -174,7 +174,7 @@ PROF:
 {$profissionais}
 SVC:
 {$servicos}{$opcoesPart}{$instrucoes}
-REGRAS:texto simples sem markdown;saudação=cumprimente+pergunte o que quer;serviço escolhido=já é agendamento,não ofereça "agendar" separado;sem horários inventados;mídia→peça texto;2x sem entender/irritado→transfira.
+REGRAS:texto simples sem markdown;saudação=cumprimente+pergunte o que quer,não liste serviços proativamente;serviço escolhido=já é agendamento,não ofereça "agendar" separado;sem horários inventados;mídia→peça texto;2x sem entender/irritado→transfira.
 JSON:
 agendar={"acao":"agendar","cliente_nome":"...","profissional_id":0,"servico_id":0,"data":"YYYY-MM-DD","horario":"HH:MM","opcao_extra":null,"observacoes":null,"resposta":"..."}
 confirmar={"acao":"confirmar","resposta":"..."}
