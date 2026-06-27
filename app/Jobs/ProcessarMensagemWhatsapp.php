@@ -89,6 +89,29 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             ->values()
             ->all();
 
+        // A API do Claude exige que a primeira mensagem seja sempre 'user'.
+        // Quando limit(6) corta o início, o array pode começar com 'assistant' → 400.
+        while (! empty($historico) && $historico[0]['role'] === 'assistant') {
+            array_shift($historico);
+        }
+
+        // Mesclar mensagens consecutivas com o mesmo role (Claude não aceita duplicatas de role).
+        $historico = array_values(array_reduce($historico, function (array $carry, array $msg): array {
+            if (! empty($carry) && end($carry)['role'] === $msg['role']) {
+                $carry[array_key_last($carry)]['content'] .= "\n" . $msg['content'];
+            } else {
+                $carry[] = $msg;
+            }
+            return $carry;
+        }, []));
+
+        Log::debug('ProcessarMensagemWhatsapp: historico enviado ao Claude', [
+            'tenant'       => $this->tenant->id,
+            'telefone'     => $this->telefone,
+            'total_msgs'   => count($historico),
+            'roles'        => array_column($historico, 'role'),
+        ]);
+
         // 7. Buscar slots e agendamento pendente em paralelo
         $horariosDisponiveis = count($historico) >= 3
             ? $agendamentoService->buscarHorariosDisponiveis($this->tenant, 4)

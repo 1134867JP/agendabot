@@ -68,7 +68,17 @@ class ClaudeAgentService
             ]);
 
         if (! $response->successful()) {
-            Log::error('ClaudeAgentService error', ['status' => $response->status(), 'body' => $response->body()]);
+            Log::error('ClaudeAgentService error', [
+                'status'          => $response->status(),
+                'body'            => $response->body(),
+                'error_type'      => $response->json('error.type'),
+                'error_message'   => $response->json('error.message'),
+                'model'           => $this->model,
+                'total_messages'  => count($mensagens),
+                'first_role'      => $mensagens[0]['role'] ?? null,
+                'last_role'       => ! empty($mensagens) ? end($mensagens)['role'] : null,
+                'roles_sequence'  => array_column($mensagens, 'role'),
+            ]);
             return ['acao' => 'erro', 'resposta' => 'Desculpe, tive um problema técnico. Tente novamente em instantes.', 'dados' => [], 'usage' => null];
         }
 
