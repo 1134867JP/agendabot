@@ -106,11 +106,11 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         // 5. Salvar mensagem do cliente
         $conversa->registrarMensagem('cliente', $this->mensagem, $this->evolutionMessageId);
 
-        // 6. Buscar histórico das últimas 4 mensagens para o Claude (economiza tokens)
+        // 6. Buscar histórico das últimas 12 mensagens para o Claude manter contexto da conversa
         $historico = $conversa->mensagens()
             ->latest('enviada_em')
             ->latest('id')
-            ->limit(4)
+            ->limit(12)
             ->get()
             ->reverse()
             ->map(fn ($m) => [
