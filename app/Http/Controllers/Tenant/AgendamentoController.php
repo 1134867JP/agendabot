@@ -109,6 +109,7 @@ class AgendamentoController extends Controller
         abort_unless($agendamento->tenant_id === app('tenant')->id, 403);
 
         $validated = $request->validate([
+            'recurso_id'       => ['nullable', 'integer', 'exists:recursos,id'],
             'cliente_nome'     => ['required', 'string', 'max:255'],
             'cliente_telefone' => ['required', 'string', 'max:20'],
             'inicio'           => ['required', 'date'],
@@ -116,10 +117,12 @@ class AgendamentoController extends Controller
             'observacoes'      => ['nullable', 'string'],
         ]);
 
-        // Verificar conflito excluindo o próprio agendamento
-        $chave = $agendamento->recurso_id
-            ? ['recurso_id', $agendamento->recurso_id]
-            : ['profissional_id', $agendamento->profissional_id];
+        $recursoId     = $validated['recurso_id'] ?? $agendamento->recurso_id;
+        $profissionalId = $recursoId ? null : $agendamento->profissional_id;
+
+        $chave = $recursoId
+            ? ['recurso_id', $recursoId]
+            : ['profissional_id', $profissionalId];
 
         $conflito = Agendamento::where($chave[0], $chave[1])
             ->where('id', '!=', $agendamento->id)
@@ -132,7 +135,7 @@ class AgendamentoController extends Controller
             return back()->withErrors(['inicio' => 'Horário não disponível.']);
         }
 
-        $agendamento->update([
+        $updateData = [
             'cliente_nome'     => $validated['cliente_nome'],
             'cliente_telefone' => $validated['cliente_telefone'],
             'inicio'           => $validated['inicio'],
@@ -140,7 +143,17 @@ class AgendamentoController extends Controller
             'data_hora'        => $validated['inicio'],
             'duracao_minutos'  => (int) Carbon::parse($validated['inicio'])->diffInMinutes($validated['fim']),
             'observacoes'      => $validated['observacoes'] ?? null,
-        ]);
+        ];
+
+        if (!empty($validated['recurso_id'])) {
+            $recurso = Recurso::where('tenant_id', app('tenant')->id)->findOrFail($validated['recurso_id']);
+            $updateData['recurso_id'] = $validated['recurso_id'];
+            $updateData['valor_total'] = $recurso->valor_hora
+                ? $recurso->valor_hora * Carbon::parse($validated['inicio'])->diffInMinutes($validated['fim']) / 60
+                : null;
+        }
+
+        $agendamento->update($updateData);
 
         return back()->with('success', 'Agendamento atualizado.');
     }

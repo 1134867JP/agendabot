@@ -34,6 +34,147 @@ function duracaoMin(a: string, b: string) {
     return Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000);
 }
 
+// ─── Modal de edição ─────────────────────────────────────────────────────────
+
+function toLocalInput(iso: string) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(0, 16).replace(' ', 'T');
+}
+
+function EditarReservaModal({ agendamento, recursos, onClose }: {
+    agendamento: Agendamento;
+    recursos: Recurso[];
+    onClose: () => void;
+}) {
+    const { data, setData, put, processing, errors } = useForm({
+        recurso_id:        (agendamento.recurso?.id ?? '') as number | string,
+        cliente_nome:      agendamento.cliente_nome,
+        cliente_telefone:  agendamento.cliente_telefone,
+        inicio:            toLocalInput(agendamento.inicio),
+        fim:               toLocalInput(agendamento.fim),
+        observacoes:       agendamento.observacoes ?? '',
+    });
+
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
+
+    const datePart = (s: string) => s?.split('T')[0] ?? '';
+    const timePart = (s: string) => s?.split('T')[1]?.slice(0, 5) ?? '';
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        put(route('tenant.agendamentos.update', agendamento.id), { onSuccess: onClose });
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center px-4" role="dialog" aria-modal="true" aria-labelledby="modal-editar-reserva">
+            <div className="w-full max-w-md rounded-2xl p-7 shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
+                <div className="mb-5 flex items-start justify-between">
+                    <h3 id="modal-editar-reserva" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }} className="text-xl font-semibold text-primary">
+                        Editar agendamento
+                    </h3>
+                    <button onClick={onClose} style={{ color: 'var(--text-3)' }} className="hover:text-primary transition-colors" aria-label="Fechar">✕</button>
+                </div>
+
+                <form onSubmit={submit} className="space-y-4">
+                    <div>
+                        <label className="label mb-1">Serviço / Recurso</label>
+                        <select
+                            value={data.recurso_id}
+                            onChange={e => setData('recurso_id', Number(e.target.value))}
+                            className="input"
+                        >
+                            <option value="">Sem recurso</option>
+                            {recursos.map(r => <option key={r.id} value={r.id}>{r.nome}</option>)}
+                        </select>
+                        {errors.recurso_id && <p className="mt-1 text-xs text-red-400">{errors.recurso_id}</p>}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="label mb-1">Nome do cliente</label>
+                            <input
+                                value={data.cliente_nome}
+                                onChange={e => setData('cliente_nome', e.target.value)}
+                                className="input"
+                                required
+                            />
+                            {errors.cliente_nome && <p className="mt-1 text-xs text-red-400">{errors.cliente_nome}</p>}
+                        </div>
+                        <div>
+                            <label className="label mb-1">Telefone</label>
+                            <input
+                                value={data.cliente_telefone}
+                                onChange={e => setData('cliente_telefone', e.target.value)}
+                                className="input"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                        <div>
+                            <label className="label mb-1">Data</label>
+                            <input
+                                type="date"
+                                value={datePart(data.inicio)}
+                                onChange={e => {
+                                    const d = e.target.value;
+                                    setData('inicio', `${d}T${timePart(data.inicio) || '09:00'}`);
+                                }}
+                                className="input"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="label mb-1">Início</label>
+                            <input
+                                type="time"
+                                value={timePart(data.inicio)}
+                                onChange={e => setData('inicio', `${datePart(data.inicio)}T${e.target.value}`)}
+                                className="input"
+                                required
+                            />
+                            {errors.inicio && <p className="mt-1 text-xs text-red-400">{errors.inicio}</p>}
+                        </div>
+                        <div>
+                            <label className="label mb-1">Fim</label>
+                            <input
+                                type="time"
+                                value={timePart(data.fim)}
+                                onChange={e => setData('fim', `${datePart(data.inicio)}T${e.target.value}`)}
+                                className="input"
+                                required
+                            />
+                            {errors.fim && <p className="mt-1 text-xs text-red-400">{errors.fim}</p>}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="label mb-1">Observações</label>
+                        <textarea
+                            value={data.observacoes}
+                            onChange={e => setData('observacoes', e.target.value)}
+                            rows={2}
+                            className="input"
+                        />
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-1">
+                        <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
+                        <button type="submit" disabled={processing} className="btn-primary">
+                            {processing ? 'Salvando…' : 'Salvar alterações'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 // ─── Modal de nova reserva ────────────────────────────────────────────────────
 
 function NovaReservaModal({ recursos, onClose }: { recursos: Recurso[]; onClose: () => void }) {
@@ -219,6 +360,7 @@ function NovaReservaModal({ recursos, onClose }: { recursos: Recurso[]; onClose:
 
 export default function AgendamentosIndex({ agendamentos, recursos, filtros }: Props) {
     const [modalAberto, setModalAberto] = useState(false);
+    const [agendamentoEditando, setAgendamentoEditando] = useState<Agendamento | null>(null);
     const { confirm, modal: confirmModal } = useConfirm();
 
     const filtrar = (e: React.FormEvent<HTMLFormElement>) => {
@@ -345,6 +487,13 @@ export default function AgendamentosIndex({ agendamentos, recursos, filtros }: P
                                         <div className="flex gap-1">
                                             {(a.status === 'confirmado' || a.status === 'agendado') && (<>
                                                 <button
+                                                    onClick={() => setAgendamentoEditando(a)}
+                                                    className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors hover:brightness-125"
+                                                    style={{ background: 'rgba(99,102,241,0.08)', color: 'var(--accent)', border: '1px solid rgba(99,102,241,0.25)' }}
+                                                >
+                                                    Editar
+                                                </button>
+                                                <button
                                                     onClick={() => concluir(a.id)}
                                                     className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors hover:brightness-125"
                                                     style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
@@ -405,6 +554,13 @@ export default function AgendamentosIndex({ agendamentos, recursos, filtros }: P
             </button>
 
             {modalAberto && <NovaReservaModal recursos={recursos} onClose={() => setModalAberto(false)} />}
+            {agendamentoEditando && (
+                <EditarReservaModal
+                    agendamento={agendamentoEditando}
+                    recursos={recursos}
+                    onClose={() => setAgendamentoEditando(null)}
+                />
+            )}
         </AppLayout>
     );
 }
