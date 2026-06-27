@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Tenant extends Model
 {
@@ -13,18 +14,19 @@ class Tenant extends Model
         'telefone_whatsapp', 'evolution_instance', 'whatsapp_conectado',
         'configuracoes', 'ativo',
         'subscription_status', 'trial_ends_at', 'subscription_ends_at',
-        'asaas_customer_id', 'asaas_subscription_id', 'plano',
+        'asaas_customer_id', 'asaas_subscription_id', 'plano', 'taxa_agendamento_bot', 'isento_cobranca',
         // v2
         'ramo_negocio', 'descricao_negocio', 'cidade', 'endereco',
         'horarios_funcionamento', 'nome_agente', 'tom_voz', 'instrucoes_extras', 'bot_ativo',
     ];
 
     protected $casts = [
-        'configuracoes'      => 'array',
-        'whatsapp_conectado' => 'boolean',
-        'ativo'              => 'boolean',
-        'bot_ativo'          => 'boolean',
-        'trial_ends_at'      => 'datetime',
+        'configuracoes'        => 'array',
+        'whatsapp_conectado'   => 'boolean',
+        'ativo'                => 'boolean',
+        'bot_ativo'            => 'boolean',
+        'isento_cobranca'      => 'boolean',
+        'trial_ends_at'        => 'datetime',
         'subscription_ends_at' => 'datetime',
     ];
 
@@ -36,6 +38,7 @@ class Tenant extends Model
         return $this->belongsToMany(User::class, 'tenant_users')
             ->withPivot('papel')->withTimestamps();
     }
+    public function cobrancasBot(): HasMany { return $this->hasMany(CobrancaBot::class); }
     // v2
     public function profissionais(): HasMany { return $this->hasMany(Profissional::class); }
     public function servicos(): HasMany { return $this->hasMany(Servico::class); }
