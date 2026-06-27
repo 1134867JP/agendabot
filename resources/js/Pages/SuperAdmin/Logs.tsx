@@ -219,7 +219,7 @@ export default function Logs() {
 
                 {/* Reload manual */}
                 <button
-                    onClick={() => { setLoading(true); buscar(nivel); }}
+                    onClick={() => { setLoading(true); buscar(nivel, canal); }}
                     className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors"
                     style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
                 >
