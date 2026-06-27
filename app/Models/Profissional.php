@@ -32,10 +32,12 @@ class Profissional extends Model
             return [];
         }
 
-        $tz     = config('app.timezone', 'America/Sao_Paulo');
-        $slots  = [];
-        $inicio = Carbon::createFromFormat('Y-m-d H:i', $data->format('Y-m-d') . ' ' . $horario->hora_inicio, $tz);
-        $fim    = Carbon::createFromFormat('Y-m-d H:i', $data->format('Y-m-d') . ' ' . $horario->hora_fim, $tz);
+        $tz          = config('app.timezone', 'America/Sao_Paulo');
+        $slots       = [];
+        $horaInicio  = substr($horario->hora_inicio, 0, 5); // garante HH:MM
+        $horaFim     = substr($horario->hora_fim,    0, 5);
+        $inicio = Carbon::createFromFormat('Y-m-d H:i', $data->format('Y-m-d') . ' ' . $horaInicio, $tz);
+        $fim    = Carbon::createFromFormat('Y-m-d H:i', $data->format('Y-m-d') . ' ' . $horaFim,    $tz);
         $duracao = $horario->duracao_slot;
 
         $inicioDia = $data->copy()->startOfDay();

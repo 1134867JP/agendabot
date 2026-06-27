@@ -134,6 +134,7 @@ Route::middleware(['auth', 'superadmin'])->prefix('superadmin')->name('superadmi
     Route::delete('impersonar', [SuperAdmin\TenantController::class, 'pararImpersonar'])->name('impersonar.parar');
 
     Route::get('agendamentos', [SuperAdmin\AgendamentoController::class, 'index'])->name('agendamentos');
+    Route::get('financeiro',   [SuperAdmin\FinanceiroController::class,  'index'])->name('financeiro');
 
     Route::get('logs',      [SuperAdmin\LogController::class, 'index'])->name('logs');
     Route::get('logs/json', [SuperAdmin\LogController::class, 'json'])->name('logs.json');
