@@ -136,8 +136,9 @@ Route::middleware(['auth', 'superadmin'])->prefix('superadmin')->name('superadmi
     Route::get('agendamentos', [SuperAdmin\AgendamentoController::class, 'index'])->name('agendamentos');
     Route::get('financeiro',   [SuperAdmin\FinanceiroController::class,  'index'])->name('financeiro');
 
-    Route::get('logs',      [SuperAdmin\LogController::class, 'index'])->name('logs');
-    Route::get('logs/json', [SuperAdmin\LogController::class, 'json'])->name('logs.json');
+    Route::get('logs',         [SuperAdmin\LogController::class, 'index'])->name('logs');
+    Route::get('logs/json',    [SuperAdmin\LogController::class, 'json'])->name('logs.json');
+    Route::get('logs/conversas', [SuperAdmin\LogController::class, 'conversas'])->name('logs.conversas');
 
     Route::get('jobs',          [SuperAdmin\JobsController::class, 'index'])->name('jobs');
     Route::post('jobs/{id}/retry',  [SuperAdmin\JobsController::class, 'retry'])->name('jobs.retry');

@@ -123,6 +123,23 @@ export default function Logs() {
         <AppLayout title="Logs do sistema" subtitle="Registro de erros, avisos e eventos da plataforma">
             <Head title="Logs" />
 
+            {/* Tabs */}
+            <div className="mb-5 flex gap-1 border-b" style={{ borderColor: 'var(--border)' }}>
+                <span
+                    className="px-4 py-2 text-sm font-medium border-b-2 -mb-px"
+                    style={{ borderColor: 'var(--accent)', color: 'var(--accent)' }}
+                >
+                    Sistema
+                </span>
+                <a
+                    href={route('superadmin.logs.conversas')}
+                    className="px-4 py-2 text-sm font-medium border-b-2 border-transparent"
+                    style={{ color: 'var(--text-3)' }}
+                >
+                    Conversas do bot
+                </a>
+            </div>
+
             {/* Toolbar */}
             <div className="mb-5 flex flex-wrap items-center gap-3">
                 {/* Filtro de nível */}
