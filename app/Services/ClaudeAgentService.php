@@ -31,11 +31,17 @@ class ClaudeAgentService
         $this->currentCliente = $clienteInfo;
         $this->transferir     = false;
 
+        $hoje = \Carbon\Carbon::now('America/Sao_Paulo');
+
         $systemBlocks = [
             [
                 'type'          => 'text',
                 'text'          => $this->buildStaticPrompt($tenant),
                 'cache_control' => ['type' => 'ephemeral'],
+            ],
+            [
+                'type' => 'text',
+                'text' => 'HOJE: ' . $hoje->translatedFormat('l, d/m/Y') . ' (' . $hoje->format('Y-m-d') . '). Só agende datas futuras a partir de amanhã.',
             ],
         ];
 
@@ -161,21 +167,23 @@ class ClaudeAgentService
         $dias  = min((int) ($input['dias'] ?? 4), 7);
         $slots = $this->agendamentoService->buscarHorariosDisponiveis($this->currentTenant, $dias);
 
+        $hoje = \Carbon\Carbon::now('America/Sao_Paulo')->format('Y-m-d');
+
         if (empty($slots)) {
-            return ['disponivel' => false, 'mensagem' => 'Nenhum horário disponível nos próximos dias.'];
+            return ['hoje' => $hoje, 'disponivel' => false, 'mensagem' => 'Nenhum horário disponível nos próximos dias.'];
         }
 
         $linhas = [];
         foreach ($slots as $profissionalId => $diasSlots) {
             foreach ($diasSlots as $data => $horarios) {
                 if (! empty($horarios)) {
-                    $dataFormatada = \Carbon\Carbon::parse($data)->format('d/m');
-                    $linhas[] = "#{$profissionalId}|{$dataFormatada}: " . implode(' ', $horarios);
+                    $dataFormatada = \Carbon\Carbon::parse($data)->format('d/m (D)');
+                    $linhas[] = "#{$profissionalId}|{$data}|{$dataFormatada}: " . implode(' ', $horarios);
                 }
             }
         }
 
-        return ['slots' => implode("\n", $linhas) ?: 'Nenhum horário disponível.'];
+        return ['hoje' => $hoje, 'slots' => implode("\n", $linhas) ?: 'Nenhum horário disponível.'];
     }
 
     private function toolCriarAgendamento(array $input): array
