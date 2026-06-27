@@ -235,7 +235,7 @@ class ClaudeAgentService
             ],
             [
                 'name'         => 'criar_agendamento',
-                'description'  => 'Cria um novo agendamento. Use somente quando tiver nome do cliente, profissional, serviço, data e horário confirmados.',
+                'description'  => 'Registra o agendamento no sistema. OBRIGATÓRIO chamar esta ferramenta assim que tiver: nome do cliente, profissional_id, servico_id, data e horário — não envie mensagem de confirmação sem antes chamar esta ferramenta com sucesso. O agendamento só existe no sistema após a chamada.',
                 'input_schema' => [
                     'type'       => 'object',
                     'properties' => [
@@ -309,6 +309,7 @@ PROF:
 SVC:
 {$servicos}{$opcoesPart}{$instrucoes}
 REGRAS: mensagens curtas; não invente horários (use buscar_slots); mídia→peça texto; 2x sem entender/irritado→transfira; datas sempre futuras.
+CRÍTICO: NUNCA diga que um agendamento foi criado/confirmado sem antes ter chamado criar_agendamento com sucesso — o sistema só registra via ferramenta, não por mensagem de texto.
 PROMPT;
     }
 
