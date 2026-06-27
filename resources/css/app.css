@@ -124,7 +124,7 @@
         border: 1px solid var(--border-strong);
         color: var(--text-1);
         @apply block w-full rounded-lg px-3 py-2 text-sm transition
-               placeholder:text-ink-3
+               placeholder:text-[color:var(--text-3)]
                focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40;
     }
 
