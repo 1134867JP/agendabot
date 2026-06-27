@@ -159,6 +159,13 @@ class AgendamentoController extends Controller
         return back()->with('success', 'Agendamento concluído.');
     }
 
+    public function destroy(Agendamento $agendamento): RedirectResponse
+    {
+        abort_unless($agendamento->tenant_id === app('tenant')->id, 403);
+        $agendamento->delete();
+        return back()->with('success', 'Agendamento excluído.');
+    }
+
     public function exportar(Request $request): StreamedResponse
     {
         $tenant = app('tenant');

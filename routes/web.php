@@ -65,6 +65,7 @@ Route::middleware('auth')->group(function () {
         Route::put('agendamentos/{agendamento}', [Tenant\AgendamentoController::class, 'update'])->name('agendamentos.update');
         Route::patch('agendamentos/{agendamento}/cancelar', [Tenant\AgendamentoController::class, 'cancelar'])->name('agendamentos.cancelar');
         Route::patch('agendamentos/{agendamento}/concluir', [Tenant\AgendamentoController::class, 'concluir'])->name('agendamentos.concluir');
+        Route::delete('agendamentos/{agendamento}', [Tenant\AgendamentoController::class, 'destroy'])->name('agendamentos.destroy');
 
         // Analytics
         Route::get('analytics', [Tenant\AnalyticsController::class, 'index'])->name('analytics');

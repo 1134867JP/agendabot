@@ -239,6 +239,12 @@ export default function AgendamentosIndex({ agendamentos, recursos, filtros }: P
         }
     };
 
+    const excluir = (id: number) => {
+        if (confirm('Excluir este agendamento permanentemente? Esta ação não pode ser desfeita.')) {
+            router.delete(route('tenant.agendamentos.destroy', id));
+        }
+    };
+
     return (
         <AppLayout title="Agendamentos" subtitle="Reservas confirmadas, concluídas e canceladas">
             <Head title="Agendamentos" />
@@ -336,8 +342,8 @@ export default function AgendamentosIndex({ agendamentos, recursos, filtros }: P
                                         </span>
                                     </td>
                                     <td className="px-4 py-3">
-                                        {(a.status === 'confirmado' || a.status === 'agendado') && (
-                                            <div className="flex gap-1">
+                                        <div className="flex gap-1">
+                                            {(a.status === 'confirmado' || a.status === 'agendado') && (<>
                                                 <button
                                                     onClick={() => concluir(a.id)}
                                                     className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors hover:brightness-125"
@@ -352,8 +358,16 @@ export default function AgendamentosIndex({ agendamentos, recursos, filtros }: P
                                                 >
                                                     Cancelar
                                                 </button>
-                                            </div>
-                                        )}
+                                            </>)}
+                                            <button
+                                                onClick={() => excluir(a.id)}
+                                                className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
+                                                style={{ background: 'rgba(239,68,68,0.04)', color: '#f87171', border: '1px solid rgba(239,68,68,0.15)' }}
+                                                title="Excluir permanentemente"
+                                            >
+                                                🗑
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
