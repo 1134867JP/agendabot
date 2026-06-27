@@ -7,7 +7,6 @@ use App\Models\Cliente;
 use App\Models\Conversa;
 use App\Models\Mensagem;
 use App\Models\Tenant;
-use App\Exceptions\HorarioIndisponivelException;
 use App\Models\TokenUsage;
 use App\Services\AgendamentoService;
 use App\Services\ClaudeAgentService;
@@ -27,7 +26,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
 
     public int $tries = 3;
     public array $backoff = [30, 60, 120];
-    public int $timeout = 45;
+    public int $timeout = 90;
 
     public function __construct(
         private Tenant $tenant,
@@ -55,7 +54,6 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             ['nome' => $nomeInicial],
         );
 
-        // Atualizar nome se veio como placeholder e agora temos o pushName real
         if ($this->pushName && $cliente->nome === 'Cliente WhatsApp') {
             $cliente->update(['nome' => $this->pushName]);
         }
@@ -86,7 +84,6 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
                 ->whereYear('created_at', now()->year)
                 ->count();
 
-            // Alerta em 80% do limite (enviado uma única vez por mês via flag no tenant)
             $alertaKey = "alerta_limite_80_{$this->tenant->id}_" . now()->format('Ym');
             if ($agendamentosMes >= (int) ($limiteBot * 0.8) && ! cache()->has($alertaKey)) {
                 cache()->put($alertaKey, true, now()->endOfMonth());
@@ -97,7 +94,6 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
                 );
             }
 
-            // Bloqueio total ao atingir o limite
             if ($agendamentosMes >= $limiteBot) {
                 $conversa->registrarMensagem('cliente', $this->mensagem, $this->evolutionMessageId);
                 $aviso = "Olá! 😕 Nosso sistema de agendamento automático está temporariamente pausado este mês.\nPor favor, entre em contato diretamente para agendar.";
@@ -123,33 +119,26 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             ->values()
             ->all();
 
-        // 7. Buscar slots e agendamento pendente em paralelo
-        $horariosDisponiveis = count($historico) >= 3
-            ? $agendamentoService->buscarHorariosDisponiveis($this->tenant, 4)
-            : [];
+        // 7. Buscar agendamento pendente
+        $agendamentoPendente = $this->buscarAgendamentoPendente($cliente);
 
-        $agendamentoPendente       = $this->buscarAgendamentoPendente($cliente);
-        $agendamentoPendenteInfo   = $agendamentoPendente
-            ? $this->formatarAgendamentoPendente($agendamentoPendente)
-            : null;
-
-        // 8. Pré-filtro de intenções simples — evita chamada ao Claude quando há agendamento
-        //    pendente e o cliente apenas confirma ou cancela com palavras simples
+        // 8. Pré-filtro de intenções simples — evita chamada ao Claude para confirmações/cancelamentos óbvios
         $intencaoDetectada = $agendamentoPendente
             ? $intencao->detectarConfirmacao($this->mensagem)
             : null;
 
         if ($intencaoDetectada) {
-            $resultado = [
-                'acao'    => $intencaoDetectada,
-                'resposta' => $intencaoDetectada === 'confirmar'
-                    ? 'Perfeito! Agendamento confirmado. ✅'
-                    : 'Entendido, agendamento cancelado.',
-                'dados'   => [],
-                'usage'   => null,
-            ];
+            if ($intencaoDetectada === 'confirmar') {
+                $agendamentoPendente->update(['status' => 'confirmado']);
+                $resposta = 'Perfeito! Agendamento confirmado. ✅';
+            } else {
+                $agendamentoService->cancelar($agendamentoPendente);
+                $resposta = 'Entendido, agendamento cancelado.';
+            }
         } else {
-            $resultado = $claude->processar($this->tenant, $historico, $horariosDisponiveis, $agendamentoPendenteInfo);
+            // 9. Chamar Claude com tool use
+            $clienteInfo = ['id' => $cliente->id, 'nome' => $cliente->nome, 'telefone' => $cliente->telefone];
+            $resultado   = $claude->processar($this->tenant, $historico, $clienteInfo, $agendamentoPendente);
 
             if (! empty($resultado['usage'])) {
                 TokenUsage::create(array_merge(
@@ -157,33 +146,18 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
                     $resultado['usage'],
                 ));
             }
-        }
 
-        // 9. Processar ação retornada pelo Claude
-        $agendamentoCriado = true;
-        $erroAgendamento   = null;
-        match ($resultado['acao']) {
-            'agendar'    => [$agendamentoCriado, $erroAgendamento] = $this->processarAgendamento($resultado['dados'], $cliente, $agendamentoService),
-            'confirmar'  => $this->confirmarAgendamento($agendamentoPendente),
-            'cancelar'   => $this->cancelarAgendamento($agendamentoPendente, $agendamentoService),
-            'transferir' => $this->transferirParaHumano($conversa),
-            default      => null,
-        };
-
-        // Se o agendamento falhou, substituir resposta com mensagem adequada
-        if ($resultado['acao'] === 'agendar' && ! $agendamentoCriado) {
-            if ($erroAgendamento === 'horario_indisponivel') {
-                $resultado['resposta'] = 'Esse horário não está disponível. Por favor, escolha outro horário nos slots disponíveis.';
-            } else {
-                $resultado['resposta'] = 'Desculpe, houve um problema técnico ao confirmar seu agendamento. Um atendente entrará em contato em breve. 🙏';
-                $this->transferirParaHumano($conversa);
+            if ($resultado['transferir']) {
+                $conversa->update(['status_v2' => 'aguardando_humano']);
             }
+
+            $resposta = $resultado['resposta'];
         }
 
         // 10. Salvar resposta do bot e enviar ao cliente
-        $conversa->registrarMensagem('bot', $resultado['resposta']);
-        $evolution->enviarMensagem($this->tenant->evolution_instance, $this->telefone, $resultado['resposta']);
-        Log::channel('jobs')->info('BOT_RESPOSTA', ['telefone' => $this->telefone, 'acao' => $resultado['acao'], 'resposta' => mb_substr($resultado['resposta'], 0, 200)]);
+        $conversa->registrarMensagem('bot', $resposta);
+        $evolution->enviarMensagem($this->tenant->evolution_instance, $this->telefone, $resposta);
+        Log::channel('jobs')->info('BOT_RESPOSTA', ['telefone' => $this->telefone, 'resposta' => mb_substr($resposta, 0, 200)]);
     }
 
     private function buscarAgendamentoPendente(Cliente $cliente): ?Agendamento
@@ -200,72 +174,5 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             })
             ->orderByRaw('COALESCE(data_hora, inicio)')
             ->first();
-    }
-
-    private function formatarAgendamentoPendente(Agendamento $agendamento): string
-    {
-        $dataHora = Carbon::parse($agendamento->data_hora ?? $agendamento->inicio)
-            ->locale('pt_BR')
-            ->translatedFormat('d/m/Y \à\s H:i');
-
-        $servico = $agendamento->profissional?->nome
-            ?? $agendamento->recurso?->nome
-            ?? 'serviço';
-
-        return "📅 {$dataHora} — {$servico}";
-    }
-
-    private function confirmarAgendamento(?Agendamento $agendamento): void
-    {
-        if ($agendamento) {
-            $agendamento->update(['status' => 'confirmado']);
-        }
-    }
-
-    private function cancelarAgendamento(?Agendamento $agendamento, AgendamentoService $service): void
-    {
-        if ($agendamento) {
-            $service->cancelar($agendamento);
-        }
-    }
-
-    /** @return array{bool, string|null} [sucesso, tipo_erro] */
-    private function processarAgendamento(array $dados, Cliente $cliente, AgendamentoService $service): array
-    {
-        try {
-            // Atualizar nome do cliente se identificado (e não for o placeholder padrão)
-            if (! empty($dados['cliente_nome']) && $dados['cliente_nome'] !== 'Cliente WhatsApp') {
-                $cliente->update(['nome' => $dados['cliente_nome']]);
-            }
-
-            $service->criarAgendamentoV2($this->tenant, array_merge($dados, [
-                'cliente_id'       => $cliente->id,
-                'cliente_nome'     => $cliente->nome,
-                'cliente_telefone' => $cliente->telefone,
-                'origem'           => 'bot',
-            ]));
-
-            return [true, null];
-        } catch (HorarioIndisponivelException $e) {
-            Log::channel('jobs')->warning('ProcessarMensagemWhatsapp: horário indisponível', [
-                'error'  => $e->getMessage(),
-                'dados'  => $dados,
-                'tenant' => $this->tenant->id,
-            ]);
-            return [false, 'horario_indisponivel'];
-        } catch (\Throwable $e) {
-            Log::channel('jobs')->error('ProcessarMensagemWhatsapp: falha ao criar agendamento', [
-                'error'  => $e->getMessage(),
-                'trace'  => $e->getTraceAsString(),
-                'dados'  => $dados,
-                'tenant' => $this->tenant->id,
-            ]);
-            return [false, 'erro_tecnico'];
-        }
-    }
-
-    private function transferirParaHumano(Conversa $conversa): void
-    {
-        $conversa->update(['status_v2' => 'aguardando_humano']);
     }
 }

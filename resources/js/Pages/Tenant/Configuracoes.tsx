@@ -27,9 +27,8 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
         tom_voz:           (tenant.tom_voz          ?? 'semiformal') as TomVoz,
         instrucoes_extras: tenant.instrucoes_extras ?? '',
         bot_ativo:         tenant.bot_ativo         ?? true,
-        horarios_funcionamento: tenant.horarios_funcionamento ?? '',
-        lembrete_ativo:    (tenant as any).lembrete_ativo    ?? true,
-        lembrete_texto:    (tenant as any).lembrete_texto    ?? '',
+        lembrete_ativo:    (tenant as any).lembrete_ativo ?? true,
+        lembrete_texto:    (tenant as any).lembrete_texto ?? '',
     });
 
     const submit = (e: React.FormEvent) => {
@@ -160,8 +159,6 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                                         background: ativo ? 'var(--accent-light)' : 'transparent',
                                         boxShadow: ativo ? '0 0 0 1px var(--accent)' : 'none',
                                     }}
-                                    onMouseEnter={e => { if (!ativo) (e.currentTarget as HTMLElement).style.borderColor = 'rgba(99,102,241,0.4)'; }}
-                                    onMouseLeave={e => { if (!ativo) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; }}
                                 >
                                     <p className="text-sm font-medium" style={{ color: ativo ? 'var(--accent)' : 'var(--text-1)' }}>{ton.label}</p>
                                     <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>{ton.desc}</p>
@@ -187,27 +184,6 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                         {(data.instrucoes_extras || '').length}/3000 caracteres
                     </p>
                     {errors.instrucoes_extras && <p className="mt-1 text-xs text-red-400">{errors.instrucoes_extras}</p>}
-                </div>
-
-                {/* Horários de funcionamento (campo livre opcional) */}
-                <div>
-                    <label className="label mb-1">
-                        Horários de funcionamento{' '}
-                        <span className="font-normal" style={{ color: 'var(--text-3)' }}>(opcional)</span>
-                    </label>
-                    <textarea
-                        value={data.horarios_funcionamento}
-                        onChange={e => setData('horarios_funcionamento', e.target.value)}
-                        rows={2}
-                        className="input resize-none"
-                        placeholder="Ex: Seg–Sex 09:00–19:00, Sáb 09:00–13:00"
-                    />
-                    <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
-                        Informação exibida para o cliente quando perguntar sobre horários.
-                    </p>
-                    {errors.horarios_funcionamento && (
-                        <p className="mt-1 text-xs text-red-400">{errors.horarios_funcionamento}</p>
-                    )}
                 </div>
 
                 {/* Lembretes automáticos */}
@@ -273,6 +249,7 @@ export default function Configuracoes({ tenant }: Props) {
         nome:                       tenant.nome,
         tipo_servico:               tenant.tipo_servico,
         tipo_servico_personalizado: tenant.tipo_servico_personalizado ?? '',
+        horarios_funcionamento:     (tenant as any).horarios_funcionamento ?? '',
     });
 
     const submit = (e: React.FormEvent) => {
@@ -320,6 +297,26 @@ export default function Configuracoes({ tenant }: Props) {
                                 onChangeCustom={v => setData('tipo_servico_personalizado', v)}
                                 error={errors.tipo_servico || errors.tipo_servico_personalizado}
                             />
+                        </div>
+
+                        <div>
+                            <label className="label mb-1">
+                                Horários de funcionamento{' '}
+                                <span className="font-normal" style={{ color: 'var(--text-3)' }}>(opcional)</span>
+                            </label>
+                            <input
+                                value={data.horarios_funcionamento}
+                                onChange={e => setData('horarios_funcionamento', e.target.value)}
+                                className="input"
+                                placeholder="Ex: Seg–Sex 09:00–19:00, Sáb 09:00–13:00"
+                                maxLength={255}
+                            />
+                            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
+                                Informação exibida para o cliente quando perguntar sobre horários.
+                            </p>
+                            {errors.horarios_funcionamento && (
+                                <p className="mt-1 text-xs text-red-400">{errors.horarios_funcionamento}</p>
+                            )}
                         </div>
 
                         <div className="pt-2">
