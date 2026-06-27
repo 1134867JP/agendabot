@@ -8,7 +8,7 @@ export interface User {
 
 export type TipoServico = 'barbeiro' | 'quadra' | 'estetica' | 'clinica' | 'studio' | 'personalizado';
 export type StatusWhatsApp = 'open' | 'close' | 'desconhecido';
-export type StatusAgendamento = 'confirmado' | 'cancelado' | 'concluido';
+export type StatusAgendamento = 'confirmado' | 'agendado' | 'cancelado' | 'concluido';
 
 export type SubscriptionStatus = 'trial' | 'active' | 'past_due' | 'blocked' | 'canceled';
 
@@ -71,7 +71,7 @@ export interface Agendamento {
     fim: string;
     status: StatusAgendamento;
     valor_total: number | null;
-    origem: 'whatsapp' | 'manual';
+    origem: 'bot' | 'whatsapp' | 'manual';
     observacoes: string | null;
 }
 
