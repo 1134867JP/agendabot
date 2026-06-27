@@ -71,10 +71,18 @@ function CopyButton({ entry }: { entry: LogEntry }) {
 }
 
 type NivelFiltro = 'ALL' | 'ERROR' | 'WARNING' | 'INFO';
+type Canal = 'laravel' | 'jobs' | 'db';
+
+const CANAL_LABELS: Record<Canal, string> = {
+    laravel: 'Sistema',
+    jobs:    'Bot / Integrações',
+    db:      'DB Inserts',
+};
 
 export default function Logs() {
     const [entries,  setEntries]  = useState<LogEntry[]>([]);
     const [nivel,    setNivel]    = useState<NivelFiltro>('ALL');
+    const [canal,    setCanal]    = useState<Canal>('jobs');
     const [busca,    setBusca]    = useState('');
     const [pausado,  setPausado]  = useState(false);
     const [loading,  setLoading]  = useState(true);
@@ -83,9 +91,9 @@ export default function Logs() {
     const [expanded, setExpanded] = useState<number | null>(null);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    const buscar = async (n: NivelFiltro) => {
+    const buscar = async (n: NivelFiltro, c: Canal) => {
         try {
-            const res  = await fetch(route('superadmin.logs.json') + `?nivel=${n}`, {
+            const res  = await fetch(route('superadmin.logs.json') + `?nivel=${n}&canal=${c}`, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
             });
             const data: ApiResponse = await res.json();
@@ -100,19 +108,21 @@ export default function Logs() {
     };
 
     useEffect(() => {
-        buscar(nivel);
-    }, [nivel]);
+        setLoading(true);
+        buscar(nivel, canal);
+    }, [nivel, canal]);
 
     useEffect(() => {
         if (pausado) {
             if (intervalRef.current) clearInterval(intervalRef.current);
             return;
         }
-        intervalRef.current = setInterval(() => buscar(nivel), 5000);
+        intervalRef.current = setInterval(() => buscar(nivel, canal), 5000);
         return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-    }, [pausado, nivel]);
+    }, [pausado, nivel, canal]);
 
     const niveis: NivelFiltro[] = ['ALL', 'ERROR', 'WARNING', 'INFO'];
+    const canais: Canal[]       = ['jobs', 'db', 'laravel'];
 
     const buscaLower = busca.toLowerCase();
     const visiveis = busca
@@ -142,6 +152,27 @@ export default function Logs() {
 
             {/* Toolbar */}
             <div className="mb-5 flex flex-wrap items-center gap-3">
+                {/* Seletor de canal */}
+                <div
+                    className="flex items-center gap-1 rounded-lg p-1"
+                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+                >
+                    {canais.map(c => (
+                        <button
+                            key={c}
+                            onClick={() => { setCanal(c); setExpanded(null); setBusca(''); }}
+                            className="rounded px-3 py-1.5 text-xs font-medium transition-all"
+                            style={
+                                canal === c
+                                    ? { background: 'var(--accent)', color: 'white' }
+                                    : { color: 'var(--text-2)' }
+                            }
+                        >
+                            {CANAL_LABELS[c]}
+                        </button>
+                    ))}
+                </div>
+
                 {/* Filtro de nível */}
                 <div
                     className="flex items-center gap-1 rounded-lg p-1"

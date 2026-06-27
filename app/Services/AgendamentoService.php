@@ -125,7 +125,7 @@ class AgendamentoService
                 throw new HorarioIndisponivelException('Horário não disponível.');
             }
 
-            return Agendamento::create([
+            $agendamento = Agendamento::create([
                 'tenant_id'        => $tenant->id,
                 'cliente_id'       => $dados['cliente_id'],
                 'cliente_nome'     => $dados['cliente_nome'],
@@ -141,6 +141,23 @@ class AgendamentoService
                 'observacoes'      => $dados['observacoes'] ?? null,
                 'origem'           => $dados['origem'] ?? 'bot',
             ]);
+
+            \Illuminate\Support\Facades\Log::channel('db')->info('AGENDAMENTO_INSERT', [
+                'id'               => $agendamento->id,
+                'tenant_id'        => $tenant->id,
+                'tenant'           => $tenant->nome,
+                'cliente_nome'     => $agendamento->cliente_nome,
+                'cliente_telefone' => $agendamento->cliente_telefone,
+                'profissional_id'  => $agendamento->profissional_id,
+                'servico_id'       => $agendamento->servico_id,
+                'data_hora_brt'    => $inicio->toDateTimeString(),
+                'data_hora_utc'    => $inicio->utc()->toDateTimeString(),
+                'duracao_minutos'  => $duracao,
+                'status'           => 'agendado',
+                'origem'           => $agendamento->origem,
+            ]);
+
+            return $agendamento;
         });
     }
 }

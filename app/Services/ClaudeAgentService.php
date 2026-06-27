@@ -152,7 +152,13 @@ class ClaudeAgentService
 
     private function executeTool(string $name, array $input, ?Agendamento $agendamentoPendente): array
     {
-        return match ($name) {
+        Log::channel('jobs')->info('TOOL_CALL', [
+            'tenant'  => $this->currentTenant->id,
+            'tool'    => $name,
+            'input'   => $input,
+        ]);
+
+        $result = match ($name) {
             'buscar_slots'           => $this->toolBuscarSlots($input),
             'criar_agendamento'      => $this->toolCriarAgendamento($input),
             'confirmar_agendamento'  => $this->toolConfirmarAgendamento($agendamentoPendente),
@@ -160,6 +166,14 @@ class ClaudeAgentService
             'transferir_para_humano' => $this->toolTransferirParaHumano(),
             default                  => ['erro' => "Ferramenta desconhecida: {$name}"],
         };
+
+        Log::channel('jobs')->info('TOOL_RESULT', [
+            'tenant' => $this->currentTenant->id,
+            'tool'   => $name,
+            'result' => $result,
+        ]);
+
+        return $result;
     }
 
     private function toolBuscarSlots(array $input): array

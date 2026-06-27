@@ -22,11 +22,18 @@ class LogController extends Controller
 
     public function json(Request $request): JsonResponse
     {
-        $nivel = strtoupper($request->query('nivel', 'all'));
-        $path  = storage_path('logs/laravel.log');
+        $nivel  = strtoupper($request->query('nivel', 'all'));
+        $canal  = $request->query('canal', 'laravel'); // laravel | jobs | db
+        $hoje   = now()->format('Y-m-d');
+
+        $path = match ($canal) {
+            'jobs' => storage_path("logs/jobs-{$hoje}.log"),
+            'db'   => storage_path("logs/db-{$hoje}.log"),
+            default => storage_path('logs/laravel.log'),
+        };
 
         if (! file_exists($path)) {
-            return response()->json(['entries' => [], 'size' => 0]);
+            return response()->json(['entries' => [], 'size' => 0, 'arquivo' => basename($path)]);
         }
 
         $size  = filesize($path);
