@@ -16,6 +16,11 @@ class CheckSubscription
             return $next($request);
         }
 
+        // Tenants isentos nunca são bloqueados por cobrança
+        if ($tenant->isento_cobranca) {
+            return $next($request);
+        }
+
         if ($tenant->subscription_status === 'trial') {
             if ($tenant->trial_ends_at && now()->isAfter($tenant->trial_ends_at)) {
                 $tenant->update(['subscription_status' => 'past_due', 'subscription_ends_at' => $tenant->trial_ends_at]);

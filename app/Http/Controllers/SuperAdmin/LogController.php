@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Mensagem;
+use App\Models\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -73,6 +75,40 @@ class LogController extends Controller
             'size'    => $size,
             'arquivo' => basename($path),
         ]);
+    }
+
+    public function conversas(Request $request): Response|JsonResponse
+    {
+        if (! $request->wantsJson()) {
+            return Inertia::render('SuperAdmin/LogsConversas');
+        }
+
+        $tenantId = $request->query('tenant_id');
+        $telefone = $request->query('telefone');
+
+        $query = Mensagem::with('conversa.tenant')
+            ->latest('enviada_em')
+            ->limit(200);
+
+        if ($tenantId) {
+            $query->whereHas('conversa', fn ($q) => $q->where('tenant_id', $tenantId));
+        }
+        if ($telefone) {
+            $query->whereHas('conversa', fn ($q) => $q->where('telefone_cliente', 'like', "%{$telefone}%"));
+        }
+
+        $mensagens = $query->get()->map(fn ($m) => [
+            'id'         => $m->id,
+            'tenant'     => $m->conversa?->tenant?->nome,
+            'telefone'   => $m->conversa?->telefone_cliente,
+            'remetente'  => $m->remetente,
+            'conteudo'   => $m->conteudo,
+            'enviada_em' => $m->enviada_em?->format('d/m H:i:s'),
+        ]);
+
+        $tenants = Tenant::where('ativo', true)->orderBy('nome')->get(['id', 'nome']);
+
+        return response()->json(['mensagens' => $mensagens, 'tenants' => $tenants]);
     }
 
     /** Lê as últimas $n linhas do arquivo de trás para frente sem carregar tudo na memória. */

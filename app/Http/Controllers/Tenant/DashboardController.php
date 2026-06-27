@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Agendamento;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Models\CobrancaBot;
 
 class DashboardController extends Controller
 {
@@ -41,7 +42,17 @@ class DashboardController extends Controller
                     ->where('status', '!=', 'cancelado')
                     ->sum('valor_total'),
                 'whatsapp_conectado'  => $tenant->whatsapp_conectado,
+                'bot_agendamentos_mes' => Agendamento::where('tenant_id', $tenant->id)
+                    ->where('origem', 'bot')
+                    ->where('status', '!=', 'cancelado')
+                    ->whereMonth('created_at', now()->month)
+                    ->whereYear('created_at', now()->year)
+                    ->count(),
+                'bot_taxa'             => (float) $tenant->taxa_agendamento_bot,
             ],
+            'ultima_cobranca_bot' => CobrancaBot::where('tenant_id', $tenant->id)
+                ->orderByDesc('periodo')
+                ->first(['periodo', 'quantidade_agendamentos', 'valor_total', 'status']),
             'proximos_agendamentos' => Agendamento::where('tenant_id', $tenant->id)
                 ->with('recurso')
                 ->where('inicio', '>=', now())

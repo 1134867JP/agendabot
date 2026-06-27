@@ -36,6 +36,10 @@ class HandleInertiaRequests extends Middleware
             ],
             'currentTenant'  => fn () => app()->bound('tenant') ? app('tenant') : null,
             'impersonando'   => fn () => (bool) session('impersonando_tenant_id'),
+            'tenantPapel'    => function () use ($request) {
+                if (! app()->bound('tenant') || ! $request->user()) return null;
+                return app('tenant')->users()->where('user_id', $request->user()->id)->value('papel');
+            },
             'flash' => [
                 'success' => fn () => session('success'),
                 'erro'    => fn () => session('erro'),
@@ -50,6 +54,7 @@ class HandleInertiaRequests extends Middleware
                     'trial_ends_at'     => $tenant->trial_ends_at?->toIso8601String(),
                     'subscription_ends_at' => $tenant->subscription_ends_at?->toIso8601String(),
                     'plano'             => $tenant->plano,
+                    'isento_cobranca'   => $tenant->isento_cobranca,
                 ];
             },
         ];

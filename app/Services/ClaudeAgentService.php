@@ -1,9 +1,8 @@
 <?php
 
-// app/Services/ClaudeAgentService.php
-
 namespace App\Services;
 
+use App\Models\Agendamento;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -12,124 +11,255 @@ class ClaudeAgentService
 {
     private string $apiKey;
     private string $model;
+    private Tenant $currentTenant;
+    private array $currentCliente;
+    private bool $transferir = false;
 
-    public function __construct()
+    public function __construct(private AgendamentoService $agendamentoService)
     {
         $this->apiKey = (string) config('services.claude.key');
         $this->model  = (string) config('services.claude.model');
     }
 
-    /**
-     * @param array $mensagens [['role'=>'user'|'assistant', 'content'=>string], ...]
-     * @param array $horariosDisponiveis resultado de AgendamentoService::buscarHorariosDisponiveis()
-     * @return array{acao: string, resposta: string, dados: array}
-     */
-    public function processar(Tenant $tenant, array $mensagens, array $horariosDisponiveis, ?string $agendamentoPendenteInfo = null): array
-    {
-        // Só incluir slots quando a conversa já tem pelo menos 3 msgs — economiza tokens nas boas-vindas
-        $incluirSlots = count($mensagens) >= 3;
-
-        // System prompt em dois blocos:
-        // - Bloco 1 (estático, cacheado): identidade, profissionais, serviços, regras
-        // - Bloco 2 (dinâmico, não cacheado): slots disponíveis (muda a cada consulta)
-        $staticPart  = $this->buildStaticPrompt($tenant);
-        $dynamicPart = $this->buildDynamicPrompt($horariosDisponiveis, $incluirSlots, $agendamentoPendenteInfo);
+    public function processar(
+        Tenant $tenant,
+        array $mensagens,
+        array $clienteInfo,
+        ?Agendamento $agendamentoPendente = null
+    ): array {
+        $this->currentTenant  = $tenant;
+        $this->currentCliente = $clienteInfo;
+        $this->transferir     = false;
 
         $systemBlocks = [
             [
                 'type'          => 'text',
-                'text'          => $staticPart,
-                'cache_control' => ['type' => 'ephemeral'], // TTL 5 min — ~90% desconto em cache hits
-            ],
-            [
-                'type' => 'text',
-                'text' => $dynamicPart,
+                'text'          => $this->buildStaticPrompt($tenant),
+                'cache_control' => ['type' => 'ephemeral'],
             ],
         ];
 
-        $response = Http::timeout(30)
-            ->retry(2, 1000, function ($e) {
-                if ($e instanceof \Illuminate\Http\Client\RequestException) {
-                    return $e->response->status() === 529;
-                }
-                return false;
-            })
-            ->withHeaders([
-                'x-api-key'         => $this->apiKey,
-                'anthropic-version' => '2023-06-01',
-                'anthropic-beta'    => 'prompt-caching-2024-07-31',
-                'content-type'      => 'application/json',
-            ])
-            ->post('https://api.anthropic.com/v1/messages', [
-                'model'      => $this->model,
-                'max_tokens' => 250,
-                'system'     => $systemBlocks,
-                'messages'   => $mensagens,
-            ]);
-
-        if (! $response->successful()) {
-            Log::error('ClaudeAgentService error', [
-                'status'          => $response->status(),
-                'body'            => $response->body(),
-                'error_type'      => $response->json('error.type'),
-                'error_message'   => $response->json('error.message'),
-                'model'           => $this->model,
-                'total_messages'  => count($mensagens),
-                'first_role'      => $mensagens[0]['role'] ?? null,
-                'last_role'       => ! empty($mensagens) ? end($mensagens)['role'] : null,
-                'roles_sequence'  => array_column($mensagens, 'role'),
-            ]);
-            return ['acao' => 'erro', 'resposta' => 'Desculpe, tive um problema técnico. Tente novamente em instantes.', 'dados' => [], 'usage' => null];
+        if ($agendamentoPendente) {
+            $dataHora = \Carbon\Carbon::parse($agendamentoPendente->data_hora ?? $agendamentoPendente->inicio)
+                ->locale('pt_BR')
+                ->translatedFormat('d/m/Y \\às H:i');
+            $servico = $agendamentoPendente->profissional?->nome
+                ?? $agendamentoPendente->recurso?->nome
+                ?? 'serviço';
+            $systemBlocks[] = [
+                'type' => 'text',
+                'text' => "PENDENTE: Agendamento ID #{$agendamentoPendente->id} — {$dataHora} — {$servico}. Use confirmar_agendamento ou cancelar_agendamento se o cliente confirmar/cancelar.",
+            ];
         }
 
-        $usage = $response->json('usage', []);
-        Log::debug('ClaudeAgentService usage', [
-            'cache_creation' => $usage['cache_creation_input_tokens'] ?? 0,
-            'cache_read'     => $usage['cache_read_input_tokens']     ?? 0,
-            'input'          => $usage['input_tokens']                ?? 0,
-            'output'         => $usage['output_tokens']               ?? 0,
+        $tools    = $this->buildTools();
+        $messages = $mensagens;
+        $totalUsage = [
+            'input_tokens'                => 0,
+            'output_tokens'               => 0,
+            'cache_creation_input_tokens' => 0,
+            'cache_read_input_tokens'     => 0,
+        ];
+        $resposta = '';
+
+        for ($i = 0; $i < 6; $i++) {
+            $response = Http::timeout(30)
+                ->retry(2, 1000, fn ($e) => $e instanceof \Illuminate\Http\Client\RequestException && $e->response->status() === 529)
+                ->withHeaders([
+                    'x-api-key'         => $this->apiKey,
+                    'anthropic-version' => '2023-06-01',
+                    'anthropic-beta'    => 'prompt-caching-2024-07-31',
+                    'content-type'      => 'application/json',
+                ])
+                ->post('https://api.anthropic.com/v1/messages', [
+                    'model'      => $this->model,
+                    'max_tokens' => 1024,
+                    'system'     => $systemBlocks,
+                    'tools'      => $tools,
+                    'messages'   => $messages,
+                ]);
+
+            if (! $response->successful()) {
+                Log::channel('jobs')->error('ClaudeAgentService error', ['status' => $response->status(), 'body' => $response->body()]);
+                return ['resposta' => 'Desculpe, tive um problema técnico. Tente novamente em instantes.', 'transferir' => false, 'usage' => $totalUsage];
+            }
+
+            $usage = $response->json('usage', []);
+            foreach (['input_tokens', 'output_tokens', 'cache_creation_input_tokens', 'cache_read_input_tokens'] as $key) {
+                $totalUsage[$key] += (int) ($usage[$key] ?? 0);
+            }
+
+            $stopReason = $response->json('stop_reason');
+            $content    = $response->json('content', []);
+
+            foreach ($content as $block) {
+                if ($block['type'] === 'text') {
+                    $resposta = $block['text'];
+                }
+            }
+
+            if ($stopReason !== 'tool_use') {
+                break;
+            }
+
+            $assistantMessage = ['role' => 'assistant', 'content' => $content];
+            $toolResults = [];
+
+            foreach ($content as $block) {
+                if ($block['type'] !== 'tool_use') continue;
+
+                $toolResult = $this->executeTool($block['name'], $block['input'] ?? [], $agendamentoPendente);
+                $toolResults[] = [
+                    'type'        => 'tool_result',
+                    'tool_use_id' => $block['id'],
+                    'content'     => json_encode($toolResult),
+                ];
+            }
+
+            $messages[] = $assistantMessage;
+            $messages[] = ['role' => 'user', 'content' => $toolResults];
+        }
+
+        Log::channel('jobs')->debug('ClaudeAgentService usage', [
+            'cache_creation' => $totalUsage['cache_creation_input_tokens'],
+            'cache_read'     => $totalUsage['cache_read_input_tokens'],
+            'input'          => $totalUsage['input_tokens'],
+            'output'         => $totalUsage['output_tokens'],
         ]);
 
-        $content = $response->json('content.0.text', '');
+        return [
+            'resposta'   => $resposta ?: 'Desculpe, não consegui processar sua mensagem. Tente novamente.',
+            'transferir' => $this->transferir,
+            'usage'      => $totalUsage,
+        ];
+    }
 
-        // Tentar extrair JSON: iterar todas as ocorrências e usar o primeiro que decodifica com sucesso
-        $jsonDecoded = null;
-        if (preg_match_all('/\{[\s\S]*?"acao"[\s\S]*?\}/u', $content, $allMatches)) {
-            foreach ($allMatches[0] as $candidate) {
-                $decoded = json_decode($candidate, true);
-                if (is_array($decoded) && isset($decoded['acao'], $decoded['resposta'])) {
-                    $jsonDecoded = $decoded;
-                    break;
+    private function executeTool(string $name, array $input, ?Agendamento $agendamentoPendente): array
+    {
+        return match ($name) {
+            'buscar_slots'           => $this->toolBuscarSlots($input),
+            'criar_agendamento'      => $this->toolCriarAgendamento($input),
+            'confirmar_agendamento'  => $this->toolConfirmarAgendamento($agendamentoPendente),
+            'cancelar_agendamento'   => $this->toolCancelarAgendamento($agendamentoPendente),
+            'transferir_para_humano' => $this->toolTransferirParaHumano(),
+            default                  => ['erro' => "Ferramenta desconhecida: {$name}"],
+        };
+    }
+
+    private function toolBuscarSlots(array $input): array
+    {
+        $dias  = min((int) ($input['dias'] ?? 4), 7);
+        $slots = $this->agendamentoService->buscarHorariosDisponiveis($this->currentTenant, $dias);
+
+        if (empty($slots)) {
+            return ['disponivel' => false, 'mensagem' => 'Nenhum horário disponível nos próximos dias.'];
+        }
+
+        $linhas = [];
+        foreach ($slots as $profissionalId => $diasSlots) {
+            foreach ($diasSlots as $data => $horarios) {
+                if (! empty($horarios)) {
+                    $dataFormatada = \Carbon\Carbon::parse($data)->format('d/m');
+                    $linhas[] = "#{$profissionalId}|{$dataFormatada}: " . implode(' ', $horarios);
                 }
             }
         }
 
-        $usageData = [
-            'input_tokens'                => (int) ($usage['input_tokens']                ?? 0),
-            'output_tokens'               => (int) ($usage['output_tokens']               ?? 0),
-            'cache_creation_input_tokens' => (int) ($usage['cache_creation_input_tokens'] ?? 0),
-            'cache_read_input_tokens'     => (int) ($usage['cache_read_input_tokens']     ?? 0),
-        ];
-
-        if ($jsonDecoded) {
-            return [
-                'acao'    => $jsonDecoded['acao'],
-                'resposta' => $jsonDecoded['resposta'],
-                'dados'   => array_diff_key($jsonDecoded, ['acao' => 1, 'resposta' => 1]),
-                'usage'   => $usageData,
-            ];
-        }
-
-        return ['acao' => 'duvida', 'resposta' => $content, 'dados' => [], 'usage' => $usageData];
+        return ['slots' => implode("\n", $linhas) ?: 'Nenhum horário disponível.'];
     }
 
-    /**
-     * Parte estática do system prompt — cacheada pela Anthropic (TTL 5min).
-     * Não inclui dados que mudam frequentemente (slots de horário).
-     */
+    private function toolCriarAgendamento(array $input): array
+    {
+        try {
+            $this->agendamentoService->criarAgendamentoV2($this->currentTenant, array_merge($input, [
+                'cliente_id'       => $this->currentCliente['id'],
+                'cliente_nome'     => $this->currentCliente['nome'],
+                'cliente_telefone' => $this->currentCliente['telefone'],
+                'origem'           => 'bot',
+            ]));
+            return ['sucesso' => true];
+        } catch (\App\Exceptions\HorarioIndisponivelException $e) {
+            return ['sucesso' => false, 'erro' => 'horario_indisponivel', 'mensagem' => $e->getMessage()];
+        } catch (\Throwable $e) {
+            Log::channel('jobs')->error('toolCriarAgendamento error', ['error' => $e->getMessage(), 'input' => $input]);
+            return ['sucesso' => false, 'erro' => 'erro_tecnico'];
+        }
+    }
+
+    private function toolConfirmarAgendamento(?Agendamento $agendamento): array
+    {
+        if (! $agendamento) {
+            return ['sucesso' => false, 'mensagem' => 'Nenhum agendamento pendente encontrado.'];
+        }
+        $agendamento->update(['status' => 'confirmado']);
+        return ['sucesso' => true];
+    }
+
+    private function toolCancelarAgendamento(?Agendamento $agendamento): array
+    {
+        if (! $agendamento) {
+            return ['sucesso' => false, 'mensagem' => 'Nenhum agendamento pendente encontrado.'];
+        }
+        $this->agendamentoService->cancelar($agendamento);
+        return ['sucesso' => true];
+    }
+
+    private function toolTransferirParaHumano(): array
+    {
+        $this->transferir = true;
+        return ['sucesso' => true];
+    }
+
+    private function buildTools(): array
+    {
+        return [
+            [
+                'name'         => 'buscar_slots',
+                'description'  => 'Busca horários disponíveis para agendamento nos próximos dias.',
+                'input_schema' => [
+                    'type'       => 'object',
+                    'properties' => [
+                        'dias' => ['type' => 'integer', 'description' => 'Número de dias para buscar (padrão 4, máximo 7)'],
+                    ],
+                ],
+            ],
+            [
+                'name'         => 'criar_agendamento',
+                'description'  => 'Cria um novo agendamento. Use somente quando tiver nome do cliente, profissional, serviço, data e horário confirmados.',
+                'input_schema' => [
+                    'type'       => 'object',
+                    'properties' => [
+                        'cliente_nome'    => ['type' => 'string',           'description' => 'Nome do cliente'],
+                        'profissional_id' => ['type' => 'integer',          'description' => 'ID do profissional'],
+                        'servico_id'      => ['type' => 'integer',          'description' => 'ID do serviço'],
+                        'data'            => ['type' => 'string',           'description' => 'Data no formato YYYY-MM-DD'],
+                        'horario'         => ['type' => 'string',           'description' => 'Horário no formato HH:MM'],
+                        'opcao_extra'     => ['type' => ['string', 'null'], 'description' => 'Opção extra (opcional)'],
+                        'observacoes'     => ['type' => ['string', 'null'], 'description' => 'Observações (opcional)'],
+                    ],
+                    'required' => ['cliente_nome', 'profissional_id', 'servico_id', 'data', 'horario'],
+                ],
+            ],
+            [
+                'name'         => 'confirmar_agendamento',
+                'description'  => 'Confirma o agendamento pendente existente quando o cliente expressa confirmação.',
+                'input_schema' => ['type' => 'object', 'properties' => []],
+            ],
+            [
+                'name'         => 'cancelar_agendamento',
+                'description'  => 'Cancela o agendamento pendente existente quando o cliente solicita cancelamento.',
+                'input_schema' => ['type' => 'object', 'properties' => []],
+            ],
+            [
+                'name'         => 'transferir_para_humano',
+                'description'  => 'Transfere a conversa para um atendente humano. Use quando não entender o cliente após 2 tentativas, quando pedir humano ou ficar irritado.',
+                'input_schema' => ['type' => 'object', 'properties' => []],
+            ],
+        ];
+    }
+
     public function buildStaticPrompt(Tenant $tenant): string
     {
-        // Profissionais com seus serviços vinculados — mais útil para o bot do que listas separadas
         $profissionais = $tenant->profissionais()->where('ativo', true)->with('servicos:id,nome')->get()
             ->map(function ($p) {
                 $servNomes = $p->servicos->pluck('nome')->join(', ');
@@ -138,7 +268,6 @@ class ClaudeAgentService
             })
             ->join("\n");
 
-        // Serviços com detalhes de valor/duração (sem repetir os profissionais)
         $servicos = $tenant->servicos()->where('ativo', true)->get()
             ->map(fn ($s) => "- ID {$s->id}: {$s->nome}" .
                 ($s->valor_min ? " (R$ {$s->valor_min}" . ($s->valor_max ? "-{$s->valor_max}" : '') . ")" : '') .
@@ -151,7 +280,7 @@ class ClaudeAgentService
             ->map(fn ($grupo, $tipo) => strtoupper($tipo) . ': ' . $grupo->pluck('nome')->join(', '))
             ->join("\n");
 
-        $horarios = $this->formatarHorarios($tenant->horarios_funcionamento ?? []);
+        $horarios = $this->formatarHorarios($tenant->horarios_funcionamento);
 
         $tomInstrucao = match ($tenant->tom_voz) {
             'formal'       => 'Linguagem profissional e respeitosa. Sem emojis. Use "Senhor/Senhora".',
@@ -160,68 +289,23 @@ class ClaudeAgentService
         };
 
         $instrucoes = $tenant->instrucoes_extras ? "\nINSTRUÇÕES ESPECÍFICAS DO NEGÓCIO:\n{$tenant->instrucoes_extras}" : '';
-
         $opcoesPart = $opcoes ? "\n{$opcoes}\n" : '';
 
         return <<<PROMPT
-Você é {$tenant->nome_agente} de {$tenant->nome} ({$tenant->ramo_negocio}).
-{$tenant->descricao_negocio}
-Local: {$tenant->endereco}, {$tenant->cidade} | Horários: {$horarios}
-Tom: {$tomInstrucao}
-
-PROFISSIONAIS:{$profissionais}
-SERVIÇOS:{$servicos}{$opcoesPart}{$instrucoes}
-REGRAS: mensagens curtas; não invente horários; mídia→peça texto; 2 tentativas sem entender→transfira; irritado/pediu humano→transfira.
-
-RESPONDA SEMPRE EM JSON:
-Agendar: {"acao":"agendar","cliente_nome":"...","profissional_id":0,"servico_id":0,"data":"YYYY-MM-DD","horario":"HH:MM","opcao_extra":null,"observacoes":null,"resposta":"..."}
-Confirmar pendente: {"acao":"confirmar","resposta":"..."}
-Cancelar pendente: {"acao":"cancelar","resposta":"..."}
-Transferir: {"acao":"transferir","resposta":"..."}
-Só responder: {"acao":"duvida","resposta":"..."}
+Você é {$tenant->nome_agente} de {$tenant->nome} ({$tenant->ramo_negocio}). {$tenant->descricao_negocio}
+Local:{$tenant->endereco},{$tenant->cidade}|Horários:{$horarios}|Tom:{$tomInstrucao}
+PROF:
+{$profissionais}
+SVC:
+{$servicos}{$opcoesPart}{$instrucoes}
+REGRAS: mensagens curtas; não invente horários (use buscar_slots); mídia→peça texto; 2x sem entender/irritado→transfira; datas sempre futuras.
 PROMPT;
     }
 
-    /**
-     * Parte dinâmica — slots disponíveis. Não cacheada pois muda com cada novo agendamento.
-     * Omite slots quando a conversa está no início (< 3 msgs) para economizar tokens.
-     */
-    public function buildDynamicPrompt(array $horariosDisponiveis, bool $incluirSlots = true, ?string $agendamentoPendenteInfo = null): string
-    {
-        $parts = [];
-
-        if ($agendamentoPendenteInfo) {
-            $parts[] = "PENDENTE: {$agendamentoPendenteInfo} — use acao confirmar/cancelar conforme resposta do cliente.";
-        }
-
-        if ($incluirSlots) {
-            $parts[] = "SLOTS:\n" . $this->formatarSlots($horariosDisponiveis);
-        }
-
-        return implode("\n\n", $parts);
-    }
-
-    private function formatarHorarios(array $horarios): string
+    private function formatarHorarios(mixed $horarios): string
     {
         if (empty($horarios)) return 'Consultar pelo WhatsApp';
+        if (is_string($horarios)) return $horarios;
         return collect($horarios)->map(fn ($h, $k) => "{$k}: {$h}")->join(' | ');
-    }
-
-    private function formatarSlots(array $slots): string
-    {
-        if (empty($slots)) return 'Nenhum horário disponível.';
-
-        $linhas = [];
-        foreach ($slots as $profissionalId => $diasSlots) {
-            foreach ($diasSlots as $data => $horariosDisponiveis) {
-                if (! empty($horariosDisponiveis)) {
-                    // Formato compacto: "#3|24/06: 09:00 09:30 10:00" (menos tokens que vírgulas e "Profissional")
-                    $dataFormatada = \Carbon\Carbon::parse($data)->format('d/m');
-                    $linhas[] = "#{$profissionalId}|{$dataFormatada}: " . implode(' ', $horariosDisponiveis);
-                }
-            }
-        }
-
-        return implode("\n", $linhas) ?: 'Nenhum horário disponível.';
     }
 }

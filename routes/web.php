@@ -117,6 +117,9 @@ Route::middleware('auth')->group(function () {
         // Configurações
         Route::get('configuracoes', [Tenant\ConfiguracaoController::class, 'index'])->name('configuracoes.index');
         Route::put('configuracoes', [Tenant\ConfiguracaoController::class, 'update'])->name('configuracoes.update');
+
+        // Cobrança variável bot
+        Route::get('cobranca/resumo', [Tenant\CobrancaController::class, 'resumo'])->name('cobranca.resumo');
     });
 });
 
@@ -126,13 +129,16 @@ Route::middleware(['auth', 'superadmin'])->prefix('superadmin')->name('superadmi
 
     Route::resource('tenants', SuperAdmin\TenantController::class);
     Route::patch('tenants/{tenant}/toggle-ativo', [SuperAdmin\TenantController::class, 'toggleAtivo'])->name('tenants.toggle-ativo');
+    Route::patch('tenants/{tenant}/toggle-isento', [SuperAdmin\TenantController::class, 'toggleIsento'])->name('tenants.toggle-isento');
     Route::post('tenants/{tenant}/impersonar', [SuperAdmin\TenantController::class, 'impersonar'])->name('tenants.impersonar');
     Route::delete('impersonar', [SuperAdmin\TenantController::class, 'pararImpersonar'])->name('impersonar.parar');
 
     Route::get('agendamentos', [SuperAdmin\AgendamentoController::class, 'index'])->name('agendamentos');
+    Route::get('financeiro',   [SuperAdmin\FinanceiroController::class,  'index'])->name('financeiro');
 
-    Route::get('logs',      [SuperAdmin\LogController::class, 'index'])->name('logs');
-    Route::get('logs/json', [SuperAdmin\LogController::class, 'json'])->name('logs.json');
+    Route::get('logs',         [SuperAdmin\LogController::class, 'index'])->name('logs');
+    Route::get('logs/json',    [SuperAdmin\LogController::class, 'json'])->name('logs.json');
+    Route::get('logs/conversas', [SuperAdmin\LogController::class, 'conversas'])->name('logs.conversas');
 
     Route::get('jobs',          [SuperAdmin\JobsController::class, 'index'])->name('jobs');
     Route::post('jobs/{id}/retry',  [SuperAdmin\JobsController::class, 'retry'])->name('jobs.retry');

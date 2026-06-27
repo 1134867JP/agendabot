@@ -101,6 +101,12 @@ class TenantController extends Controller
         return back()->with('success', $tenant->ativo ? 'Tenant ativado.' : 'Tenant desativado.');
     }
 
+    public function toggleIsento(Tenant $tenant): RedirectResponse
+    {
+        $tenant->update(['isento_cobranca' => ! $tenant->isento_cobranca]);
+        return back()->with('success', $tenant->isento_cobranca ? 'Tenant marcado como isento de cobrança.' : 'Isenção removida.');
+    }
+
     public function impersonar(Request $request, Tenant $tenant): RedirectResponse
     {
         session([
