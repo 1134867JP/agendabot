@@ -54,6 +54,19 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      - name: Aguardar SSH disponível (retry até 5x)
+        run: |
+          for i in 1 2 3 4 5; do
+            if nc -z -w 10 ${{ secrets.VPS_HOST }} 22; then
+              echo "SSH disponível na tentativa $i"
+              exit 0
+            fi
+            echo "Tentativa $i falhou, aguardando 15s..."
+            sleep 15
+          done
+          echo "SSH não respondeu após 5 tentativas"
+          exit 1
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -61,6 +74,8 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
+          timeout: 60s
+          command_timeout: 15m
           script: |
             cd /opt/apps/agendabot
             bash deploy.sh
