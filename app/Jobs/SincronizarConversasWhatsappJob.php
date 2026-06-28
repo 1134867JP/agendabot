@@ -51,6 +51,11 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
                 ['nome' => $nome]
             );
 
+            // Atualizar nome se ainda está como telefone (placeholder do cadastro anterior)
+            if ($cliente->nome === $telefone && $nome !== $telefone) {
+                $cliente->update(['nome' => $nome]);
+            }
+
             $conversa = Conversa::firstOrCreate(
                 ['tenant_id' => $this->tenant->id, 'telefone_cliente' => $telefone],
                 ['cliente_id' => $cliente->id, 'status_v2' => 'ativa']

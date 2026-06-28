@@ -253,8 +253,10 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
     const [showModalNova,  setShowModalNova]  = useState(false);
     const [sincronizando,  setSincronizando]  = useState(false);
 
-    const chatRef     = useRef<HTMLDivElement>(null);
-    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const chatRef      = useRef<HTMLDivElement>(null);
+    const intervalRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+    const syncRef      = useRef<ReturnType<typeof setInterval> | null>(null);
+    const syncTimeout  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const { data, setData, post, processing, reset } = useForm<{ conteudo: string }>({ conteudo: '' });
 
@@ -285,7 +287,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
         intervalRef.current = setInterval(() => buscarMensagens(c, true), 5000);
     }, [buscarMensagens]);
 
-    useEffect(() => () => pararPolling(), []);
+    useEffect(() => () => { pararPolling(); pararSyncPolling(); }, []);
 
     const selecionar = (c: Conversa) => {
         pararPolling();
@@ -329,11 +331,24 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
         router.get(route('tenant.conversas.index'), status ? { status_v2: status } : {}, { preserveState: true });
     };
 
+    const pararSyncPolling = () => {
+        if (syncRef.current)     { clearInterval(syncRef.current);  syncRef.current    = null; }
+        if (syncTimeout.current) { clearTimeout(syncTimeout.current); syncTimeout.current = null; }
+        setSincronizando(false);
+    };
+
     const sincronizar = () => {
         setSincronizando(true);
         router.post(route('tenant.conversas.sincronizar'), {}, {
-            onSuccess: () => router.reload(),
-            onFinish:  () => setSincronizando(false),
+            onSuccess: () => {
+                // Recarregar a lista a cada 3s enquanto o job roda em background
+                syncRef.current = setInterval(() => {
+                    router.reload({ only: ['conversas'] });
+                }, 3000);
+                // Parar após 90s (tempo suficiente para ~600 chats)
+                syncTimeout.current = setTimeout(pararSyncPolling, 90_000);
+            },
+            onError: pararSyncPolling,
         });
     };
 
