@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\BackupELimparHistoricoJob;
 use App\Jobs\ProcessarMensagemWhatsapp;
 use App\Jobs\SincronizarConversasWhatsappJob;
 use App\Models\Tenant;
@@ -31,9 +32,12 @@ class WebhookController extends Controller
                 $tenant->update(['whatsapp_conectado' => $conectado]);
                 Log::info('WHATSAPP_CONNECTION_UPDATE', ['tenant' => $tenantSlug, 'state' => $state, 'conectado' => $conectado]);
 
-                // Ao conectar pela primeira vez (ou reconectar), importar histórico em background
                 if ($conectado) {
+                    // Ao conectar: importar histórico em background
                     SincronizarConversasWhatsappJob::dispatch($tenant)->onQueue('default');
+                } else {
+                    // Ao desconectar: fazer backup e limpar histórico do banco
+                    BackupELimparHistoricoJob::dispatch($tenant)->onQueue('default');
                 }
             }
             return response('ok');

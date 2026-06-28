@@ -20,7 +20,10 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries   = 2;
-    public int $timeout = 120;
+    public int $timeout = 300;
+
+    // Nomes que indicam placeholder — serão substituídos pelo nome real
+    private const PLACEHOLDERS = ['Cliente WhatsApp', 'cliente whatsapp'];
 
     public function __construct(private readonly Tenant $tenant) {}
 
@@ -44,17 +47,14 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
                 continue; // formato antigo de grupo
             }
 
-            $nome = data_get($chat, 'pushName') ?? $telefone;
+            // pushName do fetchChats é null para contatos individuais nesta versão da API
+            // O nome real vem das mensagens (campo pushName em cada msg do cliente)
+            $nomeChat = data_get($chat, 'pushName');
 
             $cliente = Cliente::firstOrCreate(
                 ['tenant_id' => $this->tenant->id, 'telefone' => $telefone],
-                ['nome' => $nome]
+                ['nome' => $nomeChat ?? $telefone]
             );
-
-            // Atualizar nome se ainda está como telefone (placeholder do cadastro anterior)
-            if ($cliente->nome === $telefone && $nome !== $telefone) {
-                $cliente->update(['nome' => $nome]);
-            }
 
             $conversa = Conversa::firstOrCreate(
                 ['tenant_id' => $this->tenant->id, 'telefone_cliente' => $telefone],
@@ -62,6 +62,28 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
             );
 
             $msgs = $evolution->fetchMessages($this->tenant->evolution_instance, $remoteJid, 100);
+
+            // Extrair nome real do cliente a partir das mensagens recebidas (fromMe=false)
+            $nomeReal = $nomeChat;
+            if (!$nomeReal) {
+                foreach ($msgs as $msg) {
+                    if (!data_get($msg, 'key.fromMe') && data_get($msg, 'pushName')) {
+                        $nomeReal = data_get($msg, 'pushName');
+                        break;
+                    }
+                }
+            }
+
+            // Atualizar nome se ainda é um placeholder (telefone ou "Cliente WhatsApp")
+            if ($nomeReal && $nomeReal !== $telefone) {
+                $nomePlaceholder = $cliente->nome === $telefone
+                    || in_array(strtolower($cliente->nome), array_map('strtolower', self::PLACEHOLDERS));
+
+                if ($nomePlaceholder) {
+                    $cliente->update(['nome' => $nomeReal]);
+                }
+            }
+
             foreach ($msgs as $msg) {
                 $evolutionId = data_get($msg, 'key.id');
                 if (!$evolutionId) {
@@ -87,7 +109,7 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
                 };
 
                 if ($tipo === 'texto' && $conteudo === '') {
-                    continue; // ignorar mensagens sem conteúdo
+                    continue;
                 }
 
                 $ts = data_get($msg, 'messageTimestamp');
