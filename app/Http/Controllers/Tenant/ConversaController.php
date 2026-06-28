@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Jobs\SincronizarConversasWhatsappJob;
 use App\Models\Cliente;
 use App\Models\Conversa;
+use App\Models\Mensagem;
 use App\Services\EvolutionApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -115,6 +117,31 @@ class ConversaController extends Controller
         $evolution->enviarMensagem($tenant->evolution_instance, $telefone, $validated['mensagem']);
 
         return back()->with('success', 'Mensagem enviada.');
+    }
+
+    public function media(Conversa $conversa, Mensagem $mensagem, EvolutionApiService $evolution): HttpResponse
+    {
+        abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
+        abort_if((int) $mensagem->conversa_id !== (int) $conversa->id, 404);
+        abort_if(! $mensagem->evolution_message_id, 404);
+
+        $tenant    = app('tenant');
+        $fromMe    = $mensagem->remetente === 'humano';
+        $remoteJid = $conversa->telefone_cliente . '@s.whatsapp.net';
+
+        $dados = $evolution->fetchMedia($tenant->evolution_instance, $mensagem->evolution_message_id, $fromMe, $remoteJid);
+
+        if (! $dados || empty($dados['base64'])) {
+            abort(404);
+        }
+
+        $binary   = base64_decode($dados['base64']);
+        $mimetype = $dados['mimetype'] ?? 'image/jpeg';
+
+        return response($binary, 200, [
+            'Content-Type'  => $mimetype,
+            'Cache-Control' => 'private, max-age=86400',
+        ]);
     }
 
     public function sincronizar(): RedirectResponse

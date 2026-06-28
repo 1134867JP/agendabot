@@ -34,6 +34,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         private string $mensagem,
         private ?string $evolutionMessageId = null,
         private ?string $pushName = null,
+        private string $tipo = 'texto',
     ) {}
 
     public function handle(
@@ -70,7 +71,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
 
         // 4. Se aguardando/em atendimento humano → apenas salva mensagem e não processa com Claude
         if (in_array($conversa->status_v2, ['aguardando_humano', 'em_atendimento_humano'])) {
-            $conversa->registrarMensagem('cliente', $this->mensagem, $this->evolutionMessageId);
+            $conversa->registrarMensagem('cliente', $this->mensagem, $this->evolutionMessageId, $this->tipo);
             return;
         }
 
@@ -104,7 +105,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         }
 
         // 5. Salvar mensagem do cliente
-        $conversa->registrarMensagem('cliente', $this->mensagem, $this->evolutionMessageId);
+        $conversa->registrarMensagem('cliente', $this->mensagem, $this->evolutionMessageId, $this->tipo);
 
         // 6. Buscar histórico das últimas 12 mensagens para o Claude manter contexto da conversa
         $historico = $conversa->mensagens()

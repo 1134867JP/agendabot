@@ -72,14 +72,29 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
                     continue;
                 }
 
-                $fromMe   = (bool) data_get($msg, 'key.fromMe', false);
-                $conteudo = data_get($msg, 'message.conversation')
-                         ?? data_get($msg, 'message.extendedTextMessage.text')
-                         ?? '[mídia]';
+                $fromMe      = (bool) data_get($msg, 'key.fromMe', false);
+                $messageType = data_get($msg, 'messageType', 'conversation');
+
+                [$tipo, $conteudo] = match ($messageType) {
+                    'imageMessage'    => ['imagem',    data_get($msg, 'message.imageMessage.caption', '')],
+                    'videoMessage'    => ['video',     data_get($msg, 'message.videoMessage.caption', '')],
+                    'audioMessage'    => ['audio',     ''],
+                    'documentMessage' => ['documento', data_get($msg, 'message.documentMessage.fileName', '')],
+                    'stickerMessage'  => ['sticker',   ''],
+                    default           => ['texto',     data_get($msg, 'message.conversation')
+                                                    ?? data_get($msg, 'message.extendedTextMessage.text')
+                                                    ?? ''],
+                };
+
+                if ($tipo === 'texto' && $conteudo === '') {
+                    continue; // ignorar mensagens sem conteúdo
+                }
+
                 $ts = data_get($msg, 'messageTimestamp');
 
                 $conversa->mensagens()->create([
                     'remetente'            => $fromMe ? 'humano' : 'cliente',
+                    'tipo'                 => $tipo,
                     'conteudo'             => $conteudo,
                     'evolution_message_id' => $evolutionId,
                     'enviada_em'           => $ts ? Carbon::createFromTimestamp((int) $ts) : now(),

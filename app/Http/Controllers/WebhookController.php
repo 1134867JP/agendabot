@@ -72,36 +72,42 @@ class WebhookController extends Controller
             return response('ok');
         }
 
-        $tipo = data_get($msgData, 'messageType');
+        $messageType = data_get($msgData, 'messageType');
 
-        // Tipos de mídia: converter em texto sintético para o Claude reagir
-        $midiaSintetica = match ($tipo) {
-            'stickerMessage'  => '[figurinha]',
-            'imageMessage'    => '[imagem]',
-            'audioMessage'    => '[áudio]',
-            'videoMessage'    => '[vídeo]',
-            'documentMessage' => '[documento]',
+        // Mapear tipo Evolution → tipo interno
+        $tipoMidia = match ($messageType) {
+            'imageMessage'    => 'imagem',
+            'audioMessage'    => 'audio',
+            'videoMessage'    => 'video',
+            'documentMessage' => 'documento',
+            'stickerMessage'  => 'sticker',
             default           => null,
         };
 
-        $mensagem = match (true) {
-            $tipo === 'conversation'         => data_get($msgData, 'message.conversation'),
-            $tipo === 'extendedTextMessage'  => data_get($msgData, 'message.extendedTextMessage.text'),
-            $midiaSintetica !== null         => $midiaSintetica,
-            default                          => null,
+        // Conteúdo: texto real para textos, texto sintético para o Claude reagir a mídias
+        $conteudoClaude = match (true) {
+            $messageType === 'conversation'        => data_get($msgData, 'message.conversation'),
+            $messageType === 'extendedTextMessage' => data_get($msgData, 'message.extendedTextMessage.text'),
+            $tipoMidia === 'imagem'   => data_get($msgData, 'message.imageMessage.caption') ?: '[imagem]',
+            $tipoMidia === 'audio'    => '[áudio]',
+            $tipoMidia === 'video'    => data_get($msgData, 'message.videoMessage.caption') ?: '[vídeo]',
+            $tipoMidia === 'documento'=> data_get($msgData, 'message.documentMessage.fileName') ?: '[documento]',
+            $tipoMidia === 'sticker'  => '[figurinha]',
+            default                   => null,
         };
 
-        if (! $mensagem) {
-            Log::info('WEBHOOK_SKIP', ['tipo' => $tipo]);
+        if (! $conteudoClaude) {
+            Log::info('WEBHOOK_SKIP', ['tipo' => $messageType]);
             return response('ok');
         }
 
         $evolutionMessageId = data_get($msgData, 'key.id');
         $pushName           = data_get($msgData, 'pushName') ?: null;
+        $tipoInterno        = $tipoMidia ?? 'texto';
 
-        Log::info('WEBHOOK_MSG', ['telefone' => $telefone, 'tipo' => $tipo, 'push_name' => $pushName, 'mensagem' => mb_substr($mensagem, 0, 200)]);
+        Log::info('WEBHOOK_MSG', ['telefone' => $telefone, 'tipo' => $messageType, 'push_name' => $pushName, 'mensagem' => mb_substr($conteudoClaude, 0, 200)]);
 
-        ProcessarMensagemWhatsapp::dispatch($tenant, $telefone, $mensagem, $evolutionMessageId, $pushName);
+        ProcessarMensagemWhatsapp::dispatch($tenant, $telefone, $conteudoClaude, $evolutionMessageId, $pushName, $tipoInterno);
 
         return response('ok');
     }

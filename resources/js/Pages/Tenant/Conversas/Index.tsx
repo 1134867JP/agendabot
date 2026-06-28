@@ -11,10 +11,15 @@ interface Cliente {
     telefone: string;
 }
 
+type TipoMensagem = 'texto' | 'imagem' | 'audio' | 'video' | 'documento' | 'sticker';
+
 interface Mensagem {
     id: number;
+    conversa_id: number;
     remetente: 'cliente' | 'bot' | 'humano';
+    tipo: TipoMensagem;
     conteudo: string;
+    evolution_message_id: string | null;
     enviada_em: string;
 }
 
@@ -126,19 +131,71 @@ function Bubble({ msg, prevRemetente }: { msg: Mensagem; prevRemetente?: string 
         labelColor = 'rgba(52,211,153,0.85)';
     }
 
+    const mediaUrl = (msg.tipo !== 'texto' && msg.evolution_message_id)
+        ? route('tenant.conversas.media', { conversa: msg.conversa_id, mensagem: msg.id })
+        : null;
+
     return (
         <div className={`flex ${isCliente ? 'justify-start' : 'justify-end'} ${showLabel ? 'mt-3' : 'mt-1'}`}>
             <div
-                className="max-w-[75%] px-3.5 py-2.5 text-sm shadow-sm lg:max-w-[60%]"
-                style={{ background: bg, border, borderRadius: radius, color: 'var(--text-1)', wordBreak: 'break-word' }}
+                className="max-w-[75%] text-sm shadow-sm lg:max-w-[60%]"
+                style={{ background: bg, border, borderRadius: radius, color: 'var(--text-1)', wordBreak: 'break-word', overflow: 'hidden' }}
             >
                 {showLabel && (
-                    <p className="mb-1 text-[10px] font-semibold" style={{ color: labelColor }}>
+                    <p className="px-3.5 pt-2.5 mb-1 text-[10px] font-semibold" style={{ color: labelColor }}>
                         {isBot ? '🤖 Bot' : '👤 Atendente'}
                     </p>
                 )}
-                <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>{msg.conteudo}</p>
-                <p className="mt-1 text-right text-[10px] opacity-40">{fmtHora(msg.enviada_em)}</p>
+
+                {/* Imagem */}
+                {msg.tipo === 'imagem' && mediaUrl && (
+                    <img
+                        src={mediaUrl}
+                        alt={msg.conteudo || 'imagem'}
+                        loading="lazy"
+                        className="block w-full max-w-xs object-cover cursor-pointer"
+                        style={{ maxHeight: '280px' }}
+                        onClick={() => window.open(mediaUrl, '_blank')}
+                    />
+                )}
+
+                {/* Áudio */}
+                {msg.tipo === 'audio' && mediaUrl && (
+                    <div className="px-3.5 pt-2.5">
+                        <audio controls src={mediaUrl} className="w-full max-w-[260px]" style={{ height: '36px' }} />
+                    </div>
+                )}
+
+                {/* Vídeo */}
+                {msg.tipo === 'video' && mediaUrl && (
+                    <video controls src={mediaUrl} className="block w-full max-w-xs" style={{ maxHeight: '280px' }} />
+                )}
+
+                {/* Documento / Sticker / Fallback */}
+                {(msg.tipo === 'documento' || msg.tipo === 'sticker' || (!mediaUrl && msg.tipo !== 'texto')) && (
+                    <div className="px-3.5 py-2.5 flex items-center gap-2">
+                        <span style={{ color: 'var(--text-3)' }}>
+                            {msg.tipo === 'documento' ? '📄' : msg.tipo === 'sticker' ? '🎭' : '📎'}
+                        </span>
+                        <span style={{ color: 'var(--text-2)', fontSize: '12px' }}>
+                            {msg.conteudo || msg.tipo}
+                        </span>
+                        {mediaUrl && (
+                            <a href={mediaUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontSize: '11px' }}>
+                                Baixar
+                            </a>
+                        )}
+                    </div>
+                )}
+
+                {/* Texto (legenda ou conteúdo normal) */}
+                {(msg.tipo === 'texto' || msg.conteudo) && (
+                    <p className="px-3.5 py-2.5" style={{ whiteSpace: 'pre-wrap', lineHeight: 1.55, paddingTop: msg.tipo !== 'texto' && msg.conteudo ? '4px' : undefined }}>
+                        {msg.conteudo}
+                    </p>
+                )}
+
+                <p className="px-3.5 pb-2 text-right text-[10px] opacity-40">{fmtHora(msg.enviada_em)}</p>
             </div>
         </div>
     );

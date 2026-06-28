@@ -80,6 +80,27 @@ class EvolutionApiService
         return $response->json('messages.records') ?? [];
     }
 
+    public function fetchMedia(string $instance, string $messageId, bool $fromMe, string $remoteJid): ?array
+    {
+        $response = Http::withHeaders(['apikey' => $this->globalApiKey])
+            ->timeout(20)
+            ->post("{$this->baseUrl}/chat/getBase64FromMediaMessage/{$instance}", [
+                'message' => [
+                    'key' => [
+                        'id'        => $messageId,
+                        'fromMe'    => $fromMe,
+                        'remoteJid' => $remoteJid,
+                    ],
+                ],
+            ]);
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        return $response->json();
+    }
+
     public function configurarWebhook(string $instance, string $webhookUrl): bool
     {
         // Evolution API v2 requires nested 'webhook' object

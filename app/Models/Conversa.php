@@ -21,13 +21,14 @@ class Conversa extends Model
     public function cliente(): BelongsTo { return $this->belongsTo(Cliente::class); }
     public function mensagens(): HasMany { return $this->hasMany(Mensagem::class); }
 
-    public function registrarMensagem(string $remetente, string $conteudo, ?string $evolutionId = null): Mensagem
+    public function registrarMensagem(string $remetente, string $conteudo, ?string $evolutionId = null, string $tipo = 'texto'): Mensagem
     {
         $mensagem = $this->mensagens()->create([
-            'remetente'           => $remetente,
-            'conteudo'            => $conteudo,
+            'remetente'            => $remetente,
+            'tipo'                 => $tipo,
+            'conteudo'             => $conteudo,
             'evolution_message_id' => $evolutionId,
-            'enviada_em'          => now(),
+            'enviada_em'           => now(),
         ]);
 
         $this->update(['ultima_mensagem_em' => now()]);
