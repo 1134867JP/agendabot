@@ -10,7 +10,11 @@ echo "--- git pull ---"
 git pull origin master
 
 echo "--- docker compose build ---"
-docker compose build app
+if ! docker compose build app; then
+    echo "    build falhou, limpando cache e tentando novamente..."
+    docker builder prune -f
+    docker compose build --no-cache app
+fi
 
 echo "--- parando containers dependentes (worker/scheduler) ---"
 docker compose stop worker scheduler 2>/dev/null || true
