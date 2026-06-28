@@ -155,14 +155,103 @@ function SendIcon() {
     );
 }
 
+// ─── Modal Nova Conversa ──────────────────────────────────────────────────────
+
+function NovaConversaModal({ onClose }: { onClose: () => void }) {
+    const { data, setData, post, processing, errors, reset } = useForm({
+        telefone: '',
+        mensagem: '',
+    });
+
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        post(route('tenant.conversas.iniciar'), {
+            onSuccess: () => { reset(); onClose(); },
+        });
+    };
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center px-4"
+            role="dialog"
+            aria-modal="true"
+            onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+        >
+            <div
+                className="w-full max-w-sm rounded-2xl p-6 shadow-2xl"
+                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}
+            >
+                <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                        Nova conversa
+                    </h3>
+                    <button
+                        onClick={onClose}
+                        style={{ color: 'var(--text-3)' }}
+                        className="hover:text-primary transition-colors text-lg leading-none"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <form onSubmit={submit} className="space-y-3">
+                    <div>
+                        <label className="label mb-1">Telefone (com DDD e código do país)</label>
+                        <input
+                            type="tel"
+                            value={data.telefone}
+                            onChange={e => setData('telefone', e.target.value)}
+                            placeholder="Ex: 5549999999999"
+                            className="input"
+                            autoFocus
+                        />
+                        {errors.telefone && <p className="mt-1 text-xs text-red-400">{errors.telefone}</p>}
+                    </div>
+                    <div>
+                        <label className="label mb-1">Mensagem</label>
+                        <textarea
+                            value={data.mensagem}
+                            onChange={e => setData('mensagem', e.target.value)}
+                            placeholder="Olá! Tudo bem?"
+                            rows={3}
+                            className="input resize-none"
+                        />
+                        {errors.mensagem && <p className="mt-1 text-xs text-red-400">{errors.mensagem}</p>}
+                    </div>
+                    <div className="flex justify-end gap-2 pt-1">
+                        <button type="button" onClick={onClose} className="btn-secondary">
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={processing || !data.telefone.trim() || !data.mensagem.trim()}
+                            className="btn-primary"
+                        >
+                            {processing ? 'Enviando…' : 'Enviar'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function ConversasIndex({ conversas, filtros }: Props) {
-    const [selecionada, setSelecionada]  = useState<Conversa | null>(null);
-    const [mensagens,   setMensagens]    = useState<Mensagem[]>([]);
-    const [carregando,  setCarregando]   = useState(false);
-    const [assumindo,   setAssumindo]    = useState(false);
-    const [showChat,    setShowChat]     = useState(false);
+    const [selecionada,    setSelecionada]    = useState<Conversa | null>(null);
+    const [mensagens,      setMensagens]      = useState<Mensagem[]>([]);
+    const [carregando,     setCarregando]     = useState(false);
+    const [assumindo,      setAssumindo]      = useState(false);
+    const [showChat,       setShowChat]       = useState(false);
+    const [showModalNova,  setShowModalNova]  = useState(false);
+    const [sincronizando,  setSincronizando]  = useState(false);
 
     const chatRef     = useRef<HTMLDivElement>(null);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -240,6 +329,14 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
         router.get(route('tenant.conversas.index'), status ? { status_v2: status } : {}, { preserveState: true });
     };
 
+    const sincronizar = () => {
+        setSincronizando(true);
+        router.post(route('tenant.conversas.sincronizar'), {}, {
+            onSuccess: () => router.reload(),
+            onFinish:  () => setSincronizando(false),
+        });
+    };
+
     const nomeDe = (c: Conversa) => c.cliente?.nome ?? c.telefone_cliente;
     const previewDe = (c: Conversa) => {
         const texto = c.mensagens?.[0]?.conteudo;
@@ -274,9 +371,40 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                 >
                     {/* Header */}
                     <div className="px-4 py-3.5" style={{ borderBottom: '1px solid var(--border)' }}>
-                        <h2 className="text-[15px] font-semibold text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
-                            Conversas
-                        </h2>
+                        <div className="flex items-center justify-between gap-2">
+                            <h2 className="text-[15px] font-semibold text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                                Conversas
+                            </h2>
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    onClick={sincronizar}
+                                    disabled={sincronizando}
+                                    title="Sincronizar conversas do WhatsApp"
+                                    className="flex items-center justify-center rounded-full p-1.5 transition-colors hover:bg-surface-2 disabled:opacity-50"
+                                    style={{ color: 'var(--text-3)' }}
+                                >
+                                    <svg
+                                        width={14} height={14} viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                                        className={sincronizando ? 'animate-spin' : ''}
+                                    >
+                                        <polyline points="23 4 23 10 17 10"/>
+                                        <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={() => setShowModalNova(true)}
+                                    title="Nova conversa"
+                                    className="flex items-center justify-center rounded-full p-1.5 transition-colors hover:bg-surface-2"
+                                    style={{ color: 'var(--jade)' }}
+                                >
+                                    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <line x1="12" y1="5" x2="12" y2="19"/>
+                                        <line x1="5" y1="12" x2="19" y2="12"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
                         <div className="mt-2.5 flex flex-wrap gap-1">
                             {statusFiltros.map(f => {
                                 const ativo = (filtros.status_v2 ?? '') === f.value;
@@ -504,6 +632,10 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                     </div>
                 )}
             </div>
+
+            {showModalNova && (
+                <NovaConversaModal onClose={() => setShowModalNova(false)} />
+            )}
         </AppLayout>
     );
 }

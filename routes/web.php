@@ -103,6 +103,8 @@ Route::middleware('auth')->group(function () {
 
         // Conversas WhatsApp
         Route::get('conversas', [ConversaController::class, 'index'])->name('conversas.index');
+        Route::post('conversas/iniciar', [ConversaController::class, 'iniciar'])->name('conversas.iniciar');
+        Route::post('conversas/sincronizar', [ConversaController::class, 'sincronizar'])->name('conversas.sincronizar');
         Route::get('conversas/{conversa}/mensagens', [ConversaController::class, 'mensagens'])->name('conversas.mensagens');
         Route::post('conversas/{conversa}/assumir', [ConversaController::class, 'assumir'])->name('conversas.assumir');
         Route::post('conversas/{conversa}/devolver', [ConversaController::class, 'devolver'])->name('conversas.devolver');
