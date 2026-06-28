@@ -586,7 +586,7 @@ function DetalheModal({
                             </div>
                             <div>
                                 <label className="label mb-1">Status</label>
-                                <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className="input">
+                                <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as typeof f.status }))} className="input">
                                     <option value="confirmado">Confirmado</option>
                                     <option value="concluido">Concluído</option>
                                     <option value="cancelado">Cancelado</option>
