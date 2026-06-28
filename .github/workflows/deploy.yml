@@ -9,7 +9,47 @@ on:
       - 'LICENSE'
 
 jobs:
+  validar:
+    name: Validar código
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+
+      - name: Instalar dependências PHP
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Validar sintaxe PHP
+        run: find app config routes -name "*.php" | xargs php -l | grep -v "^No syntax errors" | (grep . && exit 1 || exit 0)
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependências JS
+        run: npm ci
+
+      - name: Build frontend (TypeScript + Vite)
+        run: npm run build
+
   deploy:
+    name: Deploy para VPS
+    needs: validar
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
