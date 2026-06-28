@@ -34,7 +34,7 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
         $importados = 0;
 
         foreach ($chats as $chat) {
-            $remoteJid = data_get($chat, 'id');
+            $remoteJid = data_get($chat, 'remoteJid');
             if (!$remoteJid || str_contains($remoteJid, '@g.us')) {
                 continue;
             }
@@ -44,7 +44,7 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
                 continue; // formato antigo de grupo
             }
 
-            $nome = data_get($chat, 'name') ?? $telefone;
+            $nome = data_get($chat, 'pushName') ?? $telefone;
 
             $cliente = Cliente::firstOrCreate(
                 ['tenant_id' => $this->tenant->id, 'telefone' => $telefone],

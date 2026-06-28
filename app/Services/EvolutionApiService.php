@@ -63,7 +63,7 @@ class EvolutionApiService
     public function fetchChats(string $instance): array
     {
         $response = Http::withHeaders(['apikey' => $this->globalApiKey])
-            ->get("{$this->baseUrl}/chat/findChats/{$instance}");
+            ->post("{$this->baseUrl}/chat/findChats/{$instance}", []);
 
         return $response->json() ?? [];
     }
@@ -71,12 +71,13 @@ class EvolutionApiService
     public function fetchMessages(string $instance, string $remoteJid, int $count = 100): array
     {
         $response = Http::withHeaders(['apikey' => $this->globalApiKey])
-            ->post("{$this->baseUrl}/message/findMessages/{$instance}", [
+            ->post("{$this->baseUrl}/chat/findMessages/{$instance}", [
                 'where' => ['key' => ['remoteJid' => $remoteJid]],
                 'limit' => $count,
             ]);
 
-        return $response->json('messages') ?? $response->json() ?? [];
+        // Resposta: {"messages":{"records":[...],"total":N,...}}
+        return $response->json('messages.records') ?? [];
     }
 
     public function configurarWebhook(string $instance, string $webhookUrl): bool

@@ -352,7 +352,6 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
         { label: 'Encerradas',     value: 'encerrada' },
     ];
 
-    const podeEnviar  = selecionada?.status_v2 !== 'encerrada';
     const emAtendimento = selecionada?.status_v2 === 'em_atendimento_humano';
     const dotColor = selecionada ? (STATUS_DOT[selecionada.status_v2] ?? 'var(--text-3)') : '';
 
@@ -559,61 +558,48 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                         </div>
 
                         {/* Input */}
-                        {podeEnviar ? (
-                            <form
-                                onSubmit={enviar}
-                                className="flex-shrink-0 flex items-end gap-2.5 px-4 py-3 md:px-5"
-                                style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface)' }}
-                            >
-                                {!emAtendimento && (
-                                    <p className="absolute mb-1 text-[10px] text-center w-full" style={{ color: 'var(--text-3)' }}>
-                                    </p>
-                                )}
-                                <textarea
-                                    value={data.conteudo}
-                                    onChange={e => setData('conteudo', e.target.value)}
-                                    onKeyDown={e => {
-                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                            e.preventDefault();
-                                            enviar(e as unknown as React.FormEvent);
-                                        }
-                                    }}
-                                    placeholder={emAtendimento ? 'Mensagem… (Enter para enviar)' : 'Escrever para assumir o atendimento…'}
-                                    rows={1}
-                                    className="flex-1 resize-none rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent/40"
-                                    style={{
-                                        background: 'var(--bg-surface-2)',
-                                        border: '1px solid var(--border-strong)',
-                                        color: 'var(--text-1)',
-                                        maxHeight: '120px',
-                                        lineHeight: '1.5',
-                                    }}
-                                    onInput={e => {
-                                        const el = e.currentTarget;
-                                        el.style.height = 'auto';
-                                        el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-                                    }}
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={processing || assumindo || !data.conteudo.trim()}
-                                    className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-full text-white transition-all hover:brightness-110 disabled:opacity-40"
-                                    style={{ background: data.conteudo.trim() ? 'var(--jade)' : 'var(--text-3)' }}
-                                >
-                                    {(processing || assumindo)
-                                        ? <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-                                        : <SendIcon />
+                        <form
+                            onSubmit={enviar}
+                            className="flex-shrink-0 flex items-end gap-2.5 px-4 py-3 md:px-5"
+                            style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface)' }}
+                        >
+                            <textarea
+                                value={data.conteudo}
+                                onChange={e => setData('conteudo', e.target.value)}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        enviar(e as unknown as React.FormEvent);
                                     }
-                                </button>
-                            </form>
-                        ) : (
-                            <div
-                                className="flex-shrink-0 flex items-center justify-center px-5 py-3.5"
-                                style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface)' }}
+                                }}
+                                placeholder={emAtendimento ? 'Mensagem… (Enter para enviar)' : 'Escrever para assumir o atendimento…'}
+                                rows={1}
+                                className="flex-1 resize-none rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent/40"
+                                style={{
+                                    background: 'var(--bg-surface-2)',
+                                    border: '1px solid var(--border-strong)',
+                                    color: 'var(--text-1)',
+                                    maxHeight: '120px',
+                                    lineHeight: '1.5',
+                                }}
+                                onInput={e => {
+                                    const el = e.currentTarget;
+                                    el.style.height = 'auto';
+                                    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+                                }}
+                            />
+                            <button
+                                type="submit"
+                                disabled={processing || assumindo || !data.conteudo.trim()}
+                                className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-full text-white transition-all hover:brightness-110 disabled:opacity-40"
+                                style={{ background: data.conteudo.trim() ? 'var(--jade)' : 'var(--text-3)' }}
                             >
-                                <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>Conversa encerrada</span>
-                            </div>
-                        )}
+                                {(processing || assumindo)
+                                    ? <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                                    : <SendIcon />
+                                }
+                            </button>
+                        </form>
                     </div>
                 ) : (
                     <div className="hidden md:flex flex-1 items-center justify-center flex-col gap-3" style={{ background: 'var(--bg-app)', backgroundImage: 'radial-gradient(circle, var(--border) 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
