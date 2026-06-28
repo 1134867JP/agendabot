@@ -115,6 +115,7 @@ class AgendamentoController extends Controller
             'inicio'           => ['required', 'date'],
             'fim'              => ['required', 'date', 'after:inicio'],
             'observacoes'      => ['nullable', 'string'],
+            'status'           => ['nullable', 'in:confirmado,cancelado,concluido'],
         ]);
 
         $recursoId     = $validated['recurso_id'] ?? $agendamento->recurso_id;
@@ -143,6 +144,7 @@ class AgendamentoController extends Controller
             'data_hora'        => $validated['inicio'],
             'duracao_minutos'  => (int) Carbon::parse($validated['inicio'])->diffInMinutes($validated['fim']),
             'observacoes'      => $validated['observacoes'] ?? null,
+            'status'           => $validated['status'] ?? $agendamento->status,
         ];
 
         if (!empty($validated['recurso_id'])) {

@@ -506,7 +506,7 @@ function DetalheModal({
     onClose: () => void;
     onConcluir: (id: number) => void;
     onCancelar: (id: number) => void;
-    onSalvar: (id: number, dados: { cliente_nome: string; cliente_telefone: string; inicio: string; fim: string }) => void;
+    onSalvar: (id: number, dados: { cliente_nome: string; cliente_telefone: string; inicio: string; fim: string; status: string }) => void;
 }) {
     const [editando, setEditando]   = useState(false);
     const [salvando, setSalvando]   = useState(false);
@@ -515,6 +515,7 @@ function DetalheModal({
         cliente_telefone: detalhe.telefone,
         inicio:           toLocalDateTimeInput(detalhe.start),
         fim:              detalhe.end ? toLocalDateTimeInput(detalhe.end) : '',
+        status:           detalhe.status,
     });
     const nomeRef = useRef<HTMLInputElement>(null);
 
@@ -529,6 +530,7 @@ function DetalheModal({
             cliente_telefone: form.cliente_telefone,
             inicio:           form.inicio + ':00',
             fim:              form.fim + ':00',
+            status:           form.status,
         });
     };
 
@@ -582,6 +584,14 @@ function DetalheModal({
                                 <label className="label mb-1">Término</label>
                                 <input type="datetime-local" value={form.fim} onChange={e => setForm(f => ({ ...f, fim: e.target.value }))} className="input" />
                             </div>
+                            <div>
+                                <label className="label mb-1">Status</label>
+                                <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className="input">
+                                    <option value="confirmado">Confirmado</option>
+                                    <option value="concluido">Concluído</option>
+                                    <option value="cancelado">Cancelado</option>
+                                </select>
+                            </div>
                             <div className="flex gap-2 pt-1">
                                 <button onClick={() => setEditando(false)} className="btn-secondary flex-1 justify-center text-xs py-2">Voltar</button>
                                 <button
@@ -626,11 +636,11 @@ function DetalheModal({
                                 <a href={`tel:${detalhe.telefone}`} className="btn-secondary flex-1 justify-center text-xs py-2">
                                     Ligar
                                 </a>
+                                <button onClick={() => setEditando(true)} className="btn-secondary flex-1 justify-center text-xs py-2">
+                                    Editar
+                                </button>
                                 {detalhe.status === 'confirmado' && (
                                     <>
-                                        <button onClick={() => setEditando(true)} className="btn-secondary flex-1 justify-center text-xs py-2">
-                                            Editar
-                                        </button>
                                         <button onClick={() => onConcluir(detalhe.id)} className="btn-secondary flex-1 justify-center text-xs py-2">
                                             Concluir
                                         </button>
@@ -720,7 +730,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
             onSuccess: () => { setDetalhe(null); carregar(); },
         });
     };
-    const salvarEdicao = (id: number, dados: { cliente_nome: string; cliente_telefone: string; inicio: string; fim: string }) => {
+    const salvarEdicao = (id: number, dados: { cliente_nome: string; cliente_telefone: string; inicio: string; fim: string; status: string }) => {
         router.put(route('tenant.agendamentos.update', id), dados, {
             onSuccess: () => { setDetalhe(null); carregar(); },
         });

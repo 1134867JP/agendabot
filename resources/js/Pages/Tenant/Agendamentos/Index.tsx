@@ -68,6 +68,7 @@ function EditarReservaModal({
         inicio: toLocalInput(agendamento.inicio),
         fim: toLocalInput(agendamento.fim),
         observacoes: agendamento.observacoes ?? "",
+        status: agendamento.status,
     });
 
     useEffect(() => {
@@ -237,16 +238,32 @@ function EditarReservaModal({
                         </div>
                     </div>
 
-                    <div>
-                        <label className="label mb-1">Observações</label>
-                        <textarea
-                            value={data.observacoes}
-                            onChange={(e) =>
-                                setData("observacoes", e.target.value)
-                            }
-                            rows={2}
-                            className="input"
-                        />
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="label mb-1">Status</label>
+                            <select
+                                value={data.status}
+                                onChange={(e) =>
+                                    setData("status", e.target.value as Agendamento["status"])
+                                }
+                                className="input"
+                            >
+                                <option value="confirmado">Confirmado</option>
+                                <option value="concluido">Concluído</option>
+                                <option value="cancelado">Cancelado</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="label mb-1">Observações</label>
+                            <textarea
+                                value={data.observacoes}
+                                onChange={(e) =>
+                                    setData("observacoes", e.target.value)
+                                }
+                                rows={2}
+                                className="input"
+                            />
+                        </div>
                     </div>
 
                     <div className="flex justify-end gap-2 pt-1">
@@ -884,27 +901,23 @@ export default function AgendamentosIndex({
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex gap-1">
+                                                <button
+                                                    onClick={() =>
+                                                        setAgendamentoEditando(a)
+                                                    }
+                                                    className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors hover:brightness-125"
+                                                    style={{
+                                                        background:
+                                                            "rgba(99,102,241,0.08)",
+                                                        color: "var(--accent)",
+                                                        border: "1px solid rgba(99,102,241,0.25)",
+                                                    }}
+                                                >
+                                                    Editar
+                                                </button>
                                                 {(a.status === "confirmado" ||
-                                                    a.status === "agendado" ||
-                                                    a.status ===
-                                                        "cancelado") && (
+                                                    a.status === "agendado") && (
                                                     <>
-                                                        <button
-                                                            onClick={() =>
-                                                                setAgendamentoEditando(
-                                                                    a,
-                                                                )
-                                                            }
-                                                            className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors hover:brightness-125"
-                                                            style={{
-                                                                background:
-                                                                    "rgba(99,102,241,0.08)",
-                                                                color: "var(--accent)",
-                                                                border: "1px solid rgba(99,102,241,0.25)",
-                                                            }}
-                                                        >
-                                                            Editar
-                                                        </button>
                                                         <button
                                                             onClick={() =>
                                                                 concluir(a.id)
