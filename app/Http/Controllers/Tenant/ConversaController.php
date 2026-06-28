@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SincronizarConversasWhatsappJob;
 use App\Models\Cliente;
 use App\Models\Conversa;
-use App\Models\Mensagem;
 use App\Services\EvolutionApiService;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -118,7 +117,7 @@ class ConversaController extends Controller
         return back()->with('success', 'Mensagem enviada.');
     }
 
-    public function sincronizar(EvolutionApiService $evolution): RedirectResponse
+    public function sincronizar(): RedirectResponse
     {
         $tenant = app('tenant');
 
@@ -126,58 +125,8 @@ class ConversaController extends Controller
             return back()->withErrors(['erro' => 'WhatsApp não configurado.']);
         }
 
-        $chats = $evolution->fetchChats($tenant->evolution_instance);
+        SincronizarConversasWhatsappJob::dispatch($tenant)->onQueue('default');
 
-        foreach ($chats as $chat) {
-            $remoteJid = data_get($chat, 'id');
-            if (!$remoteJid || str_contains($remoteJid, '@g.us')) {
-                continue;
-            }
-
-            $telefone = str_replace('@s.whatsapp.net', '', $remoteJid);
-            $nome     = data_get($chat, 'name') ?? $telefone;
-
-            $cliente = Cliente::firstOrCreate(
-                ['tenant_id' => $tenant->id, 'telefone' => $telefone],
-                ['nome' => $nome]
-            );
-
-            $conversa = Conversa::firstOrCreate(
-                ['tenant_id' => $tenant->id, 'telefone_cliente' => $telefone],
-                ['cliente_id' => $cliente->id, 'status_v2' => 'ativa']
-            );
-
-            $msgs = $evolution->fetchMessages($tenant->evolution_instance, $remoteJid, 100);
-            foreach ($msgs as $msg) {
-                $evolutionId = data_get($msg, 'key.id');
-                if (!$evolutionId) {
-                    continue;
-                }
-
-                if (Mensagem::where('evolution_message_id', $evolutionId)->exists()) {
-                    continue;
-                }
-
-                $fromMe   = (bool) data_get($msg, 'key.fromMe', false);
-                $conteudo = data_get($msg, 'message.conversation')
-                         ?? data_get($msg, 'message.extendedTextMessage.text')
-                         ?? '[mídia]';
-                $ts = data_get($msg, 'messageTimestamp');
-
-                $conversa->mensagens()->create([
-                    'remetente'            => $fromMe ? 'humano' : 'cliente',
-                    'conteudo'             => $conteudo,
-                    'evolution_message_id' => $evolutionId,
-                    'enviada_em'           => $ts ? Carbon::createFromTimestamp((int)$ts) : now(),
-                ]);
-            }
-
-            $ultimaMensagem = $conversa->mensagens()->orderByDesc('enviada_em')->value('enviada_em');
-            if ($ultimaMensagem) {
-                $conversa->update(['ultima_mensagem_em' => $ultimaMensagem]);
-            }
-        }
-
-        return back()->with('success', 'Conversas sincronizadas com sucesso.');
+        return back()->with('success', 'Sincronização iniciada em segundo plano. As conversas aparecem em instantes.');
     }
 }
