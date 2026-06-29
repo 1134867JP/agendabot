@@ -33,6 +33,18 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
             return;
         }
 
+        // Buscar mapa de nomes via findContacts (fonte mais confiável de pushName)
+        $contatosRaw = $evolution->fetchContacts($this->tenant->evolution_instance);
+        $nomesPorTelefone = [];
+        foreach ($contatosRaw as $contato) {
+            $jid  = data_get($contato, 'remoteJid') ?? data_get($contato, 'id');
+            $nome = data_get($contato, 'pushName') ?? data_get($contato, 'notify') ?? data_get($contato, 'name');
+            if ($jid && $nome) {
+                $tel = str_replace('@s.whatsapp.net', '', $jid);
+                $nomesPorTelefone[$tel] = $nome;
+            }
+        }
+
         $chats = $evolution->fetchChats($this->tenant->evolution_instance);
         $importados = 0;
 
@@ -47,9 +59,10 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
                 continue; // formato antigo de grupo
             }
 
-            // pushName do fetchChats é null para contatos individuais nesta versão da API
-            // O nome real vem das mensagens (campo pushName em cada msg do cliente)
-            $nomeChat = data_get($chat, 'pushName');
+            // Prioridade: findContacts > pushName do chat > mensagens > telefone
+            $nomeChat = $nomesPorTelefone[$telefone]
+                ?? data_get($chat, 'pushName')
+                ?? null;
 
             $cliente = Cliente::firstOrCreate(
                 ['tenant_id' => $this->tenant->id, 'telefone' => $telefone],
@@ -63,7 +76,7 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
 
             $msgs = $evolution->fetchMessages($this->tenant->evolution_instance, $remoteJid, 100);
 
-            // Extrair nome real do cliente a partir das mensagens recebidas (fromMe=false)
+            // Extrair nome real do cliente a partir das mensagens recebidas (fromMe=false) como fallback
             $nomeReal = $nomeChat;
             if (!$nomeReal) {
                 foreach ($msgs as $msg) {
@@ -74,12 +87,13 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
                 }
             }
 
-            // Atualizar nome se ainda é um placeholder (telefone ou "Cliente WhatsApp")
+            // Atualizar nome se é placeholder OU se veio do findContacts (fonte mais confiável)
             if ($nomeReal && $nomeReal !== $telefone) {
                 $nomePlaceholder = $cliente->nome === $telefone
                     || in_array(strtolower($cliente->nome), array_map('strtolower', self::PLACEHOLDERS));
+                $veioDoFindContacts = isset($nomesPorTelefone[$telefone]);
 
-                if ($nomePlaceholder) {
+                if ($nomePlaceholder || ($veioDoFindContacts && $cliente->nome !== $nomeReal)) {
                     $cliente->update(['nome' => $nomeReal]);
                 }
             }

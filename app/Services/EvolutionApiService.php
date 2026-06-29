@@ -68,6 +68,14 @@ class EvolutionApiService
         return $response->json() ?? [];
     }
 
+    public function fetchContacts(string $instance): array
+    {
+        $response = Http::withHeaders(['apikey' => $this->globalApiKey])
+            ->post("{$this->baseUrl}/chat/findContacts/{$instance}", []);
+
+        return $response->json() ?? [];
+    }
+
     public function fetchMessages(string $instance, string $remoteJid, int $count = 100): array
     {
         $response = Http::withHeaders(['apikey' => $this->globalApiKey])
