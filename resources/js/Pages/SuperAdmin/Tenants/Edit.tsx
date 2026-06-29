@@ -1,22 +1,20 @@
 import { Head, useForm } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
-import { PageProps, Tenant, TipoServico } from '@/types';
+import { PageProps, Tenant } from '@/types';
+import TipoServicoSelector from '@/Components/TipoServicoSelector';
 
 interface Props extends PageProps {
-    tenant: Tenant & { users: { id: number; name: string; email: string }[] };
+    tenant: Tenant & {
+        users: { id: number; name: string; email: string }[];
+        tipo_servico_personalizado?: string | null;
+    };
 }
-
-const TIPOS: { value: TipoServico; label: string; emoji: string }[] = [
-    { value: 'barbeiro',      label: 'Barbearia',        emoji: '✂️' },
-    { value: 'quadra',        label: 'Quadra Esportiva', emoji: '🏟️' },
-    { value: 'estetica',      label: 'Estética',         emoji: '💆' },
-    { value: 'personalizado', label: 'Personalizado',    emoji: '⚙️' },
-];
 
 export default function TenantEdit({ tenant }: Props) {
     const { data, setData, put, processing, errors } = useForm({
-        nome:         tenant.nome,
-        tipo_servico: tenant.tipo_servico,
+        nome:                       tenant.nome,
+        tipo_servico:               tenant.tipo_servico,
+        tipo_servico_personalizado: tenant.tipo_servico_personalizado ?? '',
     });
 
     const submit = (e: React.FormEvent) => {
@@ -46,23 +44,13 @@ export default function TenantEdit({ tenant }: Props) {
 
                         <div>
                             <label className="label mb-2">Tipo de serviço</label>
-                            <div className="grid grid-cols-2 gap-2">
-                                {TIPOS.map(t => (
-                                    <button
-                                        key={t.value}
-                                        type="button"
-                                        onClick={() => setData('tipo_servico', t.value)}
-                                        className="flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 text-sm transition-all"
-                                        style={data.tipo_servico === t.value
-                                            ? { borderColor: 'var(--accent)', background: 'var(--accent-light)', color: 'white' }
-                                            : { borderColor: 'var(--border-strong)', background: 'var(--bg-surface-2)', color: 'var(--text-2)' }
-                                        }
-                                    >
-                                        <span>{t.emoji}</span>
-                                        <span className="font-medium">{t.label}</span>
-                                    </button>
-                                ))}
-                            </div>
+                            <TipoServicoSelector
+                                value={data.tipo_servico}
+                                onChange={v => setData('tipo_servico', v as any)}
+                                customValue={data.tipo_servico_personalizado}
+                                onChangeCustom={v => setData('tipo_servico_personalizado', v)}
+                                error={errors.tipo_servico}
+                            />
                         </div>
 
                         <div>

@@ -36,20 +36,22 @@ class TenantController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'nome'         => ['required', 'string', 'max:255'],
-            'tipo_servico' => ['required', 'in:barbeiro,quadra,estetica,personalizado'],
-            'email_dono'   => ['required', 'email', 'unique:users,email'],
-            'senha_dono'   => ['required', 'min:8'],
+            'nome'                       => ['required', 'string', 'max:255'],
+            'tipo_servico'               => ['required', 'in:barbeiro,quadra,estetica,clinica,studio,personalizado'],
+            'tipo_servico_personalizado' => ['nullable', 'required_if:tipo_servico,personalizado', 'string', 'max:100'],
+            'email_dono'                 => ['required', 'email', 'unique:users,email'],
+            'senha_dono'                 => ['required', 'min:8'],
         ]);
 
         DB::transaction(function () use ($validated) {
             $slug = Str::slug($validated['nome']) . '-' . Str::random(4);
 
             $tenant = Tenant::create([
-                'nome'               => $validated['nome'],
-                'slug'               => $slug,
-                'tipo_servico'       => $validated['tipo_servico'],
-                'evolution_instance' => $slug,
+                'nome'                       => $validated['nome'],
+                'slug'                       => $slug,
+                'tipo_servico'               => $validated['tipo_servico'],
+                'tipo_servico_personalizado' => $validated['tipo_servico_personalizado'] ?? null,
+                'evolution_instance'         => $slug,
             ]);
 
             $dono = User::create([
@@ -78,8 +80,9 @@ class TenantController extends Controller
     public function update(Request $request, Tenant $tenant): RedirectResponse
     {
         $validated = $request->validate([
-            'nome'         => ['required', 'string', 'max:255'],
-            'tipo_servico' => ['required', 'in:barbeiro,quadra,estetica,personalizado'],
+            'nome'                       => ['required', 'string', 'max:255'],
+            'tipo_servico'               => ['required', 'in:barbeiro,quadra,estetica,clinica,studio,personalizado'],
+            'tipo_servico_personalizado' => ['nullable', 'required_if:tipo_servico,personalizado', 'string', 'max:100'],
         ]);
 
         $tenant->update($validated);
