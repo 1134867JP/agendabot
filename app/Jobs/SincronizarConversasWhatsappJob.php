@@ -13,6 +13,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class SincronizarConversasWhatsappJob implements ShouldQueue
@@ -30,6 +31,7 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
     public function handle(EvolutionApiService $evolution): void
     {
         if (!$this->tenant->evolution_instance) {
+            Cache::forget("sync_whatsapp_tenant_{$this->tenant->id}");
             return;
         }
 
@@ -142,6 +144,17 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
             'importados' => $importados,
             'sem_nome'   => $sem_nome,
             'nomes_map'  => count($nomesPorTelefone),
+        ]);
+
+        Cache::forget("sync_whatsapp_tenant_{$this->tenant->id}");
+    }
+
+    public function failed(\Throwable $e): void
+    {
+        Cache::forget("sync_whatsapp_tenant_{$this->tenant->id}");
+        Log::error('SINCRONIZAR_CONVERSAS_FALHOU', [
+            'tenant' => $this->tenant->slug,
+            'erro'   => $e->getMessage(),
         ]);
     }
 

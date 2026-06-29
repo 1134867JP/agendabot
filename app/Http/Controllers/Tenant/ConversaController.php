@@ -169,6 +169,16 @@ class ConversaController extends Controller
             return back()->withErrors(['erro' => 'WhatsApp não configurado.']);
         }
 
+        $lockKey = "sync_whatsapp_tenant_{$tenant->id}";
+
+        // Não coloca na fila se já há um job rodando ou pendente para este tenant
+        if (\Cache::has($lockKey)) {
+            return back()->with('success', 'Sincronização já está em andamento. Aguarde…');
+        }
+
+        // Marca como "em andamento" por 10 min (tempo máximo do job)
+        \Cache::put($lockKey, true, now()->addMinutes(10));
+
         SincronizarConversasWhatsappJob::dispatch($tenant)->onQueue('default');
 
         return back()->with('success', 'Sincronização iniciada em segundo plano. As conversas aparecem em instantes.');
