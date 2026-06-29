@@ -121,21 +121,44 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             >
                 {/* Logo */}
                 <div className="px-4 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-                    <span className="flex items-center gap-2 text-[17px] text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif', letterSpacing: '-0.01em' }}>
-                        <span
-                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg"
-                            style={{ background: 'var(--jade)' }}
-                        >
-                            <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                                <line x1="16" y1="2" x2="16" y2="6"/>
-                                <line x1="8" y1="2" x2="8" y2="6"/>
-                                <line x1="3" y1="10" x2="21" y2="10"/>
-                                <polyline points="9 16 11 18 15 14"/>
-                            </svg>
+                    <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-2 text-[17px] text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif', letterSpacing: '-0.01em' }}>
+                            <span
+                                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg"
+                                style={{ background: 'var(--jade)' }}
+                            >
+                                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                    <line x1="16" y1="2" x2="16" y2="6"/>
+                                    <line x1="8" y1="2" x2="8" y2="6"/>
+                                    <line x1="3" y1="10" x2="21" y2="10"/>
+                                    <polyline points="9 16 11 18 15 14"/>
+                                </svg>
+                            </span>
+                            AgendaBot
                         </span>
-                        AgendaBot
-                    </span>
+                        {currentTenant && (
+                            <Link
+                                href={route('tenant.conversas.index')}
+                                onClick={onClose}
+                                className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
+                                style={{ color: conversasNaoLidas > 0 ? '#00a884' : 'var(--text-3)' }}
+                                title={conversasNaoLidas > 0 ? `${conversasNaoLidas} mensagem(s) não lida(s)` : 'Conversas'}
+                            >
+                                <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/>
+                                </svg>
+                                {conversasNaoLidas > 0 && (
+                                    <span
+                                        className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full px-0.5 text-[8px] font-bold text-white"
+                                        style={{ background: '#00a884' }}
+                                    >
+                                        {conversasNaoLidas > 99 ? '99+' : conversasNaoLidas}
+                                    </span>
+                                )}
+                            </Link>
+                        )}
+                    </div>
                     {currentTenant && (
                         <span className="mt-1.5 block truncate text-[11px]" style={{ color: 'var(--text-3)' }}>
                             {currentTenant.nome}
