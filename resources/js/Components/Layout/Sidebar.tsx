@@ -218,7 +218,16 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                         {theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
                     </button>
 
-                    <p className="mb-1.5 truncate text-[12px]" style={{ color: 'var(--text-2)' }}>{auth.user.name}</p>
+                    <Link
+                        href={route('profile.edit')}
+                        className="sidebar-btn mb-1 flex items-center gap-1.5 px-2 py-1 text-[11px]"
+                    >
+                        <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        {auth.user.name}
+                    </Link>
                     <Link
                         href={route('logout')}
                         method="post"
