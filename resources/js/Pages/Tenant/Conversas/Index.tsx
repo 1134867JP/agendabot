@@ -489,12 +489,13 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                         </div>
 
                         {/* Campo de pesquisa estilo WhatsApp Web */}
-                        <div
-                            className="flex items-center gap-2 rounded-full px-3 py-1.5 mb-2"
-                            style={{ background: 'var(--bg-surface-2)', border: '1px solid transparent' }}
-                            onClick={() => buscaRef.current?.focus()}
-                        >
-                            <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)', flexShrink: 0 }}>
+                        <div className="relative mb-2.5">
+                            <svg
+                                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+                                width={13} height={13} viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+                                style={{ color: 'var(--text-3)' }}
+                            >
                                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                             </svg>
                             <input
@@ -502,13 +503,23 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                 type="text"
                                 value={busca}
                                 onChange={e => setBusca(e.target.value)}
-                                placeholder="Pesquisar ou começar nova conversa"
-                                className="flex-1 bg-transparent text-[12px] outline-none placeholder:text-[11px]"
-                                style={{ color: 'var(--text-1)' }}
+                                placeholder="Pesquisar conversa…"
+                                className="w-full rounded-full py-2 pl-8 pr-8 text-[12px] outline-none transition-colors"
+                                style={{
+                                    background: 'var(--bg-surface-2)',
+                                    color: 'var(--text-1)',
+                                    border: '1px solid var(--border)',
+                                }}
+                                onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
+                                onBlur={e  => (e.currentTarget.style.borderColor = 'var(--border)')}
                             />
                             {busca && (
-                                <button onClick={() => setBusca('')} style={{ color: 'var(--text-3)' }}>
-                                    <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                                <button
+                                    onClick={() => { setBusca(''); buscaRef.current?.focus(); }}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center rounded-full"
+                                    style={{ color: 'var(--text-3)', background: 'var(--bg-surface)' }}
+                                >
+                                    <svg width={8} height={8} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                                         <path d="M18 6L6 18M6 6l12 12"/>
                                     </svg>
                                 </button>
@@ -536,7 +547,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                     </div>
 
                     {/* Lista */}
-                    <div className="flex-1 overflow-y-auto">
+                    <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: 'var(--border) transparent' }}>
                         {conversasFiltradas.length === 0 ? (
                             <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
                                 <svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>

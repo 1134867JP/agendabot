@@ -52,7 +52,7 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
             // Ignorar grupos, broadcast e newsletters
             if ($this->deveIgnorar($remoteJid)) continue;
 
-            $telefone = str_replace('@s.whatsapp.net', '', $remoteJid);
+            $telefone = $this->limparJid($remoteJid);
 
             // ── Nome com prioridade: findContacts > pushName do chat ─────────
             $nomeChat = $nomesPorTelefone[$telefone]
@@ -158,6 +158,12 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
         ]);
     }
 
+    /** Remove qualquer sufixo de JID (@s.whatsapp.net, @c.us, @lid, etc.) */
+    private function limparJid(string $jid): string
+    {
+        return preg_replace('/@.*$/', '', $jid);
+    }
+
     /**
      * Monta mapa telefone → nome a partir do retorno de findContacts.
      * Tenta vários formatos de campo para garantir compatibilidade.
@@ -178,7 +184,7 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
 
             if (!$jid || !$nome) continue;
 
-            $tel = str_replace(['@s.whatsapp.net', '@c.us'], '', $jid);
+            $tel = preg_replace('/@.*$/', '', $jid);
             $mapa[$tel] = $nome;
         }
 
