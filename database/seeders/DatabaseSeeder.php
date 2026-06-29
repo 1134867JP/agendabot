@@ -302,6 +302,9 @@ class DatabaseSeeder extends Seeder
         if ($quadras->agendamentos()->count() === 0) {
             $this->seedAgendamentosV1($quadras, $prof1->id ?? 1, 120, 60);
         }
+
+        // ── 5. Tenant real: Odonto Excellence ────────────────────────────────────
+        $this->call(OdontoExcellenceSeeder::class);
     }
 
     private function seedAgendamentosV1(Tenant $tenant, $profissionalId, float $valorHora, int $duracaoMin): void
