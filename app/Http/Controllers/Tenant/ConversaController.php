@@ -58,15 +58,44 @@ class ConversaController extends Controller
     {
         $tenant = app('tenant');
 
-        $naoLidas = Conversa::where('tenant_id', $tenant->id)
+        $query = Conversa::where('tenant_id', $tenant->id)
             ->whereNotNull('ultima_mensagem_em')
             ->where(function ($q) {
                 $q->whereNull('ultima_leitura_em')
                   ->orWhereColumn('ultima_mensagem_em', '>', 'ultima_leitura_em');
-            })
-            ->count();
+            });
 
-        return response()->json(['conversas_nao_lidas' => $naoLidas]);
+        $total = $query->count();
+
+        $preview = (clone $query)
+            ->with([
+                'cliente:id,nome,telefone',
+                'mensagens' => fn ($q) => $q->orderByDesc('enviada_em')->limit(1),
+            ])
+            ->orderByDesc('ultima_mensagem_em')
+            ->limit(5)
+            ->get()
+            ->map(fn ($c) => [
+                'id'           => $c->id,
+                'nome'         => $c->cliente?->nome ?? $c->telefone_cliente,
+                'telefone'     => $c->telefone_cliente,
+                'preview'      => $c->mensagens->first()?->conteudo ?? '',
+                'tipo'         => $c->mensagens->first()?->tipo ?? 'texto',
+                'remetente'    => $c->mensagens->first()?->remetente ?? 'cliente',
+                'em'           => $c->ultima_mensagem_em,
+            ]);
+
+        return response()->json([
+            'conversas_nao_lidas' => $total,
+            'preview'             => $preview,
+        ]);
+    }
+
+    public function marcarLida(Conversa $conversa): JsonResponse
+    {
+        abort_if((int)$conversa->tenant_id !== (int)app('tenant')->id, 403);
+        $conversa->update(['ultima_leitura_em' => now()]);
+        return response()->json(['ok' => true]);
     }
 
     public function assumir(Conversa $conversa): RedirectResponse

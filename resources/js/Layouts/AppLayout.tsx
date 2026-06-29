@@ -4,6 +4,7 @@ import { PageProps, SubscriptionInfo } from '@/types';
 import Sidebar from '@/Components/Layout/Sidebar';
 import SubscriptionBanner from '@/Components/Layout/SubscriptionBanner';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
+import NotificacoesBell from '@/Components/NotificacoesBell';
 
 // Tracks the visual viewport so the fullHeight chat layout stays pinned
 // to the area above the iOS virtual keyboard.
@@ -56,7 +57,7 @@ export default function AppLayout({ children, title, subtitle, fullHeight }: Pro
 
     const { currentTenant, flash, subscription } = page.props;
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const { conversasNaoLidas } = useNotificacoes(!!currentTenant);
+    const { conversasNaoLidas, conversasPreview } = useNotificacoes(!!currentTenant);
 
     return (
         <div
@@ -116,24 +117,13 @@ export default function AppLayout({ children, title, subtitle, fullHeight }: Pro
                         <span className="min-w-0 flex-1 truncate text-sm" style={{ color: 'var(--text-3)' }}>{currentTenant.nome}</span>
                     )}
                     {currentTenant && (
-                        <Link
-                            href={route('tenant.conversas.index')}
-                            className="relative ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
-                            style={{ color: conversasNaoLidas > 0 ? '#00a884' : 'var(--text-3)' }}
-                            title="Notificações de mensagens"
-                        >
-                            <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/>
-                            </svg>
-                            {conversasNaoLidas > 0 && (
-                                <span
-                                    className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[9px] font-bold text-white"
-                                    style={{ background: '#00a884' }}
-                                >
-                                    {conversasNaoLidas > 99 ? '99+' : conversasNaoLidas}
-                                </span>
-                            )}
-                        </Link>
+                        <div className="ml-auto">
+                            <NotificacoesBell
+                                count={conversasNaoLidas}
+                                preview={conversasPreview}
+                                size="md"
+                            />
+                        </div>
                     )}
                 </header>
 

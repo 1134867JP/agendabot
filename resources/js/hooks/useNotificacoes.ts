@@ -1,11 +1,23 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
+export interface ConversaPreview {
+    id: number;
+    nome: string;
+    telefone: string;
+    preview: string;
+    tipo: string;
+    remetente: string;
+    em: string | null;
+}
+
 interface Notificacoes {
     conversas_nao_lidas: number;
+    preview: ConversaPreview[];
 }
 
 interface UseNotificacoesReturn {
     conversasNaoLidas: number;
+    conversasPreview: ConversaPreview[];
     novaMensagem: boolean;
     resetarNovaMensagem: () => void;
 }
@@ -14,7 +26,8 @@ const INTERVALO_MS = 8000;
 
 export function useNotificacoes(ativo: boolean): UseNotificacoesReturn {
     const [conversasNaoLidas, setConversasNaoLidas] = useState(0);
-    const [novaMensagem, setNovaMensagem] = useState(false);
+    const [conversasPreview,  setConversasPreview]  = useState<ConversaPreview[]>([]);
+    const [novaMensagem,      setNovaMensagem]      = useState(false);
     const anteriorRef = useRef<number | null>(null);
     const timeoutRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -35,6 +48,7 @@ export function useNotificacoes(ativo: boolean): UseNotificacoesReturn {
             const atual = data.conversas_nao_lidas ?? 0;
 
             setConversasNaoLidas(atual);
+            setConversasPreview(data.preview ?? []);
 
             if (anteriorRef.current !== null && atual > anteriorRef.current) {
                 setNovaMensagem(true);
@@ -64,5 +78,5 @@ export function useNotificacoes(ativo: boolean): UseNotificacoesReturn {
         };
     }, [ativo, buscar]);
 
-    return { conversasNaoLidas, novaMensagem, resetarNovaMensagem };
+    return { conversasNaoLidas, conversasPreview, novaMensagem, resetarNovaMensagem };
 }

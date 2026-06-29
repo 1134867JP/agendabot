@@ -3,6 +3,7 @@ import { PageProps, SubscriptionInfo, TipoServico } from '@/types';
 import { useTheme } from '@/Components/ThemeProvider';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
 import ToastNovaMensagem from '@/Components/ToastNovaMensagem';
+import NotificacoesBell from '@/Components/NotificacoesBell';
 
 interface NavItem {
     label: string;
@@ -76,7 +77,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     const isAdmin      = isSuperAdmin || tenantPapel === 'admin';
     const currentUrl   = page.url;
 
-    const { conversasNaoLidas, novaMensagem, resetarNovaMensagem } = useNotificacoes(!!currentTenant);
+    const { conversasNaoLidas, conversasPreview, novaMensagem, resetarNovaMensagem } = useNotificacoes(!!currentTenant);
 
     const tipoAtual = currentTenant?.tipo_servico ?? 'personalizado';
 
@@ -138,25 +139,12 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                             AgendaBot
                         </span>
                         {currentTenant && (
-                            <Link
-                                href={route('tenant.conversas.index')}
-                                onClick={onClose}
-                                className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
-                                style={{ color: conversasNaoLidas > 0 ? '#00a884' : 'var(--text-3)' }}
-                                title={conversasNaoLidas > 0 ? `${conversasNaoLidas} mensagem(s) não lida(s)` : 'Conversas'}
-                            >
-                                <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/>
-                                </svg>
-                                {conversasNaoLidas > 0 && (
-                                    <span
-                                        className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full px-0.5 text-[8px] font-bold text-white"
-                                        style={{ background: '#00a884' }}
-                                    >
-                                        {conversasNaoLidas > 99 ? '99+' : conversasNaoLidas}
-                                    </span>
-                                )}
-                            </Link>
+                            <NotificacoesBell
+                                count={conversasNaoLidas}
+                                preview={conversasPreview}
+                                size="sm"
+                                onClose={onClose}
+                            />
                         )}
                     </div>
                     {currentTenant && (
