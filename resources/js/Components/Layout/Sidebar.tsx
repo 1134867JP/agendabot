@@ -1,6 +1,8 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { PageProps, SubscriptionInfo, TipoServico } from '@/types';
 import { useTheme } from '@/Components/ThemeProvider';
+import { useNotificacoes } from '@/hooks/useNotificacoes';
+import ToastNovaMensagem from '@/Components/ToastNovaMensagem';
 
 interface NavItem {
     label: string;
@@ -73,6 +75,8 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     const isSuperAdmin = auth.user.is_super_admin;
     const isAdmin      = isSuperAdmin || tenantPapel === 'admin';
     const currentUrl   = page.url;
+
+    const { conversasNaoLidas, novaMensagem, resetarNovaMensagem } = useNotificacoes(!!currentTenant);
 
     const tipoAtual = currentTenant?.tipo_servico ?? 'personalizado';
 
@@ -173,7 +177,15 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                                             <span style={{ flexShrink: 0 }}>
                                                 <Icon d={item.icon} />
                                             </span>
-                                            {item.label}
+                                            <span className="flex-1">{item.label}</span>
+                                            {item.routeName === 'tenant.conversas.index' && conversasNaoLidas > 0 && (
+                                                <span
+                                                    className="ml-auto flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
+                                                    style={{ background: '#00a884' }}
+                                                >
+                                                    {conversasNaoLidas > 99 ? '99+' : conversasNaoLidas}
+                                                </span>
+                                            )}
                                         </Link>
                                     );
                                 })}
@@ -241,6 +253,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                     </Link>
                 </div>
             </aside>
+            <ToastNovaMensagem visivel={novaMensagem} onFechar={resetarNovaMensagem} />
         </>
     );
 }

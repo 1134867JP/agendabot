@@ -42,6 +42,8 @@ class ConversaController extends Controller
     {
         abort_if((int)$conversa->tenant_id !== (int)app('tenant')->id, 403);
 
+        $conversa->update(['ultima_leitura_em' => now()]);
+
         $mensagens = $conversa->mensagens()
             ->orderByDesc('enviada_em')
             ->limit(50)
@@ -50,6 +52,21 @@ class ConversaController extends Controller
             ->values();
 
         return response()->json($mensagens);
+    }
+
+    public function notificacoes(): JsonResponse
+    {
+        $tenant = app('tenant');
+
+        $naoLidas = Conversa::where('tenant_id', $tenant->id)
+            ->whereNotNull('ultima_mensagem_em')
+            ->where(function ($q) {
+                $q->whereNull('ultima_leitura_em')
+                  ->orWhereColumn('ultima_mensagem_em', '>', 'ultima_leitura_em');
+            })
+            ->count();
+
+        return response()->json(['conversas_nao_lidas' => $naoLidas]);
     }
 
     public function assumir(Conversa $conversa): RedirectResponse
