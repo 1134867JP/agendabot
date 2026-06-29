@@ -79,13 +79,33 @@ class EvolutionApiService
     public function fetchMessages(string $instance, string $remoteJid, int $count = 100): array
     {
         $response = Http::withHeaders(['apikey' => $this->globalApiKey])
+            ->timeout(30)
             ->post("{$this->baseUrl}/chat/findMessages/{$instance}", [
                 'where' => ['key' => ['remoteJid' => $remoteJid]],
                 'limit' => $count,
             ]);
 
-        // Resposta: {"messages":{"records":[...],"total":N,...}}
-        return $response->json('messages.records') ?? [];
+        if (! $response->successful()) {
+            return [];
+        }
+
+        $body = $response->json();
+
+        // Suporta diferentes formatos de resposta da Evolution API v1/v2
+        if (isset($body['messages']['records'])) {
+            return $body['messages']['records'];           // v2: {messages:{records:[]}}
+        }
+        if (isset($body['messages']) && is_array($body['messages'])) {
+            return $body['messages'];                      // variante: {messages:[]}
+        }
+        if (isset($body['records']) && is_array($body['records'])) {
+            return $body['records'];                       // variante: {records:[]}
+        }
+        if (is_array($body) && isset($body[0])) {
+            return $body;                                  // array direto
+        }
+
+        return [];
     }
 
     public function fetchMedia(string $instance, string $messageId, bool $fromMe, string $remoteJid): ?array

@@ -20,10 +20,10 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries   = 2;
-    public int $timeout = 300;
+    public int $timeout = 600; // 10 min — histórico de muitos chats demora
 
-    // Nomes que indicam placeholder — serão substituídos pelo nome real
-    private const PLACEHOLDERS = ['Cliente WhatsApp', 'cliente whatsapp'];
+    // JIDs que não são conversas individuais reais
+    private const JIDS_IGNORADOS = ['status@broadcast', 'broadcast'];
 
     public function __construct(private readonly Tenant $tenant) {}
 
@@ -33,80 +33,72 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
             return;
         }
 
-        // Buscar mapa de nomes via findContacts (fonte mais confiável de pushName)
-        $contatosRaw = $evolution->fetchContacts($this->tenant->evolution_instance);
-        $nomesPorTelefone = [];
-        foreach ($contatosRaw as $contato) {
-            $jid  = data_get($contato, 'remoteJid') ?? data_get($contato, 'id');
-            $nome = data_get($contato, 'pushName') ?? data_get($contato, 'notify') ?? data_get($contato, 'name');
-            if ($jid && $nome) {
-                $tel = str_replace('@s.whatsapp.net', '', $jid);
-                $nomesPorTelefone[$tel] = $nome;
-            }
-        }
+        $instance = $this->tenant->evolution_instance;
 
-        $chats = $evolution->fetchChats($this->tenant->evolution_instance);
+        // ── 1. Mapa nome→telefone via findContacts ───────────────────────────
+        $nomesPorTelefone = $this->buildNomesMap($evolution->fetchContacts($instance));
+
+        // ── 2. Buscar todos os chats ─────────────────────────────────────────
+        $chats = $evolution->fetchChats($instance);
         $importados = 0;
+        $sem_nome   = 0;
 
         foreach ($chats as $chat) {
-            $remoteJid = data_get($chat, 'remoteJid');
-            if (!$remoteJid || str_contains($remoteJid, '@g.us')) {
-                continue;
-            }
+            $remoteJid = data_get($chat, 'remoteJid') ?? data_get($chat, 'id');
+            if (!$remoteJid) continue;
+
+            // Ignorar grupos, broadcast e newsletters
+            if ($this->deveIgnorar($remoteJid)) continue;
 
             $telefone = str_replace('@s.whatsapp.net', '', $remoteJid);
-            if (str_contains($telefone, '-')) {
-                continue; // formato antigo de grupo
-            }
 
-            // Prioridade: findContacts > pushName do chat > mensagens > telefone
+            // ── Nome com prioridade: findContacts > pushName do chat ─────────
             $nomeChat = $nomesPorTelefone[$telefone]
+                ?? $nomesPorTelefone[$this->normalizar($telefone)]
                 ?? data_get($chat, 'pushName')
+                ?? data_get($chat, 'name')
                 ?? null;
 
+            // ── Cliente ──────────────────────────────────────────────────────
             $cliente = Cliente::firstOrCreate(
                 ['tenant_id' => $this->tenant->id, 'telefone' => $telefone],
                 ['nome' => $nomeChat ?? $telefone]
             );
 
+            // ── Conversa ─────────────────────────────────────────────────────
             $conversa = Conversa::firstOrCreate(
                 ['tenant_id' => $this->tenant->id, 'telefone_cliente' => $telefone],
                 ['cliente_id' => $cliente->id, 'status_v2' => 'ativa']
             );
 
-            $msgs = $evolution->fetchMessages($this->tenant->evolution_instance, $remoteJid, 100);
+            // ── Mensagens ────────────────────────────────────────────────────
+            $msgs = $evolution->fetchMessages($instance, $remoteJid, 100);
 
-            // Extrair nome real do cliente a partir das mensagens recebidas (fromMe=false) como fallback
-            $nomeReal = $nomeChat;
-            if (!$nomeReal) {
+            // Extrair nome das mensagens recebidas como fallback
+            if (!$nomeChat) {
                 foreach ($msgs as $msg) {
-                    if (!data_get($msg, 'key.fromMe') && data_get($msg, 'pushName')) {
-                        $nomeReal = data_get($msg, 'pushName');
+                    if (!data_get($msg, 'key.fromMe') && ($pn = data_get($msg, 'pushName'))) {
+                        $nomeChat = $pn;
                         break;
                     }
                 }
             }
 
-            // Atualizar nome se é placeholder OU se veio do findContacts (fonte mais confiável)
-            if ($nomeReal && $nomeReal !== $telefone) {
-                $nomePlaceholder = $cliente->nome === $telefone
-                    || in_array(strtolower($cliente->nome), array_map('strtolower', self::PLACEHOLDERS));
-                $veioDoFindContacts = isset($nomesPorTelefone[$telefone]);
+            // Atualizar nome do cliente se ainda é placeholder
+            $ehPlaceholder = $cliente->nome === $telefone
+                || strtolower($cliente->nome) === 'cliente whatsapp';
 
-                if ($nomePlaceholder || ($veioDoFindContacts && $cliente->nome !== $nomeReal)) {
-                    $cliente->update(['nome' => $nomeReal]);
-                }
+            if ($nomeChat && ($ehPlaceholder || $nomeChat !== $cliente->nome)) {
+                $cliente->update(['nome' => $nomeChat]);
             }
 
+            if (!$nomeChat) $sem_nome++;
+
+            // Importar mensagens ainda não gravadas
             foreach ($msgs as $msg) {
                 $evolutionId = data_get($msg, 'key.id');
-                if (!$evolutionId) {
-                    continue;
-                }
-
-                if (Mensagem::where('evolution_message_id', $evolutionId)->exists()) {
-                    continue;
-                }
+                if (!$evolutionId) continue;
+                if (Mensagem::where('evolution_message_id', $evolutionId)->exists()) continue;
 
                 $fromMe      = (bool) data_get($msg, 'key.fromMe', false);
                 $messageType = data_get($msg, 'messageType', 'conversation');
@@ -122,9 +114,7 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
                                                     ?? ''],
                 };
 
-                if ($tipo === 'texto' && $conteudo === '') {
-                    continue;
-                }
+                if ($tipo === 'texto' && $conteudo === '') continue;
 
                 $ts = data_get($msg, 'messageTimestamp');
 
@@ -139,6 +129,7 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
                 $importados++;
             }
 
+            // Atualizar ultima_mensagem_em
             $ultima = $conversa->mensagens()->orderByDesc('enviada_em')->value('enviada_em');
             if ($ultima) {
                 $conversa->update(['ultima_mensagem_em' => $ultima]);
@@ -149,6 +140,63 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
             'tenant'     => $this->tenant->slug,
             'chats'      => count($chats),
             'importados' => $importados,
+            'sem_nome'   => $sem_nome,
+            'nomes_map'  => count($nomesPorTelefone),
         ]);
+    }
+
+    /**
+     * Monta mapa telefone → nome a partir do retorno de findContacts.
+     * Tenta vários formatos de campo para garantir compatibilidade.
+     */
+    private function buildNomesMap(array $contatos): array
+    {
+        $mapa = [];
+
+        foreach ($contatos as $c) {
+            // JID pode estar em remoteJid, id ou jid
+            $jid  = data_get($c, 'remoteJid')
+                 ?? data_get($c, 'id')
+                 ?? data_get($c, 'jid');
+            // Nome preferido: pushName > notify > name (agenda do celular)
+            $nome = data_get($c, 'pushName')
+                 ?? data_get($c, 'notify')
+                 ?? data_get($c, 'name');
+
+            if (!$jid || !$nome) continue;
+
+            $tel = str_replace(['@s.whatsapp.net', '@c.us'], '', $jid);
+            $mapa[$tel] = $nome;
+        }
+
+        return $mapa;
+    }
+
+    private function deveIgnorar(string $remoteJid): bool
+    {
+        // Grupos WhatsApp
+        if (str_contains($remoteJid, '@g.us'))      return true;
+        // Newsletters
+        if (str_contains($remoteJid, '@newsletter')) return true;
+        // Broadcast
+        if (in_array($remoteJid, self::JIDS_IGNORADOS)) return true;
+        // Formato antigo de grupo (número-número)
+        $tel = str_replace('@s.whatsapp.net', '', $remoteJid);
+        if (str_contains($tel, '-')) return true;
+
+        return false;
+    }
+
+    /**
+     * Normaliza telefone BR: remove o 9 extra para tentar match alternativo.
+     * Ex: 554899999999 → 54899999999 (sem o dígito extra)
+     */
+    private function normalizar(string $tel): string
+    {
+        // Se o número BR tem 13 dígitos (55 + DDD + 9 + 8 dígitos), tenta sem o 9
+        if (strlen($tel) === 13 && str_starts_with($tel, '55')) {
+            return '55' . substr($tel, 2, 2) . substr($tel, 5);
+        }
+        return $tel;
     }
 }

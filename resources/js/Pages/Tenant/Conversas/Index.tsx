@@ -309,6 +309,8 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
     const [showChat,       setShowChat]       = useState(false);
     const [showModalNova,  setShowModalNova]  = useState(false);
     const [sincronizando,  setSincronizando]  = useState(false);
+    const [busca,          setBusca]          = useState('');
+    const buscaRef = useRef<HTMLInputElement>(null);
 
     const chatRef      = useRef<HTMLDivElement>(null);
     const intervalRef  = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -416,6 +418,15 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
         return texto.length > 48 ? texto.slice(0, 48) + '…' : texto;
     };
 
+    const conversasFiltradas = busca.trim()
+        ? conversas.data.filter(c => {
+            const q = busca.toLowerCase().replace(/\D/g, '');
+            const nome = nomeDe(c).toLowerCase();
+            const tel  = c.telefone_cliente.replace(/\D/g, '');
+            return nome.includes(busca.toLowerCase()) || tel.includes(q);
+          })
+        : conversas.data;
+
     const statusFiltros = [
         { label: 'Todas',          value: '' },
         { label: 'Ativas',         value: 'ativa' },
@@ -441,8 +452,8 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                     style={{ borderRight: '1px solid var(--border)' }}
                 >
                     {/* Header */}
-                    <div className="px-4 py-3.5" style={{ borderBottom: '1px solid var(--border)' }}>
-                        <div className="flex items-center justify-between gap-2">
+                    <div className="px-4 pt-3.5 pb-2" style={{ borderBottom: '1px solid var(--border)' }}>
+                        <div className="flex items-center justify-between gap-2 mb-2.5">
                             <h2 className="text-[15px] font-semibold text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
                                 Conversas
                             </h2>
@@ -476,7 +487,35 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                 </button>
                             </div>
                         </div>
-                        <div className="mt-2.5 flex flex-wrap gap-1">
+
+                        {/* Campo de pesquisa estilo WhatsApp Web */}
+                        <div
+                            className="flex items-center gap-2 rounded-full px-3 py-1.5 mb-2"
+                            style={{ background: 'var(--bg-surface-2)', border: '1px solid transparent' }}
+                            onClick={() => buscaRef.current?.focus()}
+                        >
+                            <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)', flexShrink: 0 }}>
+                                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                            </svg>
+                            <input
+                                ref={buscaRef}
+                                type="text"
+                                value={busca}
+                                onChange={e => setBusca(e.target.value)}
+                                placeholder="Pesquisar ou começar nova conversa"
+                                className="flex-1 bg-transparent text-[12px] outline-none placeholder:text-[11px]"
+                                style={{ color: 'var(--text-1)' }}
+                            />
+                            {busca && (
+                                <button onClick={() => setBusca('')} style={{ color: 'var(--text-3)' }}>
+                                    <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                                        <path d="M18 6L6 18M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="flex flex-wrap gap-1">
                             {statusFiltros.map(f => {
                                 const ativo = (filtros.status_v2 ?? '') === f.value;
                                 return (
@@ -498,15 +537,19 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
 
                     {/* Lista */}
                     <div className="flex-1 overflow-y-auto">
-                        {conversas.data.length === 0 ? (
+                        {conversasFiltradas.length === 0 ? (
                             <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
                                 <svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
                                     <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                                 </svg>
-                                <p className="text-xs font-medium text-primary">Nenhuma conversa</p>
-                                <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>As mensagens do WhatsApp aparecerão aqui.</p>
+                                <p className="text-xs font-medium text-primary">
+                                    {busca ? 'Nenhum resultado' : 'Nenhuma conversa'}
+                                </p>
+                                <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>
+                                    {busca ? `Nada encontrado para "${busca}"` : 'As mensagens do WhatsApp aparecerão aqui.'}
+                                </p>
                             </div>
-                        ) : conversas.data.map(c => {
+                        ) : conversasFiltradas.map(c => {
                             const ativo = selecionada?.id === c.id;
                             return (
                                 <button
