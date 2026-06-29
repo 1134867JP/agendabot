@@ -47,6 +47,45 @@ class AgendamentoService
         $agendamento->update(['status' => 'cancelado']);
     }
 
+    public function reagendar(Agendamento $agendamento, array $dados): Agendamento
+    {
+        return DB::transaction(function () use ($agendamento, $dados) {
+            $profissionalId = (int) ($dados['profissional_id'] ?? $agendamento->profissional_id);
+            DB::select('SELECT pg_advisory_xact_lock(?)', [$profissionalId]);
+
+            $tz      = config('app.timezone', 'America/Sao_Paulo');
+            $horario = substr($dados['hora'], 0, 5);
+            $inicio  = Carbon::createFromFormat('Y-m-d H:i', "{$dados['data']} {$horario}", $tz);
+            $duracao = $agendamento->duracao_minutos ?? 30;
+            $fim     = $inicio->copy()->addMinutes($duracao);
+
+            if ($inicio->isPast()) {
+                throw new HorarioIndisponivelException('Não é possível reagendar para datas passadas.');
+            }
+
+            $conflito = Agendamento::where('profissional_id', $profissionalId)
+                ->where('id', '!=', $agendamento->id)
+                ->whereNotIn('status', ['cancelado'])
+                ->where('data_hora', '<', $fim)
+                ->whereRaw("(data_hora + (duracao_minutos * INTERVAL '1 minute')) > ?", [$inicio])
+                ->exists();
+
+            if ($conflito) {
+                throw new HorarioIndisponivelException('Horário não disponível.');
+            }
+
+            $agendamento->update([
+                'profissional_id' => $profissionalId,
+                'servico_id'      => $dados['servico_id'] ?? $agendamento->servico_id,
+                'data_hora'       => $inicio,
+                'inicio'          => $inicio,
+                'fim'             => $fim,
+            ]);
+
+            return $agendamento->fresh();
+        });
+    }
+
     public function buscarHorariosDisponiveis(Tenant $tenant, int $dias = 7): array
     {
         $profissionais = $tenant->profissionais()->where('ativo', true)->with('horarios')->get();

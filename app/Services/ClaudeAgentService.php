@@ -159,12 +159,14 @@ class ClaudeAgentService
         ]);
 
         $result = match ($name) {
-            'buscar_slots'           => $this->toolBuscarSlots($input),
-            'criar_agendamento'      => $this->toolCriarAgendamento($input),
-            'confirmar_agendamento'  => $this->toolConfirmarAgendamento($agendamentoPendente),
-            'cancelar_agendamento'   => $this->toolCancelarAgendamento($agendamentoPendente),
-            'transferir_para_humano' => $this->toolTransferirParaHumano(),
-            default                  => ['erro' => "Ferramenta desconhecida: {$name}"],
+            'buscar_slots'                 => $this->toolBuscarSlots($input),
+            'criar_agendamento'            => $this->toolCriarAgendamento($input),
+            'confirmar_agendamento'        => $this->toolConfirmarAgendamento($agendamentoPendente),
+            'cancelar_agendamento'         => $this->toolCancelarAgendamento($agendamentoPendente),
+            'listar_agendamentos_cliente'  => $this->toolListarAgendamentosCliente(),
+            'reagendar_agendamento'        => $this->toolReagendarAgendamento($input),
+            'transferir_para_humano'       => $this->toolTransferirParaHumano(),
+            default                        => ['erro' => "Ferramenta desconhecida: {$name}"],
         };
 
         Log::channel('jobs')->info('TOOL_RESULT', [
@@ -236,6 +238,56 @@ class ClaudeAgentService
         return ['sucesso' => true];
     }
 
+    private function toolListarAgendamentosCliente(): array
+    {
+        $agendamentos = \App\Models\Agendamento::where('cliente_id', $this->currentCliente['id'])
+            ->whereNotIn('status', ['cancelado', 'concluido'])
+            ->where('data_hora', '>', now())
+            ->orderBy('data_hora')
+            ->with(['profissional:id,nome', 'servico:id,nome'])
+            ->limit(5)
+            ->get();
+
+        if ($agendamentos->isEmpty()) {
+            return ['agendamentos' => [], 'mensagem' => 'Nenhum agendamento futuro encontrado.'];
+        }
+
+        $lista = $agendamentos->map(function ($a) {
+            $dataHora = \Carbon\Carbon::parse($a->data_hora)
+                ->locale('pt_BR')
+                ->translatedFormat('D d/m \\às H:i');
+            $profissional = $a->profissional?->nome ?? '—';
+            $servico      = $a->servico?->nome ?? '—';
+            return "ID #{$a->id} — {$dataHora} — {$profissional} ({$servico})";
+        })->join("\n");
+
+        return ['agendamentos' => $lista];
+    }
+
+    private function toolReagendarAgendamento(array $input): array
+    {
+        $agendamentoId = (int) ($input['agendamento_id'] ?? 0);
+
+        $agendamento = \App\Models\Agendamento::where('id', $agendamentoId)
+            ->where('cliente_id', $this->currentCliente['id'])
+            ->whereNotIn('status', ['cancelado', 'concluido'])
+            ->first();
+
+        if (! $agendamento) {
+            return ['sucesso' => false, 'erro' => 'agendamento_invalido', 'mensagem' => 'Agendamento não encontrado ou não pertence a este cliente.'];
+        }
+
+        try {
+            $this->agendamentoService->reagendar($agendamento, $input);
+            return ['sucesso' => true];
+        } catch (\App\Exceptions\HorarioIndisponivelException $e) {
+            return ['sucesso' => false, 'erro' => 'horario_indisponivel', 'mensagem' => $e->getMessage()];
+        } catch (\Throwable $e) {
+            Log::channel('jobs')->error('toolReagendarAgendamento error', ['error' => $e->getMessage(), 'input' => $input]);
+            return ['sucesso' => false, 'erro' => 'erro_tecnico'];
+        }
+    }
+
     private function toolTransferirParaHumano(): array
     {
         $this->transferir = true;
@@ -281,6 +333,26 @@ class ClaudeAgentService
                 'name'         => 'cancelar_agendamento',
                 'description'  => 'Cancela o agendamento pendente existente quando o cliente solicita cancelamento.',
                 'input_schema' => ['type' => 'object', 'properties' => new \stdClass()],
+            ],
+            [
+                'name'         => 'listar_agendamentos_cliente',
+                'description'  => 'Lista os próximos agendamentos do cliente atual. DEVE ser chamada antes de reagendar_agendamento para identificar qual agendamento o cliente quer alterar.',
+                'input_schema' => ['type' => 'object', 'properties' => new \stdClass()],
+            ],
+            [
+                'name'         => 'reagendar_agendamento',
+                'description'  => 'Atualiza um agendamento existente com nova data, hora e opcionalmente novo profissional ou serviço. OBRIGATÓRIO chamar listar_agendamentos_cliente antes para obter o agendamento_id correto. Use buscar_slots para confirmar disponibilidade antes de chamar esta ferramenta.',
+                'input_schema' => [
+                    'type'       => 'object',
+                    'required'   => ['agendamento_id', 'data', 'hora'],
+                    'properties' => [
+                        'agendamento_id'  => ['type' => 'integer', 'description' => 'ID do agendamento a alterar (obtido via listar_agendamentos_cliente)'],
+                        'data'            => ['type' => 'string',  'description' => 'Nova data no formato YYYY-MM-DD'],
+                        'hora'            => ['type' => 'string',  'description' => 'Novo horário no formato HH:MM'],
+                        'profissional_id' => ['type' => 'integer', 'description' => 'Novo profissional (opcional — mantém o atual se omitido)'],
+                        'servico_id'      => ['type' => 'integer', 'description' => 'Novo serviço (opcional — mantém o atual se omitido)'],
+                    ],
+                ],
             ],
             [
                 'name'          => 'transferir_para_humano',
@@ -333,6 +405,13 @@ PROFISSIONAIS:
 
 SERVIÇOS:
 {$servicos}{$opcoesPart}{$instrucoes}
+
+FLUXO OBRIGATÓRIO PARA REAGENDAMENTO:
+1. Chame listar_agendamentos_cliente → mostre a lista ao cliente
+2. Cliente escolhe qual quer alterar → chame buscar_slots para mostrar novos horários
+3. Cliente confirma novo horário → chame reagendar_agendamento com o agendamento_id e os novos dados
+4. reagendar_agendamento sucesso=true → confirme o novo horário ao cliente
+- Se retornar horario_indisponivel: chame buscar_slots novamente e ofereça alternativas
 
 FLUXO OBRIGATÓRIO PARA NOVO AGENDAMENTO:
 1. Chame buscar_slots → apresente as opções reais retornadas
