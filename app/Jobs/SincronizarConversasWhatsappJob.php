@@ -54,11 +54,11 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
 
             $telefone = $this->limparJid($remoteJid);
 
-            // ── Nome com prioridade: findContacts > pushName do chat ─────────
+            // ── Nome: findContacts > pushName do chat > lastMessage.pushName ──
             $nomeChat = $nomesPorTelefone[$telefone]
                 ?? $nomesPorTelefone[$this->normalizar($telefone)]
-                ?? data_get($chat, 'pushName')
-                ?? data_get($chat, 'name')
+                ?? (data_get($chat, 'pushName') ?: null)
+                ?? (data_get($chat, 'lastMessage.pushName') ?: null)
                 ?? null;
 
             // ── Cliente ──────────────────────────────────────────────────────
@@ -76,10 +76,12 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
             // ── Mensagens ────────────────────────────────────────────────────
             $msgs = $evolution->fetchMessages($instance, $remoteJid, 100);
 
-            // Extrair nome das mensagens recebidas como fallback
+            // Extrair nome das mensagens como último fallback
+            // pushName no nível da mensagem = nome do contato (mesmo em fromMe=true na Evolution API)
             if (!$nomeChat) {
                 foreach ($msgs as $msg) {
-                    if (!data_get($msg, 'key.fromMe') && ($pn = data_get($msg, 'pushName'))) {
+                    $pn = data_get($msg, 'pushName');
+                    if ($pn && $pn !== '') {
                         $nomeChat = $pn;
                         break;
                     }

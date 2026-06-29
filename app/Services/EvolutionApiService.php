@@ -91,18 +91,27 @@ class EvolutionApiService
 
         $body = $response->json();
 
-        // Suporta diferentes formatos de resposta da Evolution API v1/v2
-        if (isset($body['messages']['records'])) {
-            return $body['messages']['records'];           // v2: {messages:{records:[]}}
+        // Formato confirmado pela Evolution API: { "messages": [...] }
+        // Também suporta variantes para compatibilidade
+        $messages = $body['messages'] ?? null;
+
+        if (is_array($messages)) {
+            // { messages: { records: [...] } } — variante v2 antiga
+            if (isset($messages['records']) && is_array($messages['records'])) {
+                return $messages['records'];
+            }
+            // { messages: [...] } — formato atual confirmado
+            if (isset($messages[0]) || $messages === []) {
+                return $messages;
+            }
         }
-        if (isset($body['messages']) && is_array($body['messages'])) {
-            return $body['messages'];                      // variante: {messages:[]}
-        }
+
         if (isset($body['records']) && is_array($body['records'])) {
-            return $body['records'];                       // variante: {records:[]}
+            return $body['records'];
         }
+
         if (is_array($body) && isset($body[0])) {
-            return $body;                                  // array direto
+            return $body;
         }
 
         return [];
