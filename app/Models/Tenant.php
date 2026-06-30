@@ -18,6 +18,7 @@ class Tenant extends Model
         // v2
         'ramo_negocio', 'descricao_negocio', 'cidade', 'endereco',
         'horarios_funcionamento', 'nome_agente', 'tom_voz', 'instrucoes_extras', 'bot_ativo',
+        'webhook_token',
     ];
 
     protected $casts = [

@@ -46,12 +46,15 @@ class TenantController extends Controller
         DB::transaction(function () use ($validated) {
             $slug = Str::slug($validated['nome']) . '-' . Str::random(4);
 
+            $webhookToken = Str::random(32);
+
             $tenant = Tenant::create([
                 'nome'                       => $validated['nome'],
                 'slug'                       => $slug,
                 'tipo_servico'               => $validated['tipo_servico'],
                 'tipo_servico_personalizado' => $validated['tipo_servico_personalizado'] ?? null,
                 'evolution_instance'         => $slug,
+                'webhook_token'              => $webhookToken,
             ]);
 
             $dono = User::create([
@@ -63,7 +66,8 @@ class TenantController extends Controller
             $tenant->users()->attach($dono->id, ['papel' => 'admin']);
 
             $this->evolution->criarInstancia($slug);
-            $this->evolution->configurarWebhook($slug, route('webhook', $slug));
+            $webhookUrl = route('webhook', $slug) . '?token=' . $webhookToken;
+            $this->evolution->configurarWebhook($slug, $webhookUrl);
         });
 
         return redirect()->route('superadmin.tenants.index')

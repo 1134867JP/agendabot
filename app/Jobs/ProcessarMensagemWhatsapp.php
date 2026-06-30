@@ -182,7 +182,23 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
 
         // 10. Salvar resposta do bot e enviar ao cliente
         $conversa->registrarMensagem('bot', $resposta);
-        $evolution->enviarMensagem($this->tenant->evolution_instance, $this->telefone, $resposta);
+
+        $enviado = false;
+        for ($tentativa = 1; $tentativa <= 3 && ! $enviado; $tentativa++) {
+            $enviado = $evolution->enviarMensagem($this->tenant->evolution_instance, $this->telefone, $resposta);
+            if (! $enviado && $tentativa < 3) {
+                sleep(2 ** ($tentativa - 1));
+            }
+        }
+
+        if (! $enviado) {
+            Log::channel('jobs')->error('EVOLUTION_SEND_FAILED', [
+                'tenant'   => $this->tenant->id,
+                'telefone' => $this->telefone,
+                'resposta' => mb_substr($resposta, 0, 200),
+            ]);
+        }
+
         Log::channel('jobs')->info('BOT_RESPOSTA', ['telefone' => $this->telefone, 'resposta' => mb_substr($resposta, 0, 200)]);
     }
 

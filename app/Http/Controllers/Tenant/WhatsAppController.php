@@ -7,6 +7,7 @@ use App\Services\EvolutionApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -14,13 +15,22 @@ class WhatsAppController extends Controller
 {
     public function __construct(private EvolutionApiService $evolution) {}
 
+    private function webhookUrl(\App\Models\Tenant $tenant): string
+    {
+        if (! $tenant->webhook_token) {
+            $tenant->update(['webhook_token' => Str::random(32)]);
+            $tenant->refresh();
+        }
+        return route('webhook', $tenant->slug) . '?token=' . $tenant->webhook_token;
+    }
+
     public function index(): Response
     {
         $tenant = app('tenant');
 
         return Inertia::render('Tenant/WhatsApp', [
             'tenant'       => $tenant,
-            'webhook_url'  => route('webhook', $tenant->slug),
+            'webhook_url'  => $this->webhookUrl($tenant),
         ]);
     }
 
@@ -34,19 +44,20 @@ class WhatsAppController extends Controller
             $tenant->update(['evolution_instance' => $instance]);
         }
 
+        $webhookUrl = $this->webhookUrl($tenant);
         $status = $this->evolution->statusInstancia($instance);
 
         // Já conectado — garantir webhook atualizado e avisar o frontend
         if ($status === 'open') {
             $tenant->update(['whatsapp_conectado' => true]);
-            $this->evolution->configurarWebhook($instance, route('webhook', $tenant->slug));
+            $this->evolution->configurarWebhook($instance, $webhookUrl);
             return response()->json(['connected' => true]);
         }
 
         // Instância não existe — criar e configurar webhook
         if ($status === 'desconhecido') {
             $result = $this->evolution->criarInstancia($instance);
-            $this->evolution->configurarWebhook($instance, route('webhook', $tenant->slug));
+            $this->evolution->configurarWebhook($instance, $webhookUrl);
 
             $qrcode = data_get($result, 'qrcode.base64') ?? data_get($result, 'base64');
             if ($qrcode) {
@@ -55,7 +66,7 @@ class WhatsAppController extends Controller
         }
 
         // Instância existe mas não conectada — garantir webhook atualizado e buscar QR
-        $this->evolution->configurarWebhook($instance, route('webhook', $tenant->slug));
+        $this->evolution->configurarWebhook($instance, $webhookUrl);
         $qrcode = $this->evolution->obterQrCode($instance);
         return response()->json(['qrcode' => $qrcode]);
     }

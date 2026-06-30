@@ -91,11 +91,13 @@ class AgendamentoService
         $profissionais = $tenant->profissionais()->where('ativo', true)->with('horarios')->get();
         $resultado = [];
 
+        $tz = config('app.timezone', 'America/Sao_Paulo');
+
         foreach ($profissionais as $profissional) {
             $resultado[$profissional->id] = [];
 
             for ($i = 0; $i < $dias; $i++) {
-                $data = Carbon::today()->addDays($i);
+                $data = Carbon::today($tz)->addDays($i);
                 $slots = $profissional->slotsDisponiveis($data);
                 $disponiveis = collect($slots)->where('disponivel', true)->pluck('hora')->values()->all();
 

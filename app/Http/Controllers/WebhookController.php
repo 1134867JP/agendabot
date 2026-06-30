@@ -18,6 +18,10 @@ class WebhookController extends Controller
             ->where('ativo', true)
             ->firstOrFail();
 
+        if ($tenant->webhook_token && ! hash_equals($tenant->webhook_token, (string) $request->query('token', ''))) {
+            return response('ok');
+        }
+
         $data = $request->json()->all();
 
         // Log para debug do formato Evolution v2
