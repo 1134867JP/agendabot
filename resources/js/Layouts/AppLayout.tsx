@@ -122,6 +122,7 @@ export default function AppLayout({ children, title, subtitle, fullHeight }: Pro
                                 count={conversasNaoLidas}
                                 preview={conversasPreview}
                                 size="md"
+                                align="right"
                             />
                         </div>
                     )}

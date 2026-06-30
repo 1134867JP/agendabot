@@ -3,7 +3,6 @@ import { PageProps, SubscriptionInfo, TipoServico } from '@/types';
 import { useTheme } from '@/Components/ThemeProvider';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
 import ToastNovaMensagem from '@/Components/ToastNovaMensagem';
-import NotificacoesBell from '@/Components/NotificacoesBell';
 
 interface NavItem {
     label: string;
@@ -77,7 +76,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     const isAdmin      = isSuperAdmin || tenantPapel === 'admin';
     const currentUrl   = page.url;
 
-    const { conversasNaoLidas, conversasPreview, novaMensagem, resetarNovaMensagem } = useNotificacoes(!!currentTenant);
+    const { conversasNaoLidas, novaMensagem, resetarNovaMensagem } = useNotificacoes(!!currentTenant);
 
     const tipoAtual = currentTenant?.tipo_servico ?? 'personalizado';
 
@@ -138,14 +137,6 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                             </span>
                             AgendaBot
                         </span>
-                        {currentTenant && (
-                            <NotificacoesBell
-                                count={conversasNaoLidas}
-                                preview={conversasPreview}
-                                size="sm"
-                                onClose={onClose}
-                            />
-                        )}
                     </div>
                     {currentTenant && (
                         <span className="mt-1.5 block truncate text-[11px]" style={{ color: 'var(--text-3)' }}>

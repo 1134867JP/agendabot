@@ -6,6 +6,7 @@ interface Props {
     count: number;
     preview: ConversaPreview[];
     size?: 'sm' | 'md';
+    align?: 'left' | 'right'; // left = dropdown vai para direita, right = dropdown vai para esquerda
     onClose?: () => void;
 }
 
@@ -61,11 +62,12 @@ async function marcarLida(id: number) {
     });
 }
 
-export default function NotificacoesBell({ count, preview, size = 'md', onClose }: Props) {
+export default function NotificacoesBell({ count, preview, size = 'md', align = 'left', onClose }: Props) {
     const [aberto, setAberto] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
     const btnSize = size === 'sm' ? 'h-7 w-7' : 'h-8 w-8';
     const iconSize = size === 'sm' ? 15 : 17;
+    const dropdownPos = align === 'right' ? 'right-0' : 'left-0';
 
     useEffect(() => {
         const handler = (e: MouseEvent) => {
@@ -102,7 +104,7 @@ export default function NotificacoesBell({ count, preview, size = 'md', onClose 
             {/* Dropdown */}
             {aberto && (
                 <div
-                    className="absolute left-0 top-full z-50 mt-2 w-72 rounded-2xl shadow-2xl overflow-hidden"
+                    className={`absolute ${dropdownPos} top-full z-50 mt-2 w-72 rounded-2xl shadow-2xl overflow-hidden`}
                     style={{ background: 'var(--bg-card, var(--bg-surface))', border: '1px solid var(--border)' }}
                 >
                     {/* Header */}
