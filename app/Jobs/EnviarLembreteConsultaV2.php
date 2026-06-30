@@ -40,10 +40,14 @@ class EnviarLembreteConsultaV2 implements ShouldQueue
             . "⏰ *{$inicio->format('H:i')}*\n"
             . "Até lá! 😊";
 
-        $evolution->enviarMensagem(
+        $enviado = $evolution->enviarMensagem(
             $tenant->evolution_instance,
             $this->agendamento->cliente_telefone,
             $mensagem,
         );
+
+        if (! $enviado) {
+            throw new \RuntimeException("Falha ao enviar lembrete via WhatsApp para {$this->agendamento->cliente_telefone}");
+        }
     }
 }

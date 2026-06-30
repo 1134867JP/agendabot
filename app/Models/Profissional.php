@@ -53,13 +53,14 @@ class Profissional extends Model
             ])
             ->all();
 
+        $agendadosCollection = collect($agendados);
         $agora  = Carbon::now($tz);
         $cursor = $inicio->copy();
         while ($cursor->copy()->addMinutes($duracao)->lte($fim)) {
             $hora    = $cursor->format('H:i');
             $slotFim = $cursor->copy()->addMinutes($duracao);
             if ($cursor->gt($agora)) {
-                $ocupado = collect($agendados)->contains(
+                $ocupado = $agendadosCollection->contains(
                     fn ($a) => $cursor->lt($a['fim']) && $slotFim->gt($a['inicio'])
                 );
                 $slots[] = ['hora' => $hora, 'disponivel' => ! $ocupado];

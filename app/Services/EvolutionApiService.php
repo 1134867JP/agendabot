@@ -18,6 +18,7 @@ class EvolutionApiService
     public function enviarMensagem(string $instance, string $telefone, string $mensagem): bool
     {
         $response = Http::withHeaders(['apikey' => $this->globalApiKey])
+            ->timeout(10)
             ->post("{$this->baseUrl}/message/sendText/{$instance}", [
                 'number' => $telefone,
                 'text'   => $mensagem,
