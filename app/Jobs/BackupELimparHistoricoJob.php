@@ -25,25 +25,37 @@ class BackupELimparHistoricoJob implements ShouldQueue
 
     public function handle(): void
     {
+        $threshold   = now()->subDays(90);
         $conversaIds = Conversa::where('tenant_id', $this->tenant->id)->pluck('id');
 
         if ($conversaIds->isEmpty()) {
             return;
         }
 
-        $totalMensagens = Mensagem::whereIn('conversa_id', $conversaIds)->count();
+        $totalMensagens = Mensagem::whereIn('conversa_id', $conversaIds)
+            ->where('enviada_em', '<', $threshold)
+            ->count();
         if ($totalMensagens === 0) {
             return;
         }
 
-        $this->gerarBackup($conversaIds->all());
+        $this->gerarBackup($conversaIds->all(), $threshold);
 
-        Mensagem::whereIn('conversa_id', $conversaIds)->delete();
+        Mensagem::whereIn('conversa_id', $conversaIds)
+            ->where('enviada_em', '<', $threshold)
+            ->delete();
 
-        Conversa::whereIn('id', $conversaIds)->update([
-            'ultima_mensagem_em' => null,
-            'status_v2'          => 'ativa',
-        ]);
+        // Only reset conversations that no longer have any remaining messages
+        $conversasVazias = Conversa::whereIn('id', $conversaIds)
+            ->whereDoesntHave('mensagens')
+            ->pluck('id');
+
+        if ($conversasVazias->isNotEmpty()) {
+            Conversa::whereIn('id', $conversasVazias)->update([
+                'ultima_mensagem_em' => null,
+                'status_v2'          => 'ativa',
+            ]);
+        }
 
         Log::info('BACKUP_E_LIMPAR', [
             'tenant'    => $this->tenant->slug,
@@ -51,13 +63,13 @@ class BackupELimparHistoricoJob implements ShouldQueue
         ]);
     }
 
-    private function gerarBackup(array $conversaIds): void
+    private function gerarBackup(array $conversaIds, Carbon $threshold): void
     {
         $data     = Carbon::now()->format('Y-m-d_H-i');
         $filename = "backups/{$this->tenant->slug}_{$data}.txt";
 
         $conversas = Conversa::whereIn('id', $conversaIds)
-            ->with(['cliente', 'mensagens' => fn ($q) => $q->orderBy('enviada_em')])
+            ->with(['cliente', 'mensagens' => fn ($q) => $q->where('enviada_em', '<', $threshold)->orderBy('enviada_em')])
             ->orderByDesc('ultima_mensagem_em')
             ->get();
 

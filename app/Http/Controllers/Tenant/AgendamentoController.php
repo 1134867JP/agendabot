@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -56,9 +57,10 @@ class AgendamentoController extends Controller
     {
         $tenant = app('tenant');
 
+        $tenantId = $tenant->id;
         $validated = $request->validate([
-            'recurso_id'        => ['nullable', 'integer', 'exists:recursos,id'],
-            'profissional_id'   => ['nullable', 'integer', 'exists:profissionais,id'],
+            'recurso_id'        => ['nullable', 'integer', Rule::exists('recursos', 'id')->where('tenant_id', $tenantId)],
+            'profissional_id'   => ['nullable', 'integer', Rule::exists('profissionais', 'id')->where('tenant_id', $tenantId)],
             'cliente_nome'      => ['required', 'string', 'max:255'],
             'cliente_telefone'  => ['required', 'string', 'max:20'],
             'inicio'            => ['required', 'date'],

@@ -7,6 +7,7 @@ use App\Models\Agendamento;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,9 +28,10 @@ class AgendaController extends Controller
     {
         $tenant = app('tenant');
 
+        $tenantId = $tenant->id;
         $request->validate([
-            'recurso_id'      => ['nullable', 'exists:recursos,id'],
-            'profissional_id' => ['nullable', 'exists:profissionais,id'],
+            'recurso_id'      => ['nullable', Rule::exists('recursos', 'id')->where('tenant_id', $tenantId)],
+            'profissional_id' => ['nullable', Rule::exists('profissionais', 'id')->where('tenant_id', $tenantId)],
             'data_inicio'     => ['required', 'date'],
             'data_fim'        => ['required', 'date'],
         ]);
@@ -45,11 +47,8 @@ class AgendaController extends Controller
                       $q->whereBetween('inicio', [$request->data_inicio, $dataFim]);
                   });
         } elseif ($request->filled('profissional_id')) {
-            // Inclui agendamentos do profissional OU sem profissional associado (dados legados)
-            $query->where(function ($q) use ($request) {
-                $q->where('profissional_id', $request->profissional_id)
-                  ->orWhereNull('profissional_id');
-            })->where(function ($q) use ($request, $dataFim) {
+            $query->where('profissional_id', $request->profissional_id)
+                  ->where(function ($q) use ($request, $dataFim) {
                 $q->whereBetween('inicio', [$request->data_inicio, $dataFim])
                   ->orWhereBetween('data_hora', [$request->data_inicio, $dataFim]);
             });
