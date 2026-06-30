@@ -48,6 +48,7 @@ class OnboardingController extends Controller
             'tipo_servico'               => $validated['tipo_servico'],
             'tipo_servico_personalizado' => $validated['tipo_servico_personalizado'] ?? null,
             'evolution_instance'         => $slugInterno,
+            'webhook_token'              => Str::random(32),
             'subscription_status'        => 'trial',
             'trial_ends_at'              => now()->addDays((int) env('TRIAL_DAYS', 14)),
             'ativo'                      => true,

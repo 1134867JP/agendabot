@@ -18,7 +18,10 @@ class ReconfigureWebhooks extends Command
         $this->info("Reconfigurando {$tenants->count()} instâncias...");
 
         foreach ($tenants as $tenant) {
-            $webhookUrl = route('webhook', $tenant->slug);
+            if (! $tenant->webhook_token) {
+                $tenant->update(['webhook_token' => \Illuminate\Support\Str::random(32)]);
+            }
+            $webhookUrl = route('webhook', $tenant->slug) . '?token=' . $tenant->webhook_token;
             $ok = $evolution->configurarWebhook($tenant->evolution_instance, $webhookUrl);
 
             $status = $ok ? '<info>OK</info>' : '<error>FALHOU</error>';

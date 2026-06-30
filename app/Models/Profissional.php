@@ -46,16 +46,24 @@ class Profissional extends Model
         $agendados = $this->agendamentos()
             ->whereBetween('data_hora', [$inicioDia, $fimDia])
             ->whereNotIn('status', ['cancelado'])
-            ->pluck('data_hora')
-            ->map(fn ($dt) => Carbon::parse($dt, $tz)->format('H:i'))
-            ->toArray();
+            ->get(['data_hora', 'duracao_minutos'])
+            ->map(fn ($a) => [
+                'inicio' => Carbon::parse($a->data_hora, $tz),
+                'fim'    => Carbon::parse($a->data_hora, $tz)->addMinutes((int) ($a->duracao_minutos ?? $duracao)),
+            ])
+            ->all();
 
+        $agendadosCollection = collect($agendados);
         $agora  = Carbon::now($tz);
         $cursor = $inicio->copy();
         while ($cursor->copy()->addMinutes($duracao)->lte($fim)) {
-            $hora = $cursor->format('H:i');
+            $hora    = $cursor->format('H:i');
+            $slotFim = $cursor->copy()->addMinutes($duracao);
             if ($cursor->gt($agora)) {
-                $slots[] = ['hora' => $hora, 'disponivel' => ! in_array($hora, $agendados)];
+                $ocupado = $agendadosCollection->contains(
+                    fn ($a) => $cursor->lt($a['fim']) && $slotFim->gt($a['inicio'])
+                );
+                $slots[] = ['hora' => $hora, 'disponivel' => ! $ocupado];
             }
             $cursor->addMinutes($duracao);
         }
