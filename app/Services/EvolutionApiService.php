@@ -76,43 +76,59 @@ class EvolutionApiService
         return $response->json() ?? [];
     }
 
-    public function fetchMessages(string $instance, string $remoteJid, int $count = 100): array
+    public function fetchMessages(string $instance, string $remoteJid, int $count = 50): array
     {
         $response = Http::withHeaders(['apikey' => $this->globalApiKey])
-            ->timeout(30)
+            ->timeout(20)
             ->post("{$this->baseUrl}/chat/findMessages/{$instance}", [
                 'where' => ['key' => ['remoteJid' => $remoteJid]],
                 'limit' => $count,
             ]);
 
         if (! $response->successful()) {
+            \Log::debug('FETCH_MESSAGES_HTTP_ERR', [
+                'instance' => $instance,
+                'jid'      => $remoteJid,
+                'status'   => $response->status(),
+            ]);
             return [];
         }
 
         $body = $response->json();
 
-        // Formato confirmado pela Evolution API: { "messages": [...] }
-        // Também suporta variantes para compatibilidade
-        $messages = $body['messages'] ?? null;
+        if (! is_array($body)) {
+            return [];
+        }
 
-        if (is_array($messages)) {
-            // { messages: { records: [...] } } — variante v2 antiga
-            if (isset($messages['records']) && is_array($messages['records'])) {
-                return $messages['records'];
-            }
-            // { messages: [...] } — formato atual confirmado
-            if (isset($messages[0]) || $messages === []) {
-                return $messages;
+        // { messages: { records: [...], total: N } }  ← Evolution API v2 paginado
+        if (isset($body['messages']['records']) && is_array($body['messages']['records'])) {
+            return $body['messages']['records'];
+        }
+
+        // { messages: [...] }  ← formato flat confirmado
+        if (isset($body['messages']) && is_array($body['messages'])) {
+            $msgs = $body['messages'];
+            // Se for array indexado (lista de mensagens), retorna diretamente
+            if (empty($msgs) || isset($msgs[0])) {
+                return $msgs;
             }
         }
 
+        // { records: [...] }  ← variante alternativa
         if (isset($body['records']) && is_array($body['records'])) {
             return $body['records'];
         }
 
-        if (is_array($body) && isset($body[0])) {
+        // Array raiz diretamente
+        if (isset($body[0])) {
             return $body;
         }
+
+        \Log::debug('FETCH_MESSAGES_UNKNOWN_FORMAT', [
+            'instance' => $instance,
+            'jid'      => $remoteJid,
+            'keys'     => array_keys($body),
+        ]);
 
         return [];
     }
