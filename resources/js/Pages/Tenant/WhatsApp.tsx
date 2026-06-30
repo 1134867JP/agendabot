@@ -12,6 +12,8 @@ export default function WhatsAppPage({ tenant, webhook_url }: Props) {
     const [conectado, setConectado] = useState(tenant.whatsapp_conectado);
     const [qrcode, setQrcode] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [desconectando, setDesconectando] = useState(false);
+    const [confirmarDesconectar, setConfirmarDesconectar] = useState(false);
     const [erro, setErro] = useState('');
     const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -43,6 +45,34 @@ export default function WhatsAppPage({ tenant, webhook_url }: Props) {
         return () => stopPolling();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    const desconectar = async () => {
+        setDesconectando(true);
+        setErro('');
+        setConfirmarDesconectar(false);
+        try {
+            const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content;
+            const res = await fetch(route('tenant.whatsapp.desconectar'), {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'X-CSRF-TOKEN': csrf ?? '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+            });
+            const json = await res.json();
+            if (json.ok) {
+                setConectado(false);
+            } else {
+                setErro(json.erro ?? 'Não foi possível desconectar. Tente novamente.');
+            }
+        } catch {
+            setErro('Erro de conexão. Tente novamente.');
+        } finally {
+            setDesconectando(false);
+        }
+    };
 
     const conectar = async () => {
         setErro('');
@@ -142,9 +172,34 @@ export default function WhatsAppPage({ tenant, webhook_url }: Props) {
                     )}
 
                     {conectado && (
-                        <p className="text-sm" style={{ color: 'var(--text-3)' }}>
-                            Os clientes já podem enviar mensagens para o seu número para agendar.
-                        </p>
+                        <div className="space-y-3">
+                            <p className="text-sm" style={{ color: 'var(--text-3)' }}>
+                                Os clientes já podem enviar mensagens para o seu número para agendar.
+                            </p>
+                            <button
+                                onClick={() => setConfirmarDesconectar(true)}
+                                disabled={desconectando}
+                                className="btn-secondary w-full justify-center py-2.5 text-sm"
+                                style={{ color: 'var(--red)', borderColor: 'rgba(239,68,68,0.3)' }}
+                            >
+                                {desconectando ? (
+                                    <>
+                                        <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                        </svg>
+                                        Desconectando…
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
+                                        </svg>
+                                        Desconectar WhatsApp
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     )}
                 </div>
 
@@ -172,6 +227,40 @@ export default function WhatsAppPage({ tenant, webhook_url }: Props) {
                     </ol>
                 </div>
             </div>
+
+            {/* Modal de confirmação de desconexão */}
+            {confirmarDesconectar && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
+                    <div className="w-full max-w-sm rounded-2xl p-7 shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full" style={{ background: 'rgba(239,68,68,0.1)' }}>
+                            <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
+                            </svg>
+                        </div>
+                        <h3 className="mb-1 text-lg font-semibold" style={{ color: 'var(--text-1)', fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                            Desconectar WhatsApp?
+                        </h3>
+                        <p className="mb-6 text-sm" style={{ color: 'var(--text-3)' }}>
+                            O bot vai parar de responder mensagens imediatamente. Para voltar a funcionar, você precisará escanear um novo QR Code.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setConfirmarDesconectar(false)}
+                                className="btn-secondary flex-1 justify-center"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={desconectar}
+                                className="btn-primary flex-1 justify-center"
+                                style={{ background: 'var(--red)' }}
+                            >
+                                Desconectar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* QR Code Modal */}
             {qrcode && (

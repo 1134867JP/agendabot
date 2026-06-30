@@ -154,6 +154,14 @@ class EvolutionApiService
         return $response->json();
     }
 
+    public function desconectar(string $instance): bool
+    {
+        $response = Http::withHeaders(['apikey' => $this->globalApiKey])
+            ->delete("{$this->baseUrl}/instance/logout/{$instance}");
+
+        return $response->successful();
+    }
+
     public function configurarWebhook(string $instance, string $webhookUrl): bool
     {
         // Evolution API v2 requires nested 'webhook' object

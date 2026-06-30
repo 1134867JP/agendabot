@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\EvolutionApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -57,6 +58,21 @@ class WhatsAppController extends Controller
         $this->evolution->configurarWebhook($instance, route('webhook', $tenant->slug));
         $qrcode = $this->evolution->obterQrCode($instance);
         return response()->json(['qrcode' => $qrcode]);
+    }
+
+    public function desconectar(): JsonResponse
+    {
+        $tenant = app('tenant');
+
+        if (!$tenant->evolution_instance) {
+            return response()->json(['ok' => false, 'erro' => 'Instância não configurada.'], 400);
+        }
+
+        $ok = $this->evolution->desconectar($tenant->evolution_instance);
+
+        $tenant->update(['whatsapp_conectado' => false]);
+
+        return response()->json(['ok' => $ok]);
     }
 
     public function status(): JsonResponse

@@ -120,6 +120,7 @@ Route::middleware('auth')->group(function () {
         Route::get('whatsapp', [Tenant\WhatsAppController::class, 'index'])->name('whatsapp');
         Route::get('whatsapp/qrcode', [Tenant\WhatsAppController::class, 'qrcode'])->name('whatsapp.qrcode');
         Route::get('whatsapp/status', [Tenant\WhatsAppController::class, 'status'])->name('whatsapp.status');
+        Route::post('whatsapp/desconectar', [Tenant\WhatsAppController::class, 'desconectar'])->name('whatsapp.desconectar');
 
         // Configurações
         Route::get('configuracoes', [Tenant\ConfiguracaoController::class, 'index'])->name('configuracoes.index');
