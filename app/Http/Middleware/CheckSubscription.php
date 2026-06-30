@@ -34,8 +34,9 @@ class CheckSubscription
         }
 
         if ($tenant->subscription_status === 'past_due') {
-            $diasVencido = $tenant->subscription_ends_at
-                ? (int) now()->diffInDays($tenant->subscription_ends_at)
+            $endsAt      = $tenant->subscription_ends_at;
+            $diasVencido = $endsAt
+                ? (int) max(0, now()->diffInDays($endsAt, false) * -1)
                 : 999;
 
             if ($diasVencido <= 3) {
@@ -45,13 +46,14 @@ class CheckSubscription
             $tenant->update(['subscription_status' => 'blocked']);
         }
 
-        if (in_array($tenant->subscription_status, ['blocked', 'canceled'])) {
+        if (in_array($tenant->subscription_status, ['expired', 'blocked', 'canceled'])) {
             if ($request->routeIs('tenant.renovar*')) {
                 return $next($request);
             }
             return redirect()->route('tenant.renovar');
         }
 
-        return $next($request);
+        // Unknown status — fail closed
+        return redirect()->route('tenant.renovar');
     }
 }

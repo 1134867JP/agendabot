@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Profissional;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -23,13 +24,14 @@ class ProfissionalController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $tenant = app('tenant');
+        $tenantId = $tenant->id;
         $data = $request->validate([
             'nome'             => 'required|string|max:255',
             'especialidades'   => 'nullable|array',
             'especialidades.*' => 'string|max:100',
             'ativo'            => 'boolean',
             'servico_ids'      => 'nullable|array',
-            'servico_ids.*'    => 'integer|exists:servicos,id',
+            'servico_ids.*'    => ['integer', Rule::exists('servicos', 'id')->where('tenant_id', $tenantId)],
         ]);
         $servicoIds = $data['servico_ids'] ?? [];
         $profissional = $tenant->profissionais()->create(\Illuminate\Support\Arr::except($data, ['servico_ids']));
@@ -39,14 +41,16 @@ class ProfissionalController extends Controller
 
     public function update(Request $request, Profissional $profissional): RedirectResponse
     {
-        abort_if((int)$profissional->tenant_id !== (int)app('tenant')->id, 403);
+        $tenant = app('tenant');
+        abort_if((int)$profissional->tenant_id !== (int)$tenant->id, 403);
+        $tenantId = $tenant->id;
         $data = $request->validate([
             'nome'             => 'required|string|max:255',
             'especialidades'   => 'nullable|array',
             'especialidades.*' => 'string|max:100',
             'ativo'            => 'boolean',
             'servico_ids'      => 'nullable|array',
-            'servico_ids.*'    => 'integer|exists:servicos,id',
+            'servico_ids.*'    => ['integer', Rule::exists('servicos', 'id')->where('tenant_id', $tenantId)],
         ]);
         $servicoIds = $data['servico_ids'] ?? [];
         $profissional->update(\Illuminate\Support\Arr::except($data, ['servico_ids']));

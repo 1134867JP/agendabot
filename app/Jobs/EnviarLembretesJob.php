@@ -50,13 +50,14 @@ class EnviarLembretesJob implements ShouldQueue
             try {
                 $mensagem = $this->montarMensagemLembrete($agendamento, $cfg['lembrete_texto'] ?? null);
 
+                // Mark before sending to prevent duplicate sends if the job is retried
+                $agendamento->update(['lembrete_enviado' => true]);
+
                 $evolution->enviarMensagem(
                     $agendamento->tenant->evolution_instance,
                     $telefone,
                     $mensagem,
                 );
-
-                $agendamento->update(['lembrete_enviado' => true]);
 
             } catch (\Throwable $e) {
                 Log::error("Falha ao enviar lembrete agendamento #{$agendamento->id}: {$e->getMessage()}");
