@@ -78,7 +78,12 @@ class OnboardingController extends Controller
         ]);
 
         $user   = auth()->user();
-        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', $user->id))->firstOrFail();
+        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', $user->id))->first();
+
+        if (! $tenant) {
+            return redirect()->route('dashboard')->with('erro', 'Complete o cadastro do seu estabelecimento antes de escolher um plano.');
+        }
+
         $taxa = config("plans.{$request->plano}.taxa_agendamento_bot", 0.40);
         $tenant->update(['plano' => $request->plano, 'taxa_agendamento_bot' => $taxa]);
 
@@ -100,9 +105,13 @@ class OnboardingController extends Controller
         return redirect()->route('onboarding.step3');
     }
 
-    public function step3(): Response
+    public function step3(): Response|RedirectResponse
     {
-        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->firstOrFail();
+        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->first();
+
+        if (! $tenant) {
+            return redirect()->route('dashboard')->with('erro', 'Complete o cadastro do seu estabelecimento antes de continuar.');
+        }
 
         return Inertia::render('Onboarding/Step3', [
             'tenant' => [
@@ -123,7 +132,11 @@ class OnboardingController extends Controller
             'bot_tom'      => 'required|in:formal,semiformal,descontraido',
         ]);
 
-        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->firstOrFail();
+        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->first();
+
+        if (! $tenant) {
+            return redirect()->route('dashboard')->with('erro', 'Complete o cadastro do seu estabelecimento antes de continuar.');
+        }
 
         $tenant->update([
             'nome_agente'       => $validated['bot_nome'],

@@ -35,5 +35,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Por padrão o Laravel silencia ModelNotFoundException (404) e não grava em log.
+        // Aqui isso quase sempre indica um bug real (ex.: usuário sem tenant tentando
+        // acessar rota que assume tenant existente), então passa a registrar em log.
+        $exceptions->stopIgnoring(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
     })->create();
