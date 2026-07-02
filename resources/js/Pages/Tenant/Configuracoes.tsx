@@ -1,7 +1,8 @@
 import { Head, useForm } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
-import { PageProps, Tenant, TipoServico } from '@/types';
+import { PageProps, Tenant, TipoServico, HorarioAtendimentoDia } from '@/types';
 import TipoServicoSelector from '@/Components/TipoServicoSelector';
+import Toggle from '@/Components/Toggle';
 
 interface Props extends PageProps {
     tenant: Tenant;
@@ -10,12 +11,31 @@ interface Props extends PageProps {
 // ─── Bot & IA form ────────────────────────────────────────────────────────────
 
 type TomVoz = 'formal' | 'semiformal' | 'descontraido';
+type ModoBot = 'agendamento' | 'triagem';
 
 const TONS: { value: TomVoz; label: string; desc: string }[] = [
     { value: 'formal',       label: 'Formal',       desc: 'Profissional, sem emojis, "Senhor/Senhora"' },
     { value: 'semiformal',   label: 'Semiformal',   desc: 'Claro e amigável, emojis moderados' },
     { value: 'descontraido', label: 'Descontraído', desc: 'Leve, emojis liberados, gírias suaves' },
 ];
+
+const MODOS: { value: ModoBot; label: string; desc: string }[] = [
+    { value: 'agendamento', label: 'Agendamento automático', desc: 'O bot consulta a agenda e fecha o agendamento sozinho.' },
+    { value: 'triagem',     label: 'Triagem / Pré-atendimento', desc: 'O bot só coleta os dados e transfere para uma atendente concluir.' },
+];
+
+const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+function buildHorarioRows(h?: HorarioAtendimentoDia[] | null): HorarioAtendimentoDia[] {
+    return DIAS.map((_, i) => {
+        const dia = h?.[i];
+        return {
+            ativo:      dia?.ativo      ?? (i >= 1 && i <= 5), // Seg–Sex por padrão
+            abertura:   dia?.abertura   ?? '08:00',
+            fechamento: dia?.fechamento ?? '18:00',
+        };
+    });
+}
 
 function BotConfigForm({ tenant }: { tenant: Tenant }) {
     const { data, setData, put, processing, errors, wasSuccessful } = useForm({
@@ -27,9 +47,15 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
         tom_voz:           (tenant.tom_voz          ?? 'semiformal') as TomVoz,
         instrucoes_extras: tenant.instrucoes_extras ?? '',
         bot_ativo:         tenant.bot_ativo         ?? true,
+        modo_bot:          (tenant.modo_bot         ?? 'agendamento') as ModoBot,
+        horario_atendimento:   buildHorarioRows(tenant.horario_atendimento),
+        mensagem_fora_horario: tenant.mensagem_fora_horario ?? '',
         lembrete_ativo:    (tenant as any).lembrete_ativo ?? true,
         lembrete_texto:    (tenant as any).lembrete_texto ?? '',
     });
+
+    const setDia = (idx: number, campo: keyof HorarioAtendimentoDia, valor: string | boolean) =>
+        setData('horario_atendimento', data.horario_atendimento.map((d, i) => i === idx ? { ...d, [campo]: valor } : d));
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -168,6 +194,71 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                     </div>
                     {errors.tom_voz && <p className="mt-1 text-xs text-red-400">{errors.tom_voz}</p>}
                 </div>
+
+                {/* Modo de atendimento */}
+                <div>
+                    <label className="label mb-3">Modo de atendimento</label>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {MODOS.map(modo => {
+                            const ativo = data.modo_bot === modo.value;
+                            return (
+                                <button
+                                    key={modo.value}
+                                    type="button"
+                                    onClick={() => setData('modo_bot', modo.value)}
+                                    className="rounded-xl p-3 text-left transition-all"
+                                    style={{
+                                        border: ativo ? '1px solid var(--accent)' : '1px solid var(--border-strong)',
+                                        background: ativo ? 'var(--accent-light)' : 'transparent',
+                                        boxShadow: ativo ? '0 0 0 1px var(--accent)' : 'none',
+                                    }}
+                                >
+                                    <p className="text-sm font-medium" style={{ color: ativo ? 'var(--accent)' : 'var(--text-1)' }}>{modo.label}</p>
+                                    <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>{modo.desc}</p>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    {errors.modo_bot && <p className="mt-1 text-xs text-red-400">{errors.modo_bot}</p>}
+                </div>
+
+                {/* Horário de atendimento — só na triagem */}
+                {data.modo_bot === 'triagem' && (
+                    <div className="rounded-xl p-4" style={{ border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+                        <p className="text-sm font-medium text-primary">Horário de atendimento</p>
+                        <p className="mt-0.5 mb-3 text-xs" style={{ color: 'var(--text-3)' }}>
+                            Dias e horas em que a atendente está disponível. Fora desse horário o bot ainda coleta os dados, mas avisa que o retorno será nesse período.
+                        </p>
+                        <div className="space-y-2.5">
+                            {data.horario_atendimento.map((dia, i) => (
+                                <div key={i} className="flex flex-wrap items-center gap-4">
+                                    <div className="w-24">
+                                        <Toggle checked={dia.ativo} onChange={() => setDia(i, 'ativo', !dia.ativo)} label={DIAS[i]} />
+                                    </div>
+                                    <input type="time" value={dia.abertura} onChange={e => setDia(i, 'abertura', e.target.value)} disabled={!dia.ativo} className="input w-28 disabled:opacity-40" />
+                                    <span className="text-xs" style={{ color: 'var(--text-3)' }}>até</span>
+                                    <input type="time" value={dia.fechamento} onChange={e => setDia(i, 'fechamento', e.target.value)} disabled={!dia.ativo} className="input w-28 disabled:opacity-40" />
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="mt-4">
+                            <label className="label mb-1">
+                                Mensagem fora do horário{' '}
+                                <span className="font-normal" style={{ color: 'var(--text-3)' }}>(opcional)</span>
+                            </label>
+                            <textarea
+                                value={data.mensagem_fora_horario}
+                                onChange={e => setData('mensagem_fora_horario', e.target.value)}
+                                rows={2}
+                                className="input resize-none"
+                                placeholder="Deixe vazio para o bot montar automaticamente com base no horário configurado."
+                                maxLength={500}
+                            />
+                            {errors.mensagem_fora_horario && <p className="mt-1 text-xs text-red-400">{errors.mensagem_fora_horario}</p>}
+                        </div>
+                    </div>
+                )}
 
                 {/* Instruções extras */}
                 <div>

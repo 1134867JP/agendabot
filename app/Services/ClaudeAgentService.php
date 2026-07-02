@@ -33,19 +33,26 @@ class ClaudeAgentService
 
         $hoje = \Carbon\Carbon::now('America/Sao_Paulo');
 
+        $triagem = $tenant->modo_bot === 'triagem';
+
         $systemBlocks = [
             [
                 'type'          => 'text',
-                'text'          => $this->buildStaticPrompt($tenant),
+                'text'          => $triagem ? $this->buildTriagemPrompt($tenant) : $this->buildStaticPrompt($tenant),
                 'cache_control' => ['type' => 'ephemeral'],
             ],
             [
                 'type' => 'text',
-                'text' => 'HOJE: ' . $hoje->translatedFormat('l, d/m/Y') . ' (' . $hoje->format('Y-m-d') . '). Só agende datas futuras a partir de amanhã.',
+                'text' => 'HOJE: ' . $hoje->translatedFormat('l, d/m/Y') . ' (' . $hoje->format('Y-m-d') . ').'
+                    . ($triagem ? '' : ' Só agende datas futuras a partir de amanhã.'),
             ],
         ];
 
-        if ($agendamentoPendente) {
+        if ($triagem) {
+            $systemBlocks[] = ['type' => 'text', 'text' => $this->buildAtendimentoBlock($tenant, $hoje)];
+        }
+
+        if ($agendamentoPendente && ! $triagem) {
             $dataHora = \Carbon\Carbon::parse($agendamentoPendente->data_hora ?? $agendamentoPendente->inicio)
                 ->locale('pt_BR')
                 ->translatedFormat('d/m/Y \\às H:i');
@@ -58,7 +65,7 @@ class ClaudeAgentService
             ];
         }
 
-        $tools    = $this->buildTools();
+        $tools    = $triagem ? $this->buildToolsTriagem() : $this->buildTools();
         $messages = $mensagens;
         $totalUsage = [
             'input_tokens'                => 0,
@@ -165,7 +172,7 @@ class ClaudeAgentService
             'cancelar_agendamento'         => $this->toolCancelarAgendamento($agendamentoPendente),
             'listar_agendamentos_cliente'  => $this->toolListarAgendamentosCliente(),
             'reagendar_agendamento'        => $this->toolReagendarAgendamento($input),
-            'transferir_para_humano'       => $this->toolTransferirParaHumano(),
+            'transferir_para_humano'       => $this->toolTransferirParaHumano($input),
             default                        => ['erro' => "Ferramenta desconhecida: {$name}"],
         };
 
@@ -288,9 +295,22 @@ class ClaudeAgentService
         }
     }
 
-    private function toolTransferirParaHumano(): array
+    private function toolTransferirParaHumano(array $input = []): array
     {
         $this->transferir = true;
+
+        // Em modo triagem, o resumo estruturado da conversa fica registrado no log
+        // para a atendente ter o handoff — os dados também permanecem no histórico.
+        if (! empty($input['resumo'])) {
+            Log::channel('jobs')->info('TRIAGEM_HANDOFF', [
+                'tenant'      => $this->currentTenant->id,
+                'cliente'     => $this->currentCliente['telefone'] ?? null,
+                'resumo'      => $input['resumo'],
+                'nome'        => $input['nome_cliente'] ?? null,
+                'preferencia' => $input['preferencia'] ?? null,
+            ]);
+        }
+
         return ['sucesso' => true];
     }
 
@@ -361,6 +381,98 @@ class ClaudeAgentService
                 'cache_control' => ['type' => 'ephemeral'],
             ],
         ];
+    }
+
+    private function buildToolsTriagem(): array
+    {
+        return [
+            [
+                'name'          => 'transferir_para_humano',
+                'description'   => 'Encaminha a conversa para uma atendente humana finalizar o agendamento. Chame assim que tiver: nome do cliente, serviço/motivo desejado e a preferência de dia/horário. NUNCA confirme horário ou agendamento antes — quem confere a agenda é a atendente.',
+                'input_schema'  => [
+                    'type'       => 'object',
+                    'properties' => [
+                        'resumo'       => ['type' => 'string', 'description' => 'Resumo curto do que o cliente deseja (serviço/motivo + preferência de dia e horário)'],
+                        'nome_cliente' => ['type' => 'string', 'description' => 'Nome do cliente'],
+                        'preferencia'  => ['type' => 'string', 'description' => 'Preferência de dia/horário informada pelo cliente'],
+                    ],
+                ],
+                'cache_control' => ['type' => 'ephemeral'],
+            ],
+        ];
+    }
+
+    /**
+     * Bloco dinâmico (não cacheado) informando ao bot se está ou não dentro do
+     * horário de atendimento da atendente e como ajustar a expectativa do cliente.
+     */
+    private function buildAtendimentoBlock(Tenant $tenant, \Carbon\Carbon $agora): string
+    {
+        $texto = $tenant->horarioAtendimentoTexto();
+
+        if ($texto === '') {
+            return 'ATENDIMENTO: Após transferir, informe que uma atendente dará sequência em instantes.';
+        }
+
+        if ($tenant->emHorarioAtendimento($agora)) {
+            return "ATENDIMENTO: Estamos DENTRO do horário de atendimento ({$texto}). Após transferir, diga que uma atendente vai dar sequência em instantes.";
+        }
+
+        $mensagem = trim((string) $tenant->mensagem_fora_horario);
+        $instrucao = $mensagem !== ''
+            ? "Use esta mensagem ao encerrar: \"{$mensagem}\""
+            : "Avise, de forma simpática, que uma atendente retornará no horário de atendimento ({$texto}).";
+
+        return "ATENDIMENTO: Estamos FORA do horário de atendimento ({$texto}). Colete normalmente os dados e transfira, mas {$instrucao}";
+    }
+
+    private function buildTriagemPrompt(Tenant $tenant): string
+    {
+        $profissionais = $tenant->profissionais()->where('ativo', true)->with('servicos:id,nome')->get()
+            ->map(function ($p) {
+                $servNomes = $p->servicos->pluck('nome')->join(', ');
+                $base = "- {$p->nome}";
+                return $servNomes ? "{$base} → {$servNomes}" : $base;
+            })
+            ->join("\n");
+
+        $servicos = $tenant->servicos()->where('ativo', true)->get()
+            ->map(fn ($s) => "- {$s->nome}" .
+                ($s->valor_min ? " (R$ {$s->valor_min}" . ($s->valor_max ? "-{$s->valor_max}" : '') . ")" : '') .
+                ($s->requer_avaliacao ? ' [requer avaliação]' : ''))
+            ->join("\n");
+
+        $tomInstrucao = match ($tenant->tom_voz) {
+            'formal'       => 'Linguagem profissional e respeitosa. Sem emojis. Use "Senhor/Senhora".',
+            'descontraido' => 'Linguagem leve e simpática. Emojis liberados. Pode usar gírias suaves.',
+            default        => 'Linguagem clara e amigável. Emojis com moderação. Tratamento informal mas respeitoso.',
+        };
+
+        $instrucoes  = $tenant->instrucoes_extras ? "\nINSTRUÇÕES ESPECÍFICAS DO NEGÓCIO:\n{$tenant->instrucoes_extras}" : '';
+        $servicosPart = $servicos ? "\nSERVIÇOS OFERECIDOS (apenas para contexto):\n{$servicos}\n" : '';
+        $profPart     = $profissionais ? "\nPROFISSIONAIS (apenas para contexto):\n{$profissionais}\n" : '';
+
+        return <<<PROMPT
+Você é {$tenant->nome_agente} de {$tenant->nome} ({$tenant->ramo_negocio}). {$tenant->descricao_negocio}
+Local: {$tenant->endereco}, {$tenant->cidade} | Tom: {$tomInstrucao}
+
+SEU PAPEL: Fazer o PRÉ-ATENDIMENTO. Você NÃO agenda e NÃO tem acesso à agenda — a disponibilidade é conferida por uma atendente humana. Seu trabalho é acolher o cliente, entender o que ele precisa e coletar os dados para a atendente concluir.
+{$servicosPart}{$profPart}{$instrucoes}
+
+FLUXO OBRIGATÓRIO:
+1. Saúde o cliente e pergunte o que ele deseja (qual serviço ou motivo).
+2. Colete o NOME do cliente.
+3. Colete a PREFERÊNCIA de dia e horário (ex: "quarta de manhã", "sábado à tarde").
+4. Quando tiver nome + serviço/motivo + preferência, chame a ferramenta transferir_para_humano passando resumo, nome_cliente e preferencia.
+5. Depois de transferir, encerre conforme a orientação de ATENDIMENTO (dentro/fora do horário).
+
+REGRAS CRÍTICAS:
+- JAMAIS diga que um horário está disponível, reservado ou confirmado. Você não vê a agenda.
+- JAMAIS prometa data/hora específica — apenas registre a PREFERÊNCIA do cliente.
+- Deixe claro, quando fizer sentido, que uma atendente vai confirmar a disponibilidade.
+- Mensagens curtas (máx 3 linhas). Se não entender após 2 tentativas ou o cliente pedir humano, chame transferir_para_humano.
+- Mídia recebida → peça para descrever em texto.
+PROMPT;
     }
 
     public function buildStaticPrompt(Tenant $tenant): string
