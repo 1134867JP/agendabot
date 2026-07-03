@@ -200,6 +200,40 @@ class ConversaSyncService
         return $cliente;
     }
 
+    /**
+     * Ordena os chats do mais recente para o mais antigo (por última mensagem) e limita
+     * a quantidade — evita sincronizar centenas de conversas inativas de uma vez, priorizando
+     * as mais ativas. Conversas fora do corte continuam chegando normalmente em tempo real
+     * via webhook (chats.upsert/messages.upsert) na próxima interação do cliente.
+     */
+    public function chatsRecentesLimitados(array $chats, int $limite): array
+    {
+        return collect($chats)
+            ->sortByDesc(fn (array $chat) => $this->timestampOrdenacao($chat))
+            ->take($limite)
+            ->values()
+            ->all();
+    }
+
+    private function timestampOrdenacao(array $chat): int
+    {
+        $ts = data_get($chat, 'lastMessage.messageTimestamp') ?? data_get($chat, 'updatedAt');
+
+        if (is_numeric($ts)) {
+            return (int) $ts;
+        }
+
+        if (is_string($ts) && $ts !== '') {
+            try {
+                return Carbon::parse($ts)->timestamp;
+            } catch (\Throwable $e) {
+                return 0;
+            }
+        }
+
+        return 0;
+    }
+
     public function buildNomesMap(array $contatos): array
     {
         $mapa = [];

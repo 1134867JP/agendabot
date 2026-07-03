@@ -20,6 +20,8 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
     public int $tries   = 2;
     public int $timeout = 600;
 
+    private const LIMITE_CHATS_SYNC = 30;
+
     public function __construct(private readonly Tenant $tenant) {}
 
     public function handle(EvolutionApiService $evolution, ConversaSyncService $sync): void
@@ -36,8 +38,9 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
         // ── 1. Mapa nome→telefone via findContacts ───────────────────────────
         $nomesPorTelefone = $sync->buildNomesMap($evolution->fetchContacts($instance));
 
-        // ── 2. Todos os chats ────────────────────────────────────────────────
-        $chats = $evolution->fetchChats($instance);
+        // ── 2. Chats mais recentes, limitados para não sincronizar o histórico inteiro ──
+        $chatsTotal = $evolution->fetchChats($instance);
+        $chats      = $sync->chatsRecentesLimitados($chatsTotal, self::LIMITE_CHATS_SYNC);
 
         $totalChats  = count($chats);
         $importados  = 0;
@@ -62,12 +65,13 @@ class SincronizarConversasWhatsappJob implements ShouldQueue
         }
 
         Log::info('SYNC_DONE', [
-            'tenant'        => $this->tenant->slug,
-            'total_chats'   => $totalChats,
-            'importados'    => $importados,
-            'sem_mensagem'  => $semMensagem,
-            'erros'         => $erros,
-            'nomes_map'     => count($nomesPorTelefone),
+            'tenant'          => $this->tenant->slug,
+            'total_chats_api' => count($chatsTotal),
+            'chats_sync'      => $totalChats,
+            'importados'      => $importados,
+            'sem_mensagem'    => $semMensagem,
+            'erros'           => $erros,
+            'nomes_map'       => count($nomesPorTelefone),
         ]);
 
         Cache::forget("sync_whatsapp_tenant_{$this->tenant->id}");
