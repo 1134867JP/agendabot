@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -19,10 +20,13 @@ class Tenant extends Model
         'ramo_negocio', 'descricao_negocio', 'cidade', 'endereco',
         'horarios_funcionamento', 'nome_agente', 'tom_voz', 'instrucoes_extras', 'bot_ativo',
         'webhook_token',
+        // triagem / horário de atendimento
+        'modo_bot', 'horario_atendimento', 'mensagem_fora_horario',
     ];
 
     protected $casts = [
         'configuracoes'        => 'array',
+        'horario_atendimento'  => 'array',
         'whatsapp_conectado'   => 'boolean',
         'ativo'                => 'boolean',
         'bot_ativo'            => 'boolean',
@@ -30,6 +34,9 @@ class Tenant extends Model
         'trial_ends_at'        => 'datetime',
         'subscription_ends_at' => 'datetime',
     ];
+
+    /** Dias da semana no índice 0=Dom .. 6=Sáb usado por horario_atendimento. */
+    public const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
     public function recursos(): HasMany { return $this->hasMany(Recurso::class); }
     public function agendamentos(): HasMany { return $this->hasMany(Agendamento::class); }
@@ -74,5 +81,72 @@ class Tenant extends Model
             'permite_cliente_cancelar'          => true,
             'politica_cancelamento'             => null,
         ], $this->configuracoes['regras_agendamento'] ?? []);
+    }
+
+    /**
+     * Verifica se o momento informado está dentro do horário de atendimento
+     * configurado. Sem horário configurado, considera-se sempre em atendimento.
+     */
+    public function emHorarioAtendimento(?Carbon $agora = null): bool
+    {
+        $horarios = $this->horario_atendimento;
+        if (empty($horarios) || ! is_array($horarios)) {
+            return true;
+        }
+
+        $agora = ($agora ?? Carbon::now())->copy()->setTimezone('America/Sao_Paulo');
+        $dia   = (int) $agora->format('w'); // 0=Dom .. 6=Sáb
+
+        $config = $horarios[$dia] ?? $horarios[(string) $dia] ?? null;
+        if (! is_array($config) || empty($config['ativo'])) {
+            return false;
+        }
+
+        $abertura   = $config['abertura']   ?? null;
+        $fechamento = $config['fechamento'] ?? null;
+        if (! $abertura || ! $fechamento) {
+            return false;
+        }
+
+        $atual = $agora->format('H:i');
+
+        return $atual >= $abertura && $atual < $fechamento;
+    }
+
+    /**
+     * Texto legível do horário de atendimento (ex.: "Seg–Sex 08:00–18:00, Sáb 08:00–12:00"),
+     * agrupando dias consecutivos com a mesma faixa. Retorna string vazia se nada configurado.
+     */
+    public function horarioAtendimentoTexto(): string
+    {
+        $horarios = $this->horario_atendimento;
+        if (empty($horarios) || ! is_array($horarios)) {
+            return '';
+        }
+
+        $grupos = [];
+        for ($dia = 0; $dia <= 6; $dia++) {
+            $config = $horarios[$dia] ?? $horarios[(string) $dia] ?? null;
+            if (! is_array($config) || empty($config['ativo']) || empty($config['abertura']) || empty($config['fechamento'])) {
+                continue;
+            }
+
+            $faixa = "{$config['abertura']}–{$config['fechamento']}";
+            $ultimo = end($grupos) ?: null;
+
+            if ($ultimo && $ultimo['faixa'] === $faixa && $ultimo['fim'] === $dia - 1) {
+                $grupos[array_key_last($grupos)]['fim'] = $dia;
+            } else {
+                $grupos[] = ['inicio' => $dia, 'fim' => $dia, 'faixa' => $faixa];
+            }
+        }
+
+        return collect($grupos)->map(function ($g) {
+            $dias = $g['inicio'] === $g['fim']
+                ? self::DIAS_SEMANA[$g['inicio']]
+                : self::DIAS_SEMANA[$g['inicio']] . '–' . self::DIAS_SEMANA[$g['fim']];
+
+            return "{$dias} {$g['faixa']}";
+        })->join(', ');
     }
 }
