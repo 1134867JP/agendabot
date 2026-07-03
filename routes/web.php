@@ -126,6 +126,14 @@ Route::middleware('auth')->group(function () {
         Route::get('configuracoes', [Tenant\ConfiguracaoController::class, 'index'])->name('configuracoes.index');
         Route::put('configuracoes', [Tenant\ConfiguracaoController::class, 'update'])->name('configuracoes.update');
 
+        // Triagem (handoff automático bot→humano)
+        Route::get('triagem', [Tenant\TriagemController::class, 'index'])->name('triagem.index');
+        Route::put('triagem', [Tenant\TriagemController::class, 'update'])->name('triagem.update');
+
+        // Regras de agendamento
+        Route::get('regras-agendamento', [Tenant\RegraAgendamentoController::class, 'index'])->name('regras-agendamento.index');
+        Route::put('regras-agendamento', [Tenant\RegraAgendamentoController::class, 'update'])->name('regras-agendamento.update');
+
         // Cobrança variável bot
         Route::get('cobranca/resumo', [Tenant\CobrancaController::class, 'resumo'])->name('cobranca.resumo');
     });

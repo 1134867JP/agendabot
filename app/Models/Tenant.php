@@ -45,4 +45,34 @@ class Tenant extends Model
     public function servicos(): HasMany { return $this->hasMany(Servico::class); }
     public function opcoes_extras(): HasMany { return $this->hasMany(OpcaoExtra::class); }
     public function clientes(): HasMany { return $this->hasMany(Cliente::class); }
+
+    /**
+     * Regras de handoff automático bot→humano, com defaults equivalentes ao comportamento
+     * atual (sem nenhuma palavra-chave configurada = nenhum handoff automático por triagem).
+     */
+    public function triagemConfig(): array
+    {
+        return array_merge([
+            'palavras_chave_humano'        => [],
+            'max_tentativas_sem_entender'  => 2,
+            'transferir_fora_do_horario'   => false,
+            'mensagem_transferencia'       => null,
+        ], $this->configuracoes['triagem'] ?? []);
+    }
+
+    /**
+     * Regras gerais de agendamento (antecedência, buffer, cancelamento), com defaults
+     * permissivos equivalentes ao comportamento atual.
+     */
+    public function regrasAgendamentoConfig(): array
+    {
+        return array_merge([
+            'antecedencia_minima_minutos'       => 30,
+            'antecedencia_maxima_dias'          => 60,
+            'buffer_entre_agendamentos_minutos' => 0,
+            'permite_cliente_remarcar'          => true,
+            'permite_cliente_cancelar'          => true,
+            'politica_cancelamento'             => null,
+        ], $this->configuracoes['regras_agendamento'] ?? []);
+    }
 }

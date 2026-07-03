@@ -27,6 +27,7 @@ class WebhookTest extends TestCase
             'ativo'               => true,
             'bot_ativo'           => true,
             'whatsapp_conectado'  => true,
+            'webhook_token'       => 'token-teste-webhook',
             'subscription_status' => 'trial',
             'trial_ends_at'       => now()->addDays(14),
         ]);
@@ -39,7 +40,7 @@ class WebhookTest extends TestCase
 
         $payload = $this->payloadEvolution('5551999999999@s.whatsapp.net', 'Quero agendar um corte');
 
-        $response = $this->postJson("/webhook/{$this->tenant->slug}", $payload);
+        $response = $this->postJson("/webhook/{$this->tenant->slug}?token=token-teste-webhook", $payload);
 
         $response->assertStatus(200);
         Queue::assertPushed(ProcessarMensagemWhatsapp::class);
@@ -51,7 +52,7 @@ class WebhookTest extends TestCase
 
         $payload = $this->payloadEvolution('5551999999999@s.whatsapp.net', 'Olá!', fromMe: true);
 
-        $response = $this->postJson("/webhook/{$this->tenant->slug}", $payload);
+        $response = $this->postJson("/webhook/{$this->tenant->slug}?token=token-teste-webhook", $payload);
 
         $response->assertStatus(200);
         Queue::assertNothingPushed();
@@ -63,7 +64,7 @@ class WebhookTest extends TestCase
 
         $payload = $this->payloadEvolution('5551999999999-1234567890@g.us', 'Mensagem de grupo');
 
-        $response = $this->postJson("/webhook/{$this->tenant->slug}", $payload);
+        $response = $this->postJson("/webhook/{$this->tenant->slug}?token=token-teste-webhook", $payload);
 
         $response->assertStatus(200);
         Queue::assertNothingPushed();
@@ -84,7 +85,7 @@ class WebhookTest extends TestCase
 
         $payload = $this->payloadEvolution('5551999999999@s.whatsapp.net', 'Oi');
 
-        $response = $this->postJson("/webhook/{$this->tenant->slug}", $payload);
+        $response = $this->postJson("/webhook/{$this->tenant->slug}?token=token-teste-webhook", $payload);
 
         $response->assertStatus(200);
         Queue::assertNothingPushed();

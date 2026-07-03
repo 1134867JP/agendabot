@@ -88,10 +88,14 @@ class AgendamentoService
 
     public function buscarHorariosDisponiveis(Tenant $tenant, int $dias = 7): array
     {
+        $regras = $tenant->regrasAgendamentoConfig();
+        $dias   = min($dias, $regras['antecedencia_maxima_dias']);
+
         $profissionais = $tenant->profissionais()->where('ativo', true)->with('horarios')->get();
         $resultado = [];
 
-        $tz = config('app.timezone', 'America/Sao_Paulo');
+        $tz                  = config('app.timezone', 'America/Sao_Paulo');
+        $antecedenciaMinima  = Carbon::now($tz)->addMinutes($regras['antecedencia_minima_minutos']);
 
         foreach ($profissionais as $profissional) {
             $resultado[$profissional->id] = [];
@@ -99,7 +103,12 @@ class AgendamentoService
             for ($i = 0; $i < $dias; $i++) {
                 $data = Carbon::today($tz)->addDays($i);
                 $slots = $profissional->slotsDisponiveis($data);
-                $disponiveis = collect($slots)->where('disponivel', true)->pluck('hora')->values()->all();
+                $disponiveis = collect($slots)
+                    ->where('disponivel', true)
+                    ->pluck('hora')
+                    ->filter(fn ($hora) => Carbon::createFromFormat('Y-m-d H:i', "{$data->format('Y-m-d')} {$hora}", $tz)->gte($antecedenciaMinima))
+                    ->values()
+                    ->all();
 
                 if (! empty($disponiveis)) {
                     $resultado[$profissional->id][$data->format('Y-m-d')] = $disponiveis;
@@ -127,6 +136,8 @@ class AgendamentoService
         }
 
         return DB::transaction(function () use ($tenant, $dados) {
+            $regras = $tenant->regrasAgendamentoConfig();
+
             $profissionalId = (int) $dados['profissional_id'];
 
             // Tenant isolation: garantir que o profissional pertence ao tenant e está ativo
@@ -152,8 +163,20 @@ class AgendamentoService
             $inicio  = Carbon::createFromFormat('Y-m-d H:i', "{$dados['data']} {$horario}", $tz);
             $fim    = $inicio->copy()->addMinutes($duracao);
 
-            if ($inicio->isPast()) {
-                throw new HorarioIndisponivelException('Não é possível agendar para datas passadas.');
+            $antecedenciaMinima = Carbon::now($tz)->addMinutes($regras['antecedencia_minima_minutos']);
+            if ($inicio->lt($antecedenciaMinima)) {
+                throw new HorarioIndisponivelException(
+                    $regras['antecedencia_minima_minutos'] > 0
+                        ? "É preciso agendar com pelo menos {$regras['antecedencia_minima_minutos']} minutos de antecedência."
+                        : 'Não é possível agendar para datas passadas.'
+                );
+            }
+
+            $antecedenciaMaxima = Carbon::now($tz)->addDays($regras['antecedencia_maxima_dias']);
+            if ($inicio->gt($antecedenciaMaxima)) {
+                throw new HorarioIndisponivelException(
+                    "Só é possível agendar com até {$regras['antecedencia_maxima_dias']} dias de antecedência."
+                );
             }
 
             // Validar que o horário está dentro do expediente do profissional
@@ -171,11 +194,13 @@ class AgendamentoService
                 );
             }
 
-            // Range overlap: detecta qualquer agendamento que se sobreponha ao slot [inicio, fim)
+            // Range overlap: detecta qualquer agendamento que se sobreponha ao slot [inicio, fim),
+            // com uma folga (buffer) configurável antes/depois de cada agendamento existente
+            $buffer = (int) $regras['buffer_entre_agendamentos_minutos'];
             $conflito = Agendamento::where('profissional_id', $profissionalId)
                 ->whereNotIn('status', ['cancelado'])
-                ->where('data_hora', '<', $fim)
-                ->whereRaw("(data_hora + (duracao_minutos * INTERVAL '1 minute')) > ?", [$inicio])
+                ->where('data_hora', '<', $fim->copy()->addMinutes($buffer))
+                ->whereRaw("(data_hora + (duracao_minutos * INTERVAL '1 minute') + (? * INTERVAL '1 minute')) > ?", [$buffer, $inicio])
                 ->exists();
 
             if ($conflito) {

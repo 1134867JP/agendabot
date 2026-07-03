@@ -395,6 +395,7 @@ class ClaudeAgentService
 
         $instrucoes = $tenant->instrucoes_extras ? "\nINSTRUÇÕES ESPECÍFICAS DO NEGÓCIO:\n{$tenant->instrucoes_extras}" : '';
         $opcoesPart = $opcoes ? "\n{$opcoes}\n" : '';
+        $maxTentativas = $tenant->triagemConfig()['max_tentativas_sem_entender'];
 
         return <<<PROMPT
 Você é {$tenant->nome_agente} de {$tenant->nome} ({$tenant->ramo_negocio}). {$tenant->descricao_negocio}
@@ -424,7 +425,7 @@ REGRAS:
 - JAMAIS invente horários: use SOMENTE as horas retornadas por buscar_slots
 - Se criar_agendamento retornar horario_indisponivel: chame buscar_slots novamente e ofereça alternativas
 - Mídia recebida → peça para descrever em texto
-- 2 mensagens sem entender / cliente irritado → chame transferir_para_humano
+- {$maxTentativas} mensagens sem entender / cliente irritado → chame transferir_para_humano
 - Datas sempre futuras (não agende para hoje ou passado)
 
 CRÍTICO: NUNCA diga que um agendamento foi criado/confirmado sem antes ter chamado criar_agendamento com sucesso. O sistema só registra via ferramenta — mensagem de texto não cria agendamento.

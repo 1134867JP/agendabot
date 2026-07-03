@@ -6,13 +6,14 @@ use App\Jobs\BackupELimparHistoricoJob;
 use App\Jobs\ProcessarMensagemWhatsapp;
 use App\Jobs\SincronizarConversasWhatsappJob;
 use App\Models\Tenant;
+use App\Services\ConversaSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 
 class WebhookController extends Controller
 {
-    public function handle(Request $request, string $tenantSlug): Response
+    public function handle(Request $request, string $tenantSlug, ConversaSyncService $sync): Response
     {
         $tenant = Tenant::where('slug', $tenantSlug)
             ->where('ativo', true)
@@ -43,6 +44,21 @@ class WebhookController extends Controller
                     // Ao desconectar: fazer backup e limpar histórico do banco
                     BackupELimparHistoricoJob::dispatch($tenant)->onQueue('default');
                 }
+            }
+            return response('ok');
+        }
+
+        // Chats/contatos novos ou atualizados fora do fluxo de mensagem (nome, criação de conversa)
+        if ($event === 'chats.upsert' || $event === 'CHATS_UPSERT') {
+            foreach ($this->normalizarLista(data_get($data, 'data')) as $chat) {
+                $sync->upsertChatLeve($tenant, $chat);
+            }
+            return response('ok');
+        }
+
+        if ($event === 'contacts.upsert' || $event === 'CONTACTS_UPSERT') {
+            foreach ($this->normalizarLista(data_get($data, 'data')) as $contato) {
+                $sync->processarContatoLeve($tenant, $contato);
             }
             return response('ok');
         }
@@ -118,5 +134,18 @@ class WebhookController extends Controller
         ProcessarMensagemWhatsapp::dispatch($tenant, $telefone, $conteudoClaude, $evolutionMessageId, $pushName, $tipoInterno);
 
         return response('ok');
+    }
+
+    /**
+     * Evolution API às vezes envia um único objeto em "data", às vezes uma lista.
+     * Normaliza para sempre iterar uma lista de arrays.
+     */
+    private function normalizarLista(mixed $data): array
+    {
+        if (! is_array($data)) {
+            return [];
+        }
+
+        return array_is_list($data) ? array_filter($data, 'is_array') : [$data];
     }
 }

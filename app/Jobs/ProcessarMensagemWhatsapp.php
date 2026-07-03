@@ -15,9 +15,12 @@ use App\Services\IntencaoService;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class ProcessarMensagemWhatsapp implements ShouldQueue
@@ -50,7 +53,8 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
 
         // 2. Buscar ou criar cliente — usa pushName do WhatsApp se disponível
         $nomeInicial = $this->pushName ?? 'Cliente WhatsApp';
-        $cliente = Cliente::firstOrCreate(
+        $cliente = $this->firstOrCreateSafe(
+            Cliente::class,
             ['tenant_id' => $this->tenant->id, 'telefone' => $this->telefone],
             ['nome' => $nomeInicial],
         );
@@ -60,7 +64,8 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         }
 
         // 3. Buscar ou criar conversa
-        $conversa = Conversa::firstOrCreate(
+        $conversa = $this->firstOrCreateSafe(
+            Conversa::class,
             ['tenant_id' => $this->tenant->id, 'telefone_cliente' => $this->telefone],
             ['status_v2' => 'ativa', 'cliente_id' => $cliente->id],
         );
@@ -104,8 +109,33 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             }
         }
 
-        // 5. Salvar mensagem do cliente
-        $conversa->registrarMensagem('cliente', $this->mensagem, $this->evolutionMessageId, $this->tipo);
+        // 5. Salvar mensagem do cliente (dedup atômico: se outro job concorrente já inseriu
+        // essa evolution_message_id, a constraint unique dispara e tratamos como duplicata)
+        try {
+            DB::transaction(fn () => $conversa->registrarMensagem('cliente', $this->mensagem, $this->evolutionMessageId, $this->tipo));
+        } catch (QueryException $e) {
+            if (! $this->isUniqueViolation($e)) {
+                throw $e;
+            }
+            Log::channel('jobs')->info('MENSAGEM_DUPLICADA_IGNORADA', [
+                'tenant'               => $this->tenant->id,
+                'telefone'             => $this->telefone,
+                'evolution_message_id' => $this->evolutionMessageId,
+            ]);
+            return;
+        }
+
+        // 5b. Triagem automática por palavra-chave: transfere para humano sem gastar uma
+        // chamada ao Claude quando o cliente pede atendente ou menciona um termo configurado.
+        $triagem = $this->tenant->triagemConfig();
+        if ($this->deveTransferirPorPalavraChave($triagem['palavras_chave_humano'])) {
+            $conversa->update(['status_v2' => 'aguardando_humano']);
+            $mensagemTransferencia = $triagem['mensagem_transferencia']
+                ?: 'Já vou te transferir para um atendente, um momento! 🙋';
+            $conversa->registrarMensagem('bot', $mensagemTransferencia);
+            $evolution->enviarMensagem($this->tenant->evolution_instance, $this->telefone, $mensagemTransferencia);
+            return;
+        }
 
         // 6. Buscar histórico das últimas 12 mensagens para o Claude manter contexto da conversa
         $historico = $conversa->mensagens()
@@ -200,6 +230,53 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         }
 
         Log::channel('jobs')->info('BOT_RESPOSTA', ['telefone' => $this->telefone, 'resposta' => mb_substr($resposta, 0, 200)]);
+    }
+
+    /**
+     * firstOrCreate não é atômico: sob concorrência (ex. sync retroativo e mensagem em
+     * tempo real chegando juntos), duas execuções podem tentar inserir o mesmo registro
+     * único ao mesmo tempo. Se isso acontecer, a segunda apenas busca o registro que a
+     * primeira já criou, em vez de propagar a exceção de unique constraint.
+     *
+     * @template TModel of Model
+     * @param class-string<TModel> $modelClass
+     * @return TModel
+     */
+    private function firstOrCreateSafe(string $modelClass, array $unique, array $extra = []): Model
+    {
+        try {
+            // DB::transaction usa SAVEPOINT quando já há uma transação em andamento, então uma
+            // violação de unique constraint aqui não aborta uma transação externa mais ampla.
+            return DB::transaction(fn () => $modelClass::firstOrCreate($unique, $extra));
+        } catch (QueryException $e) {
+            if (! $this->isUniqueViolation($e)) {
+                throw $e;
+            }
+            return $modelClass::where($unique)->firstOrFail();
+        }
+    }
+
+    private function isUniqueViolation(QueryException $e): bool
+    {
+        return $e->getCode() === '23505' || str_contains($e->getMessage(), 'duplicate key value violates unique constraint');
+    }
+
+    private function deveTransferirPorPalavraChave(array $palavrasChave): bool
+    {
+        if (empty($palavrasChave)) {
+            return false;
+        }
+
+        $mensagem = mb_strtolower($this->mensagem);
+
+        foreach ($palavrasChave as $palavra) {
+            $palavra = mb_strtolower(trim((string) $palavra));
+            if ($palavra !== '' && str_contains($mensagem, $palavra)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function buscarAgendamentoPendente(Cliente $cliente): ?Agendamento

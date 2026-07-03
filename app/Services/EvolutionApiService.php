@@ -173,7 +173,7 @@ class EvolutionApiService
                     'url'            => $webhookUrl,
                     'byEvents'       => false,
                     'base64'         => false,
-                    'events'         => ['MESSAGES_UPSERT', 'CONNECTION_UPDATE'],
+                    'events'         => ['MESSAGES_UPSERT', 'CONNECTION_UPDATE', 'CHATS_UPSERT', 'CONTACTS_UPSERT'],
                 ],
             ]);
 

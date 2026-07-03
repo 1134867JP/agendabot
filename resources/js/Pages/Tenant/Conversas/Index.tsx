@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { PageProps } from '@/types';
+import { useNotificacoes } from '@/hooks/useNotificacoes';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -318,6 +319,15 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
     const syncTimeout  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const { data, setData, post, processing, reset } = useForm<{ conteudo: string }>({ conteudo: '' });
+
+    // Mantém a lista de conversas atualizada sem exigir reload manual: sempre que o
+    // contador de não lidas mudar (nova mensagem ou conversa nova), recarrega a lista.
+    const { novaMensagem, resetarNovaMensagem } = useNotificacoes(true);
+    useEffect(() => {
+        if (!novaMensagem) return;
+        router.reload({ only: ['conversas'] });
+        resetarNovaMensagem();
+    }, [novaMensagem, resetarNovaMensagem]);
 
     const scrollBottom = () => {
         setTimeout(() => { if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight; }, 60);
