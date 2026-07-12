@@ -49,14 +49,6 @@ jobs:
       - name: Validar sintaxe PHP
         run: find app config routes -name "*.php" | xargs php -l | grep -v "^No syntax errors" | (grep . && exit 1 || exit 0)
 
-      - name: Preparar ambiente de testes
-        run: |
-          cp .env.example .env
-          php artisan key:generate
-
-      - name: Executar testes PHP
-        run: php artisan test
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -68,6 +60,14 @@ jobs:
 
       - name: Build frontend (TypeScript + Vite)
         run: npm run build
+
+      - name: Preparar ambiente de testes
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Executar testes PHP
+        run: php artisan test
 
   deploy:
     name: Deploy para VPS
