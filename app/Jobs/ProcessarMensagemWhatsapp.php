@@ -6,13 +6,13 @@ use App\Models\Agendamento;
 use App\Models\Cliente;
 use App\Models\Conversa;
 use App\Models\Mensagem;
+use App\Models\OperationalEvent;
 use App\Models\Tenant;
 use App\Models\TokenUsage;
 use App\Services\AgendamentoService;
 use App\Services\ClaudeAgentService;
 use App\Services\EvolutionApiService;
 use App\Services\IntencaoService;
-use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Model;
@@ -28,7 +28,9 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
+
     public array $backoff = [30, 60, 120];
+
     public int $timeout = 90;
 
     public function __construct(
@@ -46,6 +48,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         EvolutionApiService $evolution,
         IntencaoService $intencao,
     ): void {
+        $startedAt = hrtime(true);
         // 1. Evitar duplicata por evolution_message_id
         if ($this->evolutionMessageId && Mensagem::where('evolution_message_id', $this->evolutionMessageId)->exists()) {
             return;
@@ -77,6 +80,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         // 4. Se aguardando/em atendimento humano → apenas salva mensagem e não processa com Claude
         if (in_array($conversa->status_v2, ['aguardando_humano', 'em_atendimento_humano'])) {
             $conversa->registrarMensagem('cliente', $this->mensagem, $this->evolutionMessageId, $this->tipo);
+
             return;
         }
 
@@ -90,13 +94,13 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
                 ->whereYear('created_at', now()->year)
                 ->count();
 
-            $alertaKey = "alerta_limite_80_{$this->tenant->id}_" . now()->format('Ym');
+            $alertaKey = "alerta_limite_80_{$this->tenant->id}_".now()->format('Ym');
             if ($agendamentosMes >= (int) ($limiteBot * 0.8) && ! cache()->has($alertaKey)) {
                 cache()->put($alertaKey, true, now()->endOfMonth());
                 $evolution->enviarMensagem(
                     $this->tenant->evolution_instance,
                     $this->tenant->telefone_whatsapp,
-                    "⚠️ *AgendaBot — Aviso de limite*\n\nVocê atingiu 80% do limite de agendamentos via bot do seu plano ({$agendamentosMes}/{$limiteBot} este mês).\n\nFaça upgrade para continuar recebendo agendamentos automaticamente: " . url('/renovar'),
+                    "⚠️ *AgendaBot — Aviso de limite*\n\nVocê atingiu 80% do limite de agendamentos via bot do seu plano ({$agendamentosMes}/{$limiteBot} este mês).\n\nFaça upgrade para continuar recebendo agendamentos automaticamente: ".url('/renovar'),
                 );
             }
 
@@ -105,6 +109,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
                 $aviso = "Olá! 😕 Nosso sistema de agendamento automático está temporariamente pausado este mês.\nPor favor, entre em contato diretamente para agendar.";
                 $conversa->registrarMensagem('bot', $aviso);
                 $evolution->enviarMensagem($this->tenant->evolution_instance, $this->telefone, $aviso);
+
                 return;
             }
         }
@@ -118,10 +123,11 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
                 throw $e;
             }
             Log::channel('jobs')->info('MENSAGEM_DUPLICADA_IGNORADA', [
-                'tenant'               => $this->tenant->id,
-                'telefone'             => $this->telefone,
+                'tenant' => $this->tenant->id,
+                'telefone' => $this->telefone,
                 'evolution_message_id' => $this->evolutionMessageId,
             ]);
+
             return;
         }
 
@@ -134,6 +140,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
                 ?: 'Já vou te transferir para um atendente, um momento! 🙋';
             $conversa->registrarMensagem('bot', $mensagemTransferencia);
             $evolution->enviarMensagem($this->tenant->evolution_instance, $this->telefone, $mensagemTransferencia);
+
             return;
         }
 
@@ -145,7 +152,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             ->get()
             ->reverse()
             ->map(fn ($m) => [
-                'role'    => $m->remetente === 'cliente' ? 'user' : 'assistant',
+                'role' => $m->remetente === 'cliente' ? 'user' : 'assistant',
                 'content' => $m->conteudo,
             ])
             ->values()
@@ -161,18 +168,19 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         // Mesclar mensagens consecutivas com o mesmo role — Claude rejeita sequências duplicadas.
         $historico = array_values(array_reduce($historico, function (array $carry, array $msg): array {
             if (! empty($carry) && end($carry)['role'] === $msg['role']) {
-                $carry[array_key_last($carry)]['content'] .= "\n" . $msg['content'];
+                $carry[array_key_last($carry)]['content'] .= "\n".$msg['content'];
             } else {
                 $carry[] = $msg;
             }
+
             return $carry;
         }, []));
 
         Log::channel('jobs')->debug('BOT_HISTORICO', [
-            'tenant'     => $this->tenant->id,
-            'telefone'   => $this->telefone,
+            'tenant' => $this->tenant->id,
+            'telefone' => $this->telefone,
             'total_msgs' => count($historico),
-            'roles'      => array_column($historico, 'role'),
+            'roles' => array_column($historico, 'role'),
         ]);
 
         // 7. Buscar agendamento pendente
@@ -185,7 +193,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
 
         if ($intencaoDetectada) {
             if ($intencaoDetectada === 'confirmar') {
-                $agendamentoPendente->update(['status' => 'confirmado']);
+                $agendamentoPendente->update(['status' => 'confirmado', 'confirmed_by_client_at' => now()]);
                 $resposta = 'Perfeito! Agendamento confirmado. ✅';
             } else {
                 $agendamentoService->cancelar($agendamentoPendente);
@@ -194,7 +202,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         } else {
             // 9. Chamar Claude com tool use
             $clienteInfo = ['id' => $cliente->id, 'nome' => $cliente->nome, 'telefone' => $cliente->telefone];
-            $resultado   = $claude->processar($this->tenant, $historico, $clienteInfo, $agendamentoPendente);
+            $resultado = $claude->processar($this->tenant, $historico, $clienteInfo, $agendamentoPendente);
 
             if (! empty($resultado['usage'])) {
                 TokenUsage::create(array_merge(
@@ -222,12 +230,22 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         }
 
         if (! $enviado) {
+            OperationalEvent::record($this->tenant->id, 'integration_failure', [
+                'provider' => 'evolution',
+                'metadata' => ['operation' => 'send_message'],
+            ]);
             Log::channel('jobs')->error('EVOLUTION_SEND_FAILED', [
-                'tenant'   => $this->tenant->id,
+                'tenant' => $this->tenant->id,
                 'telefone' => $this->telefone,
                 'resposta' => mb_substr($resposta, 0, 200),
             ]);
         }
+
+        OperationalEvent::record($this->tenant->id, 'bot_response', [
+            'provider' => 'evolution',
+            'duration_ms' => (int) ((hrtime(true) - $startedAt) / 1_000_000),
+            'metadata' => ['sent' => $enviado],
+        ]);
 
         Log::channel('jobs')->info('BOT_RESPOSTA', ['telefone' => $this->telefone, 'resposta' => mb_substr($resposta, 0, 200)]);
     }
@@ -239,7 +257,8 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
      * primeira já criou, em vez de propagar a exceção de unique constraint.
      *
      * @template TModel of Model
-     * @param class-string<TModel> $modelClass
+     *
+     * @param  class-string<TModel>  $modelClass
      * @return TModel
      */
     private function firstOrCreateSafe(string $modelClass, array $unique, array $extra = []): Model
@@ -252,6 +271,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             if (! $this->isUniqueViolation($e)) {
                 throw $e;
             }
+
             return $modelClass::where($unique)->firstOrFail();
         }
     }
@@ -285,11 +305,11 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             ->where('status', 'agendado')
             ->where(function ($q) use ($cliente) {
                 $q->where('cliente_id', $cliente->id)
-                  ->orWhere('cliente_telefone', $this->telefone);
+                    ->orWhere('cliente_telefone', $this->telefone);
             })
             ->where(function ($q) {
                 $q->where(fn ($q2) => $q2->whereNotNull('data_hora')->where('data_hora', '>', now()))
-                  ->orWhere(fn ($q2) => $q2->whereNull('data_hora')->where('inicio', '>', now()));
+                    ->orWhere(fn ($q2) => $q2->whereNull('data_hora')->where('inicio', '>', now()));
             })
             ->orderByRaw('COALESCE(data_hora, inicio)')
             ->first();

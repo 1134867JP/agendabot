@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cliente;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -20,28 +22,28 @@ class ClienteController extends Controller
         if ($busca = $request->busca) {
             $query->where(function ($q) use ($busca) {
                 $q->where('nome', 'ilike', "%{$busca}%")
-                  ->orWhere('telefone', 'like', "%{$busca}%");
+                    ->orWhere('telefone', 'like', "%{$busca}%");
             });
         }
 
         return Inertia::render('Tenant/Clientes/Index', [
             'clientes' => $query->paginate(30)->withQueryString(),
-            'filtros'  => $request->only('busca'),
+            'filtros' => $request->only('busca'),
         ]);
     }
 
     public function show(Cliente $cliente): Response
     {
-        abort_if((int)$cliente->tenant_id !== (int)app('tenant')->id, 403);
+        abort_if((int) $cliente->tenant_id !== (int) app('tenant')->id, 403);
 
         return Inertia::render('Tenant/Clientes/Show', [
-            'cliente'      => $cliente,
+            'cliente' => $cliente,
             'agendamentos' => $cliente->agendamentos()
                 ->with('profissional', 'servico')
                 ->orderByDesc('data_hora')
                 ->limit(30)
                 ->get(),
-            'conversas'    => $cliente->conversas()
+            'conversas' => $cliente->conversas()
                 ->orderByDesc('ultima_mensagem_em')
                 ->limit(20)
                 ->get(),
@@ -50,12 +52,39 @@ class ClienteController extends Controller
 
     public function destroy(Cliente $cliente): RedirectResponse
     {
-        abort_if((int)$cliente->tenant_id !== (int)app('tenant')->id, 403);
+        abort_if((int) $cliente->tenant_id !== (int) app('tenant')->id, 403);
 
-        $cliente->conversas()->delete();
-        $cliente->agendamentos()->delete();
-        $cliente->delete();
+        DB::transaction(function () use ($cliente): void {
+            $cliente->conversas()->each(function ($conversa): void {
+                $conversa->mensagens()->delete();
+                $conversa->delete();
+            });
+            $cliente->agendamentos()->update([
+                'cliente_nome' => 'Cliente anonimizado',
+                'cliente_telefone' => 'anonimizado',
+                'observacoes' => null,
+            ]);
+            $cliente->update([
+                'nome' => 'Cliente anonimizado',
+                'telefone' => "anonimizado-{$cliente->id}",
+                'cpf' => null,
+                'data_nascimento' => null,
+                'observacoes' => null,
+            ]);
+        });
 
         return redirect()->route('tenant.clientes.index');
+    }
+
+    public function export(Cliente $cliente): JsonResponse
+    {
+        abort_if((int) $cliente->tenant_id !== (int) app('tenant')->id, 403);
+
+        return response()->json([
+            'exported_at' => now()->toIso8601String(),
+            'cliente' => $cliente,
+            'agendamentos' => $cliente->agendamentos()->get(),
+            'conversas' => $cliente->conversas()->with('mensagens')->get(),
+        ])->header('Content-Disposition', "attachment; filename=cliente-{$cliente->id}.json");
     }
 }

@@ -7,6 +7,9 @@ interface Stat {
     receita_mes: number;
     conversas_mes: number;
     taxa_conversao: number;
+    falhas_integracao: number;
+    tempo_resposta_ms: number;
+    receita_bot: number;
 }
 
 interface DiaData {
@@ -99,6 +102,8 @@ function RankingList({ items, emptyText }: { items: ItemRanking[]; emptyText: st
 
 export default function Analytics({ stats, por_dia, top_servicos, pico_horario }: Props) {
     const receita = stats.receita_mes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const receitaBot = stats.receita_bot.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const tempoResposta = stats.tempo_resposta_ms > 0 ? `${(stats.tempo_resposta_ms / 1000).toFixed(1)}s` : '—';
 
     return (
         <AppLayout title="Analytics" subtitle="Desempenho do mês atual">
@@ -115,6 +120,12 @@ export default function Analytics({ stats, por_dia, top_servicos, pico_horario }
                         value={`${stats.taxa_conversao}%`}
                         sub="conversas → agendamentos"
                     />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-3">
+                    <StatCard label="Receita pelo bot" value={receitaBot} sub="retorno atribuído ao WhatsApp" />
+                    <StatCard label="Tempo de resposta" value={tempoResposta} sub="média do processamento do bot" />
+                    <StatCard label="Falhas de integração" value={String(stats.falhas_integracao)} sub="Claude, Evolution e Calendar" />
                 </div>
 
                 {/* Gráfico de barras */}

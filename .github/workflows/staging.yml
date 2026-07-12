@@ -1,0 +1,22 @@
+name: Homologação
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Deploy em homologação
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          command_timeout: 15m
+          script: |
+            cd /opt/apps/agendabot-staging
+            DEPLOY_BRANCH=develop APP_DIR=/opt/apps/agendabot-staging bash deploy.sh

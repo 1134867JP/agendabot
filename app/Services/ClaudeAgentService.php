@@ -2,23 +2,31 @@
 
 namespace App\Services;
 
+use App\Exceptions\HorarioIndisponivelException;
 use App\Models\Agendamento;
+use App\Models\OperationalEvent;
 use App\Models\Tenant;
+use Carbon\Carbon;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class ClaudeAgentService
 {
     private string $apiKey;
+
     private string $model;
+
     private Tenant $currentTenant;
+
     private array $currentCliente;
+
     private bool $transferir = false;
 
     public function __construct(private AgendamentoService $agendamentoService)
     {
         $this->apiKey = (string) config('services.claude.key');
-        $this->model  = (string) config('services.claude.model');
+        $this->model = (string) config('services.claude.model');
     }
 
     public function processar(
@@ -27,24 +35,24 @@ class ClaudeAgentService
         array $clienteInfo,
         ?Agendamento $agendamentoPendente = null
     ): array {
-        $this->currentTenant  = $tenant;
+        $this->currentTenant = $tenant;
         $this->currentCliente = $clienteInfo;
-        $this->transferir     = false;
+        $this->transferir = false;
 
-        $hoje = \Carbon\Carbon::now('America/Sao_Paulo');
+        $hoje = Carbon::now('America/Sao_Paulo');
 
         $triagem = $tenant->modo_bot === 'triagem';
 
         $systemBlocks = [
             [
-                'type'          => 'text',
-                'text'          => $triagem ? $this->buildTriagemPrompt($tenant) : $this->buildStaticPrompt($tenant),
+                'type' => 'text',
+                'text' => $triagem ? $this->buildTriagemPrompt($tenant) : $this->buildStaticPrompt($tenant),
                 'cache_control' => ['type' => 'ephemeral'],
             ],
             [
                 'type' => 'text',
-                'text' => 'HOJE: ' . $hoje->translatedFormat('l, d/m/Y') . ' (' . $hoje->format('Y-m-d') . ').'
-                    . ($triagem ? '' : ' Só agende datas futuras a partir de amanhã.'),
+                'text' => 'HOJE: '.$hoje->translatedFormat('l, d/m/Y').' ('.$hoje->format('Y-m-d').').'
+                    .($triagem ? '' : ' Só agende datas futuras a partir de amanhã.'),
             ],
         ];
 
@@ -53,7 +61,7 @@ class ClaudeAgentService
         }
 
         if ($agendamentoPendente && ! $triagem) {
-            $dataHora = \Carbon\Carbon::parse($agendamentoPendente->data_hora ?? $agendamentoPendente->inicio)
+            $dataHora = Carbon::parse($agendamentoPendente->data_hora ?? $agendamentoPendente->inicio)
                 ->locale('pt_BR')
                 ->translatedFormat('d/m/Y \\às H:i');
             $servico = $agendamentoPendente->profissional?->nome
@@ -65,46 +73,51 @@ class ClaudeAgentService
             ];
         }
 
-        $tools    = $triagem ? $this->buildToolsTriagem() : $this->buildTools();
+        $tools = $triagem ? $this->buildToolsTriagem() : $this->buildTools();
         $messages = $mensagens;
         $totalUsage = [
-            'input_tokens'                => 0,
-            'output_tokens'               => 0,
+            'input_tokens' => 0,
+            'output_tokens' => 0,
             'cache_creation_input_tokens' => 0,
-            'cache_read_input_tokens'     => 0,
+            'cache_read_input_tokens' => 0,
         ];
         $resposta = '';
 
         for ($i = 0; $i < 6; $i++) {
             $response = Http::timeout(30)
-                ->retry(2, 1000, fn ($e) => $e instanceof \Illuminate\Http\Client\RequestException && $e->response->status() === 529)
+                ->retry(2, 1000, fn ($e) => $e instanceof RequestException && $e->response->status() === 529)
                 ->withHeaders([
-                    'x-api-key'         => $this->apiKey,
+                    'x-api-key' => $this->apiKey,
                     'anthropic-version' => '2023-06-01',
-                    'content-type'      => 'application/json',
+                    'content-type' => 'application/json',
                 ])
                 ->post('https://api.anthropic.com/v1/messages', [
-                    'model'         => $this->model,
-                    'max_tokens'    => 1024,
+                    'model' => $this->model,
+                    'max_tokens' => 1024,
                     'cache_control' => ['type' => 'ephemeral'],
-                    'system'        => $systemBlocks,
-                    'tools'         => $tools,
-                    'messages'      => $messages,
+                    'system' => $systemBlocks,
+                    'tools' => $tools,
+                    'messages' => $messages,
                 ]);
 
             if (! $response->successful()) {
+                OperationalEvent::record($tenant->id, 'integration_failure', [
+                    'provider' => 'claude',
+                    'metadata' => ['status' => $response->status(), 'error_type' => $response->json('error.type')],
+                ]);
                 Log::channel('jobs')->error('ClaudeAgentService error', [
-                    'status'         => $response->status(),
-                    'body'           => $response->body(),
-                    'error_type'     => $response->json('error.type'),
-                    'error_message'  => $response->json('error.message'),
-                    'model'          => $this->model,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                    'error_type' => $response->json('error.type'),
+                    'error_message' => $response->json('error.message'),
+                    'model' => $this->model,
                     'total_messages' => count($messages),
-                    'first_role'     => $messages[0]['role'] ?? null,
-                    'last_role'      => ! empty($messages) ? end($messages)['role'] : null,
+                    'first_role' => $messages[0]['role'] ?? null,
+                    'last_role' => ! empty($messages) ? end($messages)['role'] : null,
                     'roles_sequence' => array_map(fn ($m) => $m['role'] ?? '?', $messages),
                 ]);
-                return ['resposta' => 'Desculpe, tive um problema técnico. Tente novamente em instantes.', 'transferir' => false, 'usage' => $totalUsage];
+
+                return ['resposta' => 'Tive uma instabilidade e vou encaminhar você para um atendente. 🙋', 'transferir' => true, 'usage' => $totalUsage];
             }
 
             $usage = $response->json('usage', []);
@@ -113,7 +126,7 @@ class ClaudeAgentService
             }
 
             $stopReason = $response->json('stop_reason');
-            $content    = $response->json('content', []);
+            $content = $response->json('content', []);
 
             foreach ($content as $block) {
                 if ($block['type'] === 'text') {
@@ -129,13 +142,15 @@ class ClaudeAgentService
             $toolResults = [];
 
             foreach ($content as $block) {
-                if ($block['type'] !== 'tool_use') continue;
+                if ($block['type'] !== 'tool_use') {
+                    continue;
+                }
 
                 $toolResult = $this->executeTool($block['name'], $block['input'] ?? [], $agendamentoPendente);
                 $toolResults[] = [
-                    'type'        => 'tool_result',
+                    'type' => 'tool_result',
                     'tool_use_id' => $block['id'],
-                    'content'     => json_encode($toolResult),
+                    'content' => json_encode($toolResult),
                 ];
             }
 
@@ -145,40 +160,40 @@ class ClaudeAgentService
 
         Log::channel('jobs')->debug('ClaudeAgentService usage', [
             'cache_creation' => $totalUsage['cache_creation_input_tokens'],
-            'cache_read'     => $totalUsage['cache_read_input_tokens'],
-            'input'          => $totalUsage['input_tokens'],
-            'output'         => $totalUsage['output_tokens'],
+            'cache_read' => $totalUsage['cache_read_input_tokens'],
+            'input' => $totalUsage['input_tokens'],
+            'output' => $totalUsage['output_tokens'],
         ]);
 
         return [
-            'resposta'   => $resposta ?: 'Desculpe, não consegui processar sua mensagem. Tente novamente.',
+            'resposta' => $resposta ?: 'Desculpe, não consegui processar sua mensagem. Tente novamente.',
             'transferir' => $this->transferir,
-            'usage'      => $totalUsage,
+            'usage' => $totalUsage,
         ];
     }
 
     private function executeTool(string $name, array $input, ?Agendamento $agendamentoPendente): array
     {
         Log::channel('jobs')->info('TOOL_CALL', [
-            'tenant'  => $this->currentTenant->id,
-            'tool'    => $name,
-            'input'   => $input,
+            'tenant' => $this->currentTenant->id,
+            'tool' => $name,
+            'input' => $input,
         ]);
 
         $result = match ($name) {
-            'buscar_slots'                 => $this->toolBuscarSlots($input),
-            'criar_agendamento'            => $this->toolCriarAgendamento($input),
-            'confirmar_agendamento'        => $this->toolConfirmarAgendamento($agendamentoPendente),
-            'cancelar_agendamento'         => $this->toolCancelarAgendamento($agendamentoPendente),
-            'listar_agendamentos_cliente'  => $this->toolListarAgendamentosCliente(),
-            'reagendar_agendamento'        => $this->toolReagendarAgendamento($input),
-            'transferir_para_humano'       => $this->toolTransferirParaHumano($input),
-            default                        => ['erro' => "Ferramenta desconhecida: {$name}"],
+            'buscar_slots' => $this->toolBuscarSlots($input),
+            'criar_agendamento' => $this->toolCriarAgendamento($input),
+            'confirmar_agendamento' => $this->toolConfirmarAgendamento($agendamentoPendente),
+            'cancelar_agendamento' => $this->toolCancelarAgendamento($agendamentoPendente),
+            'listar_agendamentos_cliente' => $this->toolListarAgendamentosCliente(),
+            'reagendar_agendamento' => $this->toolReagendarAgendamento($input),
+            'transferir_para_humano' => $this->toolTransferirParaHumano($input),
+            default => ['erro' => "Ferramenta desconhecida: {$name}"],
         };
 
         Log::channel('jobs')->info('TOOL_RESULT', [
             'tenant' => $this->currentTenant->id,
-            'tool'   => $name,
+            'tool' => $name,
             'result' => $result,
         ]);
 
@@ -187,10 +202,10 @@ class ClaudeAgentService
 
     private function toolBuscarSlots(array $input): array
     {
-        $dias  = min((int) ($input['dias'] ?? 4), 7);
+        $dias = min((int) ($input['dias'] ?? 4), 7);
         $slots = $this->agendamentoService->buscarHorariosDisponiveis($this->currentTenant, $dias);
 
-        $hoje = \Carbon\Carbon::now('America/Sao_Paulo')->format('Y-m-d');
+        $hoje = Carbon::now('America/Sao_Paulo')->format('Y-m-d');
 
         if (empty($slots)) {
             return ['hoje' => $hoje, 'disponivel' => false, 'mensagem' => 'Nenhum horário disponível nos próximos dias.'];
@@ -200,8 +215,8 @@ class ClaudeAgentService
         foreach ($slots as $profissionalId => $diasSlots) {
             foreach ($diasSlots as $data => $horarios) {
                 if (! empty($horarios)) {
-                    $dataFormatada = \Carbon\Carbon::parse($data)->format('d/m (D)');
-                    $linhas[] = "#{$profissionalId}|{$data}|{$dataFormatada}: " . implode(' ', $horarios);
+                    $dataFormatada = Carbon::parse($data)->format('d/m (D)');
+                    $linhas[] = "#{$profissionalId}|{$data}|{$dataFormatada}: ".implode(' ', $horarios);
                 }
             }
         }
@@ -213,16 +228,18 @@ class ClaudeAgentService
     {
         try {
             $this->agendamentoService->criarAgendamentoV2($this->currentTenant, array_merge($input, [
-                'cliente_id'       => $this->currentCliente['id'],
-                'cliente_nome'     => $this->currentCliente['nome'],
+                'cliente_id' => $this->currentCliente['id'],
+                'cliente_nome' => $this->currentCliente['nome'],
                 'cliente_telefone' => $this->currentCliente['telefone'],
-                'origem'           => 'bot',
+                'origem' => 'bot',
             ]));
+
             return ['sucesso' => true];
-        } catch (\App\Exceptions\HorarioIndisponivelException $e) {
+        } catch (HorarioIndisponivelException $e) {
             return ['sucesso' => false, 'erro' => 'horario_indisponivel', 'mensagem' => $e->getMessage()];
         } catch (\Throwable $e) {
             Log::channel('jobs')->error('toolCriarAgendamento error', ['error' => $e->getMessage(), 'input' => $input]);
+
             return ['sucesso' => false, 'erro' => 'erro_tecnico'];
         }
     }
@@ -232,7 +249,8 @@ class ClaudeAgentService
         if (! $agendamento) {
             return ['sucesso' => false, 'mensagem' => 'Nenhum agendamento pendente encontrado.'];
         }
-        $agendamento->update(['status' => 'confirmado']);
+        $agendamento->update(['status' => 'confirmado', 'confirmed_by_client_at' => now()]);
+
         return ['sucesso' => true];
     }
 
@@ -242,12 +260,13 @@ class ClaudeAgentService
             return ['sucesso' => false, 'mensagem' => 'Nenhum agendamento pendente encontrado.'];
         }
         $this->agendamentoService->cancelar($agendamento);
+
         return ['sucesso' => true];
     }
 
     private function toolListarAgendamentosCliente(): array
     {
-        $agendamentos = \App\Models\Agendamento::where('cliente_id', $this->currentCliente['id'])
+        $agendamentos = Agendamento::where('cliente_id', $this->currentCliente['id'])
             ->whereNotIn('status', ['cancelado', 'concluido'])
             ->where('data_hora', '>', now())
             ->orderBy('data_hora')
@@ -260,11 +279,12 @@ class ClaudeAgentService
         }
 
         $lista = $agendamentos->map(function ($a) {
-            $dataHora = \Carbon\Carbon::parse($a->data_hora)
+            $dataHora = Carbon::parse($a->data_hora)
                 ->locale('pt_BR')
                 ->translatedFormat('D d/m \\às H:i');
             $profissional = $a->profissional?->nome ?? '—';
-            $servico      = $a->servico?->nome ?? '—';
+            $servico = $a->servico?->nome ?? '—';
+
             return "ID #{$a->id} — {$dataHora} — {$profissional} ({$servico})";
         })->join("\n");
 
@@ -275,7 +295,7 @@ class ClaudeAgentService
     {
         $agendamentoId = (int) ($input['agendamento_id'] ?? 0);
 
-        $agendamento = \App\Models\Agendamento::where('id', $agendamentoId)
+        $agendamento = Agendamento::where('id', $agendamentoId)
             ->where('cliente_id', $this->currentCliente['id'])
             ->whereNotIn('status', ['cancelado', 'concluido'])
             ->first();
@@ -286,11 +306,13 @@ class ClaudeAgentService
 
         try {
             $this->agendamentoService->reagendar($agendamento, $input);
+
             return ['sucesso' => true];
-        } catch (\App\Exceptions\HorarioIndisponivelException $e) {
+        } catch (HorarioIndisponivelException $e) {
             return ['sucesso' => false, 'erro' => 'horario_indisponivel', 'mensagem' => $e->getMessage()];
         } catch (\Throwable $e) {
             Log::channel('jobs')->error('toolReagendarAgendamento error', ['error' => $e->getMessage(), 'input' => $input]);
+
             return ['sucesso' => false, 'erro' => 'erro_tecnico'];
         }
     }
@@ -303,10 +325,10 @@ class ClaudeAgentService
         // para a atendente ter o handoff — os dados também permanecem no histórico.
         if (! empty($input['resumo'])) {
             Log::channel('jobs')->info('TRIAGEM_HANDOFF', [
-                'tenant'      => $this->currentTenant->id,
-                'cliente'     => $this->currentCliente['telefone'] ?? null,
-                'resumo'      => $input['resumo'],
-                'nome'        => $input['nome_cliente'] ?? null,
+                'tenant' => $this->currentTenant->id,
+                'cliente' => $this->currentCliente['telefone'] ?? null,
+                'resumo' => $input['resumo'],
+                'nome' => $input['nome_cliente'] ?? null,
                 'preferencia' => $input['preferencia'] ?? null,
             ]);
         }
@@ -318,66 +340,66 @@ class ClaudeAgentService
     {
         return [
             [
-                'name'         => 'buscar_slots',
-                'description'  => 'Busca horários disponíveis para agendamento nos próximos dias. DEVE ser chamada antes de criar_agendamento — nunca ofereça nem aceite horários sem antes chamar esta ferramenta.',
+                'name' => 'buscar_slots',
+                'description' => 'Busca horários disponíveis para agendamento nos próximos dias. DEVE ser chamada antes de criar_agendamento — nunca ofereça nem aceite horários sem antes chamar esta ferramenta.',
                 'input_schema' => [
-                    'type'       => 'object',
+                    'type' => 'object',
                     'properties' => [
                         'dias' => ['type' => 'integer', 'description' => 'Número de dias para buscar (padrão 4, máximo 7)'],
                     ],
                 ],
             ],
             [
-                'name'         => 'criar_agendamento',
-                'description'  => 'Registra o agendamento no sistema. OBRIGATÓRIO chamar esta ferramenta assim que tiver: nome do cliente, profissional_id, servico_id, data e horário — não envie mensagem de confirmação sem antes chamar esta ferramenta com sucesso. O agendamento só existe no sistema após a chamada.',
+                'name' => 'criar_agendamento',
+                'description' => 'Registra o agendamento no sistema. OBRIGATÓRIO chamar esta ferramenta assim que tiver: nome do cliente, profissional_id, servico_id, data e horário — não envie mensagem de confirmação sem antes chamar esta ferramenta com sucesso. O agendamento só existe no sistema após a chamada.',
                 'input_schema' => [
-                    'type'       => 'object',
+                    'type' => 'object',
                     'properties' => [
-                        'cliente_nome'    => ['type' => 'string',           'description' => 'Nome do cliente'],
+                        'cliente_nome' => ['type' => 'string',           'description' => 'Nome do cliente'],
                         'profissional_id' => ['type' => 'integer',          'description' => 'ID do profissional'],
-                        'servico_id'      => ['type' => 'integer',          'description' => 'ID do serviço'],
-                        'data'            => ['type' => 'string',           'description' => 'Data no formato YYYY-MM-DD'],
-                        'horario'         => ['type' => 'string',           'description' => 'Horário no formato HH:MM'],
-                        'opcao_extra'     => ['type' => ['string', 'null'], 'description' => 'Opção extra (opcional)'],
-                        'observacoes'     => ['type' => ['string', 'null'], 'description' => 'Observações (opcional)'],
+                        'servico_id' => ['type' => 'integer',          'description' => 'ID do serviço'],
+                        'data' => ['type' => 'string',           'description' => 'Data no formato YYYY-MM-DD'],
+                        'horario' => ['type' => 'string',           'description' => 'Horário no formato HH:MM'],
+                        'opcao_extra' => ['type' => ['string', 'null'], 'description' => 'Opção extra (opcional)'],
+                        'observacoes' => ['type' => ['string', 'null'], 'description' => 'Observações (opcional)'],
                     ],
                     'required' => ['cliente_nome', 'profissional_id', 'servico_id', 'data', 'horario'],
                 ],
             ],
             [
-                'name'         => 'confirmar_agendamento',
-                'description'  => 'Confirma o agendamento pendente existente quando o cliente expressa confirmação.',
-                'input_schema' => ['type' => 'object', 'properties' => new \stdClass()],
+                'name' => 'confirmar_agendamento',
+                'description' => 'Confirma o agendamento pendente existente quando o cliente expressa confirmação.',
+                'input_schema' => ['type' => 'object', 'properties' => new \stdClass],
             ],
             [
-                'name'         => 'cancelar_agendamento',
-                'description'  => 'Cancela o agendamento pendente existente quando o cliente solicita cancelamento.',
-                'input_schema' => ['type' => 'object', 'properties' => new \stdClass()],
+                'name' => 'cancelar_agendamento',
+                'description' => 'Cancela o agendamento pendente existente quando o cliente solicita cancelamento.',
+                'input_schema' => ['type' => 'object', 'properties' => new \stdClass],
             ],
             [
-                'name'         => 'listar_agendamentos_cliente',
-                'description'  => 'Lista os próximos agendamentos do cliente atual. DEVE ser chamada antes de reagendar_agendamento para identificar qual agendamento o cliente quer alterar.',
-                'input_schema' => ['type' => 'object', 'properties' => new \stdClass()],
+                'name' => 'listar_agendamentos_cliente',
+                'description' => 'Lista os próximos agendamentos do cliente atual. DEVE ser chamada antes de reagendar_agendamento para identificar qual agendamento o cliente quer alterar.',
+                'input_schema' => ['type' => 'object', 'properties' => new \stdClass],
             ],
             [
-                'name'         => 'reagendar_agendamento',
-                'description'  => 'Atualiza um agendamento existente com nova data, hora e opcionalmente novo profissional ou serviço. OBRIGATÓRIO chamar listar_agendamentos_cliente antes para obter o agendamento_id correto. Use buscar_slots para confirmar disponibilidade antes de chamar esta ferramenta.',
+                'name' => 'reagendar_agendamento',
+                'description' => 'Atualiza um agendamento existente com nova data, hora e opcionalmente novo profissional ou serviço. OBRIGATÓRIO chamar listar_agendamentos_cliente antes para obter o agendamento_id correto. Use buscar_slots para confirmar disponibilidade antes de chamar esta ferramenta.',
                 'input_schema' => [
-                    'type'       => 'object',
-                    'required'   => ['agendamento_id', 'data', 'hora'],
+                    'type' => 'object',
+                    'required' => ['agendamento_id', 'data', 'hora'],
                     'properties' => [
-                        'agendamento_id'  => ['type' => 'integer', 'description' => 'ID do agendamento a alterar (obtido via listar_agendamentos_cliente)'],
-                        'data'            => ['type' => 'string',  'description' => 'Nova data no formato YYYY-MM-DD'],
-                        'hora'            => ['type' => 'string',  'description' => 'Novo horário no formato HH:MM'],
+                        'agendamento_id' => ['type' => 'integer', 'description' => 'ID do agendamento a alterar (obtido via listar_agendamentos_cliente)'],
+                        'data' => ['type' => 'string',  'description' => 'Nova data no formato YYYY-MM-DD'],
+                        'hora' => ['type' => 'string',  'description' => 'Novo horário no formato HH:MM'],
                         'profissional_id' => ['type' => 'integer', 'description' => 'Novo profissional (opcional — mantém o atual se omitido)'],
-                        'servico_id'      => ['type' => 'integer', 'description' => 'Novo serviço (opcional — mantém o atual se omitido)'],
+                        'servico_id' => ['type' => 'integer', 'description' => 'Novo serviço (opcional — mantém o atual se omitido)'],
                     ],
                 ],
             ],
             [
-                'name'          => 'transferir_para_humano',
-                'description'   => 'Transfere a conversa para um atendente humano. Use quando não entender o cliente após 2 tentativas, quando pedir humano ou ficar irritado.',
-                'input_schema'  => ['type' => 'object', 'properties' => new \stdClass()],
+                'name' => 'transferir_para_humano',
+                'description' => 'Transfere a conversa para um atendente humano. Use quando não entender o cliente após 2 tentativas, quando pedir humano ou ficar irritado.',
+                'input_schema' => ['type' => 'object', 'properties' => new \stdClass],
                 'cache_control' => ['type' => 'ephemeral'],
             ],
         ];
@@ -387,14 +409,14 @@ class ClaudeAgentService
     {
         return [
             [
-                'name'          => 'transferir_para_humano',
-                'description'   => 'Encaminha a conversa para uma atendente humana finalizar o agendamento. Chame assim que tiver: nome do cliente, serviço/motivo desejado e a preferência de dia/horário. NUNCA confirme horário ou agendamento antes — quem confere a agenda é a atendente.',
-                'input_schema'  => [
-                    'type'       => 'object',
+                'name' => 'transferir_para_humano',
+                'description' => 'Encaminha a conversa para uma atendente humana finalizar o agendamento. Chame assim que tiver: nome do cliente, serviço/motivo desejado e a preferência de dia/horário. NUNCA confirme horário ou agendamento antes — quem confere a agenda é a atendente.',
+                'input_schema' => [
+                    'type' => 'object',
                     'properties' => [
-                        'resumo'       => ['type' => 'string', 'description' => 'Resumo curto do que o cliente deseja (serviço/motivo + preferência de dia e horário)'],
+                        'resumo' => ['type' => 'string', 'description' => 'Resumo curto do que o cliente deseja (serviço/motivo + preferência de dia e horário)'],
                         'nome_cliente' => ['type' => 'string', 'description' => 'Nome do cliente'],
-                        'preferencia'  => ['type' => 'string', 'description' => 'Preferência de dia/horário informada pelo cliente'],
+                        'preferencia' => ['type' => 'string', 'description' => 'Preferência de dia/horário informada pelo cliente'],
                     ],
                 ],
                 'cache_control' => ['type' => 'ephemeral'],
@@ -406,7 +428,7 @@ class ClaudeAgentService
      * Bloco dinâmico (não cacheado) informando ao bot se está ou não dentro do
      * horário de atendimento da atendente e como ajustar a expectativa do cliente.
      */
-    private function buildAtendimentoBlock(Tenant $tenant, \Carbon\Carbon $agora): string
+    private function buildAtendimentoBlock(Tenant $tenant, Carbon $agora): string
     {
         $texto = $tenant->horarioAtendimentoTexto();
 
@@ -432,25 +454,26 @@ class ClaudeAgentService
             ->map(function ($p) {
                 $servNomes = $p->servicos->pluck('nome')->join(', ');
                 $base = "- {$p->nome}";
+
                 return $servNomes ? "{$base} → {$servNomes}" : $base;
             })
             ->join("\n");
 
         $servicos = $tenant->servicos()->where('ativo', true)->get()
-            ->map(fn ($s) => "- {$s->nome}" .
-                ($s->valor_min ? " (R$ {$s->valor_min}" . ($s->valor_max ? "-{$s->valor_max}" : '') . ")" : '') .
+            ->map(fn ($s) => "- {$s->nome}".
+                ($s->valor_min ? " (R$ {$s->valor_min}".($s->valor_max ? "-{$s->valor_max}" : '').')' : '').
                 ($s->requer_avaliacao ? ' [requer avaliação]' : ''))
             ->join("\n");
 
         $tomInstrucao = match ($tenant->tom_voz) {
-            'formal'       => 'Linguagem profissional e respeitosa. Sem emojis. Use "Senhor/Senhora".',
+            'formal' => 'Linguagem profissional e respeitosa. Sem emojis. Use "Senhor/Senhora".',
             'descontraido' => 'Linguagem leve e simpática. Emojis liberados. Pode usar gírias suaves.',
-            default        => 'Linguagem clara e amigável. Emojis com moderação. Tratamento informal mas respeitoso.',
+            default => 'Linguagem clara e amigável. Emojis com moderação. Tratamento informal mas respeitoso.',
         };
 
-        $instrucoes  = $tenant->instrucoes_extras ? "\nINSTRUÇÕES ESPECÍFICAS DO NEGÓCIO:\n{$tenant->instrucoes_extras}" : '';
+        $instrucoes = $tenant->instrucoes_extras ? "\nINSTRUÇÕES ESPECÍFICAS DO NEGÓCIO:\n{$tenant->instrucoes_extras}" : '';
         $servicosPart = $servicos ? "\nSERVIÇOS OFERECIDOS (apenas para contexto):\n{$servicos}\n" : '';
-        $profPart     = $profissionais ? "\nPROFISSIONAIS (apenas para contexto):\n{$profissionais}\n" : '';
+        $profPart = $profissionais ? "\nPROFISSIONAIS (apenas para contexto):\n{$profissionais}\n" : '';
 
         return <<<PROMPT
 Você é {$tenant->nome_agente} de {$tenant->nome} ({$tenant->ramo_negocio}). {$tenant->descricao_negocio}
@@ -481,28 +504,29 @@ PROMPT;
             ->map(function ($p) {
                 $servNomes = $p->servicos->pluck('nome')->join(', ');
                 $base = "- ID {$p->id}: {$p->nome}";
+
                 return $servNomes ? "{$base} → {$servNomes}" : $base;
             })
             ->join("\n");
 
         $servicos = $tenant->servicos()->where('ativo', true)->get()
-            ->map(fn ($s) => "- ID {$s->id}: {$s->nome}" .
-                ($s->valor_min ? " (R$ {$s->valor_min}" . ($s->valor_max ? "-{$s->valor_max}" : '') . ")" : '') .
-                " — {$s->duracao_minutos}min" .
+            ->map(fn ($s) => "- ID {$s->id}: {$s->nome}".
+                ($s->valor_min ? " (R$ {$s->valor_min}".($s->valor_max ? "-{$s->valor_max}" : '').')' : '').
+                " — {$s->duracao_minutos}min".
                 ($s->requer_avaliacao ? ' [requer avaliação]' : ''))
             ->join("\n");
 
         $opcoes = $tenant->opcoes_extras()->where('ativo', true)->get()
             ->groupBy('tipo')
-            ->map(fn ($grupo, $tipo) => strtoupper($tipo) . ': ' . $grupo->pluck('nome')->join(', '))
+            ->map(fn ($grupo, $tipo) => strtoupper($tipo).': '.$grupo->pluck('nome')->join(', '))
             ->join("\n");
 
         $horarios = $this->formatarHorarios($tenant->horarios_funcionamento);
 
         $tomInstrucao = match ($tenant->tom_voz) {
-            'formal'       => 'Linguagem profissional e respeitosa. Sem emojis. Use "Senhor/Senhora".',
+            'formal' => 'Linguagem profissional e respeitosa. Sem emojis. Use "Senhor/Senhora".',
             'descontraido' => 'Linguagem leve e simpática. Emojis liberados. Pode usar gírias suaves.',
-            default        => 'Linguagem clara e amigável. Emojis com moderação. Tratamento informal mas respeitoso.',
+            default => 'Linguagem clara e amigável. Emojis com moderação. Tratamento informal mas respeitoso.',
         };
 
         $instrucoes = $tenant->instrucoes_extras ? "\nINSTRUÇÕES ESPECÍFICAS DO NEGÓCIO:\n{$tenant->instrucoes_extras}" : '';
@@ -546,8 +570,13 @@ PROMPT;
 
     private function formatarHorarios(mixed $horarios): string
     {
-        if (empty($horarios)) return 'Consultar pelo WhatsApp';
-        if (is_string($horarios)) return $horarios;
+        if (empty($horarios)) {
+            return 'Consultar pelo WhatsApp';
+        }
+        if (is_string($horarios)) {
+            return $horarios;
+        }
+
         return collect($horarios)->map(fn ($h, $k) => "{$k}: {$h}")->join(' | ');
     }
 }

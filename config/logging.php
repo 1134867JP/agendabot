@@ -1,5 +1,6 @@
 <?php
 
+use App\Logging\RedactSensitiveData;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -63,6 +64,7 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
+            'tap' => [RedactSensitiveData::class],
         ],
 
         'daily' => [
@@ -71,6 +73,7 @@ return [
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
             'replace_placeholders' => true,
+            'tap' => [RedactSensitiveData::class],
         ],
 
         'slack' => [
@@ -130,17 +133,18 @@ return [
         // Log separado para queries DML (INSERT/UPDATE/DELETE)
         'db' => [
             'driver' => 'daily',
-            'path'   => storage_path('logs/db.log'),
-            'level'  => 'debug',
-            'days'   => 7,
+            'path' => storage_path('logs/db.log'),
+            'level' => 'debug',
+            'days' => 7,
         ],
 
         // Log separado para Jobs e integrações (WhatsApp, Claude, Asaas)
         'jobs' => [
             'driver' => 'daily',
-            'path'   => storage_path('logs/jobs.log'),
-            'level'  => 'debug',
-            'days'   => 14,
+            'path' => storage_path('logs/jobs.log'),
+            'level' => 'debug',
+            'days' => 14,
+            'tap' => [RedactSensitiveData::class],
         ],
 
     ],

@@ -36,7 +36,7 @@ return [
     ],
 
     'claude' => [
-        'key'   => env('CLAUDE_API_KEY'),
+        'key' => env('CLAUDE_API_KEY'),
         'model' => env('CLAUDE_MODEL', 'claude-haiku-4-5-20251001'),
     ],
 
@@ -45,10 +45,15 @@ return [
         'key' => env('EVOLUTION_API_KEY'),
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+    ],
+
     'asaas' => [
-        'key'            => env('ASAAS_API_KEY'),
-        'base_url'       => env('ASAAS_BASE_URL', 'https://sandbox.asaas.com/api/v3'),
-        'sandbox'        => env('ASAAS_SANDBOX', true),
+        'key' => env('ASAAS_API_KEY'),
+        'base_url' => env('ASAAS_BASE_URL', 'https://sandbox.asaas.com/api/v3'),
+        'sandbox' => env('ASAAS_SANDBOX', true),
         'webhook_secret' => env('ASAAS_WEBHOOK_SECRET'),
     ],
 

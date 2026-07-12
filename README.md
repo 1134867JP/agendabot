@@ -35,10 +35,10 @@ Plataforma SaaS multi-tenant de agendamento via WhatsApp com bot de IA. Estabele
 
 | Camada | Tecnologia |
 |--------|------------|
-| Backend | Laravel 11 (PHP 8.3) |
+| Backend | Laravel 13 (PHP 8.3) |
 | Frontend | React 18 + TypeScript + Inertia.js |
 | Banco | PostgreSQL 16 |
-| Fila | Laravel Queue (database driver) |
+| Fila | Laravel Queue por prioridade (database; Redis/Horizon compatível) |
 | WhatsApp | Evolution API (WHATSAPP-BAILEYS) |
 | IA | Anthropic Claude API — `claude-haiku-4-5-20251001` |
 | Build | Vite + Tailwind CSS |
@@ -211,7 +211,23 @@ Integração com gateway de pagamentos Asaas para criar clientes, cobranças e a
 | `VerificarTrialExpiradoJob` | Verifica trials vencidos e envia e-mail de aviso |
 | `GerarCobrancaBotJob` | Gera cobranças variáveis mensais por agendamento via bot |
 
-Fila configurada com `QUEUE_CONNECTION=database`. Worker iniciado por `php artisan queue:work`.
+Fila configurada com `QUEUE_CONNECTION=database`. As prioridades são `messages`, `notifications`,
+`financial`, `sync`, `maintenance` e `default`. O worker de produção consome nessa ordem. Para
+escalar, altere `QUEUE_CONNECTION=redis`, configure o Redis e adicione Horizon sem mudar os jobs.
+
+## Confiabilidade, privacidade e integrações
+
+- `/health` verifica banco e falhas recentes da fila; o deploy usa esse endpoint e restaura a imagem anterior em caso de falha.
+- Pushes na branch `develop` podem publicar em homologação usando os secrets `STAGING_HOST`, `STAGING_USER` e `STAGING_SSH_KEY`.
+- Contextos de log passam por mascaramento central de telefone, e-mail, nomes e conteúdo de mensagens.
+- Clientes podem ter seus dados exportados e anonimizados, preservando somente registros financeiros sem identificação pessoal.
+- Eventos operacionais medem tempo de resposta, falhas de Claude/Evolution/Google e receita originada pelo bot.
+- Lista de espera, cobrança de sinal PIX, confirmação antecipada, no-show e sincronização Google Calendar fazem parte do domínio comercial.
+
+### Google Calendar
+
+Configure `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` e cadastre a URL de callback
+`/painel/integracoes/google-calendar/callback` no Google Cloud. Tokens são criptografados no banco.
 
 ---
 

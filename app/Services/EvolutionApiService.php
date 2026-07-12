@@ -2,26 +2,35 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
 class EvolutionApiService
 {
     private string $baseUrl;
+
     private string $globalApiKey;
 
     public function __construct()
     {
-        $this->baseUrl      = (string) config('services.evolution.url');
+        $this->baseUrl = (string) config('services.evolution.url');
         $this->globalApiKey = (string) config('services.evolution.key');
+    }
+
+    private function http(int $timeout = 15): PendingRequest
+    {
+        return Http::withHeaders(['apikey' => $this->globalApiKey])
+            ->timeout($timeout)
+            ->connectTimeout(5)
+            ->retry(3, 500, throw: false);
     }
 
     public function enviarMensagem(string $instance, string $telefone, string $mensagem): bool
     {
-        $response = Http::withHeaders(['apikey' => $this->globalApiKey])
-            ->timeout(10)
+        $response = $this->http(10)
             ->post("{$this->baseUrl}/message/sendText/{$instance}", [
                 'number' => $telefone,
-                'text'   => $mensagem,
+                'text' => $mensagem,
             ]);
 
         return $response->successful();
@@ -29,11 +38,11 @@ class EvolutionApiService
 
     public function criarInstancia(string $instanceName): array
     {
-        $response = Http::withHeaders(['apikey' => $this->globalApiKey])
+        $response = $this->http()
             ->post("{$this->baseUrl}/instance/create", [
                 'instanceName' => $instanceName,
-                'integration'  => 'WHATSAPP-BAILEYS',
-                'qrcode'       => true,
+                'integration' => 'WHATSAPP-BAILEYS',
+                'qrcode' => true,
             ]);
 
         return $response->json() ?? [];
@@ -41,7 +50,7 @@ class EvolutionApiService
 
     public function obterQrCode(string $instance): ?string
     {
-        $response = Http::withHeaders(['apikey' => $this->globalApiKey])
+        $response = $this->http()
             ->get("{$this->baseUrl}/instance/connect/{$instance}");
 
         return $response->json('base64');
@@ -49,7 +58,7 @@ class EvolutionApiService
 
     public function statusInstancia(string $instance): string
     {
-        $response = Http::withHeaders(['apikey' => $this->globalApiKey])
+        $response = $this->http()
             ->get("{$this->baseUrl}/instance/fetchInstances");
 
         $instancias = collect($response->json() ?? []);
@@ -63,7 +72,7 @@ class EvolutionApiService
 
     public function fetchChats(string $instance): array
     {
-        $response = Http::withHeaders(['apikey' => $this->globalApiKey])
+        $response = $this->http()
             ->post("{$this->baseUrl}/chat/findChats/{$instance}", []);
 
         return $response->json() ?? [];
@@ -71,7 +80,7 @@ class EvolutionApiService
 
     public function fetchContacts(string $instance): array
     {
-        $response = Http::withHeaders(['apikey' => $this->globalApiKey])
+        $response = $this->http()
             ->post("{$this->baseUrl}/chat/findContacts/{$instance}", []);
 
         return $response->json() ?? [];
@@ -79,8 +88,7 @@ class EvolutionApiService
 
     public function fetchMessages(string $instance, string $remoteJid, int $count = 50): array
     {
-        $response = Http::withHeaders(['apikey' => $this->globalApiKey])
-            ->timeout(20)
+        $response = $this->http(20)
             ->post("{$this->baseUrl}/chat/findMessages/{$instance}", [
                 'where' => ['key' => ['remoteJid' => $remoteJid]],
                 'limit' => $count,
@@ -89,9 +97,10 @@ class EvolutionApiService
         if (! $response->successful()) {
             \Log::debug('FETCH_MESSAGES_HTTP_ERR', [
                 'instance' => $instance,
-                'jid'      => $remoteJid,
-                'status'   => $response->status(),
+                'jid' => $remoteJid,
+                'status' => $response->status(),
             ]);
+
             return [];
         }
 
@@ -127,8 +136,8 @@ class EvolutionApiService
 
         \Log::debug('FETCH_MESSAGES_UNKNOWN_FORMAT', [
             'instance' => $instance,
-            'jid'      => $remoteJid,
-            'keys'     => array_keys($body),
+            'jid' => $remoteJid,
+            'keys' => array_keys($body),
         ]);
 
         return [];
@@ -136,13 +145,12 @@ class EvolutionApiService
 
     public function fetchMedia(string $instance, string $messageId, bool $fromMe, string $remoteJid): ?array
     {
-        $response = Http::withHeaders(['apikey' => $this->globalApiKey])
-            ->timeout(20)
+        $response = $this->http(20)
             ->post("{$this->baseUrl}/chat/getBase64FromMediaMessage/{$instance}", [
                 'message' => [
                     'key' => [
-                        'id'        => $messageId,
-                        'fromMe'    => $fromMe,
+                        'id' => $messageId,
+                        'fromMe' => $fromMe,
                         'remoteJid' => $remoteJid,
                     ],
                 ],
@@ -157,7 +165,7 @@ class EvolutionApiService
 
     public function desconectar(string $instance): bool
     {
-        $response = Http::withHeaders(['apikey' => $this->globalApiKey])
+        $response = $this->http()
             ->delete("{$this->baseUrl}/instance/logout/{$instance}");
 
         return $response->successful();
@@ -166,14 +174,14 @@ class EvolutionApiService
     public function configurarWebhook(string $instance, string $webhookUrl): bool
     {
         // Evolution API v2 requires nested 'webhook' object
-        $response = Http::withHeaders(['apikey' => $this->globalApiKey])
+        $response = $this->http()
             ->post("{$this->baseUrl}/webhook/set/{$instance}", [
                 'webhook' => [
-                    'enabled'        => true,
-                    'url'            => $webhookUrl,
-                    'byEvents'       => false,
-                    'base64'         => false,
-                    'events'         => ['MESSAGES_UPSERT', 'CONNECTION_UPDATE', 'CHATS_UPSERT', 'CONTACTS_UPSERT'],
+                    'enabled' => true,
+                    'url' => $webhookUrl,
+                    'byEvents' => false,
+                    'base64' => false,
+                    'events' => ['MESSAGES_UPSERT', 'CONNECTION_UPDATE', 'CHATS_UPSERT', 'CONTACTS_UPSERT'],
                 ],
             ]);
 

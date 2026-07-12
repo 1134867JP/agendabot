@@ -3,42 +3,111 @@
 namespace App\Services;
 
 use App\Exceptions\HorarioIndisponivelException;
+use App\Jobs\SyncGoogleCalendarJob;
 use App\Models\Agendamento;
+use App\Models\OperationalEvent;
 use App\Models\Profissional;
+use App\Models\Recurso;
 use App\Models\Servico;
 use App\Models\Tenant;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AgendamentoService
 {
-    public function criar(array $dados): Agendamento
+    /**
+     * Criação manual pelo painel (atendente). Suporta tanto `recurso_id` (tenants tipo
+     * quadra/personalizado, sem conceito de expediente) quanto `profissional_id` (com
+     * expediente). Aplica as mesmas regras de antecedência/buffer usadas pelo bot.
+     */
+    public function criar(Tenant $tenant, array $dados): Agendamento
     {
-        return DB::transaction(function () use ($dados) {
+        return DB::transaction(function () use ($tenant, $dados) {
+            $regras = $tenant->regrasAgendamentoConfig();
+            $tz = config('app.timezone', 'America/Sao_Paulo');
+            $buffer = (int) $regras['buffer_entre_agendamentos_minutos'];
+
             $lockId = $dados['recurso_id'] ?? $dados['profissional_id'] ?? 0;
             DB::select('SELECT pg_advisory_xact_lock(?)', [$lockId]);
 
-            if (!empty($dados['recurso_id'])) {
-                $conflito = Agendamento::where('recurso_id', $dados['recurso_id'])
-                    ->where('status', '!=', 'cancelado')
-                    ->where('inicio', '<', $dados['fim'])
-                    ->where('fim', '>', $dados['inicio'])
-                    ->exists();
-            } elseif (!empty($dados['profissional_id'])) {
-                $conflito = Agendamento::where('profissional_id', $dados['profissional_id'])
-                    ->where('status', '!=', 'cancelado')
-                    ->where('inicio', '<', $dados['fim'])
-                    ->where('fim', '>', $dados['inicio'])
-                    ->exists();
-            } else {
-                $conflito = false;
+            $inicio = Carbon::parse($dados['inicio'], $tz);
+            $fim = Carbon::parse($dados['fim'], $tz);
+
+            $this->validarAntecedencia($inicio, $regras, $tz);
+
+            if (! empty($dados['recurso_id'])) {
+                Recurso::where('id', $dados['recurso_id'])->where('tenant_id', $tenant->id)->firstOrFail();
+                $this->validarConflitoRecurso((int) $dados['recurso_id'], $inicio, $fim, $buffer);
+            } elseif (! empty($dados['profissional_id'])) {
+                $profissional = Profissional::where('id', $dados['profissional_id'])
+                    ->where('tenant_id', $tenant->id)
+                    ->firstOrFail();
+                $this->validarExpediente($profissional, $inicio, $fim, $tz);
+                $this->validarConflitoProfissional((int) $dados['profissional_id'], $inicio, $fim, $buffer);
             }
 
-            if ($conflito) {
-                throw new HorarioIndisponivelException('Horário não disponível.');
+            $agendamento = Agendamento::create($dados);
+            OperationalEvent::record($tenant->id, 'appointment_created', [
+                'value' => $agendamento->valor_total,
+                'metadata' => ['origin' => $agendamento->origem ?? 'manual'],
+            ]);
+            SyncGoogleCalendarJob::dispatch($agendamento)->onQueue('sync')->afterCommit();
+
+            return $agendamento;
+        });
+    }
+
+    /**
+     * Atualização manual pelo painel (atendente). Mesma lógica de validação de `criar()`,
+     * ignorando o próprio agendamento na checagem de conflito.
+     */
+    public function atualizar(Agendamento $agendamento, array $dados): Agendamento
+    {
+        return DB::transaction(function () use ($agendamento, $dados) {
+            $tenant = $agendamento->tenant;
+            $regras = $tenant->regrasAgendamentoConfig();
+            $tz = config('app.timezone', 'America/Sao_Paulo');
+            $buffer = (int) $regras['buffer_entre_agendamentos_minutos'];
+
+            $recursoId = $dados['recurso_id'] ?? $agendamento->recurso_id;
+            $profissionalId = $recursoId ? null : $agendamento->profissional_id;
+
+            $lockId = $recursoId ?? $profissionalId ?? 0;
+            DB::select('SELECT pg_advisory_xact_lock(?)', [$lockId]);
+
+            $inicio = Carbon::parse($dados['inicio'], $tz);
+            $fim = Carbon::parse($dados['fim'], $tz);
+
+            $this->validarAntecedencia($inicio, $regras, $tz);
+
+            $updateData = [
+                'cliente_nome' => $dados['cliente_nome'],
+                'cliente_telefone' => $dados['cliente_telefone'],
+                'inicio' => $inicio,
+                'fim' => $fim,
+                'data_hora' => $inicio,
+                'duracao_minutos' => (int) $inicio->diffInMinutes($fim),
+                'observacoes' => $dados['observacoes'] ?? null,
+                'status' => $dados['status'] ?? $agendamento->status,
+            ];
+
+            if ($recursoId) {
+                $recurso = Recurso::where('id', $recursoId)->where('tenant_id', $tenant->id)->firstOrFail();
+                $this->validarConflitoRecurso($recursoId, $inicio, $fim, $buffer, ignorarAgendamentoId: $agendamento->id);
+                $updateData['recurso_id'] = $recurso->id;
+                $updateData['valor_total'] = $recurso->valor_hora
+                    ? $recurso->valor_hora * $inicio->diffInMinutes($fim) / 60
+                    : null;
+            } elseif ($profissionalId) {
+                $profissional = Profissional::where('id', $profissionalId)->where('tenant_id', $tenant->id)->firstOrFail();
+                $this->validarExpediente($profissional, $inicio, $fim, $tz);
+                $this->validarConflitoProfissional($profissionalId, $inicio, $fim, $buffer, ignorarAgendamentoId: $agendamento->id);
             }
 
-            return Agendamento::create($dados);
+            $agendamento->update($updateData);
+
+            return $agendamento->fresh();
         });
     }
 
@@ -47,17 +116,95 @@ class AgendamentoService
         $agendamento->update(['status' => 'cancelado']);
     }
 
+    private function validarAntecedencia(Carbon $inicio, array $regras, string $tz): void
+    {
+        $antecedenciaMinima = Carbon::now($tz)->addMinutes($regras['antecedencia_minima_minutos']);
+        if ($inicio->lt($antecedenciaMinima)) {
+            throw new HorarioIndisponivelException(
+                $regras['antecedencia_minima_minutos'] > 0
+                    ? "É preciso agendar com pelo menos {$regras['antecedencia_minima_minutos']} minutos de antecedência."
+                    : 'Não é possível agendar para datas passadas.'
+            );
+        }
+
+        $antecedenciaMaxima = Carbon::now($tz)->addDays($regras['antecedencia_maxima_dias']);
+        if ($inicio->gt($antecedenciaMaxima)) {
+            throw new HorarioIndisponivelException(
+                "Só é possível agendar com até {$regras['antecedencia_maxima_dias']} dias de antecedência."
+            );
+        }
+    }
+
+    private function validarExpediente(Profissional $profissional, Carbon $inicio, Carbon $fim, string $tz): void
+    {
+        $diaSemana = (int) $inicio->format('N');
+        if ($diaSemana === 7) {
+            $diaSemana = 0;
+        }
+        $horarioDia = $profissional->horarios()->where('dia_semana', $diaSemana)->first();
+        if (! $horarioDia) {
+            throw new HorarioIndisponivelException('Profissional não atende neste dia da semana.');
+        }
+        $expedienteInicio = Carbon::createFromFormat('Y-m-d H:i:s', $inicio->format('Y-m-d').' '.$horarioDia->hora_inicio, $tz);
+        $expedienteFim = Carbon::createFromFormat('Y-m-d H:i:s', $inicio->format('Y-m-d').' '.$horarioDia->hora_fim, $tz);
+        if ($inicio->lt($expedienteInicio) || $fim->gt($expedienteFim)) {
+            throw new HorarioIndisponivelException(
+                "Horário fora do expediente ({$horarioDia->hora_inicio}–{$horarioDia->hora_fim})."
+            );
+        }
+    }
+
+    /**
+     * Range overlap com buffer: detecta qualquer agendamento existente do mesmo profissional
+     * que se sobreponha ao slot [inicio, fim), com uma folga configurável antes/depois.
+     */
+    private function validarConflitoProfissional(int $profissionalId, Carbon $inicio, Carbon $fim, int $buffer, ?int $ignorarAgendamentoId = null): void
+    {
+        $query = Agendamento::where('profissional_id', $profissionalId)
+            ->whereNotIn('status', ['cancelado'])
+            ->where('data_hora', '<', $fim->copy()->addMinutes($buffer))
+            ->whereRaw("(data_hora + (duracao_minutos * INTERVAL '1 minute') + (? * INTERVAL '1 minute')) > ?", [$buffer, $inicio]);
+
+        if ($ignorarAgendamentoId) {
+            $query->where('id', '!=', $ignorarAgendamentoId);
+        }
+
+        if ($query->exists()) {
+            throw new HorarioIndisponivelException('Horário não disponível.');
+        }
+    }
+
+    /**
+     * Mesma lógica de `validarConflitoProfissional`, para o caminho legado `recurso_id`
+     * (sem conceito de expediente), que já guarda `inicio`/`fim` diretamente.
+     */
+    private function validarConflitoRecurso(int $recursoId, Carbon $inicio, Carbon $fim, int $buffer, ?int $ignorarAgendamentoId = null): void
+    {
+        $query = Agendamento::where('recurso_id', $recursoId)
+            ->where('status', '!=', 'cancelado')
+            ->where('inicio', '<', $fim->copy()->addMinutes($buffer))
+            ->whereRaw("(fim + (? * INTERVAL '1 minute')) > ?", [$buffer, $inicio]);
+
+        if ($ignorarAgendamentoId) {
+            $query->where('id', '!=', $ignorarAgendamentoId);
+        }
+
+        if ($query->exists()) {
+            throw new HorarioIndisponivelException('Horário não disponível.');
+        }
+    }
+
     public function reagendar(Agendamento $agendamento, array $dados): Agendamento
     {
         return DB::transaction(function () use ($agendamento, $dados) {
             $profissionalId = (int) ($dados['profissional_id'] ?? $agendamento->profissional_id);
             DB::select('SELECT pg_advisory_xact_lock(?)', [$profissionalId]);
 
-            $tz      = config('app.timezone', 'America/Sao_Paulo');
+            $tz = config('app.timezone', 'America/Sao_Paulo');
             $horario = substr($dados['hora'], 0, 5);
-            $inicio  = Carbon::createFromFormat('Y-m-d H:i', "{$dados['data']} {$horario}", $tz);
+            $inicio = Carbon::createFromFormat('Y-m-d H:i', "{$dados['data']} {$horario}", $tz);
             $duracao = $agendamento->duracao_minutos ?? 30;
-            $fim     = $inicio->copy()->addMinutes($duracao);
+            $fim = $inicio->copy()->addMinutes($duracao);
 
             if ($inicio->isPast()) {
                 throw new HorarioIndisponivelException('Não é possível reagendar para datas passadas.');
@@ -76,10 +223,10 @@ class AgendamentoService
 
             $agendamento->update([
                 'profissional_id' => $profissionalId,
-                'servico_id'      => $dados['servico_id'] ?? $agendamento->servico_id,
-                'data_hora'       => $inicio,
-                'inicio'          => $inicio,
-                'fim'             => $fim,
+                'servico_id' => $dados['servico_id'] ?? $agendamento->servico_id,
+                'data_hora' => $inicio,
+                'inicio' => $inicio,
+                'fim' => $fim,
             ]);
 
             return $agendamento->fresh();
@@ -89,13 +236,13 @@ class AgendamentoService
     public function buscarHorariosDisponiveis(Tenant $tenant, int $dias = 7): array
     {
         $regras = $tenant->regrasAgendamentoConfig();
-        $dias   = min($dias, $regras['antecedencia_maxima_dias']);
+        $dias = min($dias, $regras['antecedencia_maxima_dias']);
 
         $profissionais = $tenant->profissionais()->where('ativo', true)->with('horarios')->get();
         $resultado = [];
 
-        $tz                  = config('app.timezone', 'America/Sao_Paulo');
-        $antecedenciaMinima  = Carbon::now($tz)->addMinutes($regras['antecedencia_minima_minutos']);
+        $tz = config('app.timezone', 'America/Sao_Paulo');
+        $antecedenciaMinima = Carbon::now($tz)->addMinutes($regras['antecedencia_minima_minutos']);
 
         foreach ($profissionais as $profissional) {
             $resultado[$profissional->id] = [];
@@ -158,85 +305,53 @@ class AgendamentoService
             $duracao = $servico?->duracao_minutos ?? $dados['duracao_minutos'] ?? 30;
 
             // Timezone explícito para garantir que "10:00" seja interpretado como horário local
-            $tz      = config('app.timezone', 'America/Sao_Paulo');
+            $tz = config('app.timezone', 'America/Sao_Paulo');
             $horario = substr($dados['horario'], 0, 5); // garante formato HH:MM (descarta segundos se vierem)
-            $inicio  = Carbon::createFromFormat('Y-m-d H:i', "{$dados['data']} {$horario}", $tz);
-            $fim    = $inicio->copy()->addMinutes($duracao);
+            $inicio = Carbon::createFromFormat('Y-m-d H:i', "{$dados['data']} {$horario}", $tz);
+            $fim = $inicio->copy()->addMinutes($duracao);
 
-            $antecedenciaMinima = Carbon::now($tz)->addMinutes($regras['antecedencia_minima_minutos']);
-            if ($inicio->lt($antecedenciaMinima)) {
-                throw new HorarioIndisponivelException(
-                    $regras['antecedencia_minima_minutos'] > 0
-                        ? "É preciso agendar com pelo menos {$regras['antecedencia_minima_minutos']} minutos de antecedência."
-                        : 'Não é possível agendar para datas passadas.'
-                );
-            }
+            $this->validarAntecedencia($inicio, $regras, $tz);
+            $this->validarExpediente($profissional, $inicio, $fim, $tz);
 
-            $antecedenciaMaxima = Carbon::now($tz)->addDays($regras['antecedencia_maxima_dias']);
-            if ($inicio->gt($antecedenciaMaxima)) {
-                throw new HorarioIndisponivelException(
-                    "Só é possível agendar com até {$regras['antecedencia_maxima_dias']} dias de antecedência."
-                );
-            }
-
-            // Validar que o horário está dentro do expediente do profissional
-            $diaSemana = (int) $inicio->format('N');
-            if ($diaSemana === 7) $diaSemana = 0;
-            $horarioDia = $profissional->horarios()->where('dia_semana', $diaSemana)->first();
-            if (! $horarioDia) {
-                throw new HorarioIndisponivelException('Profissional não atende neste dia da semana.');
-            }
-            $expedienteInicio = Carbon::createFromFormat('Y-m-d H:i:s', $inicio->format('Y-m-d') . ' ' . $horarioDia->hora_inicio, $tz);
-            $expedienteFim    = Carbon::createFromFormat('Y-m-d H:i:s', $inicio->format('Y-m-d') . ' ' . $horarioDia->hora_fim, $tz);
-            if ($inicio->lt($expedienteInicio) || $fim->gt($expedienteFim)) {
-                throw new HorarioIndisponivelException(
-                    "Horário fora do expediente ({$horarioDia->hora_inicio}–{$horarioDia->hora_fim})."
-                );
-            }
-
-            // Range overlap: detecta qualquer agendamento que se sobreponha ao slot [inicio, fim),
-            // com uma folga (buffer) configurável antes/depois de cada agendamento existente
             $buffer = (int) $regras['buffer_entre_agendamentos_minutos'];
-            $conflito = Agendamento::where('profissional_id', $profissionalId)
-                ->whereNotIn('status', ['cancelado'])
-                ->where('data_hora', '<', $fim->copy()->addMinutes($buffer))
-                ->whereRaw("(data_hora + (duracao_minutos * INTERVAL '1 minute') + (? * INTERVAL '1 minute')) > ?", [$buffer, $inicio])
-                ->exists();
-
-            if ($conflito) {
-                throw new HorarioIndisponivelException('Horário não disponível.');
-            }
+            $this->validarConflitoProfissional($profissionalId, $inicio, $fim, $buffer);
 
             $agendamento = Agendamento::create([
-                'tenant_id'        => $tenant->id,
-                'cliente_id'       => $dados['cliente_id'],
-                'cliente_nome'     => $dados['cliente_nome'],
+                'tenant_id' => $tenant->id,
+                'cliente_id' => $dados['cliente_id'],
+                'cliente_nome' => $dados['cliente_nome'],
                 'cliente_telefone' => $dados['cliente_telefone'],
-                'profissional_id'  => $profissional->id,
-                'servico_id'       => $servico?->id,
-                'data_hora'        => $inicio,
-                'inicio'           => $inicio,
-                'fim'              => $fim,
-                'duracao_minutos'  => $duracao,
-                'status'           => 'agendado',
-                'opcao_extra'      => $dados['opcao_extra'] ?? null,
-                'observacoes'      => $dados['observacoes'] ?? null,
-                'origem'           => $dados['origem'] ?? 'bot',
+                'profissional_id' => $profissional->id,
+                'servico_id' => $servico?->id,
+                'data_hora' => $inicio,
+                'inicio' => $inicio,
+                'fim' => $fim,
+                'duracao_minutos' => $duracao,
+                'status' => 'agendado',
+                'opcao_extra' => $dados['opcao_extra'] ?? null,
+                'observacoes' => $dados['observacoes'] ?? null,
+                'origem' => $dados['origem'] ?? 'bot',
             ]);
 
-            \Illuminate\Support\Facades\Log::channel('db')->info('AGENDAMENTO_INSERT', [
-                'id'               => $agendamento->id,
-                'tenant_id'        => $tenant->id,
-                'tenant'           => $tenant->nome,
-                'cliente_nome'     => $agendamento->cliente_nome,
+            OperationalEvent::record($tenant->id, 'appointment_created', [
+                'value' => $agendamento->valor_total,
+                'metadata' => ['origin' => $agendamento->origem ?? 'bot'],
+            ]);
+            SyncGoogleCalendarJob::dispatch($agendamento)->onQueue('sync')->afterCommit();
+
+            Log::channel('db')->info('AGENDAMENTO_INSERT', [
+                'id' => $agendamento->id,
+                'tenant_id' => $tenant->id,
+                'tenant' => $tenant->nome,
+                'cliente_nome' => $agendamento->cliente_nome,
                 'cliente_telefone' => $agendamento->cliente_telefone,
-                'profissional_id'  => $agendamento->profissional_id,
-                'servico_id'       => $agendamento->servico_id,
-                'data_hora_brt'    => $inicio->toDateTimeString(),
-                'data_hora_utc'    => $inicio->utc()->toDateTimeString(),
-                'duracao_minutos'  => $duracao,
-                'status'           => 'agendado',
-                'origem'           => $agendamento->origem,
+                'profissional_id' => $agendamento->profissional_id,
+                'servico_id' => $agendamento->servico_id,
+                'data_hora_brt' => $inicio->toDateTimeString(),
+                'data_hora_utc' => $inicio->utc()->toDateTimeString(),
+                'duracao_minutos' => $duracao,
+                'status' => 'agendado',
+                'origem' => $agendamento->origem,
             ]);
 
             return $agendamento;

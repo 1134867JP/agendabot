@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Services\AsaasService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -17,7 +16,7 @@ class SubscriptionController extends Controller
 
         return Inertia::render('Tenant/Renovar', [
             'tenant' => $tenant,
-            'plano'  => config("plans.{$tenant->plano}"),
+            'plano' => config("plans.{$tenant->plano}"),
         ]);
     }
 
@@ -46,9 +45,7 @@ class SubscriptionController extends Controller
 
         $tenant->update(['subscription_status' => 'canceled']);
 
-        Auth::logout();
-
-        return redirect()->route('home')
+        return redirect()->route('tenant.renovar')
             ->with('info', 'Assinatura cancelada. Seus dados ficam disponíveis por 30 dias.');
     }
 }

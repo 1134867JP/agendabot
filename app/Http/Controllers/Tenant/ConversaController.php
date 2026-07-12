@@ -34,13 +34,13 @@ class ConversaController extends Controller
 
         return Inertia::render('Tenant/Conversas/Index', [
             'conversas' => $query->paginate(30)->withQueryString(),
-            'filtros'   => $request->only('status_v2'),
+            'filtros' => $request->only('status_v2'),
         ]);
     }
 
     public function mensagens(Conversa $conversa): JsonResponse
     {
-        abort_if((int)$conversa->tenant_id !== (int)app('tenant')->id, 403);
+        abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
 
         $conversa->update(['ultima_leitura_em' => now()]);
 
@@ -62,7 +62,7 @@ class ConversaController extends Controller
             ->whereNotNull('ultima_mensagem_em')
             ->where(function ($q) {
                 $q->whereNull('ultima_leitura_em')
-                  ->orWhereColumn('ultima_mensagem_em', '>', 'ultima_leitura_em');
+                    ->orWhereColumn('ultima_mensagem_em', '>', 'ultima_leitura_em');
             });
 
         $total = $query->count();
@@ -76,31 +76,32 @@ class ConversaController extends Controller
             ->limit(5)
             ->get()
             ->map(fn ($c) => [
-                'id'           => $c->id,
-                'nome'         => $c->cliente?->nome ?? $c->telefone_cliente,
-                'telefone'     => $c->telefone_cliente,
-                'preview'      => $c->mensagens->first()?->conteudo ?? '',
-                'tipo'         => $c->mensagens->first()?->tipo ?? 'texto',
-                'remetente'    => $c->mensagens->first()?->remetente ?? 'cliente',
-                'em'           => $c->ultima_mensagem_em,
+                'id' => $c->id,
+                'nome' => $c->cliente?->nome ?? $c->telefone_cliente,
+                'telefone' => $c->telefone_cliente,
+                'preview' => $c->mensagens->first()?->conteudo ?? '',
+                'tipo' => $c->mensagens->first()?->tipo ?? 'texto',
+                'remetente' => $c->mensagens->first()?->remetente ?? 'cliente',
+                'em' => $c->ultima_mensagem_em,
             ]);
 
         return response()->json([
             'conversas_nao_lidas' => $total,
-            'preview'             => $preview,
+            'preview' => $preview,
         ]);
     }
 
     public function marcarLida(Conversa $conversa): JsonResponse
     {
-        abort_if((int)$conversa->tenant_id !== (int)app('tenant')->id, 403);
+        abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
         $conversa->update(['ultima_leitura_em' => now()]);
+
         return response()->json(['ok' => true]);
     }
 
     public function assumir(Conversa $conversa): RedirectResponse
     {
-        abort_if((int)$conversa->tenant_id !== (int)app('tenant')->id, 403);
+        abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
 
         $conversa->update(['status_v2' => 'em_atendimento_humano']);
         $conversa->registrarMensagem('bot', '⚠️ Atendimento assumido por um humano.');
@@ -110,7 +111,7 @@ class ConversaController extends Controller
 
     public function devolver(Conversa $conversa): RedirectResponse
     {
-        abort_if((int)$conversa->tenant_id !== (int)app('tenant')->id, 403);
+        abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
 
         $conversa->update(['status_v2' => 'ativa']);
         $conversa->registrarMensagem('bot', '🤖 Bot reativado. Continuando atendimento automático.');
@@ -120,7 +121,7 @@ class ConversaController extends Controller
 
     public function enviarMensagem(Request $request, Conversa $conversa, EvolutionApiService $evolution): RedirectResponse
     {
-        abort_if((int)$conversa->tenant_id !== (int)app('tenant')->id, 403);
+        abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
 
         $data = $request->validate([
             'conteudo' => 'required|string|max:4000',
@@ -171,9 +172,9 @@ class ConversaController extends Controller
         abort_if((int) $mensagem->conversa_id !== (int) $conversa->id, 404);
         abort_if(! $mensagem->evolution_message_id, 404);
 
-        $tenant    = app('tenant');
-        $fromMe    = $mensagem->remetente === 'humano';
-        $remoteJid = $conversa->telefone_cliente . '@s.whatsapp.net';
+        $tenant = app('tenant');
+        $fromMe = $mensagem->remetente === 'humano';
+        $remoteJid = $conversa->telefone_cliente.'@s.whatsapp.net';
 
         $dados = $evolution->fetchMedia($tenant->evolution_instance, $mensagem->evolution_message_id, $fromMe, $remoteJid);
 
@@ -181,11 +182,11 @@ class ConversaController extends Controller
             abort(404);
         }
 
-        $binary   = base64_decode($dados['base64']);
+        $binary = base64_decode($dados['base64']);
         $mimetype = $dados['mimetype'] ?? 'image/jpeg';
 
         return response($binary, 200, [
-            'Content-Type'  => $mimetype,
+            'Content-Type' => $mimetype,
             'Cache-Control' => 'private, max-age=86400',
         ]);
     }
@@ -194,7 +195,7 @@ class ConversaController extends Controller
     {
         $tenant = app('tenant');
 
-        if (!$tenant->evolution_instance) {
+        if (! $tenant->evolution_instance) {
             return back()->withErrors(['erro' => 'WhatsApp não configurado.']);
         }
 
@@ -208,7 +209,7 @@ class ConversaController extends Controller
         // Marca como "em andamento" por 10 min (tempo máximo do job)
         \Cache::put($lockKey, true, now()->addMinutes(10));
 
-        SincronizarConversasWhatsappJob::dispatch($tenant)->onQueue('default');
+        SincronizarConversasWhatsappJob::dispatch($tenant)->onQueue('sync');
 
         return back()->with('success', 'Sincronização iniciada em segundo plano. As conversas aparecem em instantes.');
     }

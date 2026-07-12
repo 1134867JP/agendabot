@@ -2,12 +2,13 @@
 
 namespace App\Services;
 
+use App\Exceptions\AsaasApiException;
+use App\Models\Agendamento;
 use App\Models\Tenant;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
-use RuntimeException;
 
 class AsaasService
 {
@@ -34,7 +35,7 @@ class AsaasService
         $customerId = $response->json('id');
 
         if (! $response->successful() || ! is_string($customerId) || $customerId === '') {
-            throw new RuntimeException('Não foi possível criar o cliente no Asaas.');
+            throw new AsaasApiException('Não foi possível criar o cliente no Asaas: '.$response->body());
         }
 
         $tenant->update(['asaas_customer_id' => $customerId]);
@@ -55,6 +56,10 @@ class AsaasService
             'description' => 'AgendaBot — Plano '.ucfirst($plano),
             'externalReference' => "plano_{$plano}",
         ]);
+
+        if (! $response->successful()) {
+            throw new AsaasApiException('Falha ao criar assinatura no Asaas: '.$response->body());
+        }
 
         return $response->json();
     }
@@ -87,12 +92,12 @@ class AsaasService
     public function criarCobrancaAvulsa(string $customerId, float $valor, string $descricao, Carbon $vencimento): ?string
     {
         $response = $this->http()->post('/payments', [
-            'customer'          => $customerId,
-            'billingType'       => 'PIX',
-            'value'             => round($valor, 2),
-            'dueDate'           => $vencimento->format('Y-m-d'),
-            'description'       => $descricao,
-            'externalReference' => 'taxa_bot_' . now()->format('Ym') . '_' . $customerId,
+            'customer' => $customerId,
+            'billingType' => 'PIX',
+            'value' => round($valor, 2),
+            'dueDate' => $vencimento->format('Y-m-d'),
+            'description' => $descricao,
+            'externalReference' => 'taxa_bot_'.now()->format('Ym').'_'.$customerId,
         ]);
 
         if (! $response->successful()) {
@@ -100,6 +105,38 @@ class AsaasService
         }
 
         $id = $response->json('id');
+
         return is_string($id) && $id !== '' ? $id : null;
+    }
+
+    public function criarSinalAgendamento(Agendamento $agendamento, float $valor): array
+    {
+        $customer = $this->http()->post('/customers', [
+            'name' => $agendamento->cliente_nome,
+            'mobilePhone' => preg_replace('/\D/', '', (string) $agendamento->cliente_telefone),
+            'externalReference' => "appointment_customer_{$agendamento->tenant_id}_{$agendamento->id}",
+        ]);
+
+        if (! $customer->successful() || ! $customer->json('id')) {
+            throw new AsaasApiException('Não foi possível cadastrar o cliente para cobrança do sinal.');
+        }
+
+        $payment = $this->http()->post('/payments', [
+            'customer' => $customer->json('id'),
+            'billingType' => 'PIX',
+            'value' => round($valor, 2),
+            'dueDate' => now()->addDay()->format('Y-m-d'),
+            'description' => "Sinal do agendamento #{$agendamento->id}",
+            'externalReference' => "deposit_agendamento_{$agendamento->id}",
+        ]);
+
+        if (! $payment->successful() || ! $payment->json('id')) {
+            throw new AsaasApiException('Não foi possível gerar a cobrança do sinal.');
+        }
+
+        return [
+            'id' => $payment->json('id'),
+            'url' => $payment->json('invoiceUrl') ?? $payment->json('bankSlipUrl'),
+        ];
     }
 }

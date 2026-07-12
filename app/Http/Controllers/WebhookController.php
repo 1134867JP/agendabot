@@ -31,7 +31,7 @@ class WebhookController extends Controller
         // Atualizar status de conexão quando WhatsApp conecta/desconecta
         $event = data_get($data, 'event');
         if ($event === 'connection.update' || $event === 'CONNECTION_UPDATE') {
-            $state     = data_get($data, 'data.state') ?? data_get($data, 'data.instance.state');
+            $state = data_get($data, 'data.state') ?? data_get($data, 'data.instance.state');
             $conectado = $state === 'open';
             if ($tenant->whatsapp_conectado !== $conectado) {
                 $tenant->update(['whatsapp_conectado' => $conectado]);
@@ -39,12 +39,13 @@ class WebhookController extends Controller
 
                 if ($conectado) {
                     // Ao conectar: importar histórico em background
-                    SincronizarConversasWhatsappJob::dispatch($tenant)->onQueue('default');
+                    SincronizarConversasWhatsappJob::dispatch($tenant)->onQueue('sync');
                 } else {
                     // Ao desconectar: fazer backup e limpar histórico do banco
-                    BackupELimparHistoricoJob::dispatch($tenant)->onQueue('default');
+                    BackupELimparHistoricoJob::dispatch($tenant)->onQueue('maintenance');
                 }
             }
+
             return response('ok');
         }
 
@@ -53,6 +54,7 @@ class WebhookController extends Controller
             foreach ($this->normalizarLista(data_get($data, 'data')) as $chat) {
                 $sync->upsertChatLeve($tenant, $chat);
             }
+
             return response('ok');
         }
 
@@ -60,6 +62,7 @@ class WebhookController extends Controller
             foreach ($this->normalizarLista(data_get($data, 'data')) as $contato) {
                 $sync->processarContatoLeve($tenant, $contato);
             }
+
             return response('ok');
         }
 
@@ -100,38 +103,40 @@ class WebhookController extends Controller
 
         // Mapear tipo Evolution → tipo interno
         $tipoMidia = match ($messageType) {
-            'imageMessage'    => 'imagem',
-            'audioMessage'    => 'audio',
-            'videoMessage'    => 'video',
+            'imageMessage' => 'imagem',
+            'audioMessage' => 'audio',
+            'videoMessage' => 'video',
             'documentMessage' => 'documento',
-            'stickerMessage'  => 'sticker',
-            default           => null,
+            'stickerMessage' => 'sticker',
+            default => null,
         };
 
         // Conteúdo: texto real para textos, texto sintético para o Claude reagir a mídias
         $conteudoClaude = match (true) {
-            $messageType === 'conversation'        => data_get($msgData, 'message.conversation'),
+            $messageType === 'conversation' => data_get($msgData, 'message.conversation'),
             $messageType === 'extendedTextMessage' => data_get($msgData, 'message.extendedTextMessage.text'),
-            $tipoMidia === 'imagem'   => data_get($msgData, 'message.imageMessage.caption') ?: '[imagem]',
-            $tipoMidia === 'audio'    => '[áudio]',
-            $tipoMidia === 'video'    => data_get($msgData, 'message.videoMessage.caption') ?: '[vídeo]',
-            $tipoMidia === 'documento'=> data_get($msgData, 'message.documentMessage.fileName') ?: '[documento]',
-            $tipoMidia === 'sticker'  => '[figurinha]',
-            default                   => null,
+            $tipoMidia === 'imagem' => data_get($msgData, 'message.imageMessage.caption') ?: '[imagem]',
+            $tipoMidia === 'audio' => '[áudio]',
+            $tipoMidia === 'video' => data_get($msgData, 'message.videoMessage.caption') ?: '[vídeo]',
+            $tipoMidia === 'documento' => data_get($msgData, 'message.documentMessage.fileName') ?: '[documento]',
+            $tipoMidia === 'sticker' => '[figurinha]',
+            default => null,
         };
 
         if (! $conteudoClaude) {
             Log::info('WEBHOOK_SKIP', ['tipo' => $messageType]);
+
             return response('ok');
         }
 
         $evolutionMessageId = data_get($msgData, 'key.id');
-        $pushName           = data_get($msgData, 'pushName') ?: null;
-        $tipoInterno        = $tipoMidia ?? 'texto';
+        $pushName = data_get($msgData, 'pushName') ?: null;
+        $tipoInterno = $tipoMidia ?? 'texto';
 
         Log::info('WEBHOOK_MSG', ['telefone' => $telefone, 'tipo' => $messageType, 'push_name' => $pushName, 'mensagem' => mb_substr($conteudoClaude, 0, 200)]);
 
-        ProcessarMensagemWhatsapp::dispatch($tenant, $telefone, $conteudoClaude, $evolutionMessageId, $pushName, $tipoInterno);
+        ProcessarMensagemWhatsapp::dispatch($tenant, $telefone, $conteudoClaude, $evolutionMessageId, $pushName, $tipoInterno)
+            ->onQueue('messages');
 
         return response('ok');
     }

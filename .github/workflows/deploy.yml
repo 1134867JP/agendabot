@@ -13,6 +13,20 @@ jobs:
     name: Validar código
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: agendabot_testing
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d agendabot_testing"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
       - uses: actions/checkout@v4
@@ -34,6 +48,14 @@ jobs:
 
       - name: Validar sintaxe PHP
         run: find app config routes -name "*.php" | xargs php -l | grep -v "^No syntax errors" | (grep . && exit 1 || exit 0)
+
+      - name: Preparar ambiente de testes
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Executar testes PHP
+        run: php artisan test
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

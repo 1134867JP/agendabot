@@ -17,30 +17,31 @@ class TenantController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'nome'                       => ['required', 'string', 'max:255'],
-            'tipo_servico'               => ['required', 'in:barbeiro,quadra,estetica,clinica,studio,personalizado'],
+            'nome' => ['required', 'string', 'max:255'],
+            'tipo_servico' => ['required', 'in:barbeiro,quadra,estetica,clinica,studio,personalizado'],
             'tipo_servico_personalizado' => ['nullable', 'required_if:tipo_servico,personalizado', 'string', 'max:100'],
         ]);
 
-        $slug     = Str::slug($data['nome']) . '-' . Str::random(6);
+        $slug = Str::slug($data['nome']).'-'.Str::random(6);
         $instance = $slug;
 
         $tenant = DB::transaction(function () use ($data, $slug, $instance, $request) {
             $t = Tenant::create([
-                'nome'                       => $data['nome'],
-                'slug'                       => $slug,
-                'tipo_servico'               => $data['tipo_servico'],
+                'nome' => $data['nome'],
+                'slug' => $slug,
+                'tipo_servico' => $data['tipo_servico'],
                 'tipo_servico_personalizado' => $data['tipo_servico_personalizado'] ?? null,
-                'evolution_instance'         => $instance,
-                'subscription_status'        => 'trial',
-                'trial_ends_at'              => now()->addDays((int) env('TRIAL_DAYS', 14)),
-                'ativo'                      => true,
+                'evolution_instance' => $instance,
+                'subscription_status' => 'trial',
+                'trial_ends_at' => now()->addDays((int) env('TRIAL_DAYS', 14)),
+                'ativo' => true,
             ]);
             $t->users()->attach($request->user()->id, ['papel' => 'admin']);
+
             return $t;
         });
 
-        CreateEvolutionInstanceJob::dispatch($tenant);
+        CreateEvolutionInstanceJob::dispatch($tenant)->onQueue('sync');
 
         session(['tenant_id' => $tenant->id]);
 

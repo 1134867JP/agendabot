@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Support\FailedJobsFormatter;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -15,11 +15,11 @@ class JobsController extends Controller
     public function index(): Response
     {
         $failed = $this->listarFailed(50);
-        $queue  = $this->statsQueue();
+        $queue = $this->statsQueue();
 
         return Inertia::render('SuperAdmin/Jobs', [
             'failed' => $failed,
-            'queue'  => $queue,
+            'queue' => $queue,
         ]);
     }
 
@@ -27,6 +27,7 @@ class JobsController extends Controller
     {
         try {
             Artisan::call('queue:retry', ['id' => [$id]]);
+
             return back()->with('success', "Job #{$id} reenfileirado.");
         } catch (\Throwable $e) {
             return back()->with('erro', "Falha ao retentar: {$e->getMessage()}");
@@ -37,6 +38,7 @@ class JobsController extends Controller
     {
         try {
             Artisan::call('queue:retry', ['id' => ['all']]);
+
             return back()->with('success', 'Todos os jobs reenfileirados.');
         } catch (\Throwable $e) {
             return back()->with('erro', "Falha: {$e->getMessage()}");
@@ -47,6 +49,7 @@ class JobsController extends Controller
     {
         try {
             DB::table('failed_jobs')->where('id', $id)->delete();
+
             return back()->with('success', "Job #{$id} removido.");
         } catch (\Throwable $e) {
             return back()->with('erro', "Falha ao remover: {$e->getMessage()}");
@@ -57,6 +60,7 @@ class JobsController extends Controller
     {
         try {
             Artisan::call('queue:flush');
+
             return back()->with('success', 'Fila de falhas limpa.');
         } catch (\Throwable $e) {
             return back()->with('erro', "Falha: {$e->getMessage()}");
@@ -72,26 +76,7 @@ class JobsController extends Controller
                 ->orderByDesc('failed_at')
                 ->limit($limit)
                 ->get()
-                ->map(function ($job) {
-                    $payload   = json_decode($job->payload, true);
-                    $jobClass  = data_get($payload, 'displayName', 'Desconhecido');
-                    $exception = $job->exception ?? '';
-
-                    // Extrair apenas a primeira linha da exception (mais legível)
-                    $firstLine = trim(explode("\n", $exception)[0]);
-
-                    return [
-                        'id'         => $job->id,
-                        'uuid'       => $job->uuid,
-                        'job'        => class_basename($jobClass),
-                        'job_full'   => $jobClass,
-                        'queue'      => $job->queue,
-                        'error'      => $firstLine,
-                        'exception'  => $exception,
-                        'failed_at'  => $job->failed_at,
-                        'connection' => $job->connection,
-                    ];
-                })
+                ->map(fn ($job) => FailedJobsFormatter::formatar($job))
                 ->toArray();
         } catch (\Throwable) {
             return []; // tabela pode não existir
@@ -102,7 +87,7 @@ class JobsController extends Controller
     {
         try {
             return [
-                'failed'  => DB::table('failed_jobs')->count(),
+                'failed' => DB::table('failed_jobs')->count(),
                 'pending' => DB::table('jobs')->count(),
             ];
         } catch (\Throwable) {

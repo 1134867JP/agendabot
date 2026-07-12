@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\Cache;
 
 class ForceSincronizar extends Command
 {
-    protected $signature   = 'whatsapp:sync {tenant_slug} {--clear-lock}';
+    protected $signature = 'whatsapp:sync {tenant_slug} {--clear-lock}';
+
     protected $description = 'Força sincronização de conversas WhatsApp, liberando lock se necessário';
 
     public function handle(): void
@@ -23,7 +24,7 @@ class ForceSincronizar extends Command
         }
 
         Cache::put($lockKey, true, now()->addMinutes(10));
-        SincronizarConversasWhatsappJob::dispatch($tenant)->onQueue('default');
+        SincronizarConversasWhatsappJob::dispatch($tenant)->onQueue('sync');
 
         $this->info("Sync iniciado para {$tenant->nome}. Acompanhe: tail -f storage/logs/laravel.log | grep SYNC");
     }

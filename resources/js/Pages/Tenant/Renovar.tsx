@@ -22,7 +22,7 @@ export default function Renovar({ tenant, plano }: Props) {
     };
 
     const cancelar = () => {
-        router.get(route('tenant.cancelar'));
+        router.post(route('tenant.cancelar'));
     };
 
     const valorStr = plano?.valor.toFixed(2).replace('.', ',') ?? '79,90';

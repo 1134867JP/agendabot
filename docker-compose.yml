@@ -39,7 +39,7 @@ services:
     image: agendabot-app
     container_name: agendabot-worker
     restart: always
-    command: php artisan queue:work --sleep=3 --tries=3 --timeout=45
+    command: php artisan queue:work --queue=messages,notifications,financial,sync,maintenance,default --sleep=2 --tries=3 --timeout=90
     volumes:
       - storage_data:/var/www/html/storage
     networks:

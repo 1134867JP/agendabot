@@ -8,14 +8,14 @@ use App\Models\Agendamento;
 use App\Models\Profissional;
 use App\Models\Recurso;
 use App\Services\AgendamentoService;
+use App\Services\AsaasService;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AgendamentoController extends Controller
 {
@@ -41,15 +41,15 @@ class AgendamentoController extends Controller
         if ($request->filled('busca')) {
             $query->where(function ($q) use ($request) {
                 $q->where('cliente_nome', 'ilike', "%{$request->busca}%")
-                  ->orWhere('cliente_telefone', 'like', "%{$request->busca}%");
+                    ->orWhere('cliente_telefone', 'like', "%{$request->busca}%");
             });
         }
 
         return Inertia::render('Tenant/Agendamentos/Index', [
-            'tenant'       => $tenant,
+            'tenant' => $tenant,
             'agendamentos' => $query->paginate(20)->withQueryString(),
-            'recursos'     => $tenant->recursos()->where('ativo', true)->get(),
-            'filtros'      => $request->only(['data', 'recurso_id', 'status', 'busca']),
+            'recursos' => $tenant->recursos()->where('ativo', true)->get(),
+            'filtros' => $request->only(['data', 'recurso_id', 'status', 'busca']),
         ]);
     }
 
@@ -59,13 +59,13 @@ class AgendamentoController extends Controller
 
         $tenantId = $tenant->id;
         $validated = $request->validate([
-            'recurso_id'        => ['nullable', 'integer', Rule::exists('recursos', 'id')->where('tenant_id', $tenantId)],
-            'profissional_id'   => ['nullable', 'integer', Rule::exists('profissionais', 'id')->where('tenant_id', $tenantId)],
-            'cliente_nome'      => ['required', 'string', 'max:255'],
-            'cliente_telefone'  => ['required', 'string', 'max:20'],
-            'inicio'            => ['required', 'date'],
-            'fim'               => ['required', 'date', 'after:inicio'],
-            'observacoes'       => ['nullable', 'string'],
+            'recurso_id' => ['nullable', 'integer', Rule::exists('recursos', 'id')->where('tenant_id', $tenantId)],
+            'profissional_id' => ['nullable', 'integer', Rule::exists('profissionais', 'id')->where('tenant_id', $tenantId)],
+            'cliente_nome' => ['required', 'string', 'max:255'],
+            'cliente_telefone' => ['required', 'string', 'max:20'],
+            'inicio' => ['required', 'date'],
+            'fim' => ['required', 'date', 'after:inicio'],
+            'observacoes' => ['nullable', 'string'],
             'notificar_cliente' => ['boolean'],
         ]);
 
@@ -74,31 +74,31 @@ class AgendamentoController extends Controller
         }
 
         $dados = [
-            'tenant_id'        => $tenant->id,
-            'cliente_nome'     => $validated['cliente_nome'],
+            'tenant_id' => $tenant->id,
+            'cliente_nome' => $validated['cliente_nome'],
             'cliente_telefone' => $validated['cliente_telefone'],
-            'inicio'           => $validated['inicio'],
-            'fim'              => $validated['fim'],
-            'observacoes'      => $validated['observacoes'] ?? null,
-            'origem'           => 'manual',
-            'status'           => 'confirmado',
+            'inicio' => $validated['inicio'],
+            'fim' => $validated['fim'],
+            'observacoes' => $validated['observacoes'] ?? null,
+            'origem' => 'manual',
+            'status' => 'confirmado',
         ];
 
-        if (!empty($validated['recurso_id'])) {
+        if (! empty($validated['recurso_id'])) {
             $recurso = Recurso::where('tenant_id', $tenant->id)->findOrFail($validated['recurso_id']);
-            $dados['recurso_id']  = $validated['recurso_id'];
+            $dados['recurso_id'] = $validated['recurso_id'];
             $dados['valor_total'] = $recurso->valor_hora
                 ? $recurso->valor_hora * Carbon::parse($validated['inicio'])->diffInMinutes($validated['fim']) / 60
                 : null;
         } else {
             Profissional::where('tenant_id', $tenant->id)->findOrFail($validated['profissional_id']);
-            $dados['profissional_id']  = $validated['profissional_id'];
-            $dados['data_hora']        = $validated['inicio'];
-            $dados['duracao_minutos']  = (int) Carbon::parse($validated['inicio'])->diffInMinutes($validated['fim']);
+            $dados['profissional_id'] = $validated['profissional_id'];
+            $dados['data_hora'] = $validated['inicio'];
+            $dados['duracao_minutos'] = (int) Carbon::parse($validated['inicio'])->diffInMinutes($validated['fim']);
         }
 
         try {
-            $this->agendamentoService->criar($dados);
+            $this->agendamentoService->criar($tenant, $dados);
         } catch (HorarioIndisponivelException $e) {
             return back()->withErrors(['inicio' => $e->getMessage()]);
         }
@@ -108,56 +108,24 @@ class AgendamentoController extends Controller
 
     public function update(Request $request, Agendamento $agendamento): RedirectResponse
     {
-        abort_unless($agendamento->tenant_id === app('tenant')->id, 403);
+        $tenant = app('tenant');
+        abort_unless($agendamento->tenant_id === $tenant->id, 403);
 
         $validated = $request->validate([
-            'recurso_id'       => ['nullable', 'integer', 'exists:recursos,id'],
-            'cliente_nome'     => ['required', 'string', 'max:255'],
+            'recurso_id' => ['nullable', 'integer', Rule::exists('recursos', 'id')->where('tenant_id', $tenant->id)],
+            'cliente_nome' => ['required', 'string', 'max:255'],
             'cliente_telefone' => ['required', 'string', 'max:20'],
-            'inicio'           => ['required', 'date'],
-            'fim'              => ['required', 'date', 'after:inicio'],
-            'observacoes'      => ['nullable', 'string'],
-            'status'           => ['nullable', 'in:confirmado,cancelado,concluido'],
+            'inicio' => ['required', 'date'],
+            'fim' => ['required', 'date', 'after:inicio'],
+            'observacoes' => ['nullable', 'string'],
+            'status' => ['nullable', 'in:confirmado,cancelado,concluido'],
         ]);
 
-        $recursoId     = $validated['recurso_id'] ?? $agendamento->recurso_id;
-        $profissionalId = $recursoId ? null : $agendamento->profissional_id;
-
-        $chave = $recursoId
-            ? ['recurso_id', $recursoId]
-            : ['profissional_id', $profissionalId];
-
-        $conflito = Agendamento::where($chave[0], $chave[1])
-            ->where('id', '!=', $agendamento->id)
-            ->where('status', '!=', 'cancelado')
-            ->where('inicio', '<', $validated['fim'])
-            ->where('fim', '>', $validated['inicio'])
-            ->exists();
-
-        if ($conflito) {
-            return back()->withErrors(['inicio' => 'Horário não disponível.']);
+        try {
+            $this->agendamentoService->atualizar($agendamento, $validated);
+        } catch (HorarioIndisponivelException $e) {
+            return back()->withErrors(['inicio' => $e->getMessage()]);
         }
-
-        $updateData = [
-            'cliente_nome'     => $validated['cliente_nome'],
-            'cliente_telefone' => $validated['cliente_telefone'],
-            'inicio'           => $validated['inicio'],
-            'fim'              => $validated['fim'],
-            'data_hora'        => $validated['inicio'],
-            'duracao_minutos'  => (int) Carbon::parse($validated['inicio'])->diffInMinutes($validated['fim']),
-            'observacoes'      => $validated['observacoes'] ?? null,
-            'status'           => $validated['status'] ?? $agendamento->status,
-        ];
-
-        if (!empty($validated['recurso_id'])) {
-            $recurso = Recurso::where('tenant_id', app('tenant')->id)->findOrFail($validated['recurso_id']);
-            $updateData['recurso_id'] = $validated['recurso_id'];
-            $updateData['valor_total'] = $recurso->valor_hora
-                ? $recurso->valor_hora * Carbon::parse($validated['inicio'])->diffInMinutes($validated['fim']) / 60
-                : null;
-        }
-
-        $agendamento->update($updateData);
 
         return back()->with('success', 'Agendamento atualizado.');
     }
@@ -166,6 +134,7 @@ class AgendamentoController extends Controller
     {
         abort_unless($agendamento->tenant_id === app('tenant')->id, 403);
         $this->agendamentoService->cancelar($agendamento);
+
         return back()->with('success', 'Agendamento cancelado.');
     }
 
@@ -173,13 +142,38 @@ class AgendamentoController extends Controller
     {
         abort_unless($agendamento->tenant_id === app('tenant')->id, 403);
         $agendamento->update(['status' => 'concluido']);
+
         return back()->with('success', 'Agendamento concluído.');
+    }
+
+    public function marcarNoShow(Agendamento $agendamento): RedirectResponse
+    {
+        abort_unless($agendamento->tenant_id === app('tenant')->id, 403);
+        $agendamento->update(['no_show' => true, 'status' => 'concluido']);
+
+        return back()->with('success', 'Ausência registrada.');
+    }
+
+    public function gerarSinal(Request $request, Agendamento $agendamento, AsaasService $asaas): RedirectResponse
+    {
+        abort_unless($agendamento->tenant_id === app('tenant')->id, 403);
+        $data = $request->validate(['valor' => ['required', 'numeric', 'min:1', 'max:9999']]);
+        $payment = $asaas->criarSinalAgendamento($agendamento, (float) $data['valor']);
+        $agendamento->update([
+            'deposit_status' => 'pending',
+            'deposit_amount' => $data['valor'],
+            'deposit_payment_id' => $payment['id'],
+            'deposit_payment_url' => $payment['url'],
+        ]);
+
+        return back()->with('success', 'Cobrança de sinal gerada.');
     }
 
     public function destroy(Agendamento $agendamento): RedirectResponse
     {
         abort_unless($agendamento->tenant_id === app('tenant')->id, 403);
         $agendamento->delete();
+
         return back()->with('success', 'Agendamento excluído.');
     }
 
@@ -201,7 +195,7 @@ class AgendamentoController extends Controller
             $query->where('status', $request->status);
         }
 
-        $filename = 'agendamentos-' . now()->format('Y-m-d') . '.csv';
+        $filename = 'agendamentos-'.now()->format('Y-m-d').'.csv';
 
         return response()->streamDownload(function () use ($query) {
             $handle = fopen('php://output', 'w');

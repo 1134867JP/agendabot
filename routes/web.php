@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HealthController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProfileController;
@@ -8,8 +9,8 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Tenant;
 use App\Http\Controllers\Tenant\ClienteController;
-use App\Http\Controllers\Tenant\EquipeController;
 use App\Http\Controllers\Tenant\ConversaController;
+use App\Http\Controllers\Tenant\EquipeController;
 use App\Http\Controllers\Tenant\HorarioProfissionalController;
 use App\Http\Controllers\Tenant\OpcaoExtraController;
 use App\Http\Controllers\Tenant\ProfissionalController;
@@ -20,10 +21,11 @@ use Illuminate\Support\Facades\Route;
 // Site público
 Route::get('/', [LandingController::class, 'index'])->name('home');
 Route::get('/precos', [LandingController::class, 'precos'])->name('precos');
+Route::get('/health', HealthController::class)->name('health');
 
 // Onboarding
 Route::get('/cadastro', [OnboardingController::class, 'step1'])->name('onboarding.step1');
-Route::post('/cadastro', [OnboardingController::class, 'step1Store']);
+Route::post('/cadastro', [OnboardingController::class, 'step1Store'])->middleware('throttle:6,1');
 Route::middleware('auth')->group(function () {
     Route::get('/cadastro/plano', [OnboardingController::class, 'step2'])->name('onboarding.step2');
     Route::post('/cadastro/checkout', [OnboardingController::class, 'checkout'])->name('onboarding.checkout');
@@ -47,7 +49,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware(['tenant'])->group(function () {
         Route::get('/renovar', [SubscriptionController::class, 'renovar'])->name('tenant.renovar');
         Route::post('/renovar', [SubscriptionController::class, 'processarRenovacao'])->name('tenant.renovar.store');
-        Route::get('/assinar/cancelar', [SubscriptionController::class, 'cancelar'])->name('tenant.cancelar');
+        Route::post('/assinar/cancelar', [SubscriptionController::class, 'cancelar'])->name('tenant.cancelar');
     });
 
     // ── Painel do Dono ────────────────────────────────────────────────────────
@@ -69,6 +71,13 @@ Route::middleware('auth')->group(function () {
 
         // Analytics
         Route::get('analytics', [Tenant\AnalyticsController::class, 'index'])->name('analytics');
+        Route::post('lista-espera', [Tenant\WaitlistController::class, 'store'])->name('waitlist.store');
+        Route::delete('lista-espera/{waitlistEntry}', [Tenant\WaitlistController::class, 'destroy'])->name('waitlist.destroy');
+        Route::patch('agendamentos/{agendamento}/no-show', [Tenant\AgendamentoController::class, 'marcarNoShow'])->name('agendamentos.no-show');
+        Route::post('agendamentos/{agendamento}/sinal', [Tenant\AgendamentoController::class, 'gerarSinal'])->name('agendamentos.sinal');
+        Route::get('integracoes/google-calendar/conectar', [Tenant\GoogleCalendarController::class, 'connect'])->name('calendar.connect');
+        Route::get('integracoes/google-calendar/callback', [Tenant\GoogleCalendarController::class, 'callback'])->name('calendar.callback');
+        Route::delete('integracoes/google-calendar', [Tenant\GoogleCalendarController::class, 'disconnect'])->name('calendar.disconnect');
 
         // Recursos
         Route::resource('recursos', Tenant\RecursoController::class)->except(['show']);
@@ -99,6 +108,7 @@ Route::middleware('auth')->group(function () {
         // Clientes
         Route::get('clientes', [ClienteController::class, 'index'])->name('clientes.index');
         Route::get('clientes/{cliente}', [ClienteController::class, 'show'])->name('clientes.show');
+        Route::get('clientes/{cliente}/exportar', [ClienteController::class, 'export'])->name('clientes.export');
         Route::delete('clientes/{cliente}', [ClienteController::class, 'destroy'])->name('clientes.destroy');
 
         // Conversas WhatsApp
@@ -150,16 +160,16 @@ Route::middleware(['auth', 'superadmin'])->prefix('superadmin')->name('superadmi
     Route::delete('impersonar', [SuperAdmin\TenantController::class, 'pararImpersonar'])->name('impersonar.parar');
 
     Route::get('agendamentos', [SuperAdmin\AgendamentoController::class, 'index'])->name('agendamentos');
-    Route::get('financeiro',   [SuperAdmin\FinanceiroController::class,  'index'])->name('financeiro');
+    Route::get('financeiro', [SuperAdmin\FinanceiroController::class,  'index'])->name('financeiro');
 
-    Route::get('logs',      [SuperAdmin\LogController::class, 'index'])->name('logs');
+    Route::get('logs', [SuperAdmin\LogController::class, 'index'])->name('logs');
     Route::get('logs/json', [SuperAdmin\LogController::class, 'json'])->name('logs.json');
 
-    Route::get('jobs',          [SuperAdmin\JobsController::class, 'index'])->name('jobs');
-    Route::post('jobs/{id}/retry',  [SuperAdmin\JobsController::class, 'retry'])->name('jobs.retry');
-    Route::post('jobs/retry-all',   [SuperAdmin\JobsController::class, 'retryAll'])->name('jobs.retry-all');
-    Route::delete('jobs/{id}',      [SuperAdmin\JobsController::class, 'destroy'])->name('jobs.destroy');
-    Route::delete('jobs',           [SuperAdmin\JobsController::class, 'destroyAll'])->name('jobs.destroy-all');
+    Route::get('jobs', [SuperAdmin\JobsController::class, 'index'])->name('jobs');
+    Route::post('jobs/{id}/retry', [SuperAdmin\JobsController::class, 'retry'])->name('jobs.retry');
+    Route::post('jobs/retry-all', [SuperAdmin\JobsController::class, 'retryAll'])->name('jobs.retry-all');
+    Route::delete('jobs/{id}', [SuperAdmin\JobsController::class, 'destroy'])->name('jobs.destroy');
+    Route::delete('jobs', [SuperAdmin\JobsController::class, 'destroyAll'])->name('jobs.destroy-all');
 
     Route::get('tokens', [SuperAdmin\TokenUsageController::class, 'index'])->name('tokens');
 });
