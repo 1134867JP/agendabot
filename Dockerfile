@@ -27,7 +27,6 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get update && apt-get install -y nodejs \
-    && npm install -g npm@latest \
     && rm -rf /var/lib/apt/lists/*
 
 # Apache: rewrite + deflate (gzip) + expires (cache de assets)
