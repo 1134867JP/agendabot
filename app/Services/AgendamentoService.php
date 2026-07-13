@@ -24,6 +24,8 @@ class AgendamentoService
     public function criar(Tenant $tenant, array $dados): Agendamento
     {
         return DB::transaction(function () use ($tenant, $dados) {
+            // O tenant da sessão/serviço é a única fonte de verdade.
+            $dados['tenant_id'] = $tenant->id;
             $regras = $tenant->regrasAgendamentoConfig();
             $tz = config('app.timezone', 'America/Sao_Paulo');
             $buffer = (int) $regras['buffer_entre_agendamentos_minutos'];
@@ -42,7 +44,14 @@ class AgendamentoService
             } elseif (! empty($dados['profissional_id'])) {
                 $profissional = Profissional::where('id', $dados['profissional_id'])
                     ->where('tenant_id', $tenant->id)
+                    ->where('ativo', true)
                     ->firstOrFail();
+
+                if (! empty($dados['servico_id'])) {
+                    Servico::where('id', $dados['servico_id'])
+                        ->where('tenant_id', $tenant->id)
+                        ->firstOrFail();
+                }
                 $this->validarExpediente($profissional, $inicio, $fim, $tz);
                 $this->validarConflitoProfissional((int) $dados['profissional_id'], $inicio, $fim, $buffer);
             }
@@ -197,7 +206,22 @@ class AgendamentoService
     public function reagendar(Agendamento $agendamento, array $dados): Agendamento
     {
         return DB::transaction(function () use ($agendamento, $dados) {
+            if ((int) $agendamento->tenant_id !== (int) ($agendamento->tenant?->id)) {
+                throw new \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException('Agendamento fora do tenant atual.');
+            }
+
             $profissionalId = (int) ($dados['profissional_id'] ?? $agendamento->profissional_id);
+            Profissional::where('id', $profissionalId)
+                ->where('tenant_id', $agendamento->tenant_id)
+                ->where('ativo', true)
+                ->firstOrFail();
+
+            if (! empty($dados['servico_id'])) {
+                Servico::where('id', $dados['servico_id'])
+                    ->where('tenant_id', $agendamento->tenant_id)
+                    ->firstOrFail();
+            }
+
             DB::select('SELECT pg_advisory_xact_lock(?)', [$profissionalId]);
 
             $tz = config('app.timezone', 'America/Sao_Paulo');
@@ -300,7 +324,13 @@ class AgendamentoService
             if (! empty($dados['servico_id'])) {
                 $servico = Servico::where('id', $dados['servico_id'])
                     ->where('tenant_id', $tenant->id)
-                    ->first();
+                    ->firstOrFail();
+            }
+
+            if (! empty($dados['cliente_id'])) {
+                \App\Models\Cliente::where('id', $dados['cliente_id'])
+                    ->where('tenant_id', $tenant->id)
+                    ->firstOrFail();
             }
             $duracao = $servico?->duracao_minutos ?? $dados['duracao_minutos'] ?? 30;
 
