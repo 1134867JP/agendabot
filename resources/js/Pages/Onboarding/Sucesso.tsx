@@ -6,7 +6,7 @@ interface Props extends PageProps {
     user: { name: string };
 }
 
-const steps = [
+const steps: Array<{ n: number; title: string; desc: string; href?: string }> = [
     {
         n: 1,
         title: 'Conecte seu WhatsApp',
