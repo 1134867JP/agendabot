@@ -3,8 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: agendabot-app
-    container_name: agendabot-app
+    image: agendou-app
+    container_name: agendou-app
     restart: always
     volumes:
       - storage_data:/var/www/html/storage
@@ -32,7 +32,7 @@ services:
 
   db:
     image: postgres:16
-    container_name: agendabot-db
+    container_name: agendou-db
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
@@ -47,8 +47,8 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   worker:
-    image: agendabot-app
-    container_name: agendabot-worker
+    image: agendou-app
+    container_name: agendou-worker
     restart: always
     command: php artisan queue:work --queue=messages,notifications,financial,sync,maintenance,default --sleep=2 --tries=3 --timeout=90
     volumes:
@@ -70,8 +70,8 @@ services:
       QUEUE_CONNECTION: database
 
   scheduler:
-    image: agendabot-app
-    container_name: agendabot-scheduler
+    image: agendou-app
+    container_name: agendou-scheduler
     restart: always
     command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
     volumes:

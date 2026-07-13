@@ -46,7 +46,7 @@ export default function Renovar({ tenant, plano }: Props) {
                     Acesso suspenso
                 </h1>
                 <p className="mt-2 text-sm" style={{ color: 'var(--text-3)' }}>
-                    Renove sua assinatura para continuar usando o AgendaBot.
+                    Renove sua assinatura para continuar usando o Agendou.
                 </p>
 
                 <div className="card mx-auto mt-6 max-w-xs p-5">

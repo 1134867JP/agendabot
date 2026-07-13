@@ -100,7 +100,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
                 $evolution->enviarMensagem(
                     $this->tenant->evolution_instance,
                     $this->tenant->telefone_whatsapp,
-                    "⚠️ *AgendaBot — Aviso de limite*\n\nVocê atingiu 80% do limite de agendamentos via bot do seu plano ({$agendamentosMes}/{$limiteBot} este mês).\n\nFaça upgrade para continuar recebendo agendamentos automaticamente: ".url('/renovar'),
+                    "⚠️ *Agendou — Aviso de limite*\n\nVocê atingiu 80% do limite de agendamentos via bot do seu plano ({$agendamentosMes}/{$limiteBot} este mês).\n\nFaça upgrade para continuar recebendo agendamentos automaticamente: ".url('/renovar'),
                 );
             }
 
