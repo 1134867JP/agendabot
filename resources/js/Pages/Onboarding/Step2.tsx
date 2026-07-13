@@ -56,7 +56,7 @@ export default function OnboardingStep2({ planos }: Props) {
                     <h1 className="text-3xl text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
                         Escolha seu plano
                     </h1>
-                    <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>Comece grátis por 14 dias. Cancele quando quiser.</p>
+                    <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>Escolha o plano para o fim do trial. Nenhum pagamento será solicitado agora.</p>
                 </div>
 
                 <div className="grid w-full max-w-4xl gap-5 sm:grid-cols-3">
@@ -112,7 +112,7 @@ export default function OnboardingStep2({ planos }: Props) {
                                         : { background: 'var(--bg-surface-2)', color: 'var(--text-2)', border: '1px solid var(--border-strong)' }
                                 }
                             >
-                                {loading === slug ? 'Aguarde…' : 'Começar grátis'}
+                                {loading === slug ? 'Aguarde…' : 'Escolher plano'}
                             </button>
                         </div>
                     ))}
@@ -129,7 +129,7 @@ export default function OnboardingStep2({ planos }: Props) {
                     Continuar com o período de teste gratuito →
                 </button>
                 <p className="mt-2 text-xs" style={{ color: 'var(--text-3)' }}>
-                    Sem taxa de cancelamento. Cancele a qualquer momento.
+                    14 dias grátis, sem cartão. Depois, escolha entre Pix ou cartão.
                 </p>
             </div>
         </div>
