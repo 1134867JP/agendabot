@@ -58,10 +58,10 @@ class SubscriptionPaymentTest extends TestCase
         [$tenant, $user] = $this->tenantUser();
         Http::fake([
             '*/customers' => Http::response(['id' => 'cus_card'], 200),
-            '*/subscriptions' => Http::response(['id' => 'sub_anual'], 200),
             '*/subscriptions/sub_anual/payments*' => Http::response([
                 'data' => [['invoiceUrl' => 'https://asaas.test/card/123']],
             ], 200),
+            '*/subscriptions' => Http::response(['id' => 'sub_anual'], 200),
         ]);
 
         $this->actingAs($user)
