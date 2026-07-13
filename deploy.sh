@@ -17,6 +17,11 @@ trap rollback ERR
 
 echo "=== [$(date '+%Y-%m-%d %H:%M:%S')] Deploy iniciado ==="
 
+echo "--- validando configuração do compose ---"
+docker compose config --quiet
+docker network inspect web >/dev/null
+docker network inspect evolution-net >/dev/null
+
 echo "--- git pull ---"
 git pull origin "$DEPLOY_BRANCH"
 
@@ -64,6 +69,12 @@ docker exec agendabot-app php artisan whatsapp:reconfigure-webhooks
 
 echo "--- subindo worker e scheduler com nova imagem ---"
 docker compose up -d --no-deps --force-recreate worker scheduler
+for service in agendabot-worker agendabot-scheduler; do
+    if [ "$(docker inspect -f '{{.State.Running}}' "$service" 2>/dev/null || true)" != "true" ]; then
+        echo "$service não está em execução"
+        exit 1
+    fi
+done
 
 echo "--- health check final ---"
 docker exec agendabot-app curl -fsS http://127.0.0.1/health >/dev/null

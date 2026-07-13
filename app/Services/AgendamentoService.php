@@ -372,9 +372,7 @@ class AgendamentoService
             Log::channel('db')->info('AGENDAMENTO_INSERT', [
                 'id' => $agendamento->id,
                 'tenant_id' => $tenant->id,
-                'tenant' => $tenant->nome,
-                'cliente_nome' => $agendamento->cliente_nome,
-                'cliente_telefone' => $agendamento->cliente_telefone,
+                'origin' => $agendamento->origem,
                 'profissional_id' => $agendamento->profissional_id,
                 'servico_id' => $agendamento->servico_id,
                 'data_hora_brt' => $inicio->toDateTimeString(),

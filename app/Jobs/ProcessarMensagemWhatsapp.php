@@ -124,7 +124,6 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             }
             Log::channel('jobs')->info('MENSAGEM_DUPLICADA_IGNORADA', [
                 'tenant' => $this->tenant->id,
-                'telefone' => $this->telefone,
                 'evolution_message_id' => $this->evolutionMessageId,
             ]);
 
@@ -178,7 +177,6 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
 
         Log::channel('jobs')->debug('BOT_HISTORICO', [
             'tenant' => $this->tenant->id,
-            'telefone' => $this->telefone,
             'total_msgs' => count($historico),
             'roles' => array_column($historico, 'role'),
         ]);
@@ -236,8 +234,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             ]);
             Log::channel('jobs')->error('EVOLUTION_SEND_FAILED', [
                 'tenant' => $this->tenant->id,
-                'telefone' => $this->telefone,
-                'resposta' => mb_substr($resposta, 0, 200),
+                'response_length' => mb_strlen($resposta),
             ]);
         }
 
@@ -247,7 +244,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             'metadata' => ['sent' => $enviado],
         ]);
 
-        Log::channel('jobs')->info('BOT_RESPOSTA', ['telefone' => $this->telefone, 'resposta' => mb_substr($resposta, 0, 200)]);
+        Log::channel('jobs')->info('BOT_RESPONSE_SENT', ['tenant_id' => $this->tenant->id, 'response_length' => mb_strlen($resposta)]);
     }
 
     /**
