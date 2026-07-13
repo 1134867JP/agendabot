@@ -42,7 +42,7 @@ class WebhookChatsContatosUpsertTest extends TestCase
 
         $telefone = '5551933333333';
 
-        $response = $this->postJson("/webhook/{$this->tenant->slug}?token=token-teste-chats", [
+        $response = $this->withHeader('X-Webhook-Token', 'token-teste-chats')->postJson("/webhook/{$this->tenant->slug}", [
             'event' => 'chats.upsert',
             'data'  => [[
                 'remoteJid' => "{$telefone}@s.whatsapp.net",
@@ -70,7 +70,7 @@ class WebhookChatsContatosUpsertTest extends TestCase
 
         $telefone = '5551933333334';
 
-        $response = $this->postJson("/webhook/{$this->tenant->slug}?token=token-teste-chats", [
+        $response = $this->withHeader('X-Webhook-Token', 'token-teste-chats')->postJson("/webhook/{$this->tenant->slug}", [
             'event' => 'chats.upsert',
             'data'  => [[
                 'remoteJid'   => "{$telefone}@s.whatsapp.net",
@@ -99,7 +99,7 @@ class WebhookChatsContatosUpsertTest extends TestCase
             'nome'      => 'Cliente WhatsApp',
         ]);
 
-        $response = $this->postJson("/webhook/{$this->tenant->slug}?token=token-teste-chats", [
+        $response = $this->withHeader('X-Webhook-Token', 'token-teste-chats')->postJson("/webhook/{$this->tenant->slug}", [
             'event' => 'contacts.upsert',
             'data'  => [[
                 'remoteJid' => "{$telefone}@s.whatsapp.net",
@@ -126,7 +126,7 @@ class WebhookChatsContatosUpsertTest extends TestCase
             'nome'      => 'Nome Já Correto',
         ]);
 
-        $this->postJson("/webhook/{$this->tenant->slug}?token=token-teste-chats", [
+        $this->withHeader('X-Webhook-Token', 'token-teste-chats')->postJson("/webhook/{$this->tenant->slug}", [
             'event' => 'contacts.upsert',
             'data'  => [[
                 'remoteJid' => "{$telefone}@s.whatsapp.net",
