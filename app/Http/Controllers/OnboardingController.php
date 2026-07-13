@@ -2,16 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\AsaasApiException;
 use App\Jobs\CreateEvolutionInstanceJob;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Services\AsaasService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -75,48 +72,25 @@ class OnboardingController extends Controller
 
     public function checkout(Request $request): RedirectResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'plano' => 'required|in:starter,pro,business',
         ]);
 
-        $user = auth()->user();
-        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', $user->id))->first();
+        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->first();
 
         if (! $tenant) {
             return redirect()->route('dashboard')->with('erro', 'Complete o cadastro do seu estabelecimento antes de escolher um plano.');
         }
 
-        $taxa = config("plans.{$request->plano}.taxa_agendamento_bot", 0.40);
-        $tenant->update(['plano' => $request->plano, 'taxa_agendamento_bot' => $taxa]);
-
-        try {
-            $asaas = app(AsaasService::class);
-            $customerId = $asaas->criarOuBuscarCliente($user, $tenant);
-            $subscription = $asaas->criarAssinatura($customerId, $request->plano);
-
-            $tenant->update(['asaas_subscription_id' => $subscription['id'] ?? null]);
-
-            $link = $asaas->gerarLinkCheckout($subscription['id'] ?? '');
-            if ($link) {
-                return redirect($link);
-            }
-        } catch (AsaasApiException $e) {
-            Log::channel('jobs')->error('Falha Asaas no checkout do onboarding', [
-                'tenant_id' => $tenant->id,
-                'erro' => $e->getMessage(),
-            ]);
-            // Segue o onboarding mesmo sem pagamento configurado — o tenant fica em trial
-            // e pode configurar o pagamento depois; não vale perder o cadastro por instabilidade do Asaas.
-        } catch (\Throwable $e) {
-            Log::channel('jobs')->error('Erro inesperado no checkout do onboarding', [
-                'tenant_id' => $tenant->id,
-                'erro' => $e->getMessage(),
-            ]);
-        }
+        // O trial não exige cartão. O método de pagamento será escolhido apenas
+        // quando o cliente decidir ativar ou renovar a assinatura.
+        $tenant->update([
+            'plano' => $validated['plano'],
+            'taxa_agendamento_bot' => 0,
+        ]);
 
         return redirect()->route('onboarding.step3');
     }
-
     public function step3(): Response|RedirectResponse
     {
         $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->first();
