@@ -25,9 +25,32 @@ class AsaasWebhookController extends Controller
 
         $externalReference = (string) data_get($payment, 'externalReference', '');
         if (preg_match('/^deposit_agendamento_(\d+)$/', $externalReference, $matches)) {
-            $agendamento = Agendamento::find((int) $matches[1]);
-            if ($agendamento && in_array($event, ['PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED'], true)) {
-                $agendamento->update(['deposit_status' => 'paid']);
+            $paymentId = (string) data_get($payment, 'id', '');
+            $agendamento = Agendamento::whereKey((int) $matches[1])
+                ->where('deposit_payment_id', $paymentId)
+                ->first();
+
+            if (! $agendamento) {
+                return response('ok');
+            }
+
+            $valorRecebido = (float) data_get($payment, 'value', 0);
+            $valorEsperado = (float) ($agendamento->deposit_amount ?? 0);
+
+            if ($valorEsperado > 0 && abs($valorRecebido - $valorEsperado) > 0.01) {
+                \Illuminate\Support\Facades\Log::warning('ASAAS_DEPOSIT_AMOUNT_MISMATCH', [
+                    'agendamento_id' => $agendamento->id,
+                    'payment_id' => $paymentId,
+                ]);
+
+                return response('ok');
+            }
+
+            if (in_array($event, ['PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED'], true)) {
+                $agendamento->update([
+                    'deposit_status' => 'paid',
+                    'deposit_payment_id' => $paymentId,
+                ]);
             }
 
             return response('ok');

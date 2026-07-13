@@ -21,8 +21,8 @@ class EnsureHasTenant
 
         $tenant = Tenant::find($tenantId);
 
-        $isImpersonating = session()->has('impersonando_tenant_id');
         $user = $request->user();
+        $isImpersonating = session()->has('impersonando_tenant_id') && (bool) $user?->is_super_admin;
 
         // Tenant inexistente ou sessão obsoleta → limpar e redirecionar
         if (! $tenant) {

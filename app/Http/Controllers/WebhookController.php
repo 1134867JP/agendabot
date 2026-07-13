@@ -19,14 +19,20 @@ class WebhookController extends Controller
             ->where('ativo', true)
             ->firstOrFail();
 
-        if (! $tenant->webhook_token || ! hash_equals($tenant->webhook_token, (string) $request->query('token', ''))) {
-            return response('ok');
+        $providedToken = (string) $request->header('X-Webhook-Token', '');
+        if ($providedToken === '' && str_starts_with($request->header('Authorization', ''), 'Bearer ')) {
+            $providedToken = substr($request->header('Authorization'), 7);
+        }
+
+        if (! $tenant->webhook_token || $providedToken === '' || ! hash_equals($tenant->webhook_token, $providedToken)) {
+            Log::warning('WEBHOOK_UNAUTHORIZED', ['tenant_id' => $tenant->id]);
+            return response('Unauthorized', 401);
         }
 
         $data = $request->json()->all();
 
         // Log para debug do formato Evolution v2
-        Log::info('WEBHOOK_RAW', ['tenant' => $tenantSlug, 'event' => data_get($data, 'event'), 'keys' => array_keys($data)]);
+        Log::info('WEBHOOK_RECEIVED', ['tenant_id' => $tenant->id, 'event' => data_get($data, 'event')]);
 
         // Atualizar status de conexão quando WhatsApp conecta/desconecta
         $event = data_get($data, 'event');
@@ -67,6 +73,10 @@ class WebhookController extends Controller
         }
 
         if (! $tenant->bot_ativo) {
+            return response('ok');
+        }
+
+        if (! in_array($event, ['messages.upsert', 'MESSAGES_UPSERT'], true)) {
             return response('ok');
         }
 
@@ -133,7 +143,7 @@ class WebhookController extends Controller
         $pushName = data_get($msgData, 'pushName') ?: null;
         $tipoInterno = $tipoMidia ?? 'texto';
 
-        Log::info('WEBHOOK_MSG', ['telefone' => $telefone, 'tipo' => $messageType, 'push_name' => $pushName, 'mensagem' => mb_substr($conteudoClaude, 0, 200)]);
+        Log::info('WEBHOOK_MESSAGE_ACCEPTED', ['tenant_id' => $tenant->id, 'message_id' => $evolutionMessageId, 'tipo' => $messageType, 'conteudo_length' => mb_strlen($conteudoClaude)]);
 
         ProcessarMensagemWhatsapp::dispatch($tenant, $telefone, $conteudoClaude, $evolutionMessageId, $pushName, $tipoInterno)
             ->onQueue('messages');
