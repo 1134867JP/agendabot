@@ -17,13 +17,13 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: agendabot_testing
+          POSTGRES_DB: agendou_testing
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U postgres -d agendabot_testing"
+          --health-cmd="pg_isready -U postgres -d agendou_testing"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5

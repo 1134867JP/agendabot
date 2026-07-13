@@ -74,7 +74,7 @@ class GerarCobrancaBotJob implements ShouldQueue
                 }
 
                 $vencimento = now()->addDays(5);
-                $descricao  = "AgendaBot — Taxa bot {$periodoAnterior}: {$quantidade} agendamento(s) × R$ " . number_format($taxa, 2, ',', '.');
+                $descricao  = "Agendou — Taxa bot {$periodoAnterior}: {$quantidade} agendamento(s) × R$ " . number_format($taxa, 2, ',', '.');
 
                 $chargeId = $asaas->criarCobrancaAvulsa(
                     $tenant->asaas_customer_id,

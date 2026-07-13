@@ -111,7 +111,7 @@ export default function AppLayout({ children, title, subtitle, fullHeight }: Pro
                         <MenuIcon />
                     </button>
                     <span className="text-base text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
-                        AgendaBot
+                        Agendou
                     </span>
                     {currentTenant && (
                         <span className="min-w-0 flex-1 truncate text-sm" style={{ color: 'var(--text-3)' }}>{currentTenant.nome}</span>

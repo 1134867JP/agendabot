@@ -28,7 +28,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
 
                 <Link href={route('home')} className="relative flex items-center gap-2.5">
                     <span className="flex h-8 w-8 items-center justify-center rounded-xl text-sm font-bold text-white" style={{ background: JADE }}>A</span>
-                    <span className="text-xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}>AgendaBot</span>
+                    <span className="text-xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}>Agendou</span>
                 </Link>
 
                 <div className="relative">
@@ -52,7 +52,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                     </p>
                 </div>
 
-                <p className="relative text-[11px]" style={{ color: 'var(--text-3)' }}>© {new Date().getFullYear()} AgendaBot</p>
+                <p className="relative text-[11px]" style={{ color: 'var(--text-3)' }}>© {new Date().getFullYear()} Agendou</p>
             </div>
 
             {/* ── Painel direito — formulário ─────────────────────────────────── */}
@@ -68,7 +68,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                     <div className="mb-8 lg:hidden text-center">
                         <div className="mb-3 flex items-center justify-center gap-2">
                             <span className="flex h-8 w-8 items-center justify-center rounded-xl text-sm font-bold text-white" style={{ background: JADE }}>A</span>
-                            <span className="text-xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}>AgendaBot</span>
+                            <span className="text-xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}>Agendou</span>
                         </div>
                     </div>
 
