@@ -1,4 +1,4 @@
-# AgendaBot
+# Agendou
 
 Plataforma SaaS multi-tenant de agendamento via WhatsApp com bot de IA. Estabelecimentos conectam seu WhatsApp Business e passam a receber agendamentos automaticamente — sem que o cliente precise instalar nada.
 
@@ -474,7 +474,7 @@ Custo estimado: **~US$ 0,0004 por mensagem**. O painel `/superadmin/tokens` exib
 Copie `.env.example` para `.env` e preencha:
 
 ```env
-APP_NAME=AgendaBot
+APP_NAME=Agendou
 APP_URL=https://seu-dominio.com
 
 DB_CONNECTION=pgsql

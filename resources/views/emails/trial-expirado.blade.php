@@ -1,7 +1,7 @@
 <x-mail::message>
 # Seu período de teste encerrou
 
-Olá! Obrigado por testar o **AgendaBot** com o estabelecimento **{{ $tenant->nome }}**.
+Olá! Obrigado por testar o **Agendou** com o estabelecimento **{{ $tenant->nome }}**.
 
 Seu trial de 14 dias chegou ao fim. Para continuar recebendo agendamentos pelo WhatsApp sem interrupção, escolha um plano.
 
@@ -13,5 +13,5 @@ Escolher meu plano
 
 Se tiver qualquer dúvida, responda este e-mail.
 
-— Equipe AgendaBot
+— Equipe Agendou
 </x-mail::message>

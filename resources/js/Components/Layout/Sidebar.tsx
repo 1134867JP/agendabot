@@ -140,7 +140,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                                     <polyline points="9 16 11 18 15 14"/>
                                 </svg>
                             </span>
-                            AgendaBot
+                            Agendou
                         </span>
                     </div>
                     {currentTenant && (

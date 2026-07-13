@@ -15,7 +15,7 @@ class GoogleCalendarService
         $end = $agendamento->fim ?? $start?->copy()->addMinutes($agendamento->duracao_minutos ?? 30);
         $payload = [
             'summary' => ($agendamento->servico?->nome ?? $agendamento->recurso?->nome ?? 'Agendamento').' — '.$agendamento->cliente_nome,
-            'description' => "AgendaBot #{$agendamento->id}",
+            'description' => "Agendou #{$agendamento->id}",
             'start' => ['dateTime' => $start->toRfc3339String(), 'timeZone' => config('app.timezone')],
             'end' => ['dateTime' => $end->toRfc3339String(), 'timeZone' => config('app.timezone')],
         ];

@@ -45,7 +45,7 @@ const faqs = [
     },
     {
         q: 'Como funciona o WhatsApp?',
-        a: 'Você conecta o seu próprio número de WhatsApp Business. O AgendaBot cria uma instância dedicada para seu número — nenhum software extra para instalar.',
+        a: 'Você conecta o seu próprio número de WhatsApp Business. O Agendou cria uma instância dedicada para seu número — nenhum software extra para instalar.',
     },
     {
         q: 'O bot funciona fora do horário comercial?',
@@ -74,7 +74,7 @@ export default function Precos({ planos }: Props) {
 
     return (
         <LandingLayout currentPage="precos">
-            <Head title="Planos — AgendaBot" />
+            <Head title="Planos — Agendou" />
 
             {/* ── Hero ────────────────────────────────────────────────────────── */}
             <div className="px-6 pb-4 pt-28 text-center">

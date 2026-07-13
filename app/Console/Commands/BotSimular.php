@@ -33,7 +33,7 @@ class BotSimular extends Command
         }
 
         $this->line('');
-        $this->line("🤖 <fg=cyan>AgendaBot Simulator</fg=cyan> — tenant: <fg=green>{$tenant->nome}</fg=green>");
+        $this->line("🤖 <fg=cyan>Agendou Simulator</fg=cyan> — tenant: <fg=green>{$tenant->nome}</fg=green>");
         $this->line("   Telefone simulado: <fg=yellow>{$telefone}</fg=yellow>");
         $this->line("   Digite <fg=red>sair</fg=red> para encerrar | <fg=yellow>reset</fg=yellow> para nova conversa");
         $this->line(str_repeat('─', 60));
