@@ -99,5 +99,5 @@ jobs:
           timeout: 60s
           command_timeout: 15m
           script: |
-            cd /opt/apps/agendou
+            cd /opt/apps/agendabot
             bash deploy.sh
