@@ -43,12 +43,12 @@ class CommercialFeaturesTest extends TestCase
         $agendamento = Agendamento::create([
             'tenant_id' => $tenant->id, 'cliente_nome' => 'Maria', 'cliente_telefone' => '5554',
             'inicio' => now()->addDay(), 'fim' => now()->addDay()->addHour(), 'status' => 'confirmado',
-            'deposit_status' => 'pending',
+            'deposit_status' => 'pending', 'deposit_payment_id' => 'pay-test-001', 'deposit_amount' => 10,
         ]);
 
         $this->postJson(route('asaas.webhook'), [
             'event' => 'PAYMENT_RECEIVED',
-            'payment' => ['externalReference' => "deposit_agendamento_{$agendamento->id}"],
+            'payment' => ['id' => 'pay-test-001', 'value' => 10, 'externalReference' => "deposit_agendamento_{$agendamento->id}"],
         ], ['asaas-access-token' => 'secret'])->assertOk();
 
         $this->assertSame('paid', $agendamento->fresh()->deposit_status);
