@@ -42,6 +42,10 @@ class SubscriptionPaymentTest extends TestCase
 
         $this->actingAs($user)
             ->withSession(['tenant_id' => $tenant->id])
+            ->withHeaders([
+                'X-Inertia' => 'true',
+                'X-Requested-With' => 'XMLHttpRequest',
+            ])
             ->post(route('tenant.renovar.store'), [
                 'plano' => 'pro',
                 'ciclo' => 'mensal',
@@ -67,6 +71,10 @@ class SubscriptionPaymentTest extends TestCase
 
         $this->actingAs($user)
             ->withSession(['tenant_id' => $tenant->id])
+            ->withHeaders([
+                'X-Inertia' => 'true',
+                'X-Requested-With' => 'XMLHttpRequest',
+            ])
             ->post(route('tenant.renovar.store'), [
                 'plano' => 'starter',
                 'ciclo' => 'anual',
