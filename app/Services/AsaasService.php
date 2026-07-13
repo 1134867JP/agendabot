@@ -103,9 +103,7 @@ class AsaasService
             return $url;
         }
 
-        if ($tenant->asaas_subscription_id) {
-            $this->cancelarAssinatura($tenant->asaas_subscription_id);
-        }
+        $assinaturaAnterior = $tenant->asaas_subscription_id;
 
         $response = $this->http()->post('/subscriptions', [
             'customer' => $customerId,
@@ -121,8 +119,6 @@ class AsaasService
         if (! $response->successful() || ! is_string($subscriptionId) || $subscriptionId === '') {
             throw new AsaasApiException('Não foi possível criar a assinatura: '.$response->body());
         }
-
-        $tenant->update(['asaas_subscription_id' => $subscriptionId]);
 
         $payments = $this->http()->get("/subscriptions/{$subscriptionId}/payments", ['limit' => 1]);
         $url = $payments->json('data.0.invoiceUrl');
