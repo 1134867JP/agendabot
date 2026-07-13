@@ -23,7 +23,7 @@ class SubscriptionController extends Controller
         ]);
     }
 
-    public function processarRenovacao(Request $request, AsaasService $asaas): RedirectResponse
+    public function processarRenovacao(Request $request, AsaasService $asaas): \Symfony\Component\HttpFoundation\Response
     {
         $validated = $request->validate([
             'plano' => 'required|in:starter,pro,business',
@@ -47,7 +47,10 @@ class SubscriptionController extends Controller
                 'taxa_agendamento_bot' => 0,
             ]);
 
-            return redirect()->away($url);
+            // O POST é feito pelo Inertia via Axios. Um redirect 302 externo
+            // faria o Axios seguir o checkout do Asaas dentro do XHR e falhar
+            // por CORS. Inertia::location força uma navegação do navegador.
+            return Inertia::location($url);
         } catch (AsaasApiException $e) {
             Log::channel('jobs')->error('Falha ao gerar renovação no Asaas', [
                 'tenant_id' => $tenant->id,
