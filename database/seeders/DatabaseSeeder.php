@@ -12,7 +12,7 @@ class DatabaseSeeder extends Seeder
     {
         // Super Admin
         User::firstOrCreate(
-            ['email' => 'joao@agendabot.com'],
+            ['email' => 'joao@agendou.com'],
             [
                 'name'           => 'João Pedro',
                 'password'       => Hash::make('password'),

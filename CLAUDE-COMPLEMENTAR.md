@@ -1,6 +1,6 @@
 # Prompt Complementar — Super Admin + Painel do Dono
 
-> Adicionar ao projeto AgendaBot existente. Considere toda a estrutura já criada
+> Adicionar ao projeto Agendou existente. Considere toda a estrutura já criada
 > (tenants, recursos, agendamentos, conversas, evolution API, bot WhatsApp).
 
 ---
@@ -504,7 +504,7 @@ interface AgendamentoCalendario {
 // 1. Super Admin (você)
 User::create([
     'name'           => 'João Pedro',
-    'email'          => 'joao@agendabot.com',
+    'email'          => 'joao@agendou.com',
     'password'       => Hash::make('sua-senha-aqui'),
     'is_super_admin' => true,
 ]);

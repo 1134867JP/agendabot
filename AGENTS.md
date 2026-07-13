@@ -2,7 +2,7 @@
 
 ## Visão do Produto
 
-**AgendaBot** — plataforma SaaS multi-tenant onde estabelecimentos (barbearias, quadras esportivas, estéticas, etc.) conectam seu WhatsApp Business e passam a receber agendamentos automaticamente via bot conversacional com IA.
+**Agendou** — plataforma SaaS multi-tenant onde estabelecimentos (barbearias, quadras esportivas, estéticas, etc.) conectam seu WhatsApp Business e passam a receber agendamentos automaticamente via bot conversacional com IA.
 
 - O **cliente final** agenda pelo WhatsApp do estabelecimento, sem instalar nada
 - O **dono do estabelecimento** acessa o painel web apenas para configurar
@@ -23,8 +23,8 @@
 ## Fase 1 — Setup
 
 ```bash
-composer create-project laravel/laravel agendabot
-cd agendabot
+composer create-project laravel/laravel agendou
+cd agendou
 composer require laravel/breeze inertia/laravel-inertia tightenco/ziggy guzzlehttp/guzzle
 php artisan breeze:install react --typescript
 npm install
@@ -34,11 +34,11 @@ php artisan migrate
 
 ### `.env`
 ```env
-APP_NAME=AgendaBot
+APP_NAME=Agendou
 APP_URL=http://localhost:8000
 
 DB_CONNECTION=pgsql
-DB_DATABASE=agendabot
+DB_DATABASE=agendou
 DB_USERNAME=postgres
 DB_PASSWORD=secret
 
@@ -802,7 +802,7 @@ interface Props {
 // 1. Super admin
 $superAdmin = User::create([
     'name'     => 'Super Admin',
-    'email'    => 'admin@agendabot.com',
+    'email'    => 'admin@agendou.com',
     'password' => Hash::make('password'),
     'is_super_admin' => true,
 ]);
@@ -888,7 +888,7 @@ $this->app->singleton(AgendamentoService::class);
 
 ## Fase 12 — Fluxo de Onboarding de um Novo Tenant
 
-1. Dono se cadastra no AgendaBot (auth normal)
+1. Dono se cadastra no Agendou (auth normal)
 2. Cria um tenant: informa **nome** e **tipo de serviço**
 3. Sistema cria automaticamente a instância na Evolution API (`{slug}-instance`)
 4. Configura automaticamente o webhook: `POST /webhook/{slug}`

@@ -1,8 +1,8 @@
-# AgendaBot v2 — Implementation Plan
+# Agendou v2 — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Evoluir o AgendaBot do esquema v1 (recursos + horarios_funcionamento) para o v2 genérico (profissionais + serviços + clientes + mensagens + bot configurável com transfer-to-human).
+**Goal:** Evoluir o Agendou do esquema v1 (recursos + horarios_funcionamento) para o v2 genérico (profissionais + serviços + clientes + mensagens + bot configurável com transfer-to-human).
 
 **Architecture:** Additive migrations preservam o que existe. Novos models coexistem com os antigos. BotService é reescrito para usar a nova estrutura de conversas com tabela `mensagens` separada. ClaudeService é substituído pelo ClaudeAgentService com system prompt dinâmico por tenant.
 
@@ -2537,7 +2537,7 @@ git commit -m "feat: add setup progress banner to tenant dashboard"
 public function run(): void
 {
     $superAdmin = \App\Models\User::firstOrCreate(
-        ['email' => 'admin@agendabot.com'],
+        ['email' => 'admin@agendou.com'],
         [
             'name'           => 'Super Admin',
             'password'       => \Hash::make('password'),

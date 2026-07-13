@@ -1,6 +1,6 @@
 # Prompt Complementar — Correções Cirúrgicas de UX + Estilo Unificado
 
-> Aplicar sobre o projeto AgendaBot existente. Não reescrever o que já funciona —
+> Aplicar sobre o projeto Agendou existente. Não reescrever o que já funciona —
 > corrigir os três problemas específicos identificados e unificar o estilo visual.
 
 ---
@@ -257,7 +257,7 @@ const sections = [
   <div className="px-5 py-5 border-b border-border">
     <span className="font-display text-xl text-white flex items-center gap-2">
       <span className="w-2 h-2 rounded-full bg-emerald inline-block" />
-      AgendaBot
+      Agendou
     </span>
     {/* Nome do tenant atual */}
     <span className="text-[11px] text-ink-3 mt-1 block truncate">
@@ -426,7 +426,7 @@ Manter o layout fora do painel (sem sidebar), mas com estilo dark:
 // Card centralizado: bg-app-surface border border-border rounded-2xl max-w-sm p-8
 // Logo no topo: font-display text-2xl text-white com dot emerald
 // Título: "Bem-vindo de volta"
-// Subtítulo: "Entre na sua conta AgendaBot."
+// Subtítulo: "Entre na sua conta Agendou."
 // Link embaixo: "Ainda não tem conta? Começar grátis →"
 ```
 
@@ -435,7 +435,7 @@ Manter o layout fora do painel (sem sidebar), mas com estilo dark:
 ## Fluxo corrigido completo
 
 ```
-Usuário acessa agendabot.com
+Usuário acessa agendou.com
   → Navbar: [Como funciona] [Preços] | [Entrar] [Começar grátis]
 
 Clica em "Entrar"

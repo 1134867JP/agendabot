@@ -480,7 +480,7 @@ APP_URL=https://seu-dominio.com
 DB_CONNECTION=pgsql
 DB_HOST=db
 DB_PORT=5432
-DB_DATABASE=agendabot
+DB_DATABASE=agendou
 DB_USERNAME=postgres
 DB_PASSWORD=senha-segura
 
@@ -497,7 +497,7 @@ ASAAS_SANDBOX=true
 
 MAIL_MAILER=smtp
 MAIL_HOST=
-MAIL_FROM_ADDRESS=noreply@agendabot.com
+MAIL_FROM_ADDRESS=noreply@agendou.com
 ```
 
 ### Subir com Docker
@@ -506,11 +506,11 @@ MAIL_FROM_ADDRESS=noreply@agendabot.com
 docker compose up -d
 
 # Primeira vez: migrar banco e criar dados de exemplo
-docker exec -it agendabot-app php artisan migrate --seed
+docker exec -it agendou-app php artisan migrate --seed
 ```
 
 O seeder cria:
-- **Super admin:** `admin@agendabot.com` / `password`
+- **Super admin:** `admin@agendou.com` / `password`
 - Dois tenants de exemplo (Barbearia do João e Arena Sports) com profissionais e horários
 
 ### Desenvolvimento local
