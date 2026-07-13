@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\AsaasApiException;
 use App\Services\AsaasService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -16,23 +18,45 @@ class SubscriptionController extends Controller
 
         return Inertia::render('Tenant/Renovar', [
             'tenant' => $tenant,
-            'plano' => config("plans.{$tenant->plano}"),
+            'planos' => config('plans'),
+            'planoAtual' => $tenant->plano,
         ]);
     }
 
-    public function processarRenovacao(Request $request): RedirectResponse
+    public function processarRenovacao(Request $request, AsaasService $asaas): RedirectResponse
     {
+        $validated = $request->validate([
+            'plano' => 'required|in:starter,pro,business',
+            'ciclo' => 'required|in:mensal,anual',
+            'metodo' => 'required|in:CREDIT_CARD,PIX',
+        ]);
+
         $tenant = app('tenant');
 
-        $linkPagamento = app(AsaasService::class)
-            ->gerarLinkCheckout($tenant->asaas_subscription_id ?? '');
+        try {
+            $url = $asaas->criarCheckoutRenovacao(
+                $request->user(),
+                $tenant,
+                $validated['plano'],
+                $validated['ciclo'],
+                $validated['metodo'],
+            );
 
-        if ($linkPagamento) {
-            return redirect($linkPagamento);
+            $tenant->update([
+                'plano' => $validated['plano'],
+                'taxa_agendamento_bot' => 0,
+            ]);
+
+            return redirect()->away($url);
+        } catch (AsaasApiException $e) {
+            Log::channel('jobs')->error('Falha ao gerar renovação no Asaas', [
+                'tenant_id' => $tenant->id,
+                'erro' => $e->getMessage(),
+            ]);
+
+            return redirect()->route('tenant.renovar')
+                ->with('erro', 'Não foi possível abrir o pagamento. Tente novamente em alguns instantes.');
         }
-
-        return redirect()->route('tenant.renovar')
-            ->with('erro', 'Não foi possível gerar o link de pagamento. Entre em contato com o suporte.');
     }
 
     public function cancelar(): RedirectResponse

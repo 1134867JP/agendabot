@@ -70,7 +70,14 @@ class AsaasWebhookController extends Controller
             $eventId = 'sha256:'.hash('sha256', $request->getContent());
         }
 
-        DB::transaction(function () use ($tenant, $event, $eventId, $payment, $request): void {
+        $plano = null;
+        $ciclo = 'mensal';
+        if (preg_match('/^assinatura_tenant_'.preg_quote((string) $tenant->id, '/').'_(starter|pro|business)_(mensal|anual)$/', $externalReference, $matches)) {
+            $plano = $matches[1];
+            $ciclo = $matches[2];
+        }
+
+        DB::transaction(function () use ($tenant, $event, $eventId, $payment, $request, $plano, $ciclo): void {
             $inserido = DB::table('subscription_events')->insertOrIgnore([
                 'tenant_id' => $tenant->id,
                 'event_id' => $eventId,
@@ -87,7 +94,7 @@ class AsaasWebhookController extends Controller
             }
 
             match ($event) {
-                'PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED' => $this->ativar($tenant),
+                'PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED' => $this->ativar($tenant, $plano, $ciclo),
                 'PAYMENT_OVERDUE' => $this->marcarVencido($tenant),
                 'SUBSCRIPTION_DELETED' => $this->cancelar($tenant),
                 default => null,
@@ -97,12 +104,19 @@ class AsaasWebhookController extends Controller
         return response('ok');
     }
 
-    private function ativar(Tenant $tenant): void
+    private function ativar(Tenant $tenant, ?string $plano = null, string $ciclo = 'mensal'): void
     {
-        $tenant->update([
+        $dados = [
             'subscription_status' => 'active',
-            'subscription_ends_at' => now()->addMonth(),
-        ]);
+            'subscription_ends_at' => $ciclo === 'anual' ? now()->addYear() : now()->addMonth(),
+            'taxa_agendamento_bot' => 0,
+        ];
+
+        if ($plano !== null) {
+            $dados['plano'] = $plano;
+        }
+
+        $tenant->update($dados);
     }
 
     private function marcarVencido(Tenant $tenant): void

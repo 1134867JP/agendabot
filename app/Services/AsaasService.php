@@ -71,6 +71,70 @@ class AsaasService
         return $response->json('url');
     }
 
+    /**
+     * Gera o pagamento de renovação. Cartão cria recorrência automática;
+     * Pix cria uma cobrança do período escolhido e deverá ser renovado ao vencer.
+     */
+    public function criarCheckoutRenovacao(User $user, Tenant $tenant, string $plano, string $ciclo, string $metodo): string
+    {
+        $customerId = $this->criarOuBuscarCliente($user, $tenant);
+        $anual = $ciclo === 'anual';
+        $valorMensal = (float) config("plans.{$plano}.valor");
+        $valor = $anual ? round($valorMensal * 10, 2) : $valorMensal;
+        $cycle = $anual ? 'YEARLY' : 'MONTHLY';
+        $externalReference = "assinatura_tenant_{$tenant->id}_{$plano}_{$ciclo}";
+        $descricao = 'AgendaBot — Plano '.ucfirst($plano).($anual ? ' anual' : ' mensal');
+
+        if ($metodo === 'PIX') {
+            $response = $this->http()->post('/payments', [
+                'customer' => $customerId,
+                'billingType' => 'PIX',
+                'value' => $valor,
+                'dueDate' => now()->format('Y-m-d'),
+                'description' => $descricao,
+                'externalReference' => $externalReference,
+            ]);
+
+            $url = $response->json('invoiceUrl');
+            if (! $response->successful() || ! is_string($url) || $url === '') {
+                throw new AsaasApiException('Não foi possível gerar a cobrança Pix: '.$response->body());
+            }
+
+            return $url;
+        }
+
+        $assinaturaAnterior = $tenant->asaas_subscription_id;
+
+        $response = $this->http()->post('/subscriptions', [
+            'customer' => $customerId,
+            'billingType' => 'CREDIT_CARD',
+            'value' => $valor,
+            'nextDueDate' => now()->format('Y-m-d'),
+            'cycle' => $cycle,
+            'description' => $descricao,
+            'externalReference' => $externalReference,
+        ]);
+
+        $subscriptionId = $response->json('id');
+        if (! $response->successful() || ! is_string($subscriptionId) || $subscriptionId === '') {
+            throw new AsaasApiException('Não foi possível criar a assinatura: '.$response->body());
+        }
+
+        $payments = $this->http()->get("/subscriptions/{$subscriptionId}/payments", ['limit' => 1]);
+        $url = $payments->json('data.0.invoiceUrl');
+        if (! $payments->successful() || ! is_string($url) || $url === '') {
+            throw new AsaasApiException('A assinatura foi criada, mas o checkout não ficou disponível.');
+        }
+
+        $tenant->update(['asaas_subscription_id' => $subscriptionId]);
+
+        if ($assinaturaAnterior && $assinaturaAnterior !== $subscriptionId) {
+            $this->cancelarAssinatura($assinaturaAnterior);
+        }
+
+        return $url;
+    }
+
     public function cancelarAssinatura(string $subscriptionId): bool
     {
         $response = $this->http()->delete("/subscriptions/{$subscriptionId}");

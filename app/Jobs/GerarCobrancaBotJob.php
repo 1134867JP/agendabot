@@ -48,6 +48,11 @@ class GerarCobrancaBotJob implements ShouldQueue
                 $taxa       = (float) $tenant->taxa_agendamento_bot;
                 $valorTotal = round($quantidade * $taxa, 2);
 
+                // Os planos atuais usam mensalidade fixa, sem cobrança variável.
+                if ($taxa <= 0) {
+                    return;
+                }
+
                 // Tenant isento: registrar uso mas não cobrar
                 if ($tenant->isento_cobranca) {
                     CobrancaBot::create([
