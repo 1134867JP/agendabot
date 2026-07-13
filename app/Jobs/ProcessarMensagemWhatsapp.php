@@ -124,7 +124,6 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             }
             Log::channel('jobs')->info('MENSAGEM_DUPLICADA_IGNORADA', [
                 'tenant' => $this->tenant->id,
-                'telefone' => $this->telefone,
                 'evolution_message_id' => $this->evolutionMessageId,
             ]);
 
