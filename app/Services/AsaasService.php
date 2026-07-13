@@ -126,8 +126,15 @@ class AsaasService
             throw new AsaasApiException('A assinatura foi criada, mas o checkout não ficou disponível.');
         }
 
+        $tenant->update(['asaas_subscription_id' => $subscriptionId]);
+
+        if ($assinaturaAnterior && $assinaturaAnterior !== $subscriptionId) {
+            $this->cancelarAssinatura($assinaturaAnterior);
+        }
+
         return $url;
     }
+
     public function cancelarAssinatura(string $subscriptionId): bool
     {
         $response = $this->http()->delete("/subscriptions/{$subscriptionId}");
