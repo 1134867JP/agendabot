@@ -47,7 +47,8 @@ class SubscriptionPaymentTest extends TestCase
                 'ciclo' => 'mensal',
                 'metodo' => 'PIX',
             ])
-            ->assertRedirect('https://asaas.test/pix/123');
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', 'https://asaas.test/pix/123');
 
         $this->assertSame('pro', $tenant->fresh()->plano);
         $this->assertSame('cus_pix', $tenant->fresh()->asaas_customer_id);
@@ -71,7 +72,8 @@ class SubscriptionPaymentTest extends TestCase
                 'ciclo' => 'anual',
                 'metodo' => 'CREDIT_CARD',
             ])
-            ->assertRedirect('https://asaas.test/card/123');
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', 'https://asaas.test/card/123');
 
         Http::assertSent(fn (Request $request) =>
             str_ends_with($request->url(), '/subscriptions')
