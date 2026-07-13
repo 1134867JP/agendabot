@@ -13,7 +13,8 @@ services:
       - default
       - evolution-net
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     env_file: .env
     environment:
       APP_ENV: production
@@ -23,11 +24,21 @@ services:
       SESSION_DRIVER: file
       CACHE_DRIVER: file
       QUEUE_CONNECTION: database
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
 
   db:
     image: postgres:16
     container_name: agendabot-db
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
     environment:
       POSTGRES_DB: ${DB_DATABASE}
       POSTGRES_USER: ${DB_USERNAME}
@@ -46,8 +57,10 @@ services:
       - default
       - evolution-net
     depends_on:
-      - db
-      - app
+      db:
+        condition: service_healthy
+      app:
+        condition: service_healthy
     env_file: .env
     environment:
       APP_ENV: production
@@ -66,8 +79,10 @@ services:
     networks:
       - default
     depends_on:
-      - db
-      - app
+      db:
+        condition: service_healthy
+      app:
+        condition: service_healthy
     env_file: .env
     environment:
       APP_ENV: production
