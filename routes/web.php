@@ -17,6 +17,7 @@ use App\Http\Controllers\Tenant\ProfissionalController;
 use App\Http\Controllers\Tenant\ServicoController;
 use App\Http\Controllers\TenantController;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 // Site público
 Route::get('/', [LandingController::class, 'index'])->name('home');
@@ -122,6 +123,9 @@ Route::middleware('auth')->group(function () {
         Route::post('conversas/{conversa}/assumir', [ConversaController::class, 'assumir'])->name('conversas.assumir');
         Route::post('conversas/{conversa}/devolver', [ConversaController::class, 'devolver'])->name('conversas.devolver');
         Route::post('conversas/{conversa}/enviar', [ConversaController::class, 'enviarMensagem'])->name('conversas.enviar');
+
+        // Simulador local: não envia mensagens ao WhatsApp nem chama a API de IA
+        Route::get('bot/simulador', fn () => Inertia::render('Tenant/BotSimulator'))->name('bot.simulador');
 
         // Config bot
         Route::put('configuracoes/bot', [Tenant\ConfiguracaoController::class, 'updateBot'])->name('configuracoes.bot');
