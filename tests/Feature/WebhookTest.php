@@ -40,7 +40,7 @@ class WebhookTest extends TestCase
 
         $payload = $this->payloadEvolution('5551999999999@s.whatsapp.net', 'Quero agendar um corte');
 
-        $response = $this->postJson("/webhook/{$this->tenant->slug}?token=token-teste-webhook", $payload);
+        $response = $this->withHeader('X-Webhook-Token', 'token-teste-webhook')->postJson("/webhook/{$this->tenant->slug}", $payload);
 
         $response->assertStatus(200);
         Queue::assertPushed(ProcessarMensagemWhatsapp::class);
@@ -52,7 +52,7 @@ class WebhookTest extends TestCase
 
         $payload = $this->payloadEvolution('5551999999999@s.whatsapp.net', 'Olá!', fromMe: true);
 
-        $response = $this->postJson("/webhook/{$this->tenant->slug}?token=token-teste-webhook", $payload);
+        $response = $this->withHeader('X-Webhook-Token', 'token-teste-webhook')->postJson("/webhook/{$this->tenant->slug}", $payload);
 
         $response->assertStatus(200);
         Queue::assertNothingPushed();
@@ -64,7 +64,7 @@ class WebhookTest extends TestCase
 
         $payload = $this->payloadEvolution('5551999999999-1234567890@g.us', 'Mensagem de grupo');
 
-        $response = $this->postJson("/webhook/{$this->tenant->slug}?token=token-teste-webhook", $payload);
+        $response = $this->withHeader('X-Webhook-Token', 'token-teste-webhook')->postJson("/webhook/{$this->tenant->slug}", $payload);
 
         $response->assertStatus(200);
         Queue::assertNothingPushed();
@@ -85,7 +85,7 @@ class WebhookTest extends TestCase
 
         $payload = $this->payloadEvolution('5551999999999@s.whatsapp.net', 'Oi');
 
-        $response = $this->postJson("/webhook/{$this->tenant->slug}?token=token-teste-webhook", $payload);
+        $response = $this->withHeader('X-Webhook-Token', 'token-teste-webhook')->postJson("/webhook/{$this->tenant->slug}", $payload);
 
         $response->assertStatus(200);
         Queue::assertNothingPushed();
