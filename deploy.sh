@@ -59,6 +59,8 @@ docker exec agendabot-app php artisan view:cache
 
 echo "--- migrações pendentes ---"
 docker exec agendabot-app php artisan migrate --force
+echo "--- reconfigurando webhooks com autenticação por header ---"
+docker exec agendabot-app php artisan whatsapp:reconfigure-webhooks
 
 echo "--- subindo worker e scheduler com nova imagem ---"
 docker compose up -d --no-deps --force-recreate worker scheduler
