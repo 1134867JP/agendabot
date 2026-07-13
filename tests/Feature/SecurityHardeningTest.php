@@ -17,6 +17,7 @@ class SecurityHardeningTest extends TestCase
         return Tenant::create(array_merge([
             'nome' => 'Tenant de Segurança',
             'slug' => 'tenant-seguranca-' . uniqid(),
+            'tipo_servico' => 'barbeiro',
             'webhook_token' => 'token-secreto-de-teste',
             'ativo' => true,
             'bot_ativo' => false,
