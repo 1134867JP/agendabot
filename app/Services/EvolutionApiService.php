@@ -171,7 +171,7 @@ class EvolutionApiService
         return $response->successful();
     }
 
-    public function configurarWebhook(string $instance, string $webhookUrl): bool
+    public function configurarWebhook(string $instance, string $webhookUrl, ?string $webhookToken = null): bool
     {
         // Evolution API v2 requires nested 'webhook' object
         $response = $this->http()
@@ -179,6 +179,7 @@ class EvolutionApiService
                 'webhook' => [
                     'enabled' => true,
                     'url' => $webhookUrl,
+                    'headers' => $webhookToken ? ['X-Webhook-Token' => $webhookToken] : [],
                     'byEvents' => false,
                     'base64' => false,
                     'events' => ['MESSAGES_UPSERT', 'CONNECTION_UPDATE', 'CHATS_UPSERT', 'CONTACTS_UPSERT'],
