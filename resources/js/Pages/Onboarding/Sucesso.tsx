@@ -19,6 +19,12 @@ const steps = [
     },
     {
         n: 3,
+        title: 'Teste o bot no simulador',
+        desc: 'Converse com uma versão segura antes de conectar o WhatsApp.',
+        href: 'tenant.bot.simulador',
+    },
+    {
+        n: 4,
         title: 'Compartilhe com seus clientes',
         desc: 'Divulgue o número de WhatsApp — o bot já estará pronto para atender.',
     },
@@ -62,6 +68,11 @@ export default function OnboardingSucesso({ user }: Props) {
                             <div>
                                 <p className="font-medium text-primary">{s.title}</p>
                                 <p className="mt-0.5 text-sm" style={{ color: 'var(--text-3)' }}>{s.desc}</p>
+                                {s.href && (
+                                    <Link href={route(s.href)} className="mt-2 inline-block text-xs font-medium" style={{ color: 'var(--accent)' }}>
+                                        Abrir simulador →
+                                    </Link>
+                                )}
                             </div>
                         </div>
                     ))}
