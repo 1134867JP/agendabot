@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\RegistraFalha;
 use App\Models\Agendamento;
 use App\Models\Cliente;
 use App\Models\Conversa;
@@ -25,7 +26,7 @@ use Illuminate\Support\Facades\Log;
 
 class ProcessarMensagemWhatsapp implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, RegistraFalha, SerializesModels;
 
     public int $tries = 3;
 
@@ -310,5 +311,17 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             })
             ->orderByRaw('COALESCE(data_hora, inicio)')
             ->first();
+    }
+
+    /**
+     * Esgotadas as tentativas, o cliente ficou sem resposta do bot — é o caso mais
+     * crítico de falha de job no sistema, por impactar diretamente o cliente final.
+     */
+    public function failed(\Throwable $e): void
+    {
+        $this->registrarFalha($e, $this->tenant->id, [
+            'evento' => 'processar_mensagem_whatsapp',
+            'telefone' => $this->telefone,
+        ]);
     }
 }

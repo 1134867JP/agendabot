@@ -1,9 +1,19 @@
 <?php
 
+use App\Http\Middleware\CheckSubscription;
+use App\Http\Middleware\EnsureHasTenant;
+use App\Http\Middleware\EnsureSuperAdmin;
+use App\Http\Middleware\HandleInertiaRequests;
+use App\Support\ErrorAlerter;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Illuminate\Session\TokenMismatchException;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -19,8 +29,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
 
         $middleware->web(append: [
-            \App\Http\Middleware\HandleInertiaRequests::class,
-            \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
+            HandleInertiaRequests::class,
+            AddLinkHeadersForPreloadedAssets::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [
@@ -29,14 +39,32 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
-            'tenant'       => \App\Http\Middleware\EnsureHasTenant::class,
-            'superadmin'   => \App\Http\Middleware\EnsureSuperAdmin::class,
-            'subscription' => \App\Http\Middleware\CheckSubscription::class,
+            'tenant' => EnsureHasTenant::class,
+            'superadmin' => EnsureSuperAdmin::class,
+            'subscription' => CheckSubscription::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Por padrão o Laravel silencia ModelNotFoundException (404) e não grava em log.
         // Aqui isso quase sempre indica um bug real (ex.: usuário sem tenant tentando
         // acessar rota que assume tenant existente), então passa a registrar em log.
-        $exceptions->stopIgnoring(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+        $exceptions->stopIgnoring(ModelNotFoundException::class);
+
+        // Alerta por e-mail (ERROR_ALERT_EMAIL) para exceções não tratadas em produção,
+        // além do log padrão. Exclui erros esperados (validação, 404, auth, CSRF) para
+        // não gerar ruído — só dispara para o que é, de fato, bug.
+        $exceptions->report(function (Throwable $e): void {
+            if (! app()->environment('production')) {
+                return;
+            }
+
+            if ($e instanceof ValidationException
+                || $e instanceof AuthenticationException
+                || $e instanceof TokenMismatchException
+                || $e instanceof HttpExceptionInterface) {
+                return;
+            }
+
+            ErrorAlerter::avisar($e);
+        });
     })->create();

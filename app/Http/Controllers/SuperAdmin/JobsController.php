@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Models\OperationalEvent;
 use App\Support\FailedJobsFormatter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Artisan;
@@ -16,10 +17,12 @@ class JobsController extends Controller
     {
         $failed = $this->listarFailed(50);
         $queue = $this->statsQueue();
+        $falhasRecentes = $this->listarFalhasRecentes(30);
 
         return Inertia::render('SuperAdmin/Jobs', [
             'failed' => $failed,
             'queue' => $queue,
+            'falhasRecentes' => $falhasRecentes,
         ]);
     }
 
@@ -92,6 +95,35 @@ class JobsController extends Controller
             ];
         } catch (\Throwable) {
             return ['failed' => 0, 'pending' => 0];
+        }
+    }
+
+    /**
+     * Falhas estruturadas de jobs e integrações (evento por evento, com tenant),
+     * registradas via OperationalEvent::record() em Job::failed() e nos serviços de
+     * integração. Complementa a tabela failed_jobs, que só existe enquanto o job não
+     * é retentado/removido e não guarda contexto de qual tenant foi afetado.
+     */
+    private function listarFalhasRecentes(int $limit): array
+    {
+        try {
+            return OperationalEvent::with('tenant:id,nome')
+                ->whereIn('type', ['job_failure', 'integration_failure'])
+                ->latest()
+                ->limit($limit)
+                ->get()
+                ->map(fn (OperationalEvent $evento) => [
+                    'id' => $evento->id,
+                    'tipo' => $evento->type,
+                    'provider' => $evento->provider,
+                    'tenant' => $evento->tenant?->nome,
+                    'mensagem' => data_get($evento->metadata, 'message') ?? data_get($evento->metadata, 'evento'),
+                    'metadata' => $evento->metadata,
+                    'ocorrido_em' => $evento->created_at,
+                ])
+                ->toArray();
+        } catch (\Throwable) {
+            return [];
         }
     }
 }

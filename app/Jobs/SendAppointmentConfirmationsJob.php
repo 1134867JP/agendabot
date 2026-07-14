@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\RegistraFalha;
 use App\Models\Agendamento;
 use App\Models\OperationalEvent;
 use App\Services\EvolutionApiService;
@@ -13,7 +14,7 @@ use Illuminate\Queue\SerializesModels;
 
 class SendAppointmentConfirmationsJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, RegistraFalha, SerializesModels;
 
     public function handle(EvolutionApiService $evolution): void
     {
@@ -33,5 +34,10 @@ class SendAppointmentConfirmationsJob implements ShouldQueue
                     ]);
                 }
             });
+    }
+
+    public function failed(\Throwable $e): void
+    {
+        $this->registrarFalha($e, null, ['evento' => 'enviar_confirmacoes_agendamento']);
     }
 }

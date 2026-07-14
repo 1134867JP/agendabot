@@ -20,9 +20,19 @@ interface QueueStats {
     pending: number;
 }
 
+interface FalhaRecente {
+    id: number;
+    tipo: string;
+    provider: string | null;
+    tenant: string | null;
+    mensagem: string | null;
+    ocorrido_em: string;
+}
+
 interface Props extends PageProps {
     failed: FailedJob[];
     queue: QueueStats;
+    falhasRecentes: FalhaRecente[];
 }
 
 function fmtDt(s: string) {
@@ -31,7 +41,7 @@ function fmtDt(s: string) {
     });
 }
 
-export default function Jobs({ failed, queue }: Props) {
+export default function Jobs({ failed, queue, falhasRecentes }: Props) {
     const [expanded, setExpanded] = useState<number | null>(null);
     const [loading, setLoading] = useState<number | 'all' | 'flush' | null>(null);
 
@@ -245,6 +255,37 @@ export default function Jobs({ failed, queue }: Props) {
                     </div>
                 )}
             </div>
+
+            {/* Falhas recentes por tenant (jobs + integrações) */}
+            {falhasRecentes.length > 0 && (
+                <div className="mt-6 overflow-hidden rounded-xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+                    <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+                        <p className="text-[13px] font-semibold" style={{ color: 'var(--text-1)' }}>Falhas recentes por tenant</p>
+                        <p className="text-xs" style={{ color: 'var(--text-3)' }}>Contexto estruturado de falhas de jobs e integrações (WhatsApp, Asaas, Google Calendar), mesmo depois que o job já saiu da fila de falhas.</p>
+                    </div>
+                    <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                        {falhasRecentes.map(f => (
+                            <div key={f.id} className="grid items-center gap-2 px-4 py-3" style={{ gridTemplateColumns: '140px 1fr 160px 140px' }}>
+                                <span
+                                    className="w-fit rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase"
+                                    style={{
+                                        background: f.tipo === 'job_failure' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
+                                        color: f.tipo === 'job_failure' ? '#f87171' : '#f59e0b',
+                                    }}
+                                >
+                                    {f.tipo === 'job_failure' ? 'Job' : 'Integração'}
+                                </span>
+                                <div className="min-w-0">
+                                    <p className="truncate text-[12px]" style={{ color: 'var(--text-1)' }}>{f.mensagem ?? '—'}</p>
+                                    {f.provider && <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>{f.provider}</p>}
+                                </div>
+                                <span className="truncate text-xs" style={{ color: 'var(--text-3)' }}>{f.tenant ?? '—'}</span>
+                                <span className="font-mono text-[11px]" style={{ color: 'var(--text-3)' }}>{fmtDt(f.ocorrido_em)}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </AppLayout>
     );
 }

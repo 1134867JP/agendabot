@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\RegistraFalha;
 use App\Models\Agendamento;
 use App\Services\EvolutionApiService;
 use Carbon\Carbon;
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\Log;
 
 class EnviarLembretesJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, RegistraFalha, SerializesModels;
 
     public function handle(EvolutionApiService $evolution): void
     {
@@ -28,9 +29,8 @@ class EnviarLembretesJob implements ShouldQueue
                 ->orWhereDate('data_hora', $amanha->toDateString())
             )
             ->where('lembrete_enviado', false)
-            ->whereHas('tenant', fn ($q) =>
-                $q->where('whatsapp_conectado', true)
-                  ->whereIn('subscription_status', ['trial', 'active'])
+            ->whereHas('tenant', fn ($q) => $q->where('whatsapp_conectado', true)
+                ->whereIn('subscription_status', ['trial', 'active'])
             )
             ->get();
 
@@ -67,23 +67,28 @@ class EnviarLembretesJob implements ShouldQueue
 
     private function montarMensagemLembrete(Agendamento $agendamento, ?string $textoPersonalizado): string
     {
-        $dataHora   = Carbon::parse($agendamento->data_hora ?? $agendamento->inicio)->locale('pt_BR');
-        $horario    = $dataHora->format('H:i');
+        $dataHora = Carbon::parse($agendamento->data_hora ?? $agendamento->inicio)->locale('pt_BR');
+        $horario = $dataHora->format('H:i');
         $nomeCliente = $agendamento->cliente_nome ?? $agendamento->cliente?->nome ?? 'Cliente';
         $recursoNome = $agendamento->recurso?->nome ?? $agendamento->profissional?->nome ?? '';
-        $tenant      = $agendamento->tenant->nome;
+        $tenant = $agendamento->tenant->nome;
 
         $cabecalho = "👋 *Olá, {$nomeCliente}!*\n\n"
-                   . "Lembrando que você tem um agendamento *amanhã*:\n\n"
-                   . "📅 *Data:* {$dataHora->translatedFormat('l, d \d\e F')}\n"
-                   . "⏰ *Horário:* {$horario}\n"
-                   . "📍 *Local/Serviço:* {$recursoNome} — {$tenant}\n\n";
+                   ."Lembrando que você tem um agendamento *amanhã*:\n\n"
+                   ."📅 *Data:* {$dataHora->translatedFormat('l, d \d\e F')}\n"
+                   ."⏰ *Horário:* {$horario}\n"
+                   ."📍 *Local/Serviço:* {$recursoNome} — {$tenant}\n\n";
 
         $corpo = $textoPersonalizado
-            ? trim($textoPersonalizado) . "\n\n"
+            ? trim($textoPersonalizado)."\n\n"
             : "Para *confirmar*, responda: ✅ *CONFIRMO*\n"
-            . "Para *cancelar*, responda: ❌ *CANCELAR*\n\n";
+            ."Para *cancelar*, responda: ❌ *CANCELAR*\n\n";
 
-        return $cabecalho . $corpo . "_Até amanhã!_";
+        return $cabecalho.$corpo.'_Até amanhã!_';
+    }
+
+    public function failed(\Throwable $e): void
+    {
+        $this->registrarFalha($e, null, ['evento' => 'enviar_lembretes_d1']);
     }
 }

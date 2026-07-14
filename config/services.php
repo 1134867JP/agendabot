@@ -57,4 +57,9 @@ return [
         'webhook_secret' => env('ASAAS_WEBHOOK_SECRET'),
     ],
 
+    'error_alerts' => [
+        'email' => env('ERROR_ALERT_EMAIL'),
+        'throttle_minutes' => env('ERROR_ALERT_THROTTLE_MINUTES', 15),
+    ],
+
 ];

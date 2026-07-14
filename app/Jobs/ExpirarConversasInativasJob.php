@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\RegistraFalha;
 use App\Models\Conversa;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,9 +13,10 @@ use Illuminate\Support\Facades\Log;
 
 class ExpirarConversasInativasJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, RegistraFalha, SerializesModels;
 
     public int $tries = 1;
+
     public int $timeout = 30;
 
     public function handle(): void
@@ -26,5 +28,10 @@ class ExpirarConversasInativasJob implements ShouldQueue
         if ($expiradas > 0) {
             Log::info("ExpirarConversasInativasJob: {$expiradas} conversa(s) encerrada(s) por inatividade.");
         }
+    }
+
+    public function failed(\Throwable $e): void
+    {
+        $this->registrarFalha($e, null, ['evento' => 'expirar_conversas_inativas']);
     }
 }

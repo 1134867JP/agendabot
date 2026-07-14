@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\RegistraFalha;
 use App\Models\Agendamento;
 use App\Services\EvolutionApiService;
 use Carbon\Carbon;
@@ -13,9 +14,10 @@ use Illuminate\Queue\SerializesModels;
 
 class EnviarLembreteConsultaV2 implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, RegistraFalha, SerializesModels;
 
     public int $tries = 3;
+
     public int $timeout = 30;
 
     public function __construct(
@@ -35,10 +37,10 @@ class EnviarLembreteConsultaV2 implements ShouldQueue
                  ?? 'serviço';
 
         $mensagem = "Olá, {$this->agendamento->cliente_nome}! 👋\n"
-            . "Lembramos que você tem um agendamento amanhã:\n"
-            . "📍 *{$recurso}*\n"
-            . "⏰ *{$inicio->format('H:i')}*\n"
-            . "Até lá! 😊";
+            ."Lembramos que você tem um agendamento amanhã:\n"
+            ."📍 *{$recurso}*\n"
+            ."⏰ *{$inicio->format('H:i')}*\n"
+            .'Até lá! 😊';
 
         $enviado = $evolution->enviarMensagem(
             $tenant->evolution_instance,
@@ -49,5 +51,14 @@ class EnviarLembreteConsultaV2 implements ShouldQueue
         if (! $enviado) {
             throw new \RuntimeException("Falha ao enviar lembrete via WhatsApp para {$this->agendamento->cliente_telefone}");
         }
+    }
+
+    public function failed(\Throwable $e): void
+    {
+        $this->registrarFalha($e, $this->agendamento->tenant_id, [
+            'provider' => 'evolution',
+            'evento' => 'lembrete_consulta',
+            'agendamento_id' => $this->agendamento->id,
+        ]);
     }
 }

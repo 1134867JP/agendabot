@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\RegistraFalha;
 use App\Mail\TrialExpiradoMail;
 use App\Models\Tenant;
 use Illuminate\Bus\Queueable;
@@ -14,10 +15,12 @@ use Illuminate\Support\Facades\Mail;
 
 class VerificarTrialExpiradoJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, RegistraFalha, SerializesModels;
 
     public int $tries = 3;
+
     public array $backoff = [60, 300, 900];
+
     public int $timeout = 60;
 
     public function handle(): void
@@ -33,5 +36,10 @@ class VerificarTrialExpiradoJob implements ShouldQueue
                     Log::info("Trial expirado: tenant #{$tenant->id} {$tenant->nome} — e-mail enviado para {$owner->email}");
                 }
             });
+    }
+
+    public function failed(\Throwable $e): void
+    {
+        $this->registrarFalha($e, null, ['evento' => 'verificar_trial_expirado']);
     }
 }

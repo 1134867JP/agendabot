@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\RegistraFalha;
 use App\Models\Agendamento;
 use App\Models\CobrancaBot;
 use App\Models\Tenant;
@@ -16,16 +17,17 @@ use Illuminate\Support\Facades\Log;
 
 class GerarCobrancaBotJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, RegistraFalha, SerializesModels;
 
     public int $tries = 3;
+
     public array $backoff = [60, 300, 600];
 
     public function handle(AsaasService $asaas): void
     {
         $periodoAnterior = now()->subMonth()->format('Y-m');
-        $inicioMes = Carbon::parse($periodoAnterior . '-01')->startOfMonth();
-        $fimMes    = $inicioMes->copy()->endOfMonth();
+        $inicioMes = Carbon::parse($periodoAnterior.'-01')->startOfMonth();
+        $fimMes = $inicioMes->copy()->endOfMonth();
 
         Tenant::where('ativo', true)
             ->where('subscription_status', 'active')
@@ -45,7 +47,7 @@ class GerarCobrancaBotJob implements ShouldQueue
                     return; // nada a cobrar
                 }
 
-                $taxa       = (float) $tenant->taxa_agendamento_bot;
+                $taxa = (float) $tenant->taxa_agendamento_bot;
                 $valorTotal = round($quantidade * $taxa, 2);
 
                 // Os planos atuais usam mensalidade fixa, sem cobrança variável.
@@ -56,25 +58,26 @@ class GerarCobrancaBotJob implements ShouldQueue
                 // Tenant isento: registrar uso mas não cobrar
                 if ($tenant->isento_cobranca) {
                     CobrancaBot::create([
-                        'tenant_id'               => $tenant->id,
-                        'periodo'                 => $periodoAnterior,
+                        'tenant_id' => $tenant->id,
+                        'periodo' => $periodoAnterior,
                         'quantidade_agendamentos' => $quantidade,
-                        'valor_total'             => $valorTotal,
-                        'asaas_charge_id'         => null,
-                        'status'                  => 'isento',
+                        'valor_total' => $valorTotal,
+                        'asaas_charge_id' => null,
+                        'status' => 'isento',
                     ]);
 
                     Log::channel('jobs')->info('GerarCobrancaBotJob: tenant isento, sem cobrança', [
-                        'tenant'     => $tenant->id,
-                        'periodo'    => $periodoAnterior,
+                        'tenant' => $tenant->id,
+                        'periodo' => $periodoAnterior,
                         'quantidade' => $quantidade,
-                        'valor_ref'  => $valorTotal,
+                        'valor_ref' => $valorTotal,
                     ]);
+
                     return;
                 }
 
                 $vencimento = now()->addDays(5);
-                $descricao  = "Agendou — Taxa bot {$periodoAnterior}: {$quantidade} agendamento(s) × R$ " . number_format($taxa, 2, ',', '.');
+                $descricao = "Agendou — Taxa bot {$periodoAnterior}: {$quantidade} agendamento(s) × R$ ".number_format($taxa, 2, ',', '.');
 
                 $chargeId = $asaas->criarCobrancaAvulsa(
                     $tenant->asaas_customer_id,
@@ -84,21 +87,26 @@ class GerarCobrancaBotJob implements ShouldQueue
                 );
 
                 CobrancaBot::create([
-                    'tenant_id'               => $tenant->id,
-                    'periodo'                 => $periodoAnterior,
+                    'tenant_id' => $tenant->id,
+                    'periodo' => $periodoAnterior,
                     'quantidade_agendamentos' => $quantidade,
-                    'valor_total'             => $valorTotal,
-                    'asaas_charge_id'         => $chargeId,
-                    'status'                  => $chargeId ? 'pendente' : 'falhou',
+                    'valor_total' => $valorTotal,
+                    'asaas_charge_id' => $chargeId,
+                    'status' => $chargeId ? 'pendente' : 'falhou',
                 ]);
 
                 Log::channel('jobs')->info('GerarCobrancaBotJob', [
-                    'tenant'      => $tenant->id,
-                    'periodo'     => $periodoAnterior,
-                    'quantidade'  => $quantidade,
+                    'tenant' => $tenant->id,
+                    'periodo' => $periodoAnterior,
+                    'quantidade' => $quantidade,
                     'valor_total' => $valorTotal,
-                    'charge_id'   => $chargeId,
+                    'charge_id' => $chargeId,
                 ]);
             });
+    }
+
+    public function failed(\Throwable $e): void
+    {
+        $this->registrarFalha($e, null, ['evento' => 'gerar_cobranca_bot']);
     }
 }

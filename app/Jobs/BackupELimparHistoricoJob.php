@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\RegistraFalha;
 use App\Models\Conversa;
 use App\Models\Mensagem;
 use App\Models\Tenant;
@@ -16,16 +17,17 @@ use Illuminate\Support\Facades\Storage;
 
 class BackupELimparHistoricoJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, RegistraFalha, SerializesModels;
 
-    public int $tries   = 1;
+    public int $tries = 1;
+
     public int $timeout = 120;
 
     public function __construct(private readonly Tenant $tenant) {}
 
     public function handle(): void
     {
-        $threshold   = now()->subDays(90);
+        $threshold = now()->subDays(90);
         $conversaIds = Conversa::where('tenant_id', $this->tenant->id)->pluck('id');
 
         if ($conversaIds->isEmpty()) {
@@ -53,19 +55,19 @@ class BackupELimparHistoricoJob implements ShouldQueue
         if ($conversasVazias->isNotEmpty()) {
             Conversa::whereIn('id', $conversasVazias)->update([
                 'ultima_mensagem_em' => null,
-                'status_v2'          => 'ativa',
+                'status_v2' => 'ativa',
             ]);
         }
 
         Log::info('BACKUP_E_LIMPAR', [
-            'tenant'    => $this->tenant->slug,
+            'tenant' => $this->tenant->slug,
             'mensagens' => $totalMensagens,
         ]);
     }
 
     private function gerarBackup(array $conversaIds, Carbon $threshold): void
     {
-        $data     = Carbon::now()->format('Y-m-d_H-i');
+        $data = Carbon::now()->format('Y-m-d_H-i');
         $filename = "backups/{$this->tenant->slug}_{$data}.txt";
 
         $conversas = Conversa::whereIn('id', $conversaIds)
@@ -73,16 +75,16 @@ class BackupELimparHistoricoJob implements ShouldQueue
             ->orderByDesc('ultima_mensagem_em')
             ->get();
 
-        $linhas   = [];
+        $linhas = [];
         $linhas[] = str_repeat('=', 60);
         $linhas[] = "BACKUP DE CONVERSAS — {$this->tenant->nome}";
-        $linhas[] = "Gerado em: " . Carbon::now()->format('d/m/Y H:i:s');
-        $linhas[] = "Total de conversas: " . $conversas->count();
+        $linhas[] = 'Gerado em: '.Carbon::now()->format('d/m/Y H:i:s');
+        $linhas[] = 'Total de conversas: '.$conversas->count();
         $linhas[] = str_repeat('=', 60);
 
         foreach ($conversas as $conversa) {
-            $nomeCli  = $conversa->cliente?->nome ?? $conversa->telefone_cliente;
-            $tel      = $conversa->telefone_cliente;
+            $nomeCli = $conversa->cliente?->nome ?? $conversa->telefone_cliente;
+            $tel = $conversa->telefone_cliente;
 
             $linhas[] = '';
             $linhas[] = str_repeat('─', 60);
@@ -91,26 +93,27 @@ class BackupELimparHistoricoJob implements ShouldQueue
 
             if ($conversa->mensagens->isEmpty()) {
                 $linhas[] = '  (sem mensagens)';
+
                 continue;
             }
 
             foreach ($conversa->mensagens as $msg) {
-                $hora  = Carbon::parse($msg->enviada_em)->format('d/m/Y H:i');
-                $quem  = match ($msg->remetente) {
+                $hora = Carbon::parse($msg->enviada_em)->format('d/m/Y H:i');
+                $quem = match ($msg->remetente) {
                     'cliente' => $nomeCli,
-                    'bot'     => 'Bot',
-                    'humano'  => 'Atendente',
-                    default   => $msg->remetente,
+                    'bot' => 'Bot',
+                    'humano' => 'Atendente',
+                    default => $msg->remetente,
                 };
                 $corpo = $msg->tipo !== 'texto'
-                    ? "[{$msg->tipo}]" . ($msg->conteudo ? " {$msg->conteudo}" : '')
+                    ? "[{$msg->tipo}]".($msg->conteudo ? " {$msg->conteudo}" : '')
                     : $msg->conteudo;
-                $corpo    = str_replace("\n", "\n        ", $corpo);
+                $corpo = str_replace("\n", "\n        ", $corpo);
                 $linhas[] = "[{$hora}] {$quem}: {$corpo}";
             }
         }
 
-        $total    = collect($conversas)->sum(fn ($c) => $c->mensagens->count());
+        $total = collect($conversas)->sum(fn ($c) => $c->mensagens->count());
         $linhas[] = '';
         $linhas[] = str_repeat('=', 60);
         $linhas[] = "Fim do backup — {$total} mensagens";
@@ -118,5 +121,10 @@ class BackupELimparHistoricoJob implements ShouldQueue
         Storage::put($filename, implode("\n", $linhas));
 
         Log::info('BACKUP_CRIADO', ['tenant' => $this->tenant->slug, 'arquivo' => $filename]);
+    }
+
+    public function failed(\Throwable $e): void
+    {
+        $this->registrarFalha($e, $this->tenant->id, ['evento' => 'backup_e_limpar_historico']);
     }
 }
