@@ -9,7 +9,7 @@ rollback() {
     echo "!!! deploy falhou — restaurando imagem anterior"
     if docker image inspect agendabot-app:rollback >/dev/null 2>&1; then
         docker tag agendabot-app:rollback agendabot-app:latest
-        docker compose up -d --no-deps --force-recreate app worker scheduler
+        docker compose up -d --no-deps --force-recreate app worker worker-batch scheduler
     fi
 }
 
@@ -35,9 +35,9 @@ if ! docker compose build app; then
     docker compose build --no-cache app
 fi
 
-echo "--- parando containers dependentes (worker/scheduler) ---"
-docker compose stop worker scheduler 2>/dev/null || true
-docker compose rm -f worker scheduler 2>/dev/null || true
+echo "--- parando containers dependentes (worker/worker-batch/scheduler) ---"
+docker compose stop worker worker-batch scheduler 2>/dev/null || true
+docker compose rm -f worker worker-batch scheduler 2>/dev/null || true
 
 echo "--- recriando container app ---"
 docker compose up -d --no-deps --force-recreate app
@@ -67,9 +67,9 @@ docker exec agendabot-app php artisan migrate --force
 echo "--- reconfigurando webhooks com autenticação por header ---"
 docker exec agendabot-app php artisan whatsapp:reconfigure-webhooks
 
-echo "--- subindo worker e scheduler com nova imagem ---"
-docker compose up -d --no-deps --force-recreate worker scheduler
-for service in agendabot-worker agendabot-scheduler; do
+echo "--- subindo workers e scheduler com nova imagem ---"
+docker compose up -d --no-deps --force-recreate worker worker-batch scheduler
+for service in agendabot-worker agendabot-worker-batch agendabot-scheduler; do
     if [ "$(docker inspect -f '{{.State.Running}}' "$service" 2>/dev/null || true)" != "true" ]; then
         echo "$service não está em execução"
         exit 1

@@ -6,6 +6,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 class SecurityHardeningTest extends TestCase
@@ -91,6 +92,58 @@ class SecurityHardeningTest extends TestCase
             'impersonando_tenant_id' => $tenant->id,
         ])->get(route('tenant.dashboard'))
             ->assertRedirect(route('dashboard'));
+    }
+
+    public function test_respostas_web_incluem_security_headers(): void
+    {
+        $response = $this->get(route('login'));
+
+        $response->assertOk();
+        $response->assertHeader('X-Content-Type-Options', 'nosniff');
+        $response->assertHeader('X-Frame-Options', 'DENY');
+        $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        $response->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    }
+
+    public function test_hsts_ausente_em_requisicao_http_simples(): void
+    {
+        $response = $this->get(route('login'));
+
+        $response->assertOk();
+        $this->assertFalse($response->headers->has('Strict-Transport-Security'));
+    }
+
+    public function test_hsts_presente_em_requisicao_https(): void
+    {
+        $response = $this->get('https://localhost/login');
+
+        $response->assertOk();
+        $response->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+
+    public function test_rate_limit_do_webhook_e_isolado_por_tenant(): void
+    {
+        $tenantA = $this->tenant(['slug' => 'tenant-a-' . uniqid()]);
+        $tenantB = $this->tenant(['slug' => 'tenant-b-' . uniqid()]);
+
+        $payload = ['event' => 'MESSAGES_UPSERT', 'data' => []];
+
+        // Esgotar o bucket do tenant A preenchendo a mesma chave que o middleware
+        // throttle usa para o limiter nomeado: md5({nome do limiter}.{chave do Limit::by})
+        $chaveTenantA = md5('evolution-webhook' . 'evolution-webhook:' . $tenantA->slug);
+        for ($i = 0; $i < 240; $i++) {
+            RateLimiter::hit($chaveTenantA, 60);
+        }
+
+        // Tenant A estourou o limite → 429 (a chave acima precisa bater com a do middleware)
+        $this->withHeader('X-Webhook-Token', $tenantA->webhook_token)
+            ->postJson(route('webhook', $tenantA->slug), $payload)
+            ->assertStatus(429);
+
+        // Tenant B, vindo do mesmo "IP", continua sendo atendido normalmente
+        $this->withHeader('X-Webhook-Token', $tenantB->webhook_token)
+            ->postJson(route('webhook', $tenantB->slug), $payload)
+            ->assertOk();
     }
 
     public function test_webhook_de_pagamento_de_sinal_ignora_agendamento_nao_vinculado_ao_pagamento(): void

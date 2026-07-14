@@ -15,14 +15,22 @@ use App\Services\EvolutionApiService;
 use App\Services\IntencaoService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\QueryException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Processa uma mensagem de cliente JÁ PERSISTIDA pelo webhook (ver
+ * ConversaSyncService::registrarMensagemRecebida) e responde via bot.
+ *
+ * O job pode ser despachado com delay (config bot.debounce_seconds): se o cliente
+ * enviar várias mensagens curtas em sequência, apenas o job da mensagem mais recente
+ * chama o Claude — os anteriores detectam que existe mensagem mais nova e retornam.
+ * O histórico já mescla mensagens 'user' consecutivas num único turno, então a
+ * resposta considera todas as mensagens acumuladas.
+ */
 class ProcessarMensagemWhatsapp implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
@@ -36,10 +44,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
     public function __construct(
         private Tenant $tenant,
         private string $telefone,
-        private string $mensagem,
-        private ?string $evolutionMessageId = null,
-        private ?string $pushName = null,
-        private string $tipo = 'texto',
+        private int $mensagemId,
     ) {}
 
     public function handle(
@@ -49,42 +54,55 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         IntencaoService $intencao,
     ): void {
         $startedAt = hrtime(true);
-        // 1. Evitar duplicata por evolution_message_id
-        if ($this->evolutionMessageId && Mensagem::where('evolution_message_id', $this->evolutionMessageId)->exists()) {
+
+        // 1. Carregar a mensagem persistida pelo webhook; se não existe mais, nada a fazer
+        $mensagem = Mensagem::find($this->mensagemId);
+        if (! $mensagem) {
             return;
         }
 
-        // 2. Buscar ou criar cliente — usa pushName do WhatsApp se disponível
-        $nomeInicial = $this->pushName ?? 'Cliente WhatsApp';
-        $cliente = $this->firstOrCreateSafe(
-            Cliente::class,
-            ['tenant_id' => $this->tenant->id, 'telefone' => $this->telefone],
-            ['nome' => $nomeInicial],
-        );
-
-        if ($this->pushName && $cliente->nome === 'Cliente WhatsApp') {
-            $cliente->update(['nome' => $this->pushName]);
+        $conversa = Conversa::find($mensagem->conversa_id);
+        if (! $conversa) {
+            return;
         }
 
-        // 3. Buscar ou criar conversa
-        $conversa = $this->firstOrCreateSafe(
-            Conversa::class,
-            ['tenant_id' => $this->tenant->id, 'telefone_cliente' => $this->telefone],
-            ['status_v2' => 'ativa', 'cliente_id' => $cliente->id],
-        );
+        $conteudo = $mensagem->conteudo;
 
-        if (! $conversa->cliente_id) {
+        // 2. Debounce: se já chegou mensagem MAIS NOVA do cliente nesta conversa, este job
+        // não responde — o job da mensagem mais recente responderá com o histórico completo.
+        if ($this->existeMensagemPosterior($conversa, $mensagem, 'cliente')) {
+            Log::channel('jobs')->info('MENSAGEM_DEBOUNCED', [
+                'tenant' => $this->tenant->id,
+                'mensagem_id' => $mensagem->id,
+            ]);
+
+            return;
+        }
+
+        // 3. Idempotência em retry: se o bot já respondeu depois desta mensagem
+        // (tentativa anterior que falhou após salvar a resposta), não responder de novo.
+        if ($this->existeMensagemPosterior($conversa, $mensagem, 'bot')) {
+            return;
+        }
+
+        // 4. Cliente (o webhook garante cliente_id; fallback defensivo para conversas antigas)
+        $cliente = $conversa->cliente_id ? Cliente::find($conversa->cliente_id) : null;
+        if (! $cliente) {
+            $cliente = Cliente::firstOrCreate(
+                ['tenant_id' => $this->tenant->id, 'telefone' => $this->telefone],
+                ['nome' => 'Cliente WhatsApp'],
+            );
             $conversa->update(['cliente_id' => $cliente->id]);
         }
 
-        // 4. Se aguardando/em atendimento humano → apenas salva mensagem e não processa com Claude
+        // 5. Se aguardando/em atendimento humano → mensagem já foi salva no webhook;
+        // o bot não responde.
         if (in_array($conversa->status_v2, ['aguardando_humano', 'em_atendimento_humano'])) {
-            $conversa->registrarMensagem('cliente', $this->mensagem, $this->evolutionMessageId, $this->tipo);
-
             return;
         }
 
-        // 4b. Verificar limite de agendamentos via bot do plano (isentos não têm limite)
+        // 5b. Verificar limite de agendamentos via bot do plano (isentos não têm limite).
+        // A mensagem do cliente já foi salva no webhook; aqui só respondemos o aviso.
         $limiteBot = $this->tenant->isento_cobranca ? null : config("plans.{$this->tenant->plano}.limite_bot_mes");
         if ($limiteBot !== null) {
             $agendamentosMes = Agendamento::where('tenant_id', $this->tenant->id)
@@ -105,7 +123,6 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             }
 
             if ($agendamentosMes >= $limiteBot) {
-                $conversa->registrarMensagem('cliente', $this->mensagem, $this->evolutionMessageId);
                 $aviso = "Olá! 😕 Nosso sistema de agendamento automático está temporariamente pausado este mês.\nPor favor, entre em contato diretamente para agendar.";
                 $conversa->registrarMensagem('bot', $aviso);
                 $evolution->enviarMensagem($this->tenant->evolution_instance, $this->telefone, $aviso);
@@ -114,26 +131,10 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             }
         }
 
-        // 5. Salvar mensagem do cliente (dedup atômico: se outro job concorrente já inseriu
-        // essa evolution_message_id, a constraint unique dispara e tratamos como duplicata)
-        try {
-            DB::transaction(fn () => $conversa->registrarMensagem('cliente', $this->mensagem, $this->evolutionMessageId, $this->tipo));
-        } catch (QueryException $e) {
-            if (! $this->isUniqueViolation($e)) {
-                throw $e;
-            }
-            Log::channel('jobs')->info('MENSAGEM_DUPLICADA_IGNORADA', [
-                'tenant' => $this->tenant->id,
-                'evolution_message_id' => $this->evolutionMessageId,
-            ]);
-
-            return;
-        }
-
-        // 5b. Triagem automática por palavra-chave: transfere para humano sem gastar uma
+        // 5c. Triagem automática por palavra-chave: transfere para humano sem gastar uma
         // chamada ao Claude quando o cliente pede atendente ou menciona um termo configurado.
         $triagem = $this->tenant->triagemConfig();
-        if ($this->deveTransferirPorPalavraChave($triagem['palavras_chave_humano'])) {
+        if ($this->deveTransferirPorPalavraChave($conteudo, $triagem['palavras_chave_humano'])) {
             $conversa->update(['status_v2' => 'aguardando_humano']);
             $mensagemTransferencia = $triagem['mensagem_transferencia']
                 ?: 'Já vou te transferir para um atendente, um momento! 🙋';
@@ -186,7 +187,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
 
         // 8. Pré-filtro de intenções simples — evita chamada ao Claude para confirmações/cancelamentos óbvios
         $intencaoDetectada = $agendamentoPendente
-            ? $intencao->detectarConfirmacao($this->mensagem)
+            ? $intencao->detectarConfirmacao($conteudo)
             : null;
 
         if ($intencaoDetectada) {
@@ -248,43 +249,30 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
     }
 
     /**
-     * firstOrCreate não é atômico: sob concorrência (ex. sync retroativo e mensagem em
-     * tempo real chegando juntos), duas execuções podem tentar inserir o mesmo registro
-     * único ao mesmo tempo. Se isso acontecer, a segunda apenas busca o registro que a
-     * primeira já criou, em vez de propagar a exceção de unique constraint.
-     *
-     * @template TModel of Model
-     *
-     * @param  class-string<TModel>  $modelClass
-     * @return TModel
+     * Existe mensagem do remetente informado registrada DEPOIS da mensagem deste job?
+     * Ordenação por (enviada_em, id) — o id desempata mensagens gravadas no mesmo segundo.
      */
-    private function firstOrCreateSafe(string $modelClass, array $unique, array $extra = []): Model
+    private function existeMensagemPosterior(Conversa $conversa, Mensagem $mensagem, string $remetente): bool
     {
-        try {
-            // DB::transaction usa SAVEPOINT quando já há uma transação em andamento, então uma
-            // violação de unique constraint aqui não aborta uma transação externa mais ampla.
-            return DB::transaction(fn () => $modelClass::firstOrCreate($unique, $extra));
-        } catch (QueryException $e) {
-            if (! $this->isUniqueViolation($e)) {
-                throw $e;
-            }
-
-            return $modelClass::where($unique)->firstOrFail();
-        }
+        return $conversa->mensagens()
+            ->where('remetente', $remetente)
+            ->where(function (Builder $q) use ($mensagem) {
+                $q->where('enviada_em', '>', $mensagem->enviada_em)
+                    ->orWhere(function (Builder $q2) use ($mensagem) {
+                        $q2->where('enviada_em', $mensagem->enviada_em)
+                            ->where('id', '>', $mensagem->id);
+                    });
+            })
+            ->exists();
     }
 
-    private function isUniqueViolation(QueryException $e): bool
-    {
-        return $e->getCode() === '23505' || str_contains($e->getMessage(), 'duplicate key value violates unique constraint');
-    }
-
-    private function deveTransferirPorPalavraChave(array $palavrasChave): bool
+    private function deveTransferirPorPalavraChave(string $conteudo, array $palavrasChave): bool
     {
         if (empty($palavrasChave)) {
             return false;
         }
 
-        $mensagem = mb_strtolower($this->mensagem);
+        $mensagem = mb_strtolower($conteudo);
 
         foreach ($palavrasChave as $palavra) {
             $palavra = mb_strtolower(trim((string) $palavra));

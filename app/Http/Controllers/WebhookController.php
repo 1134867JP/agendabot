@@ -145,8 +145,23 @@ class WebhookController extends Controller
 
         Log::info('WEBHOOK_MESSAGE_ACCEPTED', ['tenant_id' => $tenant->id, 'message_id' => $evolutionMessageId, 'tipo' => $messageType, 'conteudo_length' => mb_strlen($conteudoClaude)]);
 
-        ProcessarMensagemWhatsapp::dispatch($tenant, $telefone, $conteudoClaude, $evolutionMessageId, $pushName, $tipoInterno)
+        // Persistir a mensagem imediatamente (Cliente/Conversa/Mensagem com dedup por
+        // evolution_message_id). Assim o job consegue detectar, na hora de processar,
+        // se chegou mensagem mais nova do mesmo cliente (debounce).
+        $mensagem = $sync->registrarMensagemRecebida($tenant, $telefone, $conteudoClaude, $evolutionMessageId, $pushName, $tipoInterno);
+
+        if (! $mensagem) {
+            // Duplicata (mesmo evolution_message_id) — nada a processar
+            return response('ok');
+        }
+
+        $dispatch = ProcessarMensagemWhatsapp::dispatch($tenant, $telefone, $mensagem->id)
             ->onQueue('messages');
+
+        $debounce = (int) config('bot.debounce_seconds', 5);
+        if ($debounce > 0) {
+            $dispatch->delay(now()->addSeconds($debounce));
+        }
 
         return response('ok');
     }

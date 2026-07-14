@@ -205,7 +205,6 @@ Integração com gateway de pagamentos Asaas para criar clientes, cobranças e a
 | `CreateEvolutionInstanceJob` | Cria instância na Evolution API após onboarding |
 | `ExpirarConversasInativasJob` | Reseta conversas sem atividade há mais de 30 min para evitar estados corrompidos |
 | `EnviarLembretesJob` | Envia lembrete de agendamento via WhatsApp (D-1) |
-| `EnviarLembreteConsultaV2` | Versão v2 dos lembretes com template customizável |
 | `BackupELimparHistoricoJob` | Limpa histórico antigo de mensagens para controlar espaço em disco |
 | `SincronizarConversasWhatsappJob` | Sincroniza conversas e nomes via API do Evolution (com lock para evitar duplicatas) |
 | `VerificarTrialExpiradoJob` | Verifica trials vencidos e envia e-mail de aviso |
@@ -593,7 +592,6 @@ app/
 │   ├── CreateEvolutionInstanceJob.php
 │   ├── ExpirarConversasInativasJob.php
 │   ├── EnviarLembretesJob.php
-│   ├── EnviarLembreteConsultaV2.php
 │   ├── BackupELimparHistoricoJob.php
 │   ├── SincronizarConversasWhatsappJob.php
 │   ├── VerificarTrialExpiradoJob.php

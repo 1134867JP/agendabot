@@ -82,12 +82,24 @@ class BotSimular extends Command
             ]);
 
             try {
+                // Persistir a mensagem como o webhook faria em produção
+                $mensagemModel = app(\App\Services\ConversaSyncService::class)->registrarMensagemRecebida(
+                    $tenant,
+                    $telefone,
+                    $mensagem,
+                    'sim_' . $msgId++,
+                    'Cliente Simulado',
+                );
+
+                if (! $mensagemModel) {
+                    $this->line('<fg=yellow>Mensagem duplicada ignorada.</fg=yellow>');
+                    continue;
+                }
+
                 $job = new ProcessarMensagemWhatsapp(
-                    tenant:            $tenant,
-                    telefone:          $telefone,
-                    mensagem:          $mensagem,
-                    evolutionMessageId: 'sim_' . $msgId++,
-                    pushName:          'Cliente Simulado',
+                    tenant:     $tenant,
+                    telefone:   $telefone,
+                    mensagemId: $mensagemModel->id,
                 );
 
                 // Rodar síncronamente (sem queue)
