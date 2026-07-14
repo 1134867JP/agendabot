@@ -8,6 +8,7 @@ use App\Models\Conversa;
 use App\Models\Mensagem;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\ConversaSyncService;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -37,11 +38,11 @@ class ProcessarMensagemWhatsappConcorrenciaTest extends TestCase
     }
 
     /**
-     * Caminho rápido: se a mensagem já existe quando o job começa a rodar (ex: reprocessamento
-     * de um job que falhou por outro motivo após já ter salvo a mensagem), o job não deve
-     * duplicá-la nem lançar exceção.
+     * Dedup no ponto de persistência: se a mensagem já existe (ex: webhook reentregue
+     * pela Evolution API), registrarMensagemRecebida não deve duplicá-la nem lançar
+     * exceção — retorna null e nenhum job é despachado para ela.
      */
-    public function test_job_ignora_mensagem_ja_existente_sem_lancar_excecao(): void
+    public function test_persistencia_ignora_mensagem_ja_existente_sem_lancar_excecao(): void
     {
         $telefone    = '5551900000001';
         $evolutionId = 'JA_EXISTE_1';
@@ -56,16 +57,30 @@ class ProcessarMensagemWhatsappConcorrenciaTest extends TestCase
             'enviada_em'           => now(),
         ]);
 
-        ProcessarMensagemWhatsapp::dispatchSync($this->tenant, $telefone, 'Mensagem original', $evolutionId, 'Cliente Teste');
+        $resultado = app(ConversaSyncService::class)->registrarMensagemRecebida(
+            $this->tenant, $telefone, 'Mensagem original', $evolutionId, 'Cliente Teste'
+        );
 
+        $this->assertNull($resultado);
         $this->assertSame(1, Mensagem::where('evolution_message_id', $evolutionId)->count());
     }
 
     /**
+     * Retry defensivo: se a mensagem persistida foi removida antes do job rodar
+     * (ex: limpeza de histórico), o job retorna silenciosamente sem lançar exceção.
+     */
+    public function test_job_retorna_sem_excecao_quando_mensagem_nao_existe_mais(): void
+    {
+        ProcessarMensagemWhatsapp::dispatchSync($this->tenant, '5551900000003', 999999);
+
+        $this->assertSame(0, Mensagem::count());
+    }
+
+    /**
      * Verifica que a violação de unique constraint do Postgres (evolution_message_id) é
-     * corretamente reconhecida pelo helper usado no catch do job — é essa classificação que
-     * permite tratar a corrida como "mensagem duplicada" em vez de deixar a exceção propagar
-     * e derrubar o worker.
+     * corretamente reconhecida pelo helper usado no catch da persistência — é essa
+     * classificação que permite tratar a corrida como "mensagem duplicada" em vez de
+     * deixar a exceção propagar.
      */
     public function test_isuniqueviolation_reconhece_violacao_real_de_unique_constraint(): void
     {
@@ -98,10 +113,6 @@ class ProcessarMensagemWhatsappConcorrenciaTest extends TestCase
 
         $this->assertNotNull($excecao, 'Esperava que a segunda inserção violasse a unique constraint.');
 
-        $job     = new ProcessarMensagemWhatsapp($this->tenant, $telefone, 'x');
-        $metodo  = new \ReflectionMethod($job, 'isUniqueViolation');
-        $metodo->setAccessible(true);
-
-        $this->assertTrue($metodo->invoke($job, $excecao));
+        $this->assertTrue(app(ConversaSyncService::class)->isUniqueViolation($excecao));
     }
 }

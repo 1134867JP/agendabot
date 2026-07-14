@@ -6,6 +6,7 @@ use App\Jobs\ProcessarMensagemWhatsapp;
 use App\Models\Conversa;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\ConversaSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -48,9 +49,10 @@ class ProcessarMensagemWhatsappTriagemTest extends TestCase
 
         $telefone = '5551977000001';
 
-        ProcessarMensagemWhatsapp::dispatchSync(
+        $mensagem = app(ConversaSyncService::class)->registrarMensagemRecebida(
             $this->tenant, $telefone, 'Quero falar com um atendente, por favor', 'MSG_TRIAGEM_1', 'Cliente Teste'
         );
+        ProcessarMensagemWhatsapp::dispatchSync($this->tenant, $telefone, $mensagem->id);
 
         $conversa = Conversa::where('tenant_id', $this->tenant->id)->where('telefone_cliente', $telefone)->first();
 
@@ -79,9 +81,10 @@ class ProcessarMensagemWhatsappTriagemTest extends TestCase
 
         $telefone = '5551977000002';
 
-        ProcessarMensagemWhatsapp::dispatchSync(
+        $mensagem = app(ConversaSyncService::class)->registrarMensagemRecebida(
             $this->tenant, $telefone, 'Oi, queria agendar um corte', 'MSG_TRIAGEM_2', 'Cliente Teste'
         );
+        ProcessarMensagemWhatsapp::dispatchSync($this->tenant, $telefone, $mensagem->id);
 
         $conversa = Conversa::where('tenant_id', $this->tenant->id)->where('telefone_cliente', $telefone)->first();
 
