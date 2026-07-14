@@ -7,6 +7,9 @@ use App\Models\Conversa;
 use App\Models\Mensagem;
 use App\Models\Tenant;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -18,6 +21,94 @@ class ConversaSyncService
 {
     private const JIDS_IGNORADOS  = ['status@broadcast', 'broadcast'];
     private const NOMES_INVALIDOS = ['você', 'you', 'cliente whatsapp', ''];
+
+    /**
+     * Persiste imediatamente uma mensagem recebida via webhook (messages.upsert):
+     * garante Cliente e Conversa (upsert atômico) e salva a Mensagem do cliente com
+     * dedup por evolution_message_id. Retorna null quando a mensagem é duplicata.
+     *
+     * Persistir no webhook (e não no job) permite que jobs atrasados por debounce
+     * detectem mensagens mais novas do mesmo cliente antes de responder.
+     */
+    public function registrarMensagemRecebida(
+        Tenant $tenant,
+        string $telefone,
+        string $conteudo,
+        ?string $evolutionMessageId = null,
+        ?string $pushName = null,
+        string $tipo = 'texto',
+    ): ?Mensagem {
+        // Dedup rápido por evolution_message_id (a constraint unique cobre a corrida)
+        if ($evolutionMessageId && Mensagem::where('evolution_message_id', $evolutionMessageId)->exists()) {
+            return null;
+        }
+
+        $nomeInicial = $pushName ?? 'Cliente WhatsApp';
+        $cliente = $this->firstOrCreateSafe(
+            Cliente::class,
+            ['tenant_id' => $tenant->id, 'telefone' => $telefone],
+            ['nome' => $nomeInicial],
+        );
+
+        if ($pushName && $cliente->nome === 'Cliente WhatsApp') {
+            $cliente->update(['nome' => $pushName]);
+        }
+
+        $conversa = $this->firstOrCreateSafe(
+            Conversa::class,
+            ['tenant_id' => $tenant->id, 'telefone_cliente' => $telefone],
+            ['status_v2' => 'ativa', 'cliente_id' => $cliente->id],
+        );
+
+        if (! $conversa->cliente_id) {
+            $conversa->update(['cliente_id' => $cliente->id]);
+        }
+
+        try {
+            return DB::transaction(fn () => $conversa->registrarMensagem('cliente', $conteudo, $evolutionMessageId, $tipo));
+        } catch (QueryException $e) {
+            if (! $this->isUniqueViolation($e)) {
+                throw $e;
+            }
+            Log::info('MENSAGEM_DUPLICADA_IGNORADA', [
+                'tenant' => $tenant->id,
+                'evolution_message_id' => $evolutionMessageId,
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * firstOrCreate não é atômico: sob concorrência (ex. sync retroativo e mensagem em
+     * tempo real chegando juntos), duas execuções podem tentar inserir o mesmo registro
+     * único ao mesmo tempo. Se isso acontecer, a segunda apenas busca o registro que a
+     * primeira já criou, em vez de propagar a exceção de unique constraint.
+     *
+     * @template TModel of Model
+     *
+     * @param  class-string<TModel>  $modelClass
+     * @return TModel
+     */
+    public function firstOrCreateSafe(string $modelClass, array $unique, array $extra = []): Model
+    {
+        try {
+            // DB::transaction usa SAVEPOINT quando já há uma transação em andamento, então uma
+            // violação de unique constraint aqui não aborta uma transação externa mais ampla.
+            return DB::transaction(fn () => $modelClass::firstOrCreate($unique, $extra));
+        } catch (QueryException $e) {
+            if (! $this->isUniqueViolation($e)) {
+                throw $e;
+            }
+
+            return $modelClass::where($unique)->firstOrFail();
+        }
+    }
+
+    public function isUniqueViolation(QueryException $e): bool
+    {
+        return $e->getCode() === '23505' || str_contains($e->getMessage(), 'duplicate key value violates unique constraint');
+    }
 
     /**
      * Processa um chat completo (nome + histórico de mensagens). Usado na sincronização

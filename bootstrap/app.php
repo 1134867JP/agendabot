@@ -4,6 +4,7 @@ use App\Http\Middleware\CheckSubscription;
 use App\Http\Middleware\EnsureHasTenant;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\ValidateMonitorToken;
 use App\Support\ErrorAlerter;
 use Illuminate\Auth\AuthenticationException;
@@ -32,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            SecurityHeaders::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [

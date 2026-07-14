@@ -6,6 +6,7 @@ use App\Models\Tenant;
 use App\Services\ConversaSyncService;
 use App\Services\EvolutionApiService;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -13,16 +14,29 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
-class SincronizarConversasWhatsappJob implements ShouldQueue
+class SincronizarConversasWhatsappJob implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries   = 2;
     public int $timeout = 600;
 
+    /**
+     * Tempo (segundos) durante o qual o lock de unicidade é mantido.
+     */
+    public int $uniqueFor = 900;
+
     private const LIMITE_CHATS_SYNC = 30;
 
     public function __construct(private readonly Tenant $tenant) {}
+
+    /**
+     * Garante apenas um job de sincronização por tenant na fila.
+     */
+    public function uniqueId(): string
+    {
+        return (string) $this->tenant->id;
+    }
 
     public function handle(EvolutionApiService $evolution, ConversaSyncService $sync): void
     {
