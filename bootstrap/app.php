@@ -4,6 +4,7 @@ use App\Http\Middleware\CheckSubscription;
 use App\Http\Middleware\EnsureHasTenant;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\ValidateMonitorToken;
 use App\Support\ErrorAlerter;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -42,6 +43,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant' => EnsureHasTenant::class,
             'superadmin' => EnsureSuperAdmin::class,
             'subscription' => CheckSubscription::class,
+            'monitor.token' => ValidateMonitorToken::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

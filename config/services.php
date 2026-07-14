@@ -62,4 +62,8 @@ return [
         'throttle_minutes' => env('ERROR_ALERT_THROTTLE_MINUTES', 15),
     ],
 
+    'monitor' => [
+        'token' => env('MONITOR_API_TOKEN'),
+    ],
+
 ];
