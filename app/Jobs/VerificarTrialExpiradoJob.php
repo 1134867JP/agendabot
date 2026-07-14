@@ -25,7 +25,10 @@ class VerificarTrialExpiradoJob implements ShouldQueue
         Tenant::where('subscription_status', 'trial')
             ->where('trial_ends_at', '<', now())
             ->each(function (Tenant $tenant) {
-                $tenant->update(['subscription_status' => 'expired']);
+                $tenant->update([
+                    'subscription_status'  => 'past_due',
+                    'subscription_ends_at' => now(),
+                ]);
 
                 $owner = $tenant->users()->wherePivot('papel', 'admin')->first();
                 if ($owner) {

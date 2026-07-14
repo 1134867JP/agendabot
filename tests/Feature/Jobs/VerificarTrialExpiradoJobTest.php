@@ -14,7 +14,7 @@ class VerificarTrialExpiradoJobTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_trial_vencido_vira_expired_e_envia_email(): void
+    public function test_trial_vencido_vira_past_due_e_envia_email(): void
     {
         Mail::fake();
 
@@ -31,7 +31,9 @@ class VerificarTrialExpiradoJobTest extends TestCase
 
         VerificarTrialExpiradoJob::dispatchSync();
 
-        $this->assertSame('expired', $tenant->fresh()->subscription_status);
+        $tenant->refresh();
+        $this->assertSame('past_due', $tenant->subscription_status);
+        $this->assertNotNull($tenant->subscription_ends_at);
         Mail::assertQueued(TrialExpiradoMail::class, fn ($mail) => $mail->hasTo($admin->email));
     }
 
@@ -71,7 +73,7 @@ class VerificarTrialExpiradoJobTest extends TestCase
 
         VerificarTrialExpiradoJob::dispatchSync();
 
-        $this->assertSame('expired', $tenant->fresh()->subscription_status);
+        $this->assertSame('past_due', $tenant->fresh()->subscription_status);
         Mail::assertNothingQueued();
     }
 }
