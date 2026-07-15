@@ -38,6 +38,17 @@ interface Props extends PageProps {
     filtros: { status_v2?: string };
 }
 
+interface SyncStatus {
+    status: 'idle' | 'queued' | 'running' | 'completed' | 'failed';
+    processed?: number;
+    total?: number;
+    imported?: number;
+    ignored?: number;
+    errors?: number;
+    removed?: number;
+    message?: string;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const STATUS_LABEL: Record<string, string> = {
@@ -310,6 +321,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
     const [showChat,       setShowChat]       = useState(false);
     const [showModalNova,  setShowModalNova]  = useState(false);
     const [sincronizando,  setSincronizando]  = useState(false);
+    const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
 
     useEffect(() => {
         if (new URLSearchParams(window.location.search).get('nova') === '1') {
@@ -322,7 +334,6 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
     const chatRef      = useRef<HTMLDivElement>(null);
     const intervalRef  = useRef<ReturnType<typeof setInterval> | null>(null);
     const syncRef      = useRef<ReturnType<typeof setInterval> | null>(null);
-    const syncTimeout  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const { data, setData, post, processing, reset } = useForm<{ conteudo: string }>({ conteudo: '' });
 
@@ -361,8 +372,6 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
         pararPolling();
         intervalRef.current = setInterval(() => buscarMensagens(c, true), 5000);
     }, [buscarMensagens]);
-
-    useEffect(() => () => { pararPolling(); pararSyncPolling(); }, []);
 
     const selecionar = (c: Conversa) => {
         pararPolling();
@@ -407,23 +416,74 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
     };
 
     const pararSyncPolling = () => {
-        if (syncRef.current)     { clearInterval(syncRef.current);  syncRef.current    = null; }
-        if (syncTimeout.current) { clearTimeout(syncTimeout.current); syncTimeout.current = null; }
+        if (syncRef.current) {
+            clearInterval(syncRef.current);
+            syncRef.current = null;
+        }
         setSincronizando(false);
     };
 
+    const consultarStatusSync = async () => {
+        try {
+            const response = await fetch(route('tenant.conversas.sincronizacao.status'), {
+                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            if (! response.ok) return;
+
+            const status = await response.json() as SyncStatus;
+            setSyncStatus(status);
+
+            const ativo = status.status === 'queued' || status.status === 'running';
+            setSincronizando(ativo);
+
+            if (! ativo) {
+                if (syncRef.current) {
+                    clearInterval(syncRef.current);
+                    syncRef.current = null;
+                }
+                if (status.status === 'completed') {
+                    router.reload({ only: ['conversas'] });
+                }
+            }
+        } catch {
+            // Mantém a tela utilizável mesmo se a consulta de progresso falhar.
+        }
+    };
+
+    const iniciarSyncPolling = () => {
+        if (syncRef.current) clearInterval(syncRef.current);
+        void consultarStatusSync();
+        syncRef.current = setInterval(() => void consultarStatusSync(), 2000);
+    };
+
+    useEffect(() => {
+        iniciarSyncPolling();
+        return () => {
+            pararPolling();
+            if (syncRef.current) clearInterval(syncRef.current);
+        };
+    }, []);
+
     const sincronizar = () => {
         setSincronizando(true);
+        setSyncStatus({
+            status: 'queued',
+            processed: 0,
+            total: 0,
+            imported: 0,
+            message: 'Preparando a sincronização.',
+        });
+
         router.post(route('tenant.conversas.sincronizar'), {}, {
-            onSuccess: () => {
-                // Recarregar a lista a cada 3s enquanto o job roda em background
-                syncRef.current = setInterval(() => {
-                    router.reload({ only: ['conversas'] });
-                }, 3000);
-                // Parar após 90s (tempo suficiente para ~600 chats)
-                syncTimeout.current = setTimeout(pararSyncPolling, 90_000);
+            preserveScroll: true,
+            onSuccess: iniciarSyncPolling,
+            onError: () => {
+                pararSyncPolling();
+                setSyncStatus({
+                    status: 'failed',
+                    message: 'Não foi possível iniciar. Verifique a conexão do WhatsApp.',
+                });
             },
-            onError: pararSyncPolling,
         });
     };
 
@@ -453,6 +513,10 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
 
     const emAtendimento = selecionada?.status_v2 === 'em_atendimento_humano';
     const dotColor = selecionada ? (STATUS_DOT[selecionada.status_v2] ?? 'var(--text-3)') : '';
+    const syncAtivo = syncStatus?.status === 'queued' || syncStatus?.status === 'running';
+    const syncProgresso = syncStatus?.total
+        ? Math.round(((syncStatus.processed ?? 0) / syncStatus.total) * 100)
+        : 0;
 
     return (
         <AppLayout title="" fullHeight>
@@ -477,9 +541,10 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                 <button
                                     onClick={sincronizar}
                                     disabled={sincronizando}
-                                    title="Sincronizar conversas do WhatsApp"
-                                    className="flex items-center justify-center rounded-full p-1.5 transition-colors hover:bg-surface-2 disabled:opacity-50"
-                                    style={{ color: 'var(--text-3)' }}
+                                    title={sincronizando ? 'Sincronização em andamento' : 'Sincronizar conversas do WhatsApp'}
+                                    aria-label={sincronizando ? 'Sincronização em andamento' : 'Sincronizar conversas do WhatsApp'}
+                                    className="flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-surface-2 disabled:opacity-60"
+                                    style={{ color: sincronizando ? 'var(--jade)' : 'var(--text-3)' }}
                                 >
                                     <svg
                                         width={14} height={14} viewBox="0 0 24 24" fill="none"
@@ -503,6 +568,61 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                 </button>
                             </div>
                         </div>
+
+                        {syncStatus && syncStatus.status !== 'idle' && (
+                            <div
+                                className="mb-3 rounded-xl p-3"
+                                style={{
+                                    background: syncStatus.status === 'failed' ? 'rgba(239,68,68,.08)' : 'var(--bg-surface-2)',
+                                    border: `1px solid ${syncStatus.status === 'failed' ? 'rgba(239,68,68,.22)' : 'var(--border)'}`,
+                                }}
+                                role="status"
+                                aria-live="polite"
+                            >
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-semibold text-primary">
+                                            {syncStatus.status === 'queued' && 'Aguardando processamento'}
+                                            {syncStatus.status === 'running' && 'Sincronizando conversas'}
+                                            {syncStatus.status === 'completed' && 'Sincronização concluída'}
+                                            {syncStatus.status === 'failed' && 'Falha na sincronização'}
+                                        </p>
+                                        <p className="mt-0.5 text-[11px] leading-relaxed" style={{ color: 'var(--text-3)' }}>
+                                            {syncStatus.message}
+                                        </p>
+                                    </div>
+                                    {syncAtivo && (
+                                        <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[var(--border-strong)] border-t-[var(--jade)]" />
+                                    )}
+                                </div>
+
+                                {syncStatus.status === 'running' && (syncStatus.total ?? 0) > 0 && (
+                                    <div className="mt-2.5">
+                                        <div className="mb-1 flex items-center justify-between text-[10px]" style={{ color: 'var(--text-3)' }}>
+                                            <span>{syncStatus.processed ?? 0} de {syncStatus.total} conversas</span>
+                                            <span>{syncProgresso}%</span>
+                                        </div>
+                                        <div className="h-1.5 overflow-hidden rounded-full" style={{ background: 'var(--border)' }}>
+                                            <div className="h-full rounded-full transition-all" style={{ width: `${syncProgresso}%`, background: 'var(--jade)' }} />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {syncStatus.status === 'completed' && (
+                                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px]" style={{ color: 'var(--text-3)' }}>
+                                        <span>{syncStatus.imported ?? 0} mensagens importadas</span>
+                                        {(syncStatus.removed ?? 0) > 0 && <span>{syncStatus.removed} conversas vazias removidas</span>}
+                                        {(syncStatus.errors ?? 0) > 0 && <span>{syncStatus.errors} falhas</span>}
+                                    </div>
+                                )}
+
+                                {syncStatus.status === 'failed' && (
+                                    <button type="button" onClick={sincronizar} className="mt-2 text-xs font-semibold" style={{ color: 'var(--danger)' }}>
+                                        Tentar novamente
+                                    </button>
+                                )}
+                            </div>
+                        )}
 
                         {/* Campo de pesquisa estilo WhatsApp Web */}
                         <div className="relative mb-2.5">
