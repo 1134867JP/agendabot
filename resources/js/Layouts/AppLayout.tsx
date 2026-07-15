@@ -99,12 +99,12 @@ export default function AppLayout({ children, title, subtitle, fullHeight }: Pro
 
                 {/* Barra mobile — sticky no scroll da janela, oculta no desktop */}
                 <header
-                    className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 lg:hidden"
+                    className="sticky top-0 z-10 flex min-h-14 items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3 lg:hidden"
                     style={{ background: 'var(--bg-sidebar)', borderBottom: '1px solid var(--border)' }}
                 >
                     <button
                         onClick={() => setSidebarOpen(true)}
-                        className="rounded-md p-1 transition-colors"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors"
                         style={{ color: 'var(--text-2)' }}
                         aria-label="Abrir menu"
                     >
@@ -134,7 +134,7 @@ export default function AppLayout({ children, title, subtitle, fullHeight }: Pro
                 {/* Flash messages */}
                 {flash?.success && (
                     <div
-                        className="flash-msg mx-5 mt-4 flex items-center gap-2.5 rounded-lg px-4 py-3 text-sm"
+                        className="flash-msg mx-4 mt-3 flex items-start gap-2.5 rounded-lg px-3.5 py-3 text-sm sm:mx-5 sm:mt-4 sm:items-center sm:px-4"
                         style={{ background: 'rgba(110,231,183,0.08)', border: '1px solid rgba(110,231,183,0.2)', color: '#6ee7b7' }}
                     >
                         <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
@@ -145,7 +145,7 @@ export default function AppLayout({ children, title, subtitle, fullHeight }: Pro
                 )}
                 {flash?.erro && (
                     <div
-                        className="flash-msg mx-5 mt-4 flex items-center gap-2.5 rounded-lg px-4 py-3 text-sm"
+                        className="flash-msg mx-4 mt-3 flex items-start gap-2.5 rounded-lg px-3.5 py-3 text-sm sm:mx-5 sm:mt-4 sm:items-center sm:px-4"
                         style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171' }}
                     >
                         <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
@@ -161,7 +161,7 @@ export default function AppLayout({ children, title, subtitle, fullHeight }: Pro
                     className={
                         fullHeight
                             ? 'flex flex-1 flex-col overflow-hidden min-h-0'
-                            : 'p-6 lg:flex-1 lg:min-h-0 lg:overflow-y-auto'
+                            : 'p-4 sm:p-6 lg:flex-1 lg:min-h-0 lg:overflow-y-auto'
                     }
                 >
                     {!fullHeight && title && (
