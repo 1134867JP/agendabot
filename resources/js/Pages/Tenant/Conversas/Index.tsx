@@ -334,6 +334,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
     const chatRef      = useRef<HTMLDivElement>(null);
     const intervalRef  = useRef<ReturnType<typeof setInterval> | null>(null);
     const syncRef      = useRef<ReturnType<typeof setInterval> | null>(null);
+    const syncWasActiveRef = useRef(false);
 
     const { data, setData, post, processing, reset } = useForm<{ conteudo: string }>({ conteudo: '' });
 
@@ -434,6 +435,8 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
             setSyncStatus(status);
 
             const ativo = status.status === 'queued' || status.status === 'running';
+            const estavaAtivo = syncWasActiveRef.current;
+            syncWasActiveRef.current = ativo;
             setSincronizando(ativo);
 
             if (! ativo) {
@@ -441,7 +444,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                     clearInterval(syncRef.current);
                     syncRef.current = null;
                 }
-                if (status.status === 'completed') {
+                if (status.status === 'completed' && estavaAtivo) {
                     router.reload({ only: ['conversas'] });
                 }
             }
@@ -466,6 +469,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
 
     const sincronizar = () => {
         setSincronizando(true);
+        syncWasActiveRef.current = true;
         setSyncStatus({
             status: 'queued',
             processed: 0,
