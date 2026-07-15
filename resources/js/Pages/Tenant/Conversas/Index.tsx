@@ -144,7 +144,7 @@ function Bubble({ msg, prevRemetente }: { msg: Mensagem; prevRemetente?: string 
             >
                 {showLabel && (
                     <p className="px-3.5 pt-2.5 mb-1 text-[10px] font-semibold" style={{ color: labelColor }}>
-                        {isBot ? '🤖 Bot' : '👤 Atendente'}
+                        {isBot ? 'Bot' : 'Atendente'}
                     </p>
                 )}
 
@@ -175,8 +175,8 @@ function Bubble({ msg, prevRemetente }: { msg: Mensagem; prevRemetente?: string 
                 {/* Documento / Sticker / Fallback */}
                 {(msg.tipo === 'documento' || msg.tipo === 'sticker' || (!mediaUrl && msg.tipo !== 'texto')) && (
                     <div className="px-3.5 py-2.5 flex items-center gap-2">
-                        <span style={{ color: 'var(--text-3)' }}>
-                            {msg.tipo === 'documento' ? '📄' : msg.tipo === 'sticker' ? '🎭' : '📎'}
+                        <span className="text-[11px] font-medium" style={{ color: 'var(--text-3)' }}>
+                            {msg.tipo === 'documento' ? 'Documento' : msg.tipo === 'sticker' ? 'Figurinha' : 'Anexo'}
                         </span>
                         <span style={{ color: 'var(--text-2)', fontSize: '12px' }}>
                             {msg.conteudo || msg.tipo}
