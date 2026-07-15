@@ -13,7 +13,8 @@ const PlusIcon = () => (
 );
 
 export default function QuickActions() {
-    const { currentTenant } = usePage<SharedProps>().props;
+    const page = usePage<SharedProps>();
+    const { currentTenant } = page.props;
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
     const modoAgendamento = (currentTenant?.modo_bot ?? 'agendamento') === 'agendamento';
@@ -26,7 +27,7 @@ export default function QuickActions() {
         return () => document.removeEventListener('mousedown', close);
     }, []);
 
-    if (!currentTenant) return null;
+    if (!currentTenant || page.url.startsWith('/painel/agendamentos')) return null;
 
     const actions = [
         ...(modoAgendamento ? [
