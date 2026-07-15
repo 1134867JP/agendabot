@@ -109,26 +109,26 @@ function HorariosEditor({ profissional, onClose }: { profissional: Profissional;
     };
 
     return (
-        <div className="px-6 pb-5 pt-4" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface-2)' }}>
+        <div className="px-4 pb-5 pt-4 sm:px-6" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface-2)' }}>
             <h4 className="mb-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
                 Horários de atendimento
             </h4>
             <div className="space-y-2.5">
                 {rows.map((row, i) => (
-                    <div key={i} className="flex flex-wrap items-center gap-4">
-                        <div className="w-28">
+                    <div key={i} className="grid grid-cols-2 items-center gap-2 rounded-lg p-2 sm:flex sm:flex-wrap sm:gap-4">
+                        <div className="col-span-2 sm:col-span-1 sm:w-28">
                             <Toggle checked={row.ativo} onChange={() => toggle(i)} label={DIAS[i]} />
                         </div>
-                        <input type="time" value={row.hora_inicio} onChange={e => setField(i, 'hora_inicio', e.target.value)} disabled={!row.ativo} className="input w-28 disabled:opacity-40" />
-                        <span className="text-xs" style={{ color: 'var(--text-3)' }}>até</span>
-                        <input type="time" value={row.hora_fim} onChange={e => setField(i, 'hora_fim', e.target.value)} disabled={!row.ativo} className="input w-28 disabled:opacity-40" />
-                        <select value={row.duracao_slot} onChange={e => setField(i, 'duracao_slot', parseInt(e.target.value))} disabled={!row.ativo} className="input w-28 disabled:opacity-40">
+                        <input type="time" value={row.hora_inicio} onChange={e => setField(i, 'hora_inicio', e.target.value)} disabled={!row.ativo} className="input w-full min-w-0 disabled:opacity-40 sm:w-28" />
+                        <span className="hidden text-xs sm:inline" style={{ color: 'var(--text-3)' }}>até</span>
+                        <input type="time" value={row.hora_fim} onChange={e => setField(i, 'hora_fim', e.target.value)} disabled={!row.ativo} className="input w-full min-w-0 disabled:opacity-40 sm:w-28" />
+                        <select value={row.duracao_slot} onChange={e => setField(i, 'duracao_slot', parseInt(e.target.value))} disabled={!row.ativo} className="input w-full min-w-0 disabled:opacity-40 sm:w-28">
                             {DURACOES.map(m => <option key={m} value={m}>{m} min</option>)}
                         </select>
                     </div>
                 ))}
             </div>
-            <div className="mt-5 flex gap-2">
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row">
                 <button onClick={salvar} disabled={saving} className="btn-primary">{saving ? 'Salvando…' : 'Salvar horários'}</button>
                 <button onClick={onClose} className="btn-secondary">Fechar</button>
             </div>
@@ -155,10 +155,10 @@ function NovoProfissionalForm({ onClose }: { onClose: () => void }) {
 
     return (
         <div className="card overflow-hidden" style={{ borderColor: 'var(--accent)' }}>
-            <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+            <div className="px-4 py-4 sm:px-6" style={{ borderBottom: '1px solid var(--border)' }}>
                 <h3 className="font-semibold text-primary">Novo profissional</h3>
             </div>
-            <form onSubmit={submit} className="space-y-4 px-6 py-5">
+            <form onSubmit={submit} className="space-y-4 px-4 py-5 sm:px-6">
                 <div>
                     <label className="label mb-1" htmlFor="novo-prof-nome">Nome *</label>
                     <input
@@ -175,7 +175,7 @@ function NovoProfissionalForm({ onClose }: { onClose: () => void }) {
 
                 <EspecialidadesField value={data.especialidades} onChange={v => setData('especialidades', v)} />
 
-                <div className="flex gap-2 pt-1">
+                <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row">
                     <button type="submit" disabled={processing} className="btn-primary">
                         {processing ? 'Criando…' : 'Criar profissional'}
                     </button>
@@ -213,10 +213,10 @@ function EditarProfissionalForm({ profissional, onClose }: { profissional: Profi
         <>
         {confirmModal}
         <div className="card overflow-hidden" style={{ borderColor: 'var(--accent)' }}>
-            <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+            <div className="px-4 py-4 sm:px-6" style={{ borderBottom: '1px solid var(--border)' }}>
                 <h3 className="font-semibold text-primary">Editar profissional</h3>
             </div>
-            <form onSubmit={submit} className="space-y-4 px-6 py-5">
+            <form onSubmit={submit} className="space-y-4 px-4 py-5 sm:px-6">
                 <div>
                     <label className="label mb-1" htmlFor="editar-prof-nome">Nome *</label>
                     <input
@@ -234,12 +234,12 @@ function EditarProfissionalForm({ profissional, onClose }: { profissional: Profi
 
                 <Toggle checked={data.ativo} onChange={v => setData('ativo', v)} label={data.ativo ? 'Ativo' : 'Inativo'} />
 
-                <div className="flex items-center justify-between pt-1">
+                <div className="flex flex-col items-stretch gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
                     <button type="button" onClick={excluir} className="text-xs font-medium transition-opacity hover:opacity-70" style={{ color: '#f87171' }}>
                         Excluir profissional
                     </button>
-                    <div className="flex gap-2">
-                        <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
+                    <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                        <button type="button" onClick={onClose} className="btn-secondary justify-center">Cancelar</button>
                         <button type="submit" disabled={processing} className="btn-primary">
                             {processing ? 'Salvando…' : 'Salvar'}
                         </button>
@@ -270,7 +270,7 @@ export default function ProfissionaisIndex({ profissionais }: Props) {
         <ConfiguracoesLayout title="Profissionais" subtitle="Sua equipe, especialidades e horários de atendimento">
             <Head title="Profissionais" />
 
-            <div className="mb-5 flex items-center justify-between">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm" style={{ color: 'var(--text-3)' }}>
                     {profissionais.length} profissional{profissionais.length !== 1 ? 'is' : ''} cadastrado{profissionais.length !== 1 ? 's' : ''}
                 </p>
@@ -288,9 +288,12 @@ export default function ProfissionaisIndex({ profissionais }: Props) {
                 )}
 
                 {profissionais.length === 0 && !novoAberto && (
-                    <div className="card p-10 text-center" style={{ color: 'var(--text-3)' }}>
-                        <p className="text-sm">Nenhum profissional cadastrado ainda.</p>
-                        <p className="mt-1 text-xs">Cadastre seus barbeiros, fisioterapeutas, treinadores, etc.</p>
+                    <div className="card flex flex-col items-center gap-3 p-8 text-center sm:p-10" style={{ color: 'var(--text-3)' }}>
+                        <div>
+                            <p className="text-sm font-medium text-primary">Cadastre seu primeiro profissional</p>
+                            <p className="mt-1 text-xs">Defina quem atende, especialidades e horários disponíveis.</p>
+                        </div>
+                        <button type="button" onClick={() => setNovoAberto(true)} className="btn-primary min-h-11">Criar profissional</button>
                     </div>
                 )}
 
@@ -327,23 +330,23 @@ export default function ProfissionaisIndex({ profissionais }: Props) {
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-wrap items-center gap-2 pl-14 sm:pl-0">
+                                    <div className="grid w-full grid-cols-2 gap-2 pl-14 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:pl-0">
                                         <span className={`badge ${p.ativo ? 'badge-green' : 'badge-gray'}`}>
                                             {p.ativo ? 'Ativo' : 'Inativo'}
                                         </span>
                                         <button
                                             onClick={() => setExpandido(expandido === p.id ? null : p.id)}
-                                            className="btn-secondary py-1.5 text-xs"
+                                            className="btn-secondary min-h-10 justify-center py-1.5 text-xs"
                                         >
                                             {expandido === p.id ? 'Fechar' : 'Horários'}
                                         </button>
                                         <button
                                             onClick={() => { setEditando(p.id); setNovoAberto(false); setExpandido(null); }}
-                                            className="btn-secondary py-1.5 text-xs"
+                                            className="btn-secondary min-h-10 justify-center py-1.5 text-xs"
                                         >
                                             Editar
                                         </button>
-                                        <button onClick={() => toggleAtivo(p)} className="btn-secondary py-1.5 text-xs">
+                                        <button onClick={() => toggleAtivo(p)} className="btn-secondary min-h-10 justify-center py-1.5 text-xs">
                                             {p.ativo ? 'Desativar' : 'Ativar'}
                                         </button>
                                     </div>
