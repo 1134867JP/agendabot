@@ -226,7 +226,11 @@ class ConversaSyncService
             return null;
         }
 
-        $telefone      = $this->limparJid($remoteJid);
+        $telefone = $this->resolverTelefoneDoChat($chat, $remoteJid);
+        if (! $telefone) {
+            return null;
+        }
+
         $lastMsgFromMe = (bool) data_get($chat, 'lastMessage.key.fromMe', false);
         $nomeChat = $this->nomeValido(data_get($chat, 'pushName'))
             ?? ($lastMsgFromMe ? null : $this->nomeValido(data_get($chat, 'lastMessage.pushName')));
@@ -247,12 +251,16 @@ class ConversaSyncService
             return null;
         }
 
-        $telefone = $this->limparJid($jid);
-        $nome     = $this->nomeValido(
+        $telefone = $this->primeiroTelefoneValido([
+            data_get($contato, 'remoteJidAlt'),
+            data_get($contato, 'phoneNumber'),
+            $jid,
+        ]);
+        $nome = $this->nomeValido(
             data_get($contato, 'pushName') ?? data_get($contato, 'notify') ?? data_get($contato, 'name')
         );
 
-        if (! $nome) {
+        if (! $telefone || ! $nome) {
             return null;
         }
 
@@ -306,16 +314,39 @@ class ConversaSyncService
     public function buildNomesMap(array $contatos): array
     {
         $mapa = [];
-        foreach ($contatos as $c) {
-            $jid  = data_get($c, 'remoteJid') ?? data_get($c, 'id') ?? data_get($c, 'jid');
-            $nome = data_get($c, 'pushName') ?? data_get($c, 'notify') ?? data_get($c, 'name');
-            if (! $jid || ! $nome) {
+
+        foreach ($contatos as $contato) {
+            $nome = $this->nomeValido(
+                data_get($contato, 'pushName')
+                    ?? data_get($contato, 'notify')
+                    ?? data_get($contato, 'name')
+            );
+            $telefone = $this->primeiroTelefoneValido([
+                data_get($contato, 'remoteJidAlt'),
+                data_get($contato, 'phoneNumber'),
+                data_get($contato, 'remoteJid'),
+                data_get($contato, 'id'),
+                data_get($contato, 'jid'),
+            ]);
+
+            if (! $telefone || ! $nome) {
                 continue;
             }
-            $tel         = preg_replace('/@.*$/', '', $jid);
-            $mapa[$tel]  = $nome;
+
+            $mapa[$telefone] = $nome;
+            $mapa[$this->normalizar($telefone)] = $nome;
         }
+
         return $mapa;
+    }
+
+    public function resolverTelefoneMensagem(array $mensagem): ?string
+    {
+        return $this->primeiroTelefoneValido([
+            data_get($mensagem, 'key.remoteJidAlt'),
+            data_get($mensagem, 'key.participantAlt'),
+            data_get($mensagem, 'key.remoteJid'),
+        ]);
     }
 
     public function limparRegistrosVazios(Tenant $tenant): array
@@ -383,7 +414,14 @@ class ConversaSyncService
     private function primeiroTelefoneValido(array $candidatos): ?string
     {
         foreach ($candidatos as $candidato) {
-            if (! is_string($candidato) || $candidato === '' || str_contains($candidato, '@lid')) {
+            if (
+                ! is_string($candidato)
+                || $candidato === ''
+                || str_contains($candidato, '@lid')
+                || str_contains($candidato, '@g.us')
+                || str_contains($candidato, '@newsletter')
+                || str_contains($candidato, 'broadcast')
+            ) {
                 continue;
             }
 
