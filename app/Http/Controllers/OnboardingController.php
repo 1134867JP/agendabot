@@ -125,8 +125,11 @@ class OnboardingController extends Controller
 
     public function sucesso(): Response
     {
+        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->first();
+
         return Inertia::render('Onboarding/Sucesso', [
-            'user' => auth()->user(),
+            'user'   => auth()->user(),
+            'tenant' => $tenant ? $tenant->only(['nome', 'tipo_servico']) : null,
         ]);
     }
 

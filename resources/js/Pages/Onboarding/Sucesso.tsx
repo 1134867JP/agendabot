@@ -1,37 +1,53 @@
 import { Head, Link } from '@inertiajs/react';
-import { PageProps } from '@/types';
+import { PageProps, TipoServico } from '@/types';
 import ForceDark from '@/Components/ForceDark';
+import { usaProfissionais } from '@/lib/tenantNav';
 
 interface Props extends PageProps {
     user: { name: string };
+    tenant: { nome: string; tipo_servico: TipoServico } | null;
 }
 
-const steps: Array<{ n: number; title: string; desc: string; href?: string }> = [
-    {
-        n: 1,
-        title: 'Conecte seu WhatsApp',
-        desc: 'Acesse a aba WhatsApp e escaneie o QR Code com o celular do estabelecimento.',
-    },
-    {
-        n: 2,
-        title: 'Cadastre seus recursos',
-        desc: 'Adicione barbeiros, quadras ou serviços e configure os horários de funcionamento.',
-    },
-    {
-        n: 3,
-        title: 'Teste o bot no simulador',
-        desc: 'Converse com uma versão segura antes de conectar o WhatsApp.',
-        href: 'tenant.bot.simulador',
-    },
-    {
-        n: 4,
-        title: 'Compartilhe com seus clientes',
-        desc: 'Divulgue o número de WhatsApp — o bot já estará pronto para atender.',
-    },
-];
+interface Step { n: number; title: string; desc: string; href?: string; linkLabel?: string }
 
-export default function OnboardingSucesso({ user }: Props) {
+export default function OnboardingSucesso({ user, tenant }: Props) {
     const firstName = user.name.split(' ')[0];
+
+    // O catálogo varia por tipo: quadras cadastram Recursos, os demais Profissionais.
+    const comProfissionais = tenant ? usaProfissionais(tenant.tipo_servico) : true;
+    const catalogoRota   = comProfissionais ? 'tenant.profissionais.index' : 'tenant.recursos.index';
+    const catalogoTitulo = comProfissionais ? 'Cadastre profissionais e serviços' : 'Cadastre seus recursos';
+
+    // Ordem: primeiro montar o catálogo, testar no simulador e só então conectar o
+    // WhatsApp — o passo de teste explicitamente acontece antes da conexão.
+    const steps: Step[] = [
+        {
+            n: 1,
+            title: catalogoTitulo,
+            desc: 'Configure os itens agendáveis e seus horários de funcionamento.',
+            href: catalogoRota,
+            linkLabel: 'Abrir cadastro →',
+        },
+        {
+            n: 2,
+            title: 'Teste o bot no simulador',
+            desc: 'Converse com uma versão segura antes de conectar o WhatsApp.',
+            href: 'tenant.bot.simulador',
+            linkLabel: 'Abrir simulador →',
+        },
+        {
+            n: 3,
+            title: 'Conecte seu WhatsApp',
+            desc: 'Escaneie o QR Code com o celular do estabelecimento.',
+            href: 'tenant.whatsapp',
+            linkLabel: 'Conectar WhatsApp →',
+        },
+        {
+            n: 4,
+            title: 'Compartilhe com seus clientes',
+            desc: 'Divulgue o número de WhatsApp — o bot já estará pronto para atender.',
+        },
+    ];
 
     return (
         <ForceDark>
@@ -70,7 +86,7 @@ export default function OnboardingSucesso({ user }: Props) {
                                 <p className="mt-0.5 text-sm" style={{ color: 'var(--text-3)' }}>{s.desc}</p>
                                 {s.href && (
                                     <Link href={route(s.href)} className="mt-2 inline-block text-xs font-medium" style={{ color: 'var(--accent)' }}>
-                                        Abrir simulador →
+                                        {s.linkLabel ?? 'Abrir →'}
                                     </Link>
                                 )}
                             </div>
