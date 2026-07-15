@@ -103,6 +103,25 @@ class SincronizarConversasLimiteTest extends TestCase
         $this->assertDatabaseCount('conversas', 0);
     }
 
+    public function test_resolve_numero_real_quando_whatsapp_envia_identificador_lid(): void
+    {
+        $sync = app(ConversaSyncService::class);
+
+        $this->assertSame(
+            '5551999999999',
+            $sync->resolverTelefoneMensagem([
+                'key' => [
+                    'remoteJid' => '123456789012345@lid',
+                    'remoteJidAlt' => '5551999999999@s.whatsapp.net',
+                ],
+            ]),
+        );
+
+        $this->assertNull($sync->resolverTelefoneMensagem([
+            'key' => ['remoteJid' => '123456789012345@lid'],
+        ]));
+    }
+
     public function test_chatsrecenteslimitados_ordena_do_mais_recente_para_o_mais_antigo(): void
     {
         $sync = app(ConversaSyncService::class);
