@@ -67,25 +67,11 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                     </h2>
                 </div>
                 {/* Bot ativo toggle */}
-                <label className="flex cursor-pointer items-center gap-2">
-                    <span className="text-sm" style={{ color: 'var(--text-2)' }}>
-                        {data.bot_ativo ? 'Bot ativo' : 'Bot inativo'}
-                    </span>
-                    <button
-                        type="button"
-                        role="switch"
-                        aria-checked={data.bot_ativo}
-                        onClick={() => setData('bot_ativo', !data.bot_ativo)}
-                        className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
-                        style={{ background: data.bot_ativo ? 'var(--jade)' : 'rgba(255,255,255,0.12)' }}
-                    >
-                        <span
-                            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
-                                data.bot_ativo ? 'translate-x-5' : 'translate-x-0.5'
-                            }`}
-                        />
-                    </button>
-                </label>
+                <Toggle
+                    checked={data.bot_ativo}
+                    onChange={v => setData('bot_ativo', v)}
+                    label={data.bot_ativo ? 'Bot ativo' : 'Bot inativo'}
+                />
             </div>
 
             {wasSuccessful && (
@@ -299,20 +285,7 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                                 Envia uma mensagem WhatsApp 24h antes do agendamento
                             </p>
                         </div>
-                        <button
-                            type="button"
-                            role="switch"
-                            aria-checked={data.lembrete_ativo}
-                            onClick={() => setData('lembrete_ativo', !data.lembrete_ativo)}
-                            className="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none"
-                            style={{ background: data.lembrete_ativo ? 'var(--jade)' : 'rgba(255,255,255,0.12)' }}
-                        >
-                            <span
-                                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
-                                    data.lembrete_ativo ? 'translate-x-5' : 'translate-x-0.5'
-                                }`}
-                            />
-                        </button>
+                        <Toggle checked={data.lembrete_ativo} onChange={v => setData('lembrete_ativo', v)} />
                     </div>
 
                     {data.lembrete_ativo && (

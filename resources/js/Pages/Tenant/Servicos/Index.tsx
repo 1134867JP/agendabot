@@ -297,7 +297,7 @@ export default function ServicosIndex({ servicos }: Props) {
     };
 
     return (
-        <AppLayout title="Serviços">
+        <AppLayout title="Serviços" subtitle="Serviços oferecidos, valores e duração">
             <Head title="Serviços" />
 
             <div className="mb-5 flex items-center justify-between">

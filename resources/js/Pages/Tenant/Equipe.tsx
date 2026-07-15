@@ -1,7 +1,8 @@
-import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { PageProps } from '@/types';
+import { useConfirm } from '@/hooks/useConfirm';
 
 interface UsuarioEquipe {
     id: number;
@@ -51,7 +52,7 @@ function fmtData(iso: string) {
 
 export default function Equipe({ usuarios, meu_id }: Props) {
     const [showForm, setShowForm] = useState(false);
-    const [removendo, setRemovendo] = useState<number | null>(null);
+    const { confirm, modal: confirmModal } = useConfirm();
 
     const { data, setData, post, processing, errors, reset } = useForm({
         name:     '',
@@ -67,9 +68,14 @@ export default function Equipe({ usuarios, meu_id }: Props) {
         });
     };
 
-    const remover = (id: number) => {
-        setRemovendo(null);
-        router.delete(route('tenant.equipe.destroy', id));
+    const remover = async (u: UsuarioEquipe) => {
+        const ok = await confirm({
+            title: 'Remover usuário?',
+            message: `${u.name} perderá o acesso ao painel imediatamente.`,
+            confirmLabel: 'Remover',
+            variant: 'danger',
+        });
+        if (ok) router.delete(route('tenant.equipe.destroy', u.id));
     };
 
     return (
@@ -210,7 +216,7 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                                     </span>
                                     {u.id !== meu_id && (
                                         <button
-                                            onClick={() => setRemovendo(u.id)}
+                                            onClick={() => remover(u)}
                                             title="Remover da equipe"
                                             className="rounded-md p-1.5 text-red-400/60 transition-colors hover:bg-red-400/10 hover:text-red-400"
                                         >
@@ -226,36 +232,7 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                 )}
             </div>
 
-            {/* Remove confirm modal */}
-            {removendo !== null && (() => {
-                const u = usuarios.find(x => x.id === removendo)!;
-                return (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
-                        <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
-                            <h3 className="text-base font-semibold text-primary">Remover usuário?</h3>
-                            <p className="mt-1.5 text-sm" style={{ color: 'var(--text-3)' }}>
-                                <strong className="text-primary">{u.name}</strong> perderá o acesso ao painel imediatamente.
-                            </p>
-                            <div className="mt-5 flex gap-2.5">
-                                <button
-                                    onClick={() => remover(u.id)}
-                                    className="flex-1 rounded-xl py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
-                                    style={{ background: '#ef4444' }}
-                                >
-                                    Remover
-                                </button>
-                                <button
-                                    onClick={() => setRemovendo(null)}
-                                    className="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors"
-                                    style={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border-strong)', color: 'var(--text-2)' }}
-                                >
-                                    Cancelar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                );
-            })()}
+            {confirmModal}
         </AppLayout>
     );
 }

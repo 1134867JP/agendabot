@@ -267,7 +267,7 @@ export default function ProfissionaisIndex({ profissionais }: Props) {
     };
 
     return (
-        <AppLayout title="Profissionais">
+        <AppLayout title="Profissionais" subtitle="Sua equipe, especialidades e horários de atendimento">
             <Head title="Profissionais" />
 
             <div className="mb-5 flex items-center justify-between">

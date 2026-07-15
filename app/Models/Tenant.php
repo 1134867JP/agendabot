@@ -38,6 +38,12 @@ class Tenant extends Model
     /** Dias da semana no índice 0=Dom .. 6=Sáb usado por horario_atendimento. */
     public const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
+    /** Tipos de estabelecimento aceitos (fonte única para validação). */
+    public const TIPOS_SERVICO = ['barbeiro', 'quadra', 'estetica', 'clinica', 'studio', 'personalizado'];
+
+    /** Tons de voz aceitos para o bot. */
+    public const TONS_VOZ = ['formal', 'semiformal', 'descontraido'];
+
     public function recursos(): HasMany { return $this->hasMany(Recurso::class); }
     public function agendamentos(): HasMany { return $this->hasMany(Agendamento::class); }
     public function conversas(): HasMany { return $this->hasMany(Conversa::class); }

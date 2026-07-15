@@ -232,7 +232,7 @@ export default function RecursosIndex({ recursos }: Props) {
     };
 
     return (
-        <AppLayout title="Recursos">
+        <AppLayout title="Recursos" subtitle="O que pode ser agendado e seus horários de funcionamento">
             <Head title="Recursos" />
 
             <div className="mb-5 flex items-center justify-between">

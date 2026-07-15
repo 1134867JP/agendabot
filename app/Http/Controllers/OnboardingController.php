@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Onboarding\Step1Request;
+use App\Http\Requests\Onboarding\Step3Request;
 use App\Jobs\CreateEvolutionInstanceJob;
 use App\Models\Tenant;
 use App\Models\User;
@@ -20,17 +22,9 @@ class OnboardingController extends Controller
         return Inertia::render('Onboarding/Step1');
     }
 
-    public function step1Store(Request $request): RedirectResponse
+    public function step1Store(Step1Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'nome_usuario' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'senha' => 'required|min:8|confirmed',
-            'nome_estabelecimento' => 'required|string|max:255',
-            'tipo_servico' => 'required|in:barbeiro,quadra,estetica,clinica,studio,personalizado',
-            'tipo_servico_personalizado' => 'nullable|required_if:tipo_servico,personalizado|string|max:100',
-            'telefone' => 'required|string|min:10|max:25',
-        ]);
+        $validated = $request->validated();
 
         $user = User::create([
             'name' => $validated['nome_usuario'],
@@ -110,13 +104,9 @@ class OnboardingController extends Controller
         ]);
     }
 
-    public function step3Store(Request $request): RedirectResponse
+    public function step3Store(Step3Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'bot_nome' => 'required|string|min:2|max:80',
-            'bot_saudacao' => 'required|string|min:10|max:500',
-            'bot_tom' => 'required|in:formal,semiformal,descontraido',
-        ]);
+        $validated = $request->validated();
 
         $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->first();
 
