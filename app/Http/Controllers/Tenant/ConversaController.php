@@ -26,6 +26,7 @@ class ConversaController extends Controller
                 'cliente',
                 'mensagens' => fn ($q) => $q->orderByDesc('enviada_em')->limit(1),
             ])
+            ->orderByRaw("CASE status_v2 WHEN 'aguardando_humano' THEN 0 WHEN 'em_atendimento_humano' THEN 1 WHEN 'ativa' THEN 2 ELSE 3 END")
             ->orderByDesc('ultima_mensagem_em');
 
         if ($status = $request->status_v2) {
@@ -104,7 +105,7 @@ class ConversaController extends Controller
         abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
 
         $conversa->update(['status_v2' => 'em_atendimento_humano']);
-        $conversa->registrarMensagem('bot', '⚠️ Atendimento assumido por um humano.');
+        $conversa->registrarMensagem('bot', 'Atendimento assumido por uma pessoa da equipe.');
 
         return back()->with('success', 'Atendimento assumido.');
     }
@@ -114,7 +115,7 @@ class ConversaController extends Controller
         abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
 
         $conversa->update(['status_v2' => 'ativa']);
-        $conversa->registrarMensagem('bot', '🤖 Bot reativado. Continuando atendimento automático.');
+        $conversa->registrarMensagem('bot', 'Atendimento automático reativado.');
 
         return back()->with('success', 'Bot reativado.');
     }
