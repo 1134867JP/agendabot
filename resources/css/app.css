@@ -166,6 +166,21 @@
     .sidebar-btn { color: var(--text-3); background: transparent; @apply transition-colors rounded-md; }
     .sidebar-btn:hover { color: var(--text-2); background: var(--bg-surface-2); }
 
+    /* ── Abas do hub de configurações ────────────────────────────────────── */
+    .config-tab {
+        color: var(--text-3);
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        @apply flex items-center gap-2 whitespace-nowrap rounded-t-lg px-3.5 py-2.5 text-sm font-medium transition-all;
+    }
+    .config-tab svg { color: var(--text-3); transition: color .15s; }
+    .config-tab:hover { color: var(--text-1); background: var(--bg-surface-2); }
+    .config-tab:hover svg { color: var(--text-2); }
+    .config-tab--active { color: var(--accent); border-bottom-color: var(--accent); }
+    .config-tab--active svg { color: var(--accent); }
+    .config-tab--active:hover { color: var(--accent); background: var(--accent-light); }
+    .config-tab--active:hover svg { color: var(--accent); }
+
     /* ── Scrollbar invisível mas funcional ───────────────────────────────── */
     .scroll-hidden { scrollbar-width: none; -ms-overflow-style: none; }
     .scroll-hidden::-webkit-scrollbar { display: none; }

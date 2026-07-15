@@ -18,20 +18,19 @@ export default function ConfiguracoesTabs() {
 
     return (
         <div className="mb-6 -mt-2 overflow-x-auto scroll-hidden">
-            <div className="flex min-w-max gap-1" style={{ borderBottom: '1px solid var(--border)' }}>
+            <div className="flex min-w-max gap-0.5" style={{ borderBottom: '1px solid var(--border)' }}>
                 {tabs.map(tab => {
                     const active = isActive(tab.path);
                     return (
                         <Link
                             key={tab.routeName}
                             href={route(tab.routeName)}
-                            className="whitespace-nowrap px-3.5 py-2.5 text-sm font-medium transition-colors"
-                            style={{
-                                color: active ? 'var(--accent)' : 'var(--text-3)',
-                                borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
-                                marginBottom: '-1px',
-                            }}
+                            aria-current={active ? 'page' : undefined}
+                            className={`config-tab${active ? ' config-tab--active' : ''}`}
                         >
+                            <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                <path d={tab.icon} />
+                            </svg>
                             {tab.label}
                         </Link>
                     );
