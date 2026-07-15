@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { PageProps, Recurso } from '@/types';
@@ -134,7 +134,7 @@ function MiniCalendar({
             <div className="mb-3 flex items-center justify-between">
                 <button
                     onClick={prev}
-                    className="flex h-6 w-6 items-center justify-center rounded-md transition-colors hover:bg-[var(--bg-surface-2)]"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
                     style={{ color: 'var(--text-3)' }}
                 >
                     <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -146,7 +146,7 @@ function MiniCalendar({
                 </span>
                 <button
                     onClick={next}
-                    className="flex h-6 w-6 items-center justify-center rounded-md transition-colors hover:bg-[var(--bg-surface-2)]"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
                     style={{ color: 'var(--text-3)' }}
                 >
                     <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -165,7 +165,7 @@ function MiniCalendar({
             {/* Day cells */}
             <div className="grid grid-cols-7">
                 {cells.map((d, i) => {
-                    if (!d) return <div key={i} style={{ height: 28 }} />;
+                    if (!d) return <div key={i} style={{ height: 36 }} />;
                     const iso    = toISO(d);
                     const isSel  = iso === selISO;
                     const isToday = iso === hoje;
@@ -176,8 +176,8 @@ function MiniCalendar({
                             onClick={() => onSelect(d)}
                             className="relative flex flex-col items-center justify-center rounded-full transition-colors"
                             style={{
-                                height: 28,
-                                fontSize: 11,
+                                height: 36,
+                                fontSize: 12,
                                 fontWeight: isSel || isToday ? 600 : 400,
                                 background: isSel ? 'var(--jade)' : 'transparent',
                                 color: isSel ? 'white' : isToday ? 'var(--jade)' : 'var(--text-2)',
@@ -793,7 +793,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
                     <div className="flex items-center gap-2 px-4 pb-2">
                         <button
                             onClick={() => navegarDia(addDays(diaAtivo, -1))}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
+                            className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
                             style={{ color: 'var(--text-3)' }}
                         >
                             <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -803,7 +803,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
                         <p className="flex-1 text-center text-[13px] font-semibold text-primary">{fmtDiaLongo(diaAtivo)}</p>
                         <button
                             onClick={() => navegarDia(addDays(diaAtivo, 1))}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
+                            className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
                             style={{ color: 'var(--text-3)' }}
                         >
                             <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -819,7 +819,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
                                 <button
                                     key={e.id}
                                     onClick={() => setEntidadeId(e.id)}
-                                    className="flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-all"
+                                    className="flex min-h-10 flex-shrink-0 items-center rounded-full px-3 py-1.5 text-xs font-medium transition-all"
                                     style={{
                                         background: entidadeId === e.id ? 'var(--jade)' : 'var(--bg-surface-2)',
                                         color: entidadeId === e.id ? 'white' : 'var(--text-2)',
@@ -832,26 +832,35 @@ export default function Agenda({ recursos, profissionais }: Props) {
                     )}
                 </div>
 
-                {/* Day events */}
-                <DayTimeline
-                    dia={diaAtivo}
-                    agendamentos={agendamentos}
-                    onDetalhe={setDetalhe}
-                    onNovo={hora => setModalNova({ data: toISO(diaAtivo), hora })}
-                    loading={loading}
-                />
-
-                {/* FAB */}
-                <button
-                    onClick={() => setModalNova({ data: toISO(diaAtivo), hora: '09:00' })}
-                    aria-label="Nova reserva"
-                    className="fixed bottom-6 right-5 z-20 flex items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95"
-                    style={{ width: 52, height: 52, background: 'var(--jade)', color: 'white' }}
-                >
-                    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 5v14M5 12h14" />
-                    </svg>
-                </button>
+                {entidades.length === 0 ? (
+                    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+                        <p className="font-medium text-primary">Prepare a agenda</p>
+                        <p className="text-sm" style={{ color: 'var(--text-3)' }}>
+                            Cadastre quem atende e os horários disponíveis antes de criar reservas.
+                        </p>
+                        <Link href={route('tenant.profissionais.index')} className="btn-primary min-h-11">Criar primeiro profissional</Link>
+                    </div>
+                ) : (
+                    <>
+                        <DayTimeline
+                            dia={diaAtivo}
+                            agendamentos={agendamentos}
+                            onDetalhe={setDetalhe}
+                            onNovo={hora => setModalNova({ data: toISO(diaAtivo), hora })}
+                            loading={loading}
+                        />
+                        <button
+                            onClick={() => setModalNova({ data: toISO(diaAtivo), hora: '09:00' })}
+                            aria-label="Nova reserva"
+                            className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-5 z-20 flex items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95"
+                            style={{ width: 52, height: 52, background: 'var(--jade)', color: 'white' }}
+                        >
+                            <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 5v14M5 12h14" />
+                            </svg>
+                        </button>
+                    </>
+                )}
             </div>
 
             {/* ───────────── Desktop ───────────── */}
@@ -921,7 +930,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
                     >
                         <button
                             onClick={prevWeek}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
+                            className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
                             style={{ color: 'var(--text-3)' }}
                         >
                             <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -939,7 +948,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
 
                         <button
                             onClick={nextWeek}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
+                            className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
                             style={{ color: 'var(--text-3)' }}
                         >
                             <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -976,8 +985,11 @@ export default function Agenda({ recursos, profissionais }: Props) {
                         <div className="flex flex-1 flex-col items-center justify-center gap-2">
                             <p className="font-medium text-primary">Nenhum profissional cadastrado</p>
                             <p className="text-sm" style={{ color: 'var(--text-3)' }}>
-                                Cadastre um profissional para usar a agenda.
+                                Cadastre quem atende e os horários disponíveis.
                             </p>
+                            <Link href={route('tenant.profissionais.index')} className="btn-primary mt-2 min-h-11">
+                                Criar primeiro profissional
+                            </Link>
                         </div>
                     ) : (
                         <WeekGrid
