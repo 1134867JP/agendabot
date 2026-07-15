@@ -165,20 +165,17 @@ export default function AppLayout({ children, title, subtitle, fullHeight }: Pro
                     }
                 >
                     {!fullHeight && title && (
-                        <div className="mb-7">
-                            <div className="flex items-baseline gap-3">
-                                <h1
-                                    className="text-[28px] leading-tight font-normal"
-                                    style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}
-                                >
-                                    {title}
-                                </h1>
-                                <div className="h-1.5 w-8 rounded-full" style={{ background: 'var(--jade)', opacity: 0.7, marginBottom: '4px', flexShrink: 0 }} />
-                            </div>
+                        <div className="mb-5">
+                            <h1
+                                className="text-xl font-semibold tracking-tight"
+                                style={{ color: 'var(--text-1)' }}
+                            >
+                                {title}
+                            </h1>
                             {subtitle && (
-                                <p className="mt-1.5 text-sm" style={{ color: 'var(--text-3)' }}>{subtitle}</p>
+                                <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>{subtitle}</p>
                             )}
-                            <div className="mt-5 h-px" style={{ background: 'var(--border)' }} />
+                            <div className="mt-4 h-px" style={{ background: 'var(--border)' }} />
                         </div>
                     )}
                     {children}
