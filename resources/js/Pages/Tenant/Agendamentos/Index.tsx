@@ -587,6 +587,13 @@ export default function AgendamentosIndex({
     filtros,
 }: Props) {
     const [modalAberto, setModalAberto] = useState(false);
+
+    useEffect(() => {
+        if (new URLSearchParams(window.location.search).get("novo") === "1") {
+            setModalAberto(true);
+        }
+    }, []);
+
     const [agendamentoEditando, setAgendamentoEditando] =
         useState<Agendamento | null>(null);
     const { confirm, modal: confirmModal } = useConfirm();
