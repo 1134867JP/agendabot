@@ -3,6 +3,7 @@ import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { PageProps, Recurso, HorarioFuncionamento } from '@/types';
 import Toggle from '@/Components/Toggle';
+import { useConfirm } from '@/hooks/useConfirm';
 
 interface Props extends PageProps {
     recursos: Recurso[];
@@ -141,6 +142,7 @@ function EditarRecursoForm({ recurso, onClose }: { recurso: Recurso; onClose: ()
         duracao_padrao_minutos: recurso.duracao_padrao_minutos?.toString() ?? '60',
         ativo: recurso.ativo,
     });
+    const { confirm, modal: confirmModal } = useConfirm();
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -150,10 +152,14 @@ function EditarRecursoForm({ recurso, onClose }: { recurso: Recurso; onClose: ()
         });
     };
 
-    const excluir = () => {
-        if (confirm('Remover este recurso?')) {
-            router.delete(route('tenant.recursos.destroy', recurso.id), { preserveScroll: true });
-        }
+    const excluir = async () => {
+        const ok = await confirm({
+            title: 'Desativar recurso',
+            message: `Desativar "${recurso.nome}"? Ele não aceitará novos agendamentos.`,
+            confirmLabel: 'Desativar',
+            variant: 'warning',
+        });
+        if (ok) router.delete(route('tenant.recursos.destroy', recurso.id), { preserveScroll: true });
     };
 
     return (
@@ -193,7 +199,7 @@ function EditarRecursoForm({ recurso, onClose }: { recurso: Recurso; onClose: ()
 
                 <div className="flex items-center justify-between pt-1">
                     <button type="button" onClick={excluir} className="text-xs font-medium transition-opacity hover:opacity-70" style={{ color: '#f87171' }}>
-                        Excluir recurso
+                        Desativar recurso
                     </button>
                     <div className="flex gap-2">
                         <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
@@ -203,6 +209,7 @@ function EditarRecursoForm({ recurso, onClose }: { recurso: Recurso; onClose: ()
                     </div>
                 </div>
             </form>
+            {confirmModal}
         </div>
     );
 }

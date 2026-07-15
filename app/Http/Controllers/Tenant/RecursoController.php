@@ -57,8 +57,10 @@ class RecursoController extends Controller
     public function destroy(Recurso $recurso): RedirectResponse
     {
         abort_unless($recurso->tenant_id === app('tenant')->id, 403);
-        $recurso->delete();
-        return back()->with('success', 'Recurso removido.');
+        // Desativa em vez de apagar, mantendo o histórico de agendamentos e alinhando
+        // ao comportamento de Profissional/Serviço/OpçãoExtra.
+        $recurso->update(['ativo' => false]);
+        return back()->with('success', 'Recurso desativado.');
     }
 
     public function create(): Response

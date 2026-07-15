@@ -47,7 +47,11 @@ class OnboardingTest extends TestCase
             'bot_tom' => 'semiformal',
         ]);
         $response->assertRedirect(route('onboarding.sucesso'));
-        $this->assertSame('Bia', $tenant->fresh()->nome_agente);
+        $fresh = $tenant->fresh();
+        $this->assertSame('Bia', $fresh->nome_agente);
+        // A saudação é persistida no campo próprio e NÃO sequestra instrucoes_extras.
+        $this->assertSame('Olá! Bem-vindo à barbearia, como posso ajudar?', $fresh->bot_saudacao);
+        $this->assertNull($fresh->instrucoes_extras);
 
         $this->get(route('onboarding.sucesso'))->assertOk();
     }

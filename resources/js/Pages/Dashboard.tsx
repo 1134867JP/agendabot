@@ -112,7 +112,7 @@ export default function Dashboard({ auth, tenants }: Props) {
                                 onClick={() => selecionar(tenant)}
                                 className="card group flex w-full items-center gap-4 p-4 text-left transition-all"
                                 style={{ cursor: 'pointer' }}
-                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface2)'; }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface-2)'; }}
                                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface)'; }}
                             >
                                 <div

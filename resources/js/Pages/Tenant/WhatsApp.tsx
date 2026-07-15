@@ -5,10 +5,9 @@ import { PageProps, Tenant } from '@/types';
 
 interface Props extends PageProps {
     tenant: Tenant;
-    webhook_url: string;
 }
 
-export default function WhatsAppPage({ tenant, webhook_url }: Props) {
+export default function WhatsAppPage({ tenant }: Props) {
     const [conectado, setConectado] = useState(tenant.whatsapp_conectado);
     const [qrcode, setQrcode] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);

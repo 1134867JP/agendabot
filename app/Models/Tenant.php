@@ -18,7 +18,7 @@ class Tenant extends Model
         'asaas_customer_id', 'asaas_subscription_id', 'plano', 'taxa_agendamento_bot', 'isento_cobranca',
         // v2
         'ramo_negocio', 'descricao_negocio', 'cidade', 'endereco',
-        'horarios_funcionamento', 'nome_agente', 'tom_voz', 'instrucoes_extras', 'bot_ativo',
+        'horarios_funcionamento', 'nome_agente', 'tom_voz', 'instrucoes_extras', 'bot_saudacao', 'bot_ativo',
         'webhook_token',
         // triagem / horário de atendimento
         'modo_bot', 'horario_atendimento', 'mensagem_fora_horario',

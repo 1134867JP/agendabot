@@ -29,8 +29,7 @@ class WhatsAppController extends Controller
         $tenant = app('tenant');
 
         return Inertia::render('Tenant/WhatsApp', [
-            'tenant'       => $tenant,
-            'webhook_url'  => $this->webhookUrl($tenant),
+            'tenant' => $tenant,
         ]);
     }
 

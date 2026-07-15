@@ -2,6 +2,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import { PageProps } from '@/types';
 import { FormEventHandler } from 'react';
 import ForceDark from '@/Components/ForceDark';
+import { TONS_VOZ } from '@/constants/bot';
 
 interface Props extends PageProps {
     tenant: {
@@ -9,36 +10,21 @@ interface Props extends PageProps {
         tipo_servico: string;
         nome_agente: string | null;
         tom_voz: string | null;
-        instrucoes_extras: string | null;
+        bot_saudacao: string | null;
     };
 }
 
-const TOM_OPTIONS = [
-    {
-        value: 'semiformal',
-        label: 'Casual',
-        desc: 'Simpático e próximo',
-        exemplo: '"Oi! Que bom ter você por aqui 😊 Como posso ajudar?"',
-    },
-    {
-        value: 'formal',
-        label: 'Profissional',
-        desc: 'Cordial e objetivo',
-        exemplo: '"Olá! Seja bem-vindo. Em que posso ajudá-lo hoje?"',
-    },
-    {
-        value: 'descontraido',
-        label: 'Descontraído',
-        desc: 'Bem-humorado e informal',
-        exemplo: '"Eaí! Bora agendar? Me diz o que você precisa 🤙"',
-    },
-];
-
 export default function OnboardingStep3({ tenant }: Props) {
+    const defaults = {
+        bot_nome:     `Assistente da ${tenant.nome}`,
+        bot_saudacao: `Olá! Bem-vindo à ${tenant.nome}. Como posso ajudar?`,
+        bot_tom:      'semiformal',
+    };
+
     const { data, setData, post, processing, errors } = useForm({
-        bot_nome:     tenant.nome_agente     || `Assistente da ${tenant.nome}`,
-        bot_saudacao: tenant.instrucoes_extras || `Olá! Bem-vindo à ${tenant.nome}. Como posso ajudar?`,
-        bot_tom:      tenant.tom_voz         || 'semiformal',
+        bot_nome:     tenant.nome_agente  || defaults.bot_nome,
+        bot_saudacao: tenant.bot_saudacao || defaults.bot_saudacao,
+        bot_tom:      tenant.tom_voz      || defaults.bot_tom,
     });
 
     const submit: FormEventHandler = (e) => {
@@ -46,8 +32,9 @@ export default function OnboardingStep3({ tenant }: Props) {
         post(route('onboarding.step3.store'));
     };
 
+    // "Pular" ignora edições parciais e grava os valores-padrão sugeridos.
     const pular = () => {
-        router.post(route('onboarding.step3.store'), data);
+        router.post(route('onboarding.step3.store'), defaults);
     };
 
     return (
@@ -130,7 +117,7 @@ export default function OnboardingStep3({ tenant }: Props) {
                         <div className="card p-6">
                             <p className="label mb-3">Tom de conversa</p>
                             <div className="space-y-2">
-                                {TOM_OPTIONS.map(opt => (
+                                {TONS_VOZ.map(opt => (
                                     <label
                                         key={opt.value}
                                         className="flex cursor-pointer items-start gap-3 rounded-lg p-3 transition-colors"

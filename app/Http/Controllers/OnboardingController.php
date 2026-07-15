@@ -105,7 +105,7 @@ class OnboardingController extends Controller
                 'tipo_servico' => $tenant->tipo_servico,
                 'nome_agente' => $tenant->nome_agente,
                 'tom_voz' => $tenant->tom_voz,
-                'instrucoes_extras' => $tenant->instrucoes_extras,
+                'bot_saudacao' => $tenant->bot_saudacao,
             ],
         ]);
     }
@@ -127,7 +127,7 @@ class OnboardingController extends Controller
         $tenant->update([
             'nome_agente' => $validated['bot_nome'],
             'tom_voz' => $validated['bot_tom'],
-            'instrucoes_extras' => $validated['bot_saudacao'],
+            'bot_saudacao' => $validated['bot_saudacao'],
         ]);
 
         return redirect()->route('onboarding.sucesso');

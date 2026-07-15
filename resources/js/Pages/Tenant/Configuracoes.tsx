@@ -3,6 +3,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { PageProps, Tenant, TipoServico, HorarioAtendimentoDia } from '@/types';
 import TipoServicoSelector from '@/Components/TipoServicoSelector';
 import Toggle from '@/Components/Toggle';
+import { TONS_VOZ, TomVoz } from '@/constants/bot';
 
 interface Props extends PageProps {
     tenant: Tenant;
@@ -10,14 +11,7 @@ interface Props extends PageProps {
 
 // ─── Bot & IA form ────────────────────────────────────────────────────────────
 
-type TomVoz = 'formal' | 'semiformal' | 'descontraido';
 type ModoBot = 'agendamento' | 'triagem';
-
-const TONS: { value: TomVoz; label: string; desc: string }[] = [
-    { value: 'formal',       label: 'Formal',       desc: 'Profissional, sem emojis, "Senhor/Senhora"' },
-    { value: 'semiformal',   label: 'Semiformal',   desc: 'Claro e amigável, emojis moderados' },
-    { value: 'descontraido', label: 'Descontraído', desc: 'Leve, emojis liberados, gírias suaves' },
-];
 
 const MODOS: { value: ModoBot; label: string; desc: string }[] = [
     { value: 'agendamento', label: 'Agendamento automático', desc: 'O bot consulta a agenda e fecha o agendamento sozinho.' },
@@ -45,13 +39,14 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
         endereco:          tenant.endereco          ?? '',
         nome_agente:       tenant.nome_agente       ?? 'Bia',
         tom_voz:           (tenant.tom_voz          ?? 'semiformal') as TomVoz,
+        bot_saudacao:      tenant.bot_saudacao      ?? '',
         instrucoes_extras: tenant.instrucoes_extras ?? '',
         bot_ativo:         tenant.bot_ativo         ?? true,
         modo_bot:          (tenant.modo_bot         ?? 'agendamento') as ModoBot,
         horario_atendimento:   buildHorarioRows(tenant.horario_atendimento),
         mensagem_fora_horario: tenant.mensagem_fora_horario ?? '',
-        lembrete_ativo:    (tenant as any).lembrete_ativo ?? true,
-        lembrete_texto:    (tenant as any).lembrete_texto ?? '',
+        lembrete_ativo:    tenant.lembrete_ativo ?? true,
+        lembrete_texto:    tenant.lembrete_texto ?? '',
     });
 
     const setDia = (idx: number, campo: keyof HorarioAtendimentoDia, valor: string | boolean) =>
@@ -168,11 +163,29 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                     </div>
                 </div>
 
+                {/* Mensagem de boas-vindas */}
+                <div>
+                    <label className="label mb-1">Mensagem de boas-vindas</label>
+                    <textarea
+                        value={data.bot_saudacao}
+                        onChange={e => setData('bot_saudacao', e.target.value)}
+                        rows={2}
+                        className="input resize-none"
+                        placeholder="Ex: Olá! Bem-vindo à nossa clínica. Como posso ajudar?"
+                        maxLength={500}
+                    />
+                    <p className="mt-1 flex justify-between text-xs" style={{ color: 'var(--text-3)' }}>
+                        <span>Referência que o bot usa ao saudar o cliente na primeira mensagem.</span>
+                        <span>{(data.bot_saudacao || '').length}/500</span>
+                    </p>
+                    {errors.bot_saudacao && <p className="mt-1 text-xs text-red-400">{errors.bot_saudacao}</p>}
+                </div>
+
                 {/* Tom de voz */}
                 <div>
                     <label className="label mb-3">Tom de voz</label>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                        {TONS.map(ton => {
+                        {TONS_VOZ.map(ton => {
                             const ativo = data.tom_voz === ton.value;
                             return (
                                 <button
@@ -340,7 +353,7 @@ export default function Configuracoes({ tenant }: Props) {
         nome:                       tenant.nome,
         tipo_servico:               tenant.tipo_servico,
         tipo_servico_personalizado: tenant.tipo_servico_personalizado ?? '',
-        horarios_funcionamento:     (tenant as any).horarios_funcionamento ?? '',
+        horarios_funcionamento:     tenant.horarios_funcionamento ?? '',
     });
 
     const submit = (e: React.FormEvent) => {
