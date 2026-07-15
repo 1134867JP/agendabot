@@ -11,7 +11,7 @@ interface Props {
 export default function TipoServicoSelector({ value, onChange, customValue, onChangeCustom, error }: Props) {
     return (
         <div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {TIPOS_SERVICO.map(t => (
                     <button
                         key={t.value}

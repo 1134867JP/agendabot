@@ -139,7 +139,7 @@ function Bubble({ msg, prevRemetente }: { msg: Mensagem; prevRemetente?: string 
     return (
         <div className={`flex ${isCliente ? 'justify-start' : 'justify-end'} ${showLabel ? 'mt-3' : 'mt-1'}`}>
             <div
-                className="max-w-[75%] text-sm shadow-sm lg:max-w-[60%]"
+                className="max-w-[88%] text-sm shadow-sm sm:max-w-[75%] lg:max-w-[60%]"
                 style={{ background: bg, border, borderRadius: radius, color: 'var(--text-1)', wordBreak: 'break-word', overflow: 'hidden' }}
             >
                 {showLabel && (
@@ -236,13 +236,13 @@ function NovaConversaModal({ onClose }: { onClose: () => void }) {
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center px-4"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center sm:px-4"
             role="dialog"
             aria-modal="true"
             onClick={e => { if (e.target === e.currentTarget) onClose(); }}
         >
             <div
-                className="w-full max-w-sm rounded-2xl p-6 shadow-2xl"
+                className="max-h-[92dvh] w-full max-w-sm overflow-y-auto rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl sm:p-6"
                 style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}
             >
                 <div className="mb-4 flex items-center justify-between">
@@ -612,7 +612,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
 
                         {/* Chat header */}
                         <div
-                            className="flex items-center justify-between gap-3 px-4 py-3 flex-shrink-0"
+                            className="flex flex-shrink-0 items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3"
                             style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}
                         >
                             <div className="flex items-center gap-3 min-w-0">
@@ -627,7 +627,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                     </svg>
                                 </button>
 
-                                <Avatar name={nomeDe(selecionada)} size="lg" />
+                                <Avatar name={nomeDe(selecionada)} />
 
                                 <div className="min-w-0">
                                     <p className="truncate text-[15px] font-semibold text-primary">{nomeDe(selecionada)}</p>
@@ -636,7 +636,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                         <p className="text-[11px]" style={{ color: dotColor }}>
                                             {STATUS_LABEL[selecionada.status_v2]}
                                         </p>
-                                        <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>· {selecionada.telefone_cliente}</span>
+                                        <span className="hidden text-[11px] sm:inline" style={{ color: 'var(--text-3)' }}>· {selecionada.telefone_cliente}</span>
                                     </div>
                                 </div>
                             </div>
@@ -646,7 +646,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                     <button
                                         onClick={() => assumir()}
                                         disabled={assumindo}
-                                        className="rounded-full px-4 py-1.5 text-xs font-semibold text-white transition-all hover:brightness-110 disabled:opacity-50"
+                                        className="min-h-9 rounded-full px-3 py-1.5 text-xs font-semibold text-white transition-all hover:brightness-110 disabled:opacity-50 sm:px-4"
                                         style={{ background: 'var(--accent)' }}
                                     >
                                         {assumindo ? '…' : 'Assumir'}
@@ -655,10 +655,11 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                 {emAtendimento && (
                                     <button
                                         onClick={devolver}
-                                        className="rounded-full px-4 py-1.5 text-xs font-semibold transition-colors"
+                                        className="min-h-9 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors sm:px-4"
                                         style={{ background: 'var(--jade-light)', border: '1px solid rgba(0,168,132,0.25)', color: 'var(--jade)' }}
                                     >
-                                        Devolver ao bot
+                                        <span className="sm:hidden">Bot</span>
+                                        <span className="hidden sm:inline">Devolver ao bot</span>
                                     </button>
                                 )}
                             </div>
@@ -667,7 +668,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                         {/* Mensagens */}
                         <div
                             ref={chatRef}
-                            className="flex-1 overflow-y-auto px-4 py-5 md:px-6"
+                            className="flex-1 overflow-y-auto px-3 py-4 sm:px-4 sm:py-5 md:px-6"
                             style={{
                                 background: 'var(--bg-app)',
                                 backgroundImage: 'radial-gradient(circle, var(--border) 1px, transparent 1px)',
@@ -696,7 +697,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                         {/* Input */}
                         <form
                             onSubmit={enviar}
-                            className="flex-shrink-0 flex items-end gap-2.5 px-4 py-3 md:px-5"
+                            className="flex flex-shrink-0 items-end gap-2 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5 sm:gap-2.5 sm:px-4 sm:py-3 md:px-5"
                             style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface)' }}
                         >
                             <textarea
@@ -727,7 +728,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                             <button
                                 type="submit"
                                 disabled={processing || assumindo || !data.conteudo.trim()}
-                                className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-full text-white transition-all hover:brightness-110 disabled:opacity-40"
+                                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-white transition-all hover:brightness-110 disabled:opacity-40"
                                 style={{ background: data.conteudo.trim() ? 'var(--jade)' : 'var(--text-3)' }}
                             >
                                 {(processing || assumindo)

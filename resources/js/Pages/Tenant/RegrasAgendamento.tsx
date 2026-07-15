@@ -43,7 +43,7 @@ export default function RegrasAgendamento({ config }: Props) {
                     </div>
                 )}
 
-                <div className="card p-7">
+                <div className="card p-4 sm:p-7">
                     <div className="mb-6 flex items-center gap-3">
                         <span className="h-4 w-0.5 rounded-full" style={{ background: 'var(--accent)' }} />
                         <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-2)' }}>
@@ -97,7 +97,7 @@ export default function RegrasAgendamento({ config }: Props) {
                                 max={240}
                                 value={data.buffer_entre_agendamentos_minutos}
                                 onChange={e => setData('buffer_entre_agendamentos_minutos', Number(e.target.value))}
-                                className="input max-w-[180px]"
+                                className="input w-full sm:max-w-[180px]"
                             />
                             <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
                                 Tempo de folga adicionado entre um agendamento e o próximo do mesmo profissional/recurso.
@@ -108,7 +108,7 @@ export default function RegrasAgendamento({ config }: Props) {
                         </div>
 
                         <div className="rounded-xl p-4 space-y-4" style={{ border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-start justify-between gap-3">
                                 <div>
                                     <p className="text-sm font-medium text-primary">Cliente pode remarcar pelo WhatsApp</p>
                                     <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
@@ -120,7 +120,7 @@ export default function RegrasAgendamento({ config }: Props) {
                                     onChange={v => setData('permite_cliente_remarcar', v)}
                                 />
                             </div>
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-start justify-between gap-3">
                                 <div>
                                     <p className="text-sm font-medium text-primary">Cliente pode cancelar pelo WhatsApp</p>
                                     <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>

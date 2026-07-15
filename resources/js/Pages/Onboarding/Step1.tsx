@@ -41,17 +41,17 @@ export default function OnboardingStep1() {
                 ))}
             </div>
 
-            <div className="flex flex-1 items-start justify-center px-4 py-10">
+            <div className="flex flex-1 items-start justify-center px-4 py-6 sm:py-10">
                 <div className="w-full max-w-md">
                     {/* Header */}
-                    <div className="mb-8">
-                        <h1 className="text-3xl text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                    <div className="mb-6 sm:mb-8">
+                        <h1 className="text-2xl text-primary sm:text-3xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
                             Crie sua conta
                         </h1>
                         <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>14 dias grátis. Sem cartão para começar.</p>
                     </div>
 
-                    <form onSubmit={submit} className="card p-7 space-y-5">
+                    <form onSubmit={submit} className="card space-y-5 p-4 sm:p-7">
                         <div className="space-y-4">
                             <div>
                                 <label className="label mb-1" htmlFor="nome_usuario">Nome completo</label>
@@ -69,7 +69,7 @@ export default function OnboardingStep1() {
                                 {errors.email && <p className="mt-1 text-xs text-red-400">{errors.email}</p>}
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid gap-3 sm:grid-cols-2">
                                 <div>
                                     <label className="label mb-1" htmlFor="senha">Senha</label>
                                     <input id="senha" type="password" value={data.senha}

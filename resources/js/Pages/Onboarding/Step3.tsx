@@ -57,10 +57,10 @@ export default function OnboardingStep3({ tenant }: Props) {
                 ))}
             </div>
 
-            <div className="flex flex-1 items-start justify-center px-4 py-10">
+            <div className="flex flex-1 items-start justify-center px-4 py-6 sm:py-10">
                 <div className="w-full max-w-lg">
-                    <div className="mb-8">
-                        <h1 className="text-3xl text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                    <div className="mb-6 sm:mb-8">
+                        <h1 className="text-2xl text-primary sm:text-3xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
                             Personalize seu bot
                         </h1>
                         <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>
@@ -71,7 +71,7 @@ export default function OnboardingStep3({ tenant }: Props) {
                     <form onSubmit={submit} className="space-y-6">
 
                         {/* Nome do bot */}
-                        <div className="card p-6 space-y-4">
+                        <div className="card p-4 sm:p-6 space-y-4">
                             <div>
                                 <label className="label mb-1" htmlFor="bot_nome">
                                     Nome do assistente
@@ -114,7 +114,7 @@ export default function OnboardingStep3({ tenant }: Props) {
                         </div>
 
                         {/* Tom */}
-                        <div className="card p-6">
+                        <div className="card p-4 sm:p-6">
                             <p className="label mb-3">Tom de conversa</p>
                             <div className="space-y-2">
                                 {TONS_VOZ.map(opt => (
@@ -135,12 +135,12 @@ export default function OnboardingStep3({ tenant }: Props) {
                                             className="mt-0.5 accent-[var(--accent)]"
                                         />
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex flex-col items-start gap-0.5 sm:flex-row sm:items-center sm:gap-2">
                                                 <span className="text-sm font-medium text-primary">{opt.label}</span>
                                                 <span className="text-xs" style={{ color: 'var(--text-3)' }}>{opt.desc}</span>
                                             </div>
                                             <p
-                                                className="mt-1 truncate text-xs italic"
+                                                className="mt-1 line-clamp-2 text-xs italic"
                                                 style={{ color: 'var(--text-3)' }}
                                             >
                                                 {opt.exemplo}

@@ -46,23 +46,23 @@ function HorariosEditor({ recurso, onClose }: { recurso: Recurso; onClose: () =>
     };
 
     return (
-        <div className="px-6 pb-5 pt-4" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface-2)' }}>
+        <div className="px-4 pb-5 pt-4 sm:px-6" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface-2)' }}>
             <h4 className="mb-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
                 Horários de funcionamento
             </h4>
             <div className="space-y-2.5">
                 {rows.map((row, i) => (
-                    <div key={i} className="flex items-center gap-4">
-                        <div className="w-28">
+                    <div key={i} className="grid grid-cols-2 items-center gap-2 rounded-lg p-2 sm:flex sm:gap-4">
+                        <div className="col-span-2 sm:col-span-1 sm:w-28">
                             <Toggle checked={row.ativo} onChange={() => toggle(i)} label={DIAS[i].slice(0, 3)} />
                         </div>
-                        <input type="time" value={row.abertura} onChange={e => setHora(i, 'abertura', e.target.value)} disabled={!row.ativo} className="input w-28 disabled:opacity-40" />
-                        <span className="text-xs" style={{ color: 'var(--text-3)' }}>até</span>
-                        <input type="time" value={row.fechamento} onChange={e => setHora(i, 'fechamento', e.target.value)} disabled={!row.ativo} className="input w-28 disabled:opacity-40" />
+                        <input type="time" value={row.abertura} onChange={e => setHora(i, 'abertura', e.target.value)} disabled={!row.ativo} className="input w-full min-w-0 disabled:opacity-40 sm:w-28" />
+                        <span className="hidden text-xs sm:inline" style={{ color: 'var(--text-3)' }}>até</span>
+                        <input type="time" value={row.fechamento} onChange={e => setHora(i, 'fechamento', e.target.value)} disabled={!row.ativo} className="input w-full min-w-0 disabled:opacity-40 sm:w-28" />
                     </div>
                 ))}
             </div>
-            <div className="mt-5 flex gap-2">
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row">
                 <button onClick={salvar} disabled={saving} className="btn-primary">{saving ? 'Salvando…' : 'Salvar horários'}</button>
                 <button onClick={onClose} className="btn-secondary">Fechar</button>
             </div>
@@ -90,10 +90,10 @@ function NovoRecursoForm({ onClose }: { onClose: () => void }) {
 
     return (
         <div className="card overflow-hidden" style={{ borderColor: 'var(--accent)' }}>
-            <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+            <div className="px-4 py-4 sm:px-6" style={{ borderBottom: '1px solid var(--border)' }}>
                 <h3 className="font-semibold text-primary">Novo recurso</h3>
             </div>
-            <form onSubmit={submit} className="space-y-4 px-6 py-5">
+            <form onSubmit={submit} className="space-y-4 px-4 py-5 sm:px-6">
                 <div>
                     <label className="label mb-1" htmlFor="novo-recurso-nome">Nome *</label>
                     <input
@@ -111,7 +111,7 @@ function NovoRecursoForm({ onClose }: { onClose: () => void }) {
                     <label className="label mb-1">Descrição</label>
                     <textarea value={data.descricao} onChange={e => setData('descricao', e.target.value)} rows={2} className="input" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-3 sm:grid-cols-2">
                     <div>
                         <label className="label mb-1">Valor/hora (R$)</label>
                         <input type="number" step="0.01" value={data.valor_hora} onChange={e => setData('valor_hora', e.target.value)} className="input" placeholder="60.00" />
@@ -121,7 +121,7 @@ function NovoRecursoForm({ onClose }: { onClose: () => void }) {
                         <input type="number" value={data.duracao_padrao_minutos} onChange={e => setData('duracao_padrao_minutos', e.target.value)} className="input" required />
                     </div>
                 </div>
-                <div className="flex gap-2 pt-1">
+                <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row">
                     <button type="submit" disabled={processing} className="btn-primary">
                         {processing ? 'Criando…' : 'Criar recurso'}
                     </button>
@@ -164,10 +164,10 @@ function EditarRecursoForm({ recurso, onClose }: { recurso: Recurso; onClose: ()
 
     return (
         <div className="card overflow-hidden" style={{ borderColor: 'var(--accent)' }}>
-            <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+            <div className="px-4 py-4 sm:px-6" style={{ borderBottom: '1px solid var(--border)' }}>
                 <h3 className="font-semibold text-primary">Editar recurso</h3>
             </div>
-            <form onSubmit={submit} className="space-y-4 px-6 py-5">
+            <form onSubmit={submit} className="space-y-4 px-4 py-5 sm:px-6">
                 <div>
                     <label className="label mb-1" htmlFor="editar-recurso-nome">Nome *</label>
                     <input
@@ -184,7 +184,7 @@ function EditarRecursoForm({ recurso, onClose }: { recurso: Recurso; onClose: ()
                     <label className="label mb-1">Descrição</label>
                     <textarea value={data.descricao} onChange={e => setData('descricao', e.target.value)} rows={2} className="input" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-3 sm:grid-cols-2">
                     <div>
                         <label className="label mb-1">Valor/hora (R$)</label>
                         <input type="number" step="0.01" value={data.valor_hora} onChange={e => setData('valor_hora', e.target.value)} className="input" placeholder="60.00" />
@@ -197,12 +197,12 @@ function EditarRecursoForm({ recurso, onClose }: { recurso: Recurso; onClose: ()
 
                 <Toggle checked={data.ativo} onChange={v => setData('ativo', v)} label={data.ativo ? 'Ativo' : 'Inativo'} />
 
-                <div className="flex items-center justify-between pt-1">
+                <div className="flex flex-col items-stretch gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
                     <button type="button" onClick={excluir} className="text-xs font-medium transition-opacity hover:opacity-70" style={{ color: '#f87171' }}>
                         Desativar recurso
                     </button>
-                    <div className="flex gap-2">
-                        <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
+                    <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                        <button type="button" onClick={onClose} className="btn-secondary justify-center">Cancelar</button>
                         <button type="submit" disabled={processing} className="btn-primary">
                             {processing ? 'Salvando…' : 'Salvar'}
                         </button>
@@ -235,7 +235,7 @@ export default function RecursosIndex({ recursos }: Props) {
         <ConfiguracoesLayout title="Recursos" subtitle="O que pode ser agendado e seus horários de funcionamento">
             <Head title="Recursos" />
 
-            <div className="mb-5 flex items-center justify-between">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm" style={{ color: 'var(--text-3)' }}>
                     {recursos.length} recurso{recursos.length !== 1 ? 's' : ''} cadastrado{recursos.length !== 1 ? 's' : ''}
                 </p>
@@ -264,16 +264,16 @@ export default function RecursosIndex({ recursos }: Props) {
                             <EditarRecursoForm recurso={r} onClose={() => setEditando(null)} />
                         ) : (
                             <>
-                                <div className="flex items-center justify-between px-6 py-4">
-                                    <div className="flex items-center gap-4">
+                                <div className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                                    <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                                         <div
                                             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-primary"
                                             style={{ background: r.ativo ? 'var(--accent)' : 'rgba(255,255,255,0.15)' }}
                                         >
                                             {r.nome.charAt(0).toUpperCase()}
                                         </div>
-                                        <div>
-                                            <p className="font-semibold text-primary">{r.nome}</p>
+                                        <div className="min-w-0">
+                                            <p className="truncate font-semibold text-primary">{r.nome}</p>
                                             {r.descricao && <p className="text-xs" style={{ color: 'var(--text-3)' }}>{r.descricao}</p>}
                                             <div className="mt-1 flex flex-wrap gap-3">
                                                 {r.valor_hora > 0 && (
@@ -286,23 +286,23 @@ export default function RecursosIndex({ recursos }: Props) {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2">
-                                        <span className={`badge ${r.ativo ? 'badge-green' : 'badge-gray'}`}>
+                                    <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
+                                        <span className={`badge col-span-2 justify-self-start sm:col-span-1 ${r.ativo ? 'badge-green' : 'badge-gray'}`}>
                                             {r.ativo ? 'Ativo' : 'Inativo'}
                                         </span>
                                         <button
                                             onClick={() => setExpandido(expandido === r.id ? null : r.id)}
-                                            className="btn-secondary py-1.5 text-xs"
+                                            className="btn-secondary min-h-10 justify-center py-1.5 text-xs"
                                         >
                                             {expandido === r.id ? 'Fechar' : 'Horários'}
                                         </button>
                                         <button
                                             onClick={() => { setEditando(r.id); setNovoAberto(false); setExpandido(null); }}
-                                            className="btn-secondary py-1.5 text-xs"
+                                            className="btn-secondary min-h-10 justify-center py-1.5 text-xs"
                                         >
                                             Editar
                                         </button>
-                                        <button onClick={() => toggleAtivo(r)} className="btn-secondary py-1.5 text-xs">
+                                        <button onClick={() => toggleAtivo(r)} className="btn-secondary min-h-10 justify-center py-1.5 text-xs">
                                             {r.ativo ? 'Desativar' : 'Ativar'}
                                         </button>
                                     </div>

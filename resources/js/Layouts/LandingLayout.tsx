@@ -20,10 +20,10 @@ function LandingNavbar({ currentPage, scrolled }: { currentPage?: string; scroll
                 borderBottom:  scrolled ? '1px solid rgba(110,215,189,0.14)' : 'none',
             }}
         >
-            <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+            <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4">
                 <Link
                     href={route('home')}
-                    className="text-xl italic"
+                    className="shrink-0 text-xl italic"
                     style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'rgba(232,230,225,0.95)' }}
                 >
                     Agendou
@@ -62,13 +62,22 @@ function LandingNavbar({ currentPage, scrolled }: { currentPage?: string; scroll
                     </Link>
                 </nav>
 
-                <Link
-                    href={route('login')}
-                    className="md:hidden text-[13px] font-medium transition-colors"
-                    style={{ color: 'rgba(255,255,255,0.65)' }}
-                >
-                    Entrar
-                </Link>
+                <div className="flex items-center gap-3 md:hidden">
+                    <Link
+                        href={route('precos')}
+                        className="text-[12px] font-medium transition-colors"
+                        style={{ color: 'rgba(255,255,255,0.65)' }}
+                    >
+                        Preços
+                    </Link>
+                    <Link
+                        href={route('login')}
+                        className="text-[12px] font-medium transition-colors"
+                        style={{ color: 'rgba(255,255,255,0.65)' }}
+                    >
+                        Entrar
+                    </Link>
+                </div>
 
                 <Link
                     href={route('onboarding.step1')}
@@ -82,7 +91,7 @@ function LandingNavbar({ currentPage, scrolled }: { currentPage?: string; scroll
                 </Link>
                 <Link
                     href={route('onboarding.step1')}
-                    className="md:hidden rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white transition-all"
+                    className="shrink-0 md:hidden rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white transition-all"
                     style={{ background: INDIGO }}
                 >
                     Começar

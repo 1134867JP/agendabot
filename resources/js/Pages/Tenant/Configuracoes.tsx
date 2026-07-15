@@ -58,8 +58,8 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
     };
 
     return (
-        <div className="card p-7">
-            <div className="mb-6 flex items-center justify-between">
+        <div className="card p-4 sm:p-7">
+            <div className="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
                     <span className="h-4 w-0.5 rounded-full" style={{ background: 'var(--jade)' }} />
                     <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-2)' }}>
@@ -230,13 +230,13 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                         </p>
                         <div className="space-y-2.5">
                             {data.horario_atendimento.map((dia, i) => (
-                                <div key={i} className="flex flex-wrap items-center gap-4">
-                                    <div className="w-24">
+                                <div key={i} className="grid grid-cols-2 items-center gap-2 rounded-lg p-2 sm:flex sm:flex-wrap sm:gap-4" style={{ background: 'var(--bg-surface-2)' }}>
+                                    <div className="col-span-2 min-w-0 sm:col-span-1 sm:w-24">
                                         <Toggle checked={dia.ativo} onChange={() => setDia(i, 'ativo', !dia.ativo)} label={DIAS[i]} />
                                     </div>
-                                    <input type="time" value={dia.abertura} onChange={e => setDia(i, 'abertura', e.target.value)} disabled={!dia.ativo} className="input w-28 disabled:opacity-40" />
-                                    <span className="text-xs" style={{ color: 'var(--text-3)' }}>até</span>
-                                    <input type="time" value={dia.fechamento} onChange={e => setDia(i, 'fechamento', e.target.value)} disabled={!dia.ativo} className="input w-28 disabled:opacity-40" />
+                                    <input type="time" value={dia.abertura} onChange={e => setDia(i, 'abertura', e.target.value)} disabled={!dia.ativo} className="input w-full min-w-0 disabled:opacity-40 sm:w-28" />
+                                    <span className="hidden text-xs sm:inline" style={{ color: 'var(--text-3)' }}>até</span>
+                                    <input type="time" value={dia.fechamento} onChange={e => setDia(i, 'fechamento', e.target.value)} disabled={!dia.ativo} className="input w-full min-w-0 disabled:opacity-40 sm:w-28" />
                                 </div>
                             ))}
                         </div>
@@ -278,7 +278,7 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
 
                 {/* Lembretes automáticos */}
                 <div className="rounded-xl p-4" style={{ border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
-                    <div className="mb-3 flex items-center justify-between">
+                    <div className="mb-3 flex items-start justify-between gap-3">
                         <div>
                             <p className="text-sm font-medium text-primary">Lembrete automático</p>
                             <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
@@ -346,7 +346,7 @@ export default function Configuracoes({ tenant }: Props) {
                     </div>
                 )}
 
-                <div className="card p-7">
+                <div className="card p-4 sm:p-7">
                     <div className="mb-6 flex items-center gap-3">
                         <span className="h-4 w-0.5 rounded-full" style={{ background: 'var(--accent)' }} />
                         <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-2)' }}>

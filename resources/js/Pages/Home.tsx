@@ -216,12 +216,12 @@ export default function Home() {
             `}</style>
 
             {/* ── Hero ──────────────────────────────────────────────────────── */}
-            <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 pb-16 pt-24">
+            <section className="relative flex flex-col items-center justify-center overflow-hidden px-5 pb-14 pt-24 sm:min-h-screen sm:px-6 sm:pb-16">
                 {/* Background glows */}
                 <div className="pointer-events-none absolute left-1/3 top-1/4 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.07] blur-[80px]" style={{ background: INDIGO }} />
                 <div className="pointer-events-none absolute right-1/4 bottom-1/3 h-80 w-80 rounded-full opacity-[0.05] blur-[60px]" style={{ background: JADE }} />
 
-                <div className="relative z-10 mx-auto grid max-w-6xl gap-12 lg:grid-cols-2 lg:items-center">
+                <div className="relative z-10 mx-auto grid max-w-6xl gap-8 sm:gap-12 lg:grid-cols-2 lg:items-center">
                     {/* Copy */}
                     <div>
                         {/* Eyebrow */}
@@ -234,7 +234,7 @@ export default function Home() {
                         </div>
 
                         {/* Headline — risco: duas fontes na mesma frase */}
-                        <h1 className="text-5xl leading-[1.08] tracking-tight lg:text-[62px]">
+                        <h1 className="text-[42px] leading-[1.08] tracking-tight sm:text-5xl lg:text-[62px]">
                             <span
                                 className="block font-bold"
                                 style={{ fontFamily: "'DM Sans', sans-serif", color: 'rgba(232,230,225,0.95)' }}
@@ -259,10 +259,10 @@ export default function Home() {
                             Clientes mandam mensagem, encontram um horário e recebem a confirmação — sem planilha, sem "anota aí".
                         </p>
 
-                        <div className="mt-8 flex flex-wrap items-center gap-3">
+                        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                             <Link
                                 href={route('onboarding.step1')}
-                                className="inline-flex items-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:brightness-110 hover:shadow-indigo-500/20 hover:-translate-y-0.5"
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:brightness-110 hover:shadow-indigo-500/20 hover:-translate-y-0.5 sm:w-auto"
                                 style={{ background: INDIGO }}
                             >
                                 Começar 14 dias grátis
@@ -272,7 +272,7 @@ export default function Home() {
                             </Link>
                             <a
                                 href="#como-funciona"
-                                className="rounded-xl px-6 py-3.5 text-sm font-medium transition-all hover:bg-white/5"
+                                className="w-full rounded-xl px-6 py-3.5 text-center text-sm font-medium transition-all hover:bg-white/5 sm:w-auto"
                                 style={{ color: 'rgba(232,230,225,0.65)', border: '1px solid rgba(255,255,255,0.12)' }}
                             >
                                 Ver como funciona
@@ -280,7 +280,7 @@ export default function Home() {
                         </div>
 
                         {/* Trust line */}
-                        <div className="mt-5 flex flex-wrap items-center gap-4 text-[12px]" style={{ color: 'rgba(232,230,225,0.3)' }}>
+                        <div className="mt-5 flex flex-col items-start gap-2 text-[12px] sm:flex-row sm:flex-wrap sm:items-center sm:gap-4" style={{ color: 'rgba(232,230,225,0.3)' }}>
                             {['Sem cartão para começar', 'Setup em 5 minutos', 'Cancele quando quiser'].map((t, i) => (
                                 <span key={i} className="flex items-center gap-1.5">
                                     <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: JADE }}>
@@ -294,7 +294,7 @@ export default function Home() {
 
                     {/* Mockup + floating cards */}
                     <div className="flex justify-center lg:justify-end">
-                        <div className="relative" style={{ padding: '48px 60px 48px 40px' }}>
+                        <div className="relative px-3 py-8 sm:px-10 sm:py-12 sm:pr-[60px]">
                             {/* Phone glow */}
                             <div
                                 className="absolute inset-8 rounded-[40px] blur-3xl opacity-20"
@@ -319,6 +319,7 @@ export default function Home() {
                                                                                 text="14 reservas confirmadas"
                                         sub="hoje via WhatsApp"
                                         style={{ bottom: '40px', left: '0', animationDelay: '0.2s' }}
+                                        className="hidden sm:flex"
                                     />
                                     <FloatCard
                                                                                 text="Cliente respondeu"
@@ -436,7 +437,7 @@ export default function Home() {
                         {segments.map((s, i) => (
                             <div
                                 key={s.title}
-                                className="group flex items-center gap-6 px-6 py-5 transition-colors duration-150"
+                                className="group flex flex-col items-start gap-2 px-5 py-5 transition-colors duration-150 sm:flex-row sm:items-center sm:gap-6 sm:px-6"
                                 style={{
                                     borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none',
                                     background: 'rgba(255,255,255,0.02)',
@@ -455,7 +456,7 @@ export default function Home() {
 
                                 {/* Title */}
                                 <h3
-                                    className="w-40 shrink-0 text-[15px] font-semibold leading-tight"
+                                    className="w-auto shrink-0 text-[15px] font-semibold leading-tight sm:w-40"
                                     style={{ color: 'rgba(232,230,225,0.88)' }}
                                 >
                                     {s.title}
@@ -465,7 +466,7 @@ export default function Home() {
                                 <div className="hidden h-px flex-1 sm:block" style={{ background: 'rgba(255,255,255,0.06)' }} />
 
                                 {/* Desc */}
-                                <p className="flex-1 text-sm leading-relaxed sm:text-right" style={{ color: 'rgba(232,230,225,0.42)' }}>
+                                <p className="flex-1 text-left text-sm leading-relaxed sm:text-right" style={{ color: 'rgba(232,230,225,0.42)' }}>
                                     {s.desc}
                                 </p>
                             </div>
@@ -559,7 +560,7 @@ export default function Home() {
                 <div className="relative mx-auto max-w-2xl text-center">
                     <p className="mb-4 text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: JADE }}>Comece hoje</p>
                     <h2
-                        className="mb-4 text-5xl leading-tight"
+                        className="mb-4 text-4xl leading-tight sm:text-5xl"
                         style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'rgba(232,230,225,0.95)' }}
                     >
                         Chega de anotar horário<br />

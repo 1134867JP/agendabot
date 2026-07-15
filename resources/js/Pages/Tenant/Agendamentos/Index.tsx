@@ -91,13 +91,13 @@ function EditarReservaModal({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center px-4"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center sm:px-4"
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-editar-reserva"
         >
             <div
-                className="w-full max-w-md rounded-2xl p-7 shadow-2xl"
+                className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-2xl p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl sm:p-7"
                 style={{
                     background: "var(--bg-surface)",
                     border: "1px solid var(--border-strong)",
@@ -147,7 +147,7 @@ function EditarReservaModal({
                         )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
                         <div>
                             <label className="label mb-1">
                                 Nome do cliente
@@ -179,7 +179,7 @@ function EditarReservaModal({
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid gap-3 sm:grid-cols-3">
                         <div>
                             <label className="label mb-1">Data</label>
                             <input
@@ -238,7 +238,7 @@ function EditarReservaModal({
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
                         <div>
                             <label className="label mb-1">Status</label>
                             <select
@@ -266,18 +266,18 @@ function EditarReservaModal({
                         </div>
                     </div>
 
-                    <div className="flex justify-end gap-2 pt-1">
+                    <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="btn-secondary"
+                            className="btn-secondary min-h-11 w-full sm:w-auto"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             disabled={processing}
-                            className="btn-primary"
+                            className="btn-primary min-h-11 w-full sm:w-auto"
                         >
                             {processing ? "Salvando…" : "Salvar alterações"}
                         </button>
@@ -351,13 +351,13 @@ function NovaReservaModal({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center px-4"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center sm:px-4"
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-nova-reserva"
         >
             <div
-                className="w-full max-w-md rounded-2xl p-7 shadow-2xl"
+                className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-2xl p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl sm:p-7"
                 style={{
                     background: "var(--bg-surface)",
                     border: "1px solid var(--border-strong)",
@@ -412,7 +412,7 @@ function NovaReservaModal({
                         </select>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
                         <div>
                             <label
                                 className="label mb-1"
@@ -457,7 +457,7 @@ function NovaReservaModal({
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid gap-3 sm:grid-cols-3">
                         <div className="col-span-1">
                             <label className="label mb-1">Data</label>
                             <input
@@ -557,18 +557,18 @@ function NovaReservaModal({
                         Notificar cliente via WhatsApp
                     </label>
 
-                    <div className="flex justify-end gap-2 pt-1">
+                    <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="btn-secondary"
+                            className="btn-secondary min-h-11 w-full sm:w-auto"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             disabled={processing}
-                            className="btn-primary"
+                            className="btn-primary min-h-11 w-full sm:w-auto"
                         >
                             {processing ? "Salvando…" : "Confirmar reserva"}
                         </button>
@@ -646,7 +646,7 @@ export default function AgendamentosIndex({
             {/* Filtros */}
             <form
                 onSubmit={filtrar}
-                className="card mb-5 flex flex-wrap items-end gap-3 p-4"
+                className="card mb-5 grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end"
             >
                 <div>
                     <label className="label mb-1">Data</label>
@@ -685,7 +685,7 @@ export default function AgendamentosIndex({
                         <option value="cancelado">Cancelado</option>
                     </select>
                 </div>
-                <div className="flex-1 min-w-[160px]">
+                <div className="min-w-0 sm:col-span-2 lg:min-w-[160px] lg:flex-1">
                     <label className="label mb-1">Busca</label>
                     <input
                         type="text"
@@ -695,8 +695,8 @@ export default function AgendamentosIndex({
                         className="input"
                     />
                 </div>
-                <div className="flex gap-2">
-                    <button type="submit" className="btn-primary">
+                <div className="flex gap-2 sm:col-span-2 lg:col-span-1">
+                    <button type="submit" className="btn-primary min-h-11 flex-1 lg:flex-none">
                         Filtrar
                     </button>
                     <button
@@ -704,7 +704,7 @@ export default function AgendamentosIndex({
                         onClick={() =>
                             router.get(route("tenant.agendamentos.index"))
                         }
-                        className="btn-secondary"
+                        className="btn-secondary min-h-11 flex-1 lg:flex-none"
                     >
                         Limpar
                     </button>
@@ -713,8 +713,8 @@ export default function AgendamentosIndex({
 
             {/* Tabela */}
             <div className="card overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm">
+                <div className="overflow-x-auto overscroll-x-contain">
+                    <table className="min-w-[860px] text-sm">
                         <thead>
                             <tr
                                 style={{
@@ -887,8 +887,8 @@ export default function AgendamentosIndex({
                                             >
                                                 {a.origem === "bot" ||
                                                 a.origem === "whatsapp"
-                                                    ? "🤖 WhatsApp"
-                                                    : "📋 Manual"}
+                                                    ? "WhatsApp"
+                                                    : "Manual"}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
@@ -961,7 +961,7 @@ export default function AgendamentosIndex({
                                                     }}
                                                     title="Excluir permanentemente"
                                                 >
-                                                    🗑
+                                                    Excluir
                                                 </button>
                                             </div>
                                         </td>
@@ -975,7 +975,7 @@ export default function AgendamentosIndex({
                 {/* Paginação */}
                 {agendamentos.last_page > 1 && (
                     <div
-                        className="flex gap-1 px-4 py-3"
+                        className="flex gap-1 overflow-x-auto px-4 py-3"
                         style={{ borderTop: "1px solid var(--border)" }}
                     >
                         {agendamentos.links.map((link, i) => (
@@ -1014,13 +1014,14 @@ export default function AgendamentosIndex({
             {/* FAB */}
             <button
                 onClick={() => setModalAberto(true)}
-                className="fixed bottom-7 right-7 flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:scale-105 hover:brightness-110"
+                className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-20 flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold text-white shadow-lg transition-all hover:scale-105 hover:brightness-110 sm:bottom-7 sm:right-7 sm:h-auto sm:w-auto sm:gap-2 sm:px-5 sm:py-3"
                 style={{
                     background: "var(--accent)",
                     boxShadow: "0 4px 20px rgba(99,102,241,0.4)",
                 }}
             >
-                + Nova reserva
+                <span className="text-xl leading-none sm:text-base">+</span>
+                <span className="hidden sm:inline">Nova reserva</span>
             </button>
 
             {modalAberto && (

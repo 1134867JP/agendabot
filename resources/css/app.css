@@ -68,6 +68,7 @@
     body {
         background-color: var(--bg-app);
         color: var(--text-1);
+        overflow-x: hidden;
     }
 }
 
@@ -216,4 +217,22 @@
     }
     .marquee-track { animation: marquee 28s linear infinite; }
     .marquee-track:hover { animation-play-state: paused; }
+
+    /* ── Ergonomia mobile ───────────────────────────────────────────────── */
+    @media (max-width: 639px) {
+        .btn-primary,
+        .btn-secondary,
+        .btn-danger {
+            min-height: 44px;
+        }
+
+        .input {
+            min-height: 44px;
+        }
+
+        .config-tab {
+            min-height: 44px;
+            padding-inline: 0.75rem;
+        }
+    }
 }

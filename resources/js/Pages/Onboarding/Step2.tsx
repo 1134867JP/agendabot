@@ -51,9 +51,9 @@ export default function OnboardingStep2({ planos }: Props) {
                 ))}
             </div>
 
-            <div className="flex flex-1 flex-col items-center px-4 py-10">
-                <div className="mb-10 text-center">
-                    <h1 className="text-3xl text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+            <div className="flex flex-1 flex-col items-center px-4 py-6 sm:py-10">
+                <div className="mb-7 text-center sm:mb-10">
+                    <h1 className="text-2xl text-primary sm:text-3xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
                         Escolha seu plano
                     </h1>
                     <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>Escolha o plano para o fim do trial. Nenhum pagamento será solicitado agora.</p>
@@ -63,7 +63,7 @@ export default function OnboardingStep2({ planos }: Props) {
                     {planoList.map(([slug, plano]) => (
                         <div
                             key={slug}
-                            className="flex flex-col rounded-xl p-6 transition-all"
+                            className="flex flex-col rounded-xl p-4 transition-all sm:p-6"
                             style={{
                                 background: 'var(--bg-surface)',
                                 border: `2px solid ${plano.destaque ? 'var(--accent)' : 'var(--border)'}`,
@@ -121,14 +121,14 @@ export default function OnboardingStep2({ planos }: Props) {
                 <button
                     onClick={pular}
                     disabled={loading !== null}
-                    className="mt-8 text-sm transition-colors disabled:opacity-50"
+                    className="mt-6 min-h-11 px-3 text-sm transition-colors disabled:opacity-50 sm:mt-8"
                     style={{ color: 'var(--text-3)' }}
                     onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-2)')}
                     onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
                 >
                     Continuar com o período de teste gratuito →
                 </button>
-                <p className="mt-2 text-xs" style={{ color: 'var(--text-3)' }}>
+                <p className="mt-2 text-center text-xs" style={{ color: 'var(--text-3)' }}>
                     14 dias grátis, sem cartão. Depois, escolha entre Pix ou cartão.
                 </p>
             </div>

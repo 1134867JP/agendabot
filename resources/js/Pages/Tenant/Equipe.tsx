@@ -83,14 +83,14 @@ export default function Equipe({ usuarios, meu_id }: Props) {
             <Head title="Equipe" />
 
             {/* Header row */}
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm" style={{ color: 'var(--text-3)' }}>
                     {usuarios.length} membro{usuarios.length !== 1 ? 's' : ''}
                 </p>
                 {!showForm && (
                     <button
                         onClick={() => setShowForm(true)}
-                        className="btn-primary py-2 text-sm"
+                        className="btn-primary justify-center py-2 text-sm"
                     >
                         <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -102,7 +102,7 @@ export default function Equipe({ usuarios, meu_id }: Props) {
 
             {/* Add user form */}
             {showForm && (
-                <div className="card mb-5 p-5">
+                <div className="card mb-5 p-4 sm:p-5">
                     <div className="mb-4 flex items-center justify-between">
                         <h3 className="text-sm font-semibold text-primary">Novo usuário</h3>
                         <button
@@ -160,18 +160,18 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-2 pt-1">
+                        <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
                             <button
                                 type="button"
                                 onClick={() => { setShowForm(false); reset(); }}
-                                className="btn-secondary py-2 text-sm"
+                                className="btn-secondary justify-center py-2 text-sm"
                             >
                                 Cancelar
                             </button>
                             <button
                                 type="submit"
                                 disabled={processing}
-                                className="btn-primary py-2 text-sm"
+                                className="btn-primary justify-center py-2 text-sm"
                             >
                                 {processing ? 'Salvando…' : 'Adicionar'}
                             </button>
@@ -192,7 +192,7 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                 ) : (
                     <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
                         {usuarios.map(u => (
-                            <div key={u.id} className="flex items-center gap-3.5 px-4 py-3.5">
+                            <div key={u.id} className="flex items-start gap-3 px-4 py-3.5 sm:items-center sm:gap-3.5">
                                 <Avatar nome={u.name} size={38} />
 
                                 <div className="min-w-0 flex-1">
@@ -207,7 +207,7 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                                     <p className="mt-0.5 truncate text-xs" style={{ color: 'var(--text-3)' }}>{u.email}</p>
                                 </div>
 
-                                <div className="flex shrink-0 items-center gap-3">
+                                <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-3">
                                     <span className={`badge ${PAPEL_BADGE[u.papel] ?? 'badge-gray'}`}>
                                         {PAPEL_LABEL[u.papel] ?? u.papel}
                                     </span>
@@ -218,7 +218,7 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                                         <button
                                             onClick={() => remover(u)}
                                             title="Remover da equipe"
-                                            className="rounded-md p-1.5 text-red-400/60 transition-colors hover:bg-red-400/10 hover:text-red-400"
+                                            className="flex h-10 w-10 items-center justify-center rounded-md text-red-400/60 transition-colors hover:bg-red-400/10 hover:text-red-400"
                                         >
                                             <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                 <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>

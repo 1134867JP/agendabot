@@ -37,12 +37,12 @@ export default function ConfirmModal({
 
     return (
         <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center px-4"
+            className="fixed inset-0 z-[9999] flex items-end justify-center sm:items-center sm:px-4"
             style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
             onClick={e => { if (e.target === e.currentTarget) onCancel(); }}
         >
             <div
-                className="w-full max-w-sm rounded-2xl p-6 shadow-2xl"
+                className="w-full max-w-sm rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl sm:p-6"
                 style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}
             >
                 {/* Ícone */}
@@ -66,11 +66,11 @@ export default function ConfirmModal({
                 <h3 className="mb-1 text-base font-semibold text-primary">{title}</h3>
                 <p className="mb-6 text-sm" style={{ color: 'var(--text-2)' }}>{message}</p>
 
-                <div className="flex gap-2 justify-end">
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                     <button
                         type="button"
                         onClick={onCancel}
-                        className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+                        className="min-h-11 w-full rounded-lg px-4 py-2 text-sm font-medium transition-colors sm:w-auto"
                         style={{ background: 'var(--bg-surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
                     >
                         {cancelLabel}
@@ -79,7 +79,7 @@ export default function ConfirmModal({
                         ref={confirmRef}
                         type="button"
                         onClick={onConfirm}
-                        className="rounded-lg px-4 py-2 text-sm font-medium transition-colors hover:brightness-110"
+                        className="min-h-11 w-full rounded-lg px-4 py-2 text-sm font-medium transition-colors hover:brightness-110 sm:w-auto"
                         style={{ background: btnBg, color: btnColor, border: btnBorder }}
                     >
                         {confirmLabel}
