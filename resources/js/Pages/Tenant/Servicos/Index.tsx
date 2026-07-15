@@ -62,10 +62,10 @@ function NovoServicoForm({ onClose }: { onClose: () => void }) {
 
     return (
         <div className="card overflow-hidden" style={{ borderColor: 'var(--accent)' }}>
-            <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+            <div className="px-4 py-4 sm:px-6" style={{ borderBottom: '1px solid var(--border)' }}>
                 <h3 className="font-semibold text-primary">Novo serviço</h3>
             </div>
-            <form onSubmit={submit} className="space-y-4 px-6 py-5">
+            <form onSubmit={submit} className="space-y-4 px-4 py-5 sm:px-6">
                 <div>
                     <label className="label mb-1" htmlFor="novo-servico-nome">Nome *</label>
                     <input
@@ -92,7 +92,7 @@ function NovoServicoForm({ onClose }: { onClose: () => void }) {
                     />
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid gap-3 sm:grid-cols-3">
                     <div>
                         <label className="label mb-1">Valor mín</label>
                         <input
@@ -129,7 +129,7 @@ function NovoServicoForm({ onClose }: { onClose: () => void }) {
                     label="Requer avaliação prévia"
                 />
 
-                <div className="flex gap-2 pt-1">
+                <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row">
                     <button type="submit" disabled={processing} className="btn-primary">
                         {processing ? 'Criando…' : 'Criar serviço'}
                     </button>
@@ -180,10 +180,10 @@ function EditarServicoForm({
         <>
         {confirmModal}
         <div className="card overflow-hidden" style={{ borderColor: 'var(--accent)' }}>
-            <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+            <div className="px-4 py-4 sm:px-6" style={{ borderBottom: '1px solid var(--border)' }}>
                 <h3 className="font-semibold text-primary">Editar serviço</h3>
             </div>
-            <form onSubmit={submit} className="space-y-4 px-6 py-5">
+            <form onSubmit={submit} className="space-y-4 px-4 py-5 sm:px-6">
                 <div>
                     <label className="label mb-1" htmlFor="editar-servico-nome">Nome *</label>
                     <input
@@ -207,7 +207,7 @@ function EditarServicoForm({
                     />
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid gap-3 sm:grid-cols-3">
                     <div>
                         <label className="label mb-1">Valor mín</label>
                         <input
@@ -250,7 +250,7 @@ function EditarServicoForm({
                     label={data.ativo ? 'Ativo' : 'Inativo'}
                 />
 
-                <div className="flex items-center justify-between pt-1">
+                <div className="flex flex-col items-stretch gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
                     <button
                         type="button"
                         onClick={excluir}
@@ -259,8 +259,8 @@ function EditarServicoForm({
                     >
                         Excluir serviço
                     </button>
-                    <div className="flex gap-2">
-                        <button type="button" onClick={onClose} className="btn-secondary">
+                    <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                        <button type="button" onClick={onClose} className="btn-secondary justify-center">
                             Cancelar
                         </button>
                         <button type="submit" disabled={processing} className="btn-primary">
@@ -300,7 +300,7 @@ export default function ServicosIndex({ servicos }: Props) {
         <ConfiguracoesLayout title="Serviços" subtitle="Serviços oferecidos, valores e duração">
             <Head title="Serviços" />
 
-            <div className="mb-5 flex items-center justify-between">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm" style={{ color: 'var(--text-3)' }}>
                     {servicos.length} serviço{servicos.length !== 1 ? 's' : ''} cadastrado{servicos.length !== 1 ? 's' : ''}
                 </p>
@@ -318,9 +318,12 @@ export default function ServicosIndex({ servicos }: Props) {
                 )}
 
                 {servicos.length === 0 && !novoAberto && (
-                    <div className="card p-10 text-center" style={{ color: 'var(--text-3)' }}>
-                        <p className="text-sm">Nenhum serviço cadastrado ainda.</p>
-                        <p className="mt-1 text-xs">Cadastre os serviços oferecidos pelo seu estabelecimento.</p>
+                    <div className="card flex flex-col items-center gap-3 p-8 text-center sm:p-10" style={{ color: 'var(--text-3)' }}>
+                        <div>
+                            <p className="text-sm font-medium text-primary">Cadastre seu primeiro serviço</p>
+                            <p className="mt-1 text-xs">Informe o que pode ser reservado, duração e valores.</p>
+                        </div>
+                        <button type="button" onClick={() => setNovoAberto(true)} className="btn-primary min-h-11">Criar serviço</button>
                     </div>
                 )}
 
@@ -333,16 +336,16 @@ export default function ServicosIndex({ servicos }: Props) {
                         />
                     ) : (
                         <div key={s.id} className="card overflow-hidden">
-                            <div className="flex items-center justify-between px-6 py-4">
-                                <div className="flex items-center gap-4">
+                            <div className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                                <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                                     <div
                                         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-primary"
                                         style={{ background: s.ativo ? 'var(--accent)' : 'rgba(255,255,255,0.15)' }}
                                     >
                                         {s.nome.charAt(0).toUpperCase()}
                                     </div>
-                                    <div>
-                                        <p className="font-semibold text-primary">{s.nome}</p>
+                                    <div className="min-w-0">
+                                        <p className="truncate font-semibold text-primary">{s.nome}</p>
                                         {s.descricao && (
                                             <p className="mt-0.5 text-xs line-clamp-1" style={{ color: 'var(--text-3)' }}>
                                                 {s.descricao}
@@ -360,17 +363,17 @@ export default function ServicosIndex({ servicos }: Props) {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-2">
-                                    <span className={`badge ${s.ativo ? 'badge-green' : 'badge-gray'}`}>
+                                <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
+                                    <span className={`badge col-span-2 justify-self-start sm:col-span-1 ${s.ativo ? 'badge-green' : 'badge-gray'}`}>
                                         {s.ativo ? 'Ativo' : 'Inativo'}
                                     </span>
                                     <button
                                         onClick={() => { setEditando(s.id); setNovoAberto(false); }}
-                                        className="btn-secondary py-1.5 text-xs"
+                                        className="btn-secondary min-h-10 justify-center py-1.5 text-xs"
                                     >
                                         Editar
                                     </button>
-                                    <button onClick={() => toggleAtivo(s)} className="btn-secondary py-1.5 text-xs">
+                                    <button onClick={() => toggleAtivo(s)} className="btn-secondary min-h-10 justify-center py-1.5 text-xs">
                                         {s.ativo ? 'Desativar' : 'Ativar'}
                                     </button>
                                 </div>
