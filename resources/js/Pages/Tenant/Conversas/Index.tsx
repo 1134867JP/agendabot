@@ -42,7 +42,7 @@ interface Props extends PageProps {
 
 const STATUS_LABEL: Record<string, string> = {
     ativa:                 'Ativa',
-    aguardando_humano:     'Aguardando',
+    aguardando_humano:     'Aguardando equipe',
     em_atendimento_humano: 'Em atendimento',
     encerrada:             'Encerrada',
 };
@@ -573,8 +573,13 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                     {busca ? 'Nenhum resultado' : 'Nenhuma conversa'}
                                 </p>
                                 <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>
-                                    {busca ? `Nada encontrado para "${busca}"` : 'As mensagens do WhatsApp aparecerão aqui.'}
+                                    {busca ? `Nada encontrado para "${busca}"` : 'Inicie um atendimento ou aguarde novas mensagens.'}
                                 </p>
+                                {!busca && (
+                                    <button type="button" onClick={() => setShowModalNova(true)} className="btn-primary mt-2 min-h-11 text-xs">
+                                        Iniciar conversa
+                                    </button>
+                                )}
                             </div>
                         ) : conversasFiltradas.map(c => {
                             const ativo = selecionada?.id === c.id;
