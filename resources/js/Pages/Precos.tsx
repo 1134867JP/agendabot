@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { PageProps } from '@/types';
 import LandingLayout from '@/Layouts/LandingLayout';
 
-const INDIGO = '#6366F1';
-const JADE   = '#00a884';
+const INDIGO = '#2d9d82';
+const JADE   = '#6ed7bd';
 
 interface Plano {
     nome: string;
@@ -136,7 +136,7 @@ export default function Precos({ planos }: Props) {
                             className="relative flex flex-col rounded-2xl p-6"
                             style={{
                                 background: plano.destaque
-                                    ? `linear-gradient(135deg, ${INDIGO}18 0%, ${INDIGO}08 100%)`
+                                    ? `${INDIGO}12`
                                     : 'rgba(255,255,255,0.03)',
                                 border: `1.5px solid ${plano.destaque ? INDIGO + '60' : 'rgba(255,255,255,0.08)'}`,
                             }}
@@ -144,7 +144,7 @@ export default function Precos({ planos }: Props) {
                             {plano.destaque && (
                                 <div
                                     className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-3.5 py-1 text-[11px] font-semibold text-white"
-                                    style={{ background: INDIGO, boxShadow: `0 4px 16px ${INDIGO}60` }}
+                                    style={{ background: INDIGO, boxShadow: `0 4px 14px ${INDIGO}35` }}
                                 >
                                     Mais popular
                                 </div>
@@ -221,7 +221,7 @@ export default function Precos({ planos }: Props) {
                                 className="block w-full rounded-xl py-3 text-center text-[13px] font-semibold transition-all hover:brightness-110 hover:-translate-y-0.5"
                                 style={
                                     plano.destaque
-                                        ? { background: INDIGO, color: 'white', boxShadow: `0 8px 24px ${INDIGO}40` }
+                                        ? { background: INDIGO, color: 'white', boxShadow: `0 6px 18px ${INDIGO}28` }
                                         : { background: 'rgba(255,255,255,0.07)', color: 'rgba(232,230,225,0.75)', border: '1px solid rgba(255,255,255,0.1)' }
                                 }
                             >
