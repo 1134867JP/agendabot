@@ -9,16 +9,28 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class TenantController extends Controller
 {
     public function __construct(private EvolutionApiService $evolution) {}
 
+    /**
+     * Fluxo dedicado para um usuário JÁ autenticado adicionar mais um estabelecimento
+     * (distinto do onboarding, que cria usuário + tenant juntos).
+     */
+    public function create(): Response
+    {
+        return Inertia::render('Estabelecimentos/Create');
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
             'nome' => ['required', 'string', 'max:255'],
-            'tipo_servico' => ['required', 'in:barbeiro,quadra,estetica,clinica,studio,personalizado'],
+            'tipo_servico' => ['required', Rule::in(Tenant::TIPOS_SERVICO)],
             'tipo_servico_personalizado' => ['nullable', 'required_if:tipo_servico,personalizado', 'string', 'max:100'],
         ]);
 
@@ -32,8 +44,9 @@ class TenantController extends Controller
                 'tipo_servico' => $data['tipo_servico'],
                 'tipo_servico_personalizado' => $data['tipo_servico_personalizado'] ?? null,
                 'evolution_instance' => $instance,
+                'webhook_token' => Str::random(32),
                 'subscription_status' => 'trial',
-                'trial_ends_at' => now()->addDays((int) env('TRIAL_DAYS', 14)),
+                'trial_ends_at' => now()->addDays((int) config('services.trial_days', env('TRIAL_DAYS', 14))),
                 'ativo' => true,
             ]);
             $t->users()->attach($request->user()->id, ['papel' => 'admin']);

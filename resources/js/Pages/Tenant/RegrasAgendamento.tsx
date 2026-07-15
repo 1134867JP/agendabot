@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import AppLayout from '@/Layouts/AppLayout';
+import ConfiguracoesLayout from '@/Layouts/ConfiguracoesLayout';
 import { PageProps } from '@/types';
 import Toggle from '@/Components/Toggle';
 
@@ -32,7 +32,7 @@ export default function RegrasAgendamento({ config }: Props) {
     };
 
     return (
-        <AppLayout title="Regras de agendamento" subtitle="Antecedência, intervalo entre horários e política de cancelamento">
+        <ConfiguracoesLayout title="Regras de agendamento" subtitle="Antecedência, intervalo entre horários e política de cancelamento">
             <Head title="Regras de agendamento" />
 
             <div className="mx-auto max-w-2xl space-y-6">
@@ -163,6 +163,6 @@ export default function RegrasAgendamento({ config }: Props) {
                     </form>
                 </div>
             </div>
-        </AppLayout>
+        </ConfiguracoesLayout>
     );
 }

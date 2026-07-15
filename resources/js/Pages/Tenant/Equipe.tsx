@@ -1,6 +1,6 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
-import AppLayout from '@/Layouts/AppLayout';
+import ConfiguracoesLayout from '@/Layouts/ConfiguracoesLayout';
 import { PageProps } from '@/types';
 import { useConfirm } from '@/hooks/useConfirm';
 
@@ -79,7 +79,7 @@ export default function Equipe({ usuarios, meu_id }: Props) {
     };
 
     return (
-        <AppLayout title="Equipe" subtitle="Gerencie quem tem acesso ao painel">
+        <ConfiguracoesLayout title="Equipe" subtitle="Gerencie quem tem acesso ao painel">
             <Head title="Equipe" />
 
             {/* Header row */}
@@ -233,6 +233,6 @@ export default function Equipe({ usuarios, meu_id }: Props) {
             </div>
 
             {confirmModal}
-        </AppLayout>
+        </ConfiguracoesLayout>
     );
 }

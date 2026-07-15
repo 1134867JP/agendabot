@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import AppLayout from '@/Layouts/AppLayout';
+import ConfiguracoesLayout from '@/Layouts/ConfiguracoesLayout';
 import { PageProps, Tenant, TipoServico, HorarioAtendimentoDia } from '@/types';
 import TipoServicoSelector from '@/Components/TipoServicoSelector';
 import Toggle from '@/Components/Toggle';
@@ -335,7 +335,7 @@ export default function Configuracoes({ tenant }: Props) {
     };
 
     return (
-        <AppLayout title="Configurações" subtitle="Nome do estabelecimento, tipo de serviço e personalização do bot">
+        <ConfiguracoesLayout title="Configurações" subtitle="Nome do estabelecimento, tipo de serviço e personalização do bot">
             <Head title="Configurações" />
 
             <div className="mx-auto max-w-2xl space-y-6">
@@ -407,6 +407,6 @@ export default function Configuracoes({ tenant }: Props) {
                 {/* Bot & IA section */}
                 <BotConfigForm tenant={tenant} />
             </div>
-        </AppLayout>
+        </ConfiguracoesLayout>
     );
 }

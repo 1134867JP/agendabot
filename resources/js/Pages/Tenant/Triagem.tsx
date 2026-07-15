@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import AppLayout from '@/Layouts/AppLayout';
+import ConfiguracoesLayout from '@/Layouts/ConfiguracoesLayout';
 import { PageProps } from '@/types';
 import Toggle from '@/Components/Toggle';
 
@@ -35,7 +35,7 @@ export default function Triagem({ config }: Props) {
     };
 
     return (
-        <AppLayout title="Triagem" subtitle="Regras automáticas para o bot passar a conversa a um atendente humano">
+        <ConfiguracoesLayout title="Triagem" subtitle="Regras automáticas para o bot passar a conversa a um atendente humano">
             <Head title="Triagem" />
 
             <div className="mx-auto max-w-2xl space-y-6">
@@ -128,6 +128,6 @@ export default function Triagem({ config }: Props) {
                     </form>
                 </div>
             </div>
-        </AppLayout>
+        </ConfiguracoesLayout>
     );
 }

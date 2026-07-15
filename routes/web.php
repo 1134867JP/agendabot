@@ -40,6 +40,7 @@ Route::middleware('auth')->group(function () {
     // Seleção de tenant (tela inicial para donos)
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/tenants/{tenant}/selecionar', [TenantController::class, 'selecionar'])->name('tenants.selecionar');
+    Route::get('/tenants/novo', [TenantController::class, 'create'])->name('tenants.create');
     Route::post('/tenants', [TenantController::class, 'store'])->name('tenants.store');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

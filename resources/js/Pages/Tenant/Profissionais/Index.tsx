@@ -1,6 +1,6 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
-import AppLayout from '@/Layouts/AppLayout';
+import ConfiguracoesLayout from '@/Layouts/ConfiguracoesLayout';
 import { useConfirm } from '@/hooks/useConfirm';
 import { PageProps } from '@/types';
 import Toggle from '@/Components/Toggle';
@@ -267,7 +267,7 @@ export default function ProfissionaisIndex({ profissionais }: Props) {
     };
 
     return (
-        <AppLayout title="Profissionais" subtitle="Sua equipe, especialidades e horários de atendimento">
+        <ConfiguracoesLayout title="Profissionais" subtitle="Sua equipe, especialidades e horários de atendimento">
             <Head title="Profissionais" />
 
             <div className="mb-5 flex items-center justify-between">
@@ -357,6 +357,6 @@ export default function ProfissionaisIndex({ profissionais }: Props) {
                     </div>
                 ))}
             </div>
-        </AppLayout>
+        </ConfiguracoesLayout>
     );
 }

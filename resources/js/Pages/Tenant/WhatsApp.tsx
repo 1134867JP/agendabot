@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
-import AppLayout from '@/Layouts/AppLayout';
+import ConfiguracoesLayout from '@/Layouts/ConfiguracoesLayout';
 import { PageProps, Tenant } from '@/types';
 
 interface Props extends PageProps {
@@ -114,7 +114,7 @@ export default function WhatsAppPage({ tenant }: Props) {
     };
 
     return (
-        <AppLayout title="WhatsApp" subtitle="Conecte seu número para receber agendamentos automáticos">
+        <ConfiguracoesLayout title="WhatsApp" subtitle="Conecte seu número para receber agendamentos automáticos">
             <Head title="WhatsApp" />
 
             <div className="mx-auto max-w-lg">
@@ -333,6 +333,6 @@ export default function WhatsAppPage({ tenant }: Props) {
                     </div>
                 </div>
             )}
-        </AppLayout>
+        </ConfiguracoesLayout>
     );
 }

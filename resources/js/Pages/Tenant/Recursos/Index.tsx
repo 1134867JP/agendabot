@@ -1,6 +1,6 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
-import AppLayout from '@/Layouts/AppLayout';
+import ConfiguracoesLayout from '@/Layouts/ConfiguracoesLayout';
 import { PageProps, Recurso, HorarioFuncionamento } from '@/types';
 import Toggle from '@/Components/Toggle';
 import { useConfirm } from '@/hooks/useConfirm';
@@ -232,7 +232,7 @@ export default function RecursosIndex({ recursos }: Props) {
     };
 
     return (
-        <AppLayout title="Recursos" subtitle="O que pode ser agendado e seus horários de funcionamento">
+        <ConfiguracoesLayout title="Recursos" subtitle="O que pode ser agendado e seus horários de funcionamento">
             <Head title="Recursos" />
 
             <div className="mb-5 flex items-center justify-between">
@@ -316,6 +316,6 @@ export default function RecursosIndex({ recursos }: Props) {
                     </div>
                 ))}
             </div>
-        </AppLayout>
+        </ConfiguracoesLayout>
     );
 }
