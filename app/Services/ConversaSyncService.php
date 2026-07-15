@@ -122,118 +122,96 @@ class ConversaSyncService
         array $nomesPorTelefone,
     ): array {
         $remoteJid = data_get($chat, 'remoteJid') ?? data_get($chat, 'id');
-        if (! $remoteJid) {
-            return ['importados' => 0, 'sem_mensagem' => true];
+        if (! $remoteJid || $this->deveIgnorar($remoteJid)) {
+            return ['importados' => 0, 'sem_mensagem' => true, 'ignorado' => true];
         }
 
-        if ($this->deveIgnorar($remoteJid)) {
-            return ['importados' => 0, 'sem_mensagem' => true];
+        $isLid = str_contains($remoteJid, '@lid');
+        $telefone = $this->resolverTelefoneDoChat($chat, $remoteJid);
+
+        // Primeiro confirma o histórico. Não cria Cliente/Conversa para chats vazios.
+        $msgs = $this->fetchMsgsComFallback(
+            $tenant,
+            $evolution,
+            $instance,
+            $remoteJid,
+            $isLid,
+            $telefone,
+        );
+
+        if (! $telefone) {
+            $telefone = $this->resolverTelefoneDasMensagens($msgs);
         }
 
-        $isLid    = str_contains($remoteJid, '@lid');
-        $telefone = $this->limparJid($remoteJid);
+        // Um @lid sem número real não deve virar um contato numérico falso no sistema.
+        if (! $telefone || ! $this->telefoneValido($telefone)) {
+            return ['importados' => 0, 'sem_mensagem' => true, 'ignorado' => true];
+        }
 
-        // ── Nome: findContacts > pushName do chat > lastMessage.pushName ──────
-        // lastMessage.pushName só é confiável se a última mensagem não foi enviada pelo próprio tenant
+        if (empty($msgs) && data_get($chat, 'lastMessage')) {
+            $msgs = [data_get($chat, 'lastMessage')];
+        }
+
+        $mensagensImportaveis = collect($msgs)
+            ->map(fn (array $msg) => $this->normalizarMensagem($msg))
+            ->filter()
+            ->values();
+
+        if ($mensagensImportaveis->isEmpty()) {
+            return ['importados' => 0, 'sem_mensagem' => true, 'ignorado' => false];
+        }
+
         $lastMsgFromMe = (bool) data_get($chat, 'lastMessage.key.fromMe', false);
         $nomeChat = $this->nomeValido($nomesPorTelefone[$telefone] ?? null)
             ?? $this->nomeValido($nomesPorTelefone[$this->normalizar($telefone)] ?? null)
             ?? $this->nomeValido(data_get($chat, 'pushName'))
             ?? ($lastMsgFromMe ? null : $this->nomeValido(data_get($chat, 'lastMessage.pushName')));
 
-        [$cliente, $conversa] = $this->upsertClienteEConversa($tenant, $telefone, $nomeChat);
-
-        // ── Mensagens ─────────────────────────────────────────────────────────
-        // Busca com o JID original; se @lid sem resultado, tenta @s.whatsapp.net
-        $msgs = $this->fetchMsgsComFallback($tenant, $evolution, $instance, $remoteJid, $isLid, $telefone);
-
-        // Extrair nome das mensagens como último fallback (ignora mensagens do próprio tenant)
         if (! $nomeChat) {
             foreach ($msgs as $msg) {
                 if (data_get($msg, 'key.fromMe')) {
                     continue;
                 }
-                $pn = $this->nomeValido(data_get($msg, 'pushName'));
-                if ($pn) {
-                    $nomeChat = $pn;
+
+                $nomeChat = $this->nomeValido(data_get($msg, 'pushName'));
+                if ($nomeChat) {
                     break;
                 }
             }
-            $this->atualizarNomeSePlaceholder($cliente, $conversa, $nomeChat);
         }
 
-        // Se sem mensagens, tenta usar lastMessage do chat como fallback rápido
-        if (empty($msgs)) {
-            $lastMsg = data_get($chat, 'lastMessage');
-            if ($lastMsg) {
-                $msgs = [$lastMsg];
-            }
-        }
+        [$cliente, $conversa] = $this->upsertClienteEConversa($tenant, $telefone, $nomeChat);
+        $importados = 0;
 
-        $importados  = 0;
-        $semMensagem = empty($msgs);
-
-        foreach ($msgs as $msg) {
-            $evolutionId = data_get($msg, 'key.id');
-            if (! $evolutionId) {
-                continue;
-            }
-            if (Mensagem::where('evolution_message_id', $evolutionId)->exists()) {
+        foreach ($mensagensImportaveis as $msg) {
+            if (Mensagem::where('evolution_message_id', $msg['evolution_id'])->exists()) {
                 continue;
             }
 
-            $fromMe      = (bool) data_get($msg, 'key.fromMe', false);
-            $messageType = data_get($msg, 'messageType', 'conversation');
-
-            [$tipo, $conteudo] = match ($messageType) {
-                'imageMessage'    => ['imagem',    data_get($msg, 'message.imageMessage.caption', '')],
-                'videoMessage'    => ['video',     data_get($msg, 'message.videoMessage.caption', '')],
-                'audioMessage'    => ['audio',     ''],
-                'documentMessage' => ['documento', data_get($msg, 'message.documentMessage.fileName', '')],
-                'stickerMessage'  => ['sticker',   ''],
-                default           => ['texto',
-                    data_get($msg, 'message.conversation')
-                    ?? data_get($msg, 'message.extendedTextMessage.text')
-                    ?? data_get($msg, 'message.ephemeralMessage.message.extendedTextMessage.text')
-                    ?? '',
-                ],
-            };
-
-            // Pula texto vazio (mas não mídias)
-            if ($tipo === 'texto' && $conteudo === '') {
-                continue;
+            try {
+                $conversa->mensagens()->create([
+                    'remetente'            => $msg['from_me'] ? 'humano' : 'cliente',
+                    'tipo'                 => $msg['tipo'],
+                    'conteudo'             => $msg['conteudo'],
+                    'evolution_message_id' => $msg['evolution_id'],
+                    'enviada_em'           => $msg['timestamp']
+                        ? Carbon::createFromTimestamp($msg['timestamp'])
+                        : now(),
+                ]);
+                $importados++;
+            } catch (QueryException $e) {
+                if (! $this->isUniqueViolation($e)) {
+                    throw $e;
+                }
             }
-
-            $ts = data_get($msg, 'messageTimestamp');
-
-            $conversa->mensagens()->create([
-                'remetente'            => $fromMe ? 'humano' : 'cliente',
-                'tipo'                 => $tipo,
-                'conteudo'             => $conteudo,
-                'evolution_message_id' => $evolutionId,
-                'enviada_em'           => $ts ? Carbon::createFromTimestamp((int) $ts) : now(),
-            ]);
-
-            $importados++;
         }
 
-        // Atualiza ultima_mensagem_em a partir do banco (mais preciso)
         $ultima = $conversa->mensagens()->orderByDesc('enviada_em')->value('enviada_em');
-        if (! $ultima) {
-            // Fallback: pega o timestamp do lastMessage do chat
-            $chatTs = data_get($chat, 'lastMessage.messageTimestamp')
-                   ?? data_get($chat, 'updatedAt');
-            if ($chatTs) {
-                $ultima = is_numeric($chatTs)
-                    ? Carbon::createFromTimestamp((int) $chatTs)
-                    : Carbon::parse($chatTs);
-            }
-        }
         if ($ultima) {
             $conversa->update(['ultima_mensagem_em' => $ultima]);
         }
 
-        return ['importados' => $importados, 'sem_mensagem' => $semMensagem];
+        return ['importados' => $importados, 'sem_mensagem' => false, 'ignorado' => false];
     }
 
     /**
@@ -340,6 +318,127 @@ class ConversaSyncService
         return $mapa;
     }
 
+    public function limparRegistrosVazios(Tenant $tenant): array
+    {
+        return DB::transaction(function () use ($tenant): array {
+            $conversas = Conversa::where('tenant_id', $tenant->id)
+                ->where('status_v2', 'ativa')
+                ->whereNull('ultima_mensagem_em')
+                ->doesntHave('mensagens')
+                ->get();
+
+            $conversasRemovidas = $conversas->count();
+            foreach ($conversas as $conversa) {
+                $conversa->delete();
+            }
+
+            $clientesRemovidos = Cliente::where('tenant_id', $tenant->id)
+                ->doesntHave('conversas')
+                ->doesntHave('agendamentos')
+                ->where(function ($query) {
+                    $query->whereColumn('nome', 'telefone')
+                        ->orWhereRaw('LOWER(TRIM(nome)) IN (?, ?)', ['cliente whatsapp', '']);
+                })
+                ->delete();
+
+            return [
+                'conversas' => $conversasRemovidas,
+                'clientes' => $clientesRemovidos,
+            ];
+        });
+    }
+
+    private function resolverTelefoneDoChat(array $chat, string $remoteJid): ?string
+    {
+        $candidatos = [
+            str_contains($remoteJid, '@lid') ? null : $remoteJid,
+            data_get($chat, 'remoteJidAlt'),
+            data_get($chat, 'lastMessage.key.remoteJidAlt'),
+            data_get($chat, 'lastMessage.key.participantAlt'),
+            data_get($chat, 'phoneNumber'),
+        ];
+
+        return $this->primeiroTelefoneValido($candidatos);
+    }
+
+    private function resolverTelefoneDasMensagens(array $mensagens): ?string
+    {
+        foreach ($mensagens as $mensagem) {
+            $telefone = $this->primeiroTelefoneValido([
+                data_get($mensagem, 'key.remoteJidAlt'),
+                data_get($mensagem, 'key.participantAlt'),
+                str_contains((string) data_get($mensagem, 'key.remoteJid'), '@lid')
+                    ? null
+                    : data_get($mensagem, 'key.remoteJid'),
+            ]);
+
+            if ($telefone) {
+                return $telefone;
+            }
+        }
+
+        return null;
+    }
+
+    private function primeiroTelefoneValido(array $candidatos): ?string
+    {
+        foreach ($candidatos as $candidato) {
+            if (! is_string($candidato) || $candidato === '' || str_contains($candidato, '@lid')) {
+                continue;
+            }
+
+            $telefone = preg_replace('/\D/', '', preg_replace('/@.*$/', '', $candidato));
+            if ($this->telefoneValido($telefone)) {
+                return $telefone;
+            }
+        }
+
+        return null;
+    }
+
+    private function telefoneValido(?string $telefone): bool
+    {
+        return is_string($telefone) && preg_match('/^\d{10,15}$/', $telefone) === 1;
+    }
+
+    private function normalizarMensagem(array $msg): ?array
+    {
+        $evolutionId = data_get($msg, 'key.id');
+        if (! $evolutionId) {
+            return null;
+        }
+
+        $messageType = data_get($msg, 'messageType', 'conversation');
+        [$tipo, $conteudo] = match ($messageType) {
+            'imageMessage' => ['imagem', data_get($msg, 'message.imageMessage.caption', '')],
+            'videoMessage' => ['video', data_get($msg, 'message.videoMessage.caption', '')],
+            'audioMessage' => ['audio', ''],
+            'documentMessage' => ['documento', data_get($msg, 'message.documentMessage.fileName', '')],
+            'stickerMessage' => ['sticker', ''],
+            default => [
+                'texto',
+                data_get($msg, 'message.conversation')
+                    ?? data_get($msg, 'message.extendedTextMessage.text')
+                    ?? data_get($msg, 'message.ephemeralMessage.message.extendedTextMessage.text')
+                    ?? '',
+            ],
+        };
+
+        if ($tipo === 'texto' && trim((string) $conteudo) === '') {
+            return null;
+        }
+
+        $timestamp = data_get($msg, 'messageTimestamp');
+
+        return [
+            'evolution_id' => (string) $evolutionId,
+            'from_me' => (bool) data_get($msg, 'key.fromMe', false),
+            'tipo' => $tipo,
+            'conteudo' => (string) $conteudo,
+            'timestamp' => is_numeric($timestamp) ? (int) $timestamp : null,
+        ];
+    }
+
     /**
      * Busca mensagens com fallback para @lid: tenta o JID original; se @lid e vazio,
      * tenta @s.whatsapp.net.
@@ -350,20 +449,19 @@ class ConversaSyncService
         string $instance,
         string $remoteJid,
         bool $isLid,
-        string $telefone,
+        ?string $telefone,
     ): array {
         $msgs = $evolution->fetchMessages($instance, $remoteJid, 50);
 
-        if (empty($msgs) && $isLid) {
-            // @lid não encontrou — tenta com o número real (@s.whatsapp.net)
-            $jidAlternativo = $telefone . '@s.whatsapp.net';
+        if (empty($msgs) && $isLid && $telefone) {
+            $jidAlternativo = $telefone.'@s.whatsapp.net';
             $msgs = $evolution->fetchMessages($instance, $jidAlternativo, 50);
 
             if (! empty($msgs)) {
                 Log::info('SYNC_LID_FALLBACK', [
                     'tenant' => $tenant->slug,
-                    'lid'    => $remoteJid,
-                    'found'  => count($msgs),
+                    'lid' => $remoteJid,
+                    'found' => count($msgs),
                 ]);
             }
         }
@@ -396,7 +494,7 @@ class ConversaSyncService
         $ehPlaceholder = $cliente->nome === $cliente->telefone
             || in_array(strtolower(trim($cliente->nome)), self::NOMES_INVALIDOS, true);
 
-        if ($nomeChat && ($ehPlaceholder || $nomeChat !== $cliente->nome)) {
+        if ($nomeChat && $ehPlaceholder) {
             $cliente->update(['nome' => $nomeChat]);
             $conversa->cliente()->update(['nome' => $nomeChat]);
         }
