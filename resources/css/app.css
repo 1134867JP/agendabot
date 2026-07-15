@@ -4,49 +4,49 @@
 
 @layer base {
     :root, .dark {
-        --bg-app:        #070b14;
+        --bg-app:        #0d1012;
         --amber-text:    #fcd34d;
         --amber-btn-bg:  rgba(245,158,11,0.20);
         --amber-btn-bdr: rgba(245,158,11,0.30);
         --danger-text:   #fca5a5;
         --danger-btn-bg: rgba(239,68,68,0.20);
         --danger-btn-bdr:rgba(239,68,68,0.30);
-        --bg-sidebar:    #0b1120;
-        --bg-surface:    #101827;
-        --bg-surface-2:  #162235;
-        --accent:        #38bdf8;
-        --accent-light:  rgba(56, 189, 248, 0.14);
-        --emerald:       #67e8f9;
-        --jade:          #38bdf8;
-        --jade-light:    rgba(56, 189, 248, 0.12);
-        --text-1:        #e6edf7;
-        --text-2:        rgba(230, 237, 247, 0.58);
-        --text-3:        rgba(184, 201, 222, 0.38);
-        --border:        rgba(148, 187, 220, 0.12);
-        --border-strong: rgba(148, 187, 220, 0.22);
+        --bg-sidebar:    #111619;
+        --bg-surface:    #161c1f;
+        --bg-surface-2:  #1c2428;
+        --accent:        #2d9d82;
+        --accent-light:  rgba(45, 157, 130, 0.13);
+        --emerald:       #6ed7bd;
+        --jade:          #2d9d82;
+        --jade-light:    rgba(45, 157, 130, 0.12);
+        --text-1:        #edf1ef;
+        --text-2:        rgba(237, 241, 239, 0.62);
+        --text-3:        rgba(198, 210, 205, 0.46);
+        --border:        rgba(219, 231, 226, 0.10);
+        --border-strong: rgba(219, 231, 226, 0.18);
     }
 
     .light {
-        --bg-app:        #f5f8fc;
+        --bg-app:        #f6f7f5;
         --amber-text:    #92400e;
         --amber-btn-bg:  rgba(245,158,11,0.15);
         --amber-btn-bdr: rgba(245,158,11,0.35);
         --danger-text:   #991b1b;
         --danger-btn-bg: rgba(239,68,68,0.12);
         --danger-btn-bdr:rgba(239,68,68,0.30);
-        --bg-sidebar:    #eaf1f8;
+        --bg-sidebar:    #eef1ee;
         --bg-surface:    #ffffff;
-        --bg-surface-2:  #eef5fb;
-        --accent:        #0284c7;
-        --accent-light:  rgba(2, 132, 199, 0.10);
-        --emerald:       #0891b2;
-        --jade:          #0284c7;
-        --jade-light:    rgba(2, 132, 199, 0.10);
-        --text-1:        #172033;
-        --text-2:        rgba(23, 32, 51, 0.64);
-        --text-3:        rgba(65, 86, 112, 0.58);
-        --border:        rgba(46, 91, 128, 0.14);
-        --border-strong: rgba(46, 91, 128, 0.24);
+        --bg-surface-2:  #f0f3f0;
+        --accent:        #227b66;
+        --accent-light:  rgba(34, 123, 102, 0.10);
+        --emerald:       #1e8f76;
+        --jade:          #227b66;
+        --jade-light:    rgba(34, 123, 102, 0.10);
+        --text-1:        #1a2420;
+        --text-2:        rgba(26, 36, 32, 0.66);
+        --text-3:        rgba(73, 92, 84, 0.62);
+        --border:        rgba(52, 78, 68, 0.14);
+        --border-strong: rgba(52, 78, 68, 0.22);
     }
 
     html {
@@ -82,7 +82,7 @@
     .card {
         background: var(--bg-surface);
         border: 1px solid var(--border);
-        box-shadow: 0 1px 3px rgba(4, 24, 48, 0.28), 0 0 0 1px rgba(56, 189, 248, 0.02);
+        box-shadow: 0 1px 3px rgba(10, 22, 17, 0.18);
         @apply rounded-xl;
     }
 
@@ -195,10 +195,11 @@
 
     /* ── Texto gradiente ─────────────────────────────────────────────────── */
     .gradient-text {
-        background: linear-gradient(135deg, #38bdf8, #818cf8);
+        background: none;
+        color: var(--accent);
         -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        -webkit-text-fill-color: currentColor;
+        background-clip: initial;
     }
 
     /* ── Flash message slide-in ──────────────────────────────────────────── */
