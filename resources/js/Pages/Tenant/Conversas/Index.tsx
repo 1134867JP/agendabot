@@ -215,9 +215,9 @@ function SendIcon() {
 
 // ─── Modal Nova Conversa ──────────────────────────────────────────────────────
 
-function NovaConversaModal({ onClose }: { onClose: () => void }) {
+function NovaConversaModal({ onClose, initialTelefone = '' }: { onClose: () => void; initialTelefone?: string }) {
     const { data, setData, post, processing, errors, reset } = useForm({
-        telefone: '',
+        telefone: initialTelefone,
         mensagem: '',
     });
 
@@ -282,7 +282,7 @@ function NovaConversaModal({ onClose }: { onClose: () => void }) {
                         />
                         {errors.mensagem && <p className="mt-1 text-xs text-red-400">{errors.mensagem}</p>}
                     </div>
-                    <div className="flex justify-end gap-2 pt-1">
+                    <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
                         <button type="button" onClick={onClose} className="btn-secondary">
                             Cancelar
                         </button>
@@ -671,6 +671,13 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                             </div>
                         </div>
 
+                        {selecionada.status_v2 === 'aguardando_humano' && (
+                            <div className="flex items-center justify-between gap-3 px-3 py-2.5 sm:px-4" style={{ background: 'var(--amber-btn-bg)', borderBottom: '1px solid var(--amber-btn-bdr)' }}>
+                                <p className="text-xs" style={{ color: 'var(--amber-text)' }}>Este cliente foi transferido pelo bot e aguarda sua equipe.</p>
+                                <button type="button" onClick={() => assumir()} disabled={assumindo} className="shrink-0 text-xs font-semibold" style={{ color: 'var(--amber-text)' }}>Assumir →</button>
+                            </div>
+                        )}
+
                         {/* Mensagens */}
                         <div
                             ref={chatRef}
@@ -763,7 +770,10 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
             </div>
 
             {showModalNova && (
-                <NovaConversaModal onClose={() => setShowModalNova(false)} />
+                <NovaConversaModal
+                    initialTelefone={new URLSearchParams(window.location.search).get('telefone') ?? ''}
+                    onClose={() => setShowModalNova(false)}
+                />
             )}
         </AppLayout>
     );
