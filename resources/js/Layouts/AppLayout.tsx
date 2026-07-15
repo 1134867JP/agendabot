@@ -5,6 +5,7 @@ import Sidebar from '@/Components/Layout/Sidebar';
 import SubscriptionBanner from '@/Components/Layout/SubscriptionBanner';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
 import NotificacoesBell from '@/Components/NotificacoesBell';
+import QuickActions from '@/Components/Layout/QuickActions';
 
 // Tracks the visual viewport so the fullHeight chat layout stays pinned
 // to the area above the iOS virtual keyboard.
@@ -50,7 +51,7 @@ export default function AppLayout({ children, title, subtitle, fullHeight }: Pro
     useAppHeight();
 
     const page = usePage<PageProps<{
-        currentTenant?: { id: number; nome: string; slug: string } | null;
+        currentTenant?: { id: number; nome: string; slug: string; modo_bot?: 'agendamento' | 'triagem' | null } | null;
         flash?: { success?: string; erro?: string };
         subscription?: SubscriptionInfo | null;
     }>>();
@@ -181,6 +182,7 @@ export default function AppLayout({ children, title, subtitle, fullHeight }: Pro
                     {children}
                 </main>
             </div>
+            {!fullHeight && currentTenant && <QuickActions />}
         </div>
     );
 }
