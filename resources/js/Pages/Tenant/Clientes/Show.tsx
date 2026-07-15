@@ -1,13 +1,14 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
-import { PageProps } from '@/types';
+import { PageProps, Tenant } from '@/types';
 
 interface Cliente {
     id: number;
     nome: string;
     telefone: string;
     created_at: string;
+    observacoes: string | null;
 }
 
 interface AgendamentoCliente {
@@ -147,6 +148,17 @@ function DeleteModal({ nome, onConfirm, onCancel }: { nome: string; onConfirm: (
 export default function ClienteShow({ cliente, agendamentos, conversas }: Props) {
     const [showDelete, setShowDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const { currentTenant } = usePage<PageProps<{ currentTenant?: Tenant | null }>>().props;
+    const modoAgendamento = (currentTenant?.modo_bot ?? 'agendamento') === 'agendamento';
+    const notesForm = useForm({
+        nome: cliente.nome,
+        observacoes: cliente.observacoes ?? '',
+    });
+
+    const salvarObservacoes = (event: React.FormEvent) => {
+        event.preventDefault();
+        notesForm.patch(route('tenant.clientes.update', cliente.id), { preserveScroll: true });
+    };
 
     const totalAgendamentos = agendamentos.length;
     const realizados = agendamentos.filter(a => ['agendado', 'confirmado', 'concluido'].includes(a.status)).length;
@@ -198,6 +210,17 @@ export default function ClienteShow({ cliente, agendamentos, conversas }: Props)
                     </div>
                 </div>
 
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                    {modoAgendamento && (
+                        <button type="button" onClick={() => router.visit(route('tenant.agendamentos.index', { novo: 1, cliente: cliente.telefone }))} className="btn-primary min-h-11">
+                            Novo agendamento
+                        </button>
+                    )}
+                    <button type="button" onClick={() => router.visit(route('tenant.conversas.index', { nova: 1, telefone: cliente.telefone }))} className="btn-secondary min-h-11">
+                        Iniciar conversa
+                    </button>
+                </div>
+
                 <div className="mt-4 grid grid-cols-2 gap-3">
                     <div className="rounded-xl p-3 text-center" style={{ background: 'var(--bg-surface-2)' }}>
                         <p className="text-2xl font-bold text-primary">{totalAgendamentos}</p>
@@ -210,8 +233,31 @@ export default function ClienteShow({ cliente, agendamentos, conversas }: Props)
                 </div>
             </div>
 
+            <form onSubmit={salvarObservacoes} className="card mb-4 p-4 sm:p-5">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                        <h3 className="text-sm font-semibold text-primary">Anotações internas</h3>
+                        <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>Preferências e contexto para o próximo atendimento.</p>
+                    </div>
+                    {notesForm.wasSuccessful && <span className="text-xs" style={{ color: 'var(--jade)' }}>Salvo</span>}
+                </div>
+                <textarea
+                    value={notesForm.data.observacoes}
+                    onChange={event => notesForm.setData('observacoes', event.target.value)}
+                    className="input min-h-24 resize-y"
+                    maxLength={2000}
+                    placeholder="Ex.: prefere horários pela manhã, serviço habitual, observações importantes…"
+                />
+                <div className="mt-3 flex items-center justify-between gap-3">
+                    <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>{notesForm.data.observacoes.length}/2000</span>
+                    <button type="submit" disabled={notesForm.processing} className="btn-primary min-h-11">
+                        {notesForm.processing ? 'Salvando…' : 'Salvar anotações'}
+                    </button>
+                </div>
+            </form>
+
             {/* Agendamentos */}
-            <div className="card mb-4 overflow-hidden">
+            {modoAgendamento && <div className="card mb-4 overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: '1px solid var(--border)' }}>
                     <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
                         Agendamentos
@@ -227,6 +273,7 @@ export default function ClienteShow({ cliente, agendamentos, conversas }: Props)
                             <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
                         </svg>
                         <p className="text-xs" style={{ color: 'var(--text-3)' }}>Nenhum agendamento</p>
+                        <button type="button" onClick={() => router.visit(route('tenant.agendamentos.index', { novo: 1, cliente: cliente.telefone }))} className="btn-primary mt-2 min-h-11 text-xs">Criar agendamento</button>
                     </div>
                 ) : (
                     <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
@@ -248,7 +295,7 @@ export default function ClienteShow({ cliente, agendamentos, conversas }: Props)
                         ))}
                     </div>
                 )}
-            </div>
+            </div>}
 
             {/* Conversas */}
             <div className="card overflow-hidden">
@@ -267,6 +314,7 @@ export default function ClienteShow({ cliente, agendamentos, conversas }: Props)
                             <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
                         </svg>
                         <p className="text-xs" style={{ color: 'var(--text-3)' }}>Nenhuma conversa</p>
+                        <button type="button" onClick={() => router.visit(route('tenant.conversas.index', { nova: 1, telefone: cliente.telefone }))} className="btn-primary mt-2 min-h-11 text-xs">Iniciar conversa</button>
                     </div>
                 ) : (
                     <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
