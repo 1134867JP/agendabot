@@ -310,6 +310,12 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
     const [showChat,       setShowChat]       = useState(false);
     const [showModalNova,  setShowModalNova]  = useState(false);
     const [sincronizando,  setSincronizando]  = useState(false);
+
+    useEffect(() => {
+        if (new URLSearchParams(window.location.search).get('nova') === '1') {
+            setShowModalNova(true);
+        }
+    }, []);
     const [busca,          setBusca]          = useState('');
     const buscaRef = useRef<HTMLInputElement>(null);
 
