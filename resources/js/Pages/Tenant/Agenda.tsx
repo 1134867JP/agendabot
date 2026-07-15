@@ -836,9 +836,9 @@ export default function Agenda({ recursos, profissionais }: Props) {
                     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
                         <p className="font-medium text-primary">Prepare a agenda</p>
                         <p className="text-sm" style={{ color: 'var(--text-3)' }}>
-                            Cadastre quem atende e os horários disponíveis antes de criar reservas.
+                            Cadastre profissionais ou recursos e defina os horários disponíveis.
                         </p>
-                        <Link href={route('tenant.profissionais.index')} className="btn-primary min-h-11">Criar primeiro profissional</Link>
+                        <Link href={route('tenant.configuracoes.index')} className="btn-primary min-h-11">Configurar agenda</Link>
                     </div>
                 ) : (
                     <>
