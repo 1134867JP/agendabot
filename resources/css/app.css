@@ -4,49 +4,49 @@
 
 @layer base {
     :root, .dark {
-        --bg-app:        #08090f;
+        --bg-app:        #0d1012;
         --amber-text:    #fcd34d;
         --amber-btn-bg:  rgba(245,158,11,0.20);
         --amber-btn-bdr: rgba(245,158,11,0.30);
         --danger-text:   #fca5a5;
         --danger-btn-bg: rgba(239,68,68,0.20);
         --danger-btn-bdr:rgba(239,68,68,0.30);
-        --bg-sidebar:    #0c0e16;
-        --bg-surface:    #111320;
-        --bg-surface-2:  #161929;
-        --accent:        #6366f1;
-        --accent-light:  rgba(99, 102, 241, 0.12);
-        --emerald:       #6ee7b7;
-        --jade:          #00a884;
-        --jade-light:    rgba(0, 168, 132, 0.12);
-        --text-1:        #e8e6e1;
-        --text-2:        rgba(232, 230, 225, 0.55);
-        --text-3:        rgba(232, 230, 225, 0.25);
-        --border:        rgba(255, 255, 255, 0.07);
-        --border-strong: rgba(255, 255, 255, 0.13);
+        --bg-sidebar:    #111619;
+        --bg-surface:    #161c1f;
+        --bg-surface-2:  #1c2428;
+        --accent:        #2d9d82;
+        --accent-light:  rgba(45, 157, 130, 0.13);
+        --emerald:       #6ed7bd;
+        --jade:          #2d9d82;
+        --jade-light:    rgba(45, 157, 130, 0.12);
+        --text-1:        #edf1ef;
+        --text-2:        rgba(237, 241, 239, 0.62);
+        --text-3:        rgba(198, 210, 205, 0.46);
+        --border:        rgba(219, 231, 226, 0.10);
+        --border-strong: rgba(219, 231, 226, 0.18);
     }
 
     .light {
-        --bg-app:        #f8f7f5;
+        --bg-app:        #f6f7f5;
         --amber-text:    #92400e;
         --amber-btn-bg:  rgba(245,158,11,0.15);
         --amber-btn-bdr: rgba(245,158,11,0.35);
         --danger-text:   #991b1b;
         --danger-btn-bg: rgba(239,68,68,0.12);
         --danger-btn-bdr:rgba(239,68,68,0.30);
-        --bg-sidebar:    #f0eeeb;
+        --bg-sidebar:    #eef1ee;
         --bg-surface:    #ffffff;
-        --bg-surface-2:  #f4f3f0;
-        --accent:        #6366f1;
-        --accent-light:  rgba(99, 102, 241, 0.10);
-        --emerald:       #059669;
-        --jade:          #068a6c;
-        --jade-light:    rgba(6, 138, 108, 0.10);
-        --text-1:        #1a1a2e;
-        --text-2:        rgba(26, 26, 46, 0.60);
-        --text-3:        rgba(26, 26, 46, 0.35);
-        --border:        rgba(0, 0, 0, 0.07);
-        --border-strong: rgba(0, 0, 0, 0.15);
+        --bg-surface-2:  #f0f3f0;
+        --accent:        #227b66;
+        --accent-light:  rgba(34, 123, 102, 0.10);
+        --emerald:       #1e8f76;
+        --jade:          #227b66;
+        --jade-light:    rgba(34, 123, 102, 0.10);
+        --text-1:        #1a2420;
+        --text-2:        rgba(26, 36, 32, 0.66);
+        --text-3:        rgba(73, 92, 84, 0.62);
+        --border:        rgba(52, 78, 68, 0.14);
+        --border-strong: rgba(52, 78, 68, 0.22);
     }
 
     html {
@@ -82,7 +82,7 @@
     .card {
         background: var(--bg-surface);
         border: 1px solid var(--border);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 1px 3px rgba(10, 22, 17, 0.18);
         @apply rounded-xl;
     }
 
@@ -166,6 +166,21 @@
     .sidebar-btn { color: var(--text-3); background: transparent; @apply transition-colors rounded-md; }
     .sidebar-btn:hover { color: var(--text-2); background: var(--bg-surface-2); }
 
+    /* ── Abas do hub de configurações ────────────────────────────────────── */
+    .config-tab {
+        color: var(--text-3);
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        @apply flex items-center gap-2 whitespace-nowrap rounded-t-lg px-3.5 py-2.5 text-sm font-medium transition-all;
+    }
+    .config-tab svg { color: var(--text-3); transition: color .15s; }
+    .config-tab:hover { color: var(--text-1); background: var(--bg-surface-2); }
+    .config-tab:hover svg { color: var(--text-2); }
+    .config-tab--active { color: var(--accent); border-bottom-color: var(--accent); }
+    .config-tab--active svg { color: var(--accent); }
+    .config-tab--active:hover { color: var(--accent); background: var(--accent-light); }
+    .config-tab--active:hover svg { color: var(--accent); }
+
     /* ── Scrollbar invisível mas funcional ───────────────────────────────── */
     .scroll-hidden { scrollbar-width: none; -ms-overflow-style: none; }
     .scroll-hidden::-webkit-scrollbar { display: none; }
@@ -180,10 +195,11 @@
 
     /* ── Texto gradiente ─────────────────────────────────────────────────── */
     .gradient-text {
-        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        background: none;
+        color: var(--accent);
         -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        -webkit-text-fill-color: currentColor;
+        background-clip: initial;
     }
 
     /* ── Flash message slide-in ──────────────────────────────────────────── */
