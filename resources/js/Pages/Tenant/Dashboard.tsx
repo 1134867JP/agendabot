@@ -118,7 +118,6 @@ export default function TenantDashboard({
         { done: setup_completo.bot_config, label: 'Configure o atendimento', description: modoAgendamento ? 'Personalize como o bot conversa e agenda.' : 'Personalize como o bot coleta dados e transfere.', href: route('tenant.configuracoes.index') },
         ...catalogoItems,
         { done: setup_completo.whatsapp, label: 'Conecte o WhatsApp', description: 'Ative o canal usado pelos seus clientes.', href: route('tenant.whatsapp') },
-        { done: true, label: 'Faça um teste', description: 'Valide a experiência antes de divulgar.', href: route('tenant.bot.simulador') },
     ];
 
     const concluidos = setupItems.filter(item => item.done).length;
@@ -159,7 +158,10 @@ export default function TenantDashboard({
                                 : 'O bot coleta informações e transfere a conversa quando necessário.'}
                         </p>
                     </div>
-                    <Link href={route('tenant.configuracoes.index')} className="btn-secondary min-h-11 justify-center">Ajustar funcionamento</Link>
+                    <div className="grid grid-cols-2 gap-2 sm:flex">
+                        <Link href={route('tenant.bot.simulador')} className="btn-secondary min-h-11 justify-center">Testar atendimento</Link>
+                        <Link href={route('tenant.configuracoes.index')} className="btn-secondary min-h-11 justify-center">Ajustar funcionamento</Link>
+                    </div>
                 </div>
 
                 {!todoConfigurado && (
