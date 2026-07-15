@@ -97,7 +97,7 @@ class DashboardController extends Controller
             $pendencias->push([
                 'id' => 'deposits',
                 'tone' => 'warning',
-                'title' => "{$depositosPendentes} sinal".($depositosPendentes === 1 ? '' : 'is').' pendente'.($depositosPendentes === 1 ? '' : 's'),
+                'title' => $depositosPendentes === 1 ? '1 sinal pendente' : "{$depositosPendentes} sinais pendentes",
                 'description' => 'Confira os pagamentos antes dos próximos atendimentos.',
                 'action' => 'Revisar reservas',
                 'href' => route('tenant.agendamentos.index'),
