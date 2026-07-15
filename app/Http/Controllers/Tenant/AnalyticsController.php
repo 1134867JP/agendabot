@@ -59,11 +59,18 @@ class AnalyticsController extends Controller
 
         $receitaBot = (float) (clone $atual)->whereIn('origem', ['whatsapp', 'bot'])->sum('valor_total');
 
-        $porDiaRaw = (clone $atual)
-            ->selectRaw('DATE(COALESCE(data_hora, inicio)) as dia, COUNT(*) as total')
-            ->groupBy('dia')
-            ->orderBy('dia')
-            ->pluck('total', 'dia');
+        $porDiaRaw = ($tenant->modo_bot ?? 'agendamento') === 'triagem'
+            ? Conversa::where('tenant_id', $tenant->id)
+                ->whereBetween('created_at', [$inicio, $fim])
+                ->selectRaw('DATE(created_at) as dia, COUNT(*) as total')
+                ->groupBy('dia')
+                ->orderBy('dia')
+                ->pluck('total', 'dia')
+            : (clone $atual)
+                ->selectRaw('DATE(COALESCE(data_hora, inicio)) as dia, COUNT(*) as total')
+                ->groupBy('dia')
+                ->orderBy('dia')
+                ->pluck('total', 'dia');
 
         $porDia = collect(range($dias - 1, 0))->map(fn ($i) => [
             'data' => now()->subDays($i)->format('Y-m-d'),
