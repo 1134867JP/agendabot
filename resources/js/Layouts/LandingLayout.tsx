@@ -2,8 +2,8 @@ import { Link } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import ForceDark from '@/Components/ForceDark';
 
-const DARK  = '#08090f';
-const INDIGO = '#6366F1';
+const DARK  = '#0d1012';
+const INDIGO = '#2d9d82';
 
 interface Props {
     children: React.ReactNode;
@@ -15,9 +15,9 @@ function LandingNavbar({ currentPage, scrolled }: { currentPage?: string; scroll
         <header
             className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
             style={{
-                background:    scrolled ? 'rgba(8,9,15,0.88)' : 'transparent',
+                background:    scrolled ? 'rgba(13,16,18,0.92)' : 'transparent',
                 backdropFilter: scrolled ? 'blur(12px)' : 'none',
-                borderBottom:  scrolled ? '1px solid rgba(99,102,241,0.15)' : 'none',
+                borderBottom:  scrolled ? '1px solid rgba(110,215,189,0.14)' : 'none',
             }}
         >
             <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
@@ -73,7 +73,7 @@ function LandingNavbar({ currentPage, scrolled }: { currentPage?: string; scroll
                 <Link
                     href={route('onboarding.step1')}
                     className="hidden md:inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-[13px] font-semibold text-white transition-all hover:brightness-110 hover:-translate-y-px"
-                    style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', boxShadow: '0 4px 14px rgba(99,102,241,0.35)' }}
+                    style={{ background: INDIGO, boxShadow: '0 4px 14px rgba(45,157,130,0.22)' }}
                 >
                     Começar grátis
                     <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -83,7 +83,7 @@ function LandingNavbar({ currentPage, scrolled }: { currentPage?: string; scroll
                 <Link
                     href={route('onboarding.step1')}
                     className="md:hidden rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white transition-all"
-                    style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
+                    style={{ background: INDIGO }}
                 >
                     Começar
                 </Link>
