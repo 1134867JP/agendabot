@@ -119,6 +119,7 @@ Route::middleware('auth')->group(function () {
         Route::get('conversas/notificacoes', [ConversaController::class, 'notificacoes'])->name('conversas.notificacoes');
         Route::post('conversas/{conversa}/marcar-lida', [ConversaController::class, 'marcarLida'])->name('conversas.marcar-lida');
         Route::post('conversas/iniciar', [ConversaController::class, 'iniciar'])->name('conversas.iniciar');
+        Route::get('conversas/sincronizacao/status', [ConversaController::class, 'statusSincronizacao'])->name('conversas.sincronizacao.status');
         Route::post('conversas/sincronizar', [ConversaController::class, 'sincronizar'])->name('conversas.sincronizar');
         Route::get('conversas/{conversa}/mensagens', [ConversaController::class, 'mensagens'])->name('conversas.mensagens');
         Route::get('conversas/{conversa}/mensagens/{mensagem}/media', [ConversaController::class, 'media'])->name('conversas.media');
