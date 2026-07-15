@@ -1,20 +1,15 @@
 import { Head, useForm } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { PageProps, TipoServico } from '@/types';
-
-const TIPOS: { value: TipoServico; label: string; emoji: string }[] = [
-    { value: 'barbeiro',      label: 'Barbearia',        emoji: '✂️' },
-    { value: 'quadra',        label: 'Quadra Esportiva', emoji: '🏟️' },
-    { value: 'estetica',      label: 'Estética',         emoji: '💆' },
-    { value: 'personalizado', label: 'Personalizado',    emoji: '⚙️' },
-];
+import { TIPOS_SERVICO } from '@/constants/tiposServico';
 
 export default function TenantCreate(_: PageProps) {
     const { data, setData, post, processing, errors } = useForm({
-        nome:          '',
-        tipo_servico:  'barbeiro' as TipoServico,
-        email_dono:    '',
-        senha_dono:    '',
+        nome:                        '',
+        tipo_servico:                'barbeiro' as TipoServico,
+        tipo_servico_personalizado:  '',
+        email_dono:                  '',
+        senha_dono:                  '',
     });
 
     const submit = (e: React.FormEvent) => {
@@ -46,7 +41,7 @@ export default function TenantCreate(_: PageProps) {
                         <div>
                             <label className="label mb-2">Tipo de serviço</label>
                             <div className="grid grid-cols-2 gap-2">
-                                {TIPOS.map(t => (
+                                {TIPOS_SERVICO.map(t => (
                                     <button
                                         key={t.value}
                                         type="button"
@@ -62,7 +57,17 @@ export default function TenantCreate(_: PageProps) {
                                     </button>
                                 ))}
                             </div>
+                            {data.tipo_servico === 'personalizado' && (
+                                <input
+                                    value={data.tipo_servico_personalizado}
+                                    onChange={e => setData('tipo_servico_personalizado', e.target.value)}
+                                    className="input mt-2"
+                                    placeholder="Ex: Clínica veterinária, Estúdio de pilates…"
+                                    required
+                                />
+                            )}
                             {errors.tipo_servico && <p className="mt-1 text-xs text-red-400">{errors.tipo_servico}</p>}
+                            {errors.tipo_servico_personalizado && <p className="mt-1 text-xs text-red-400">{errors.tipo_servico_personalizado}</p>}
                         </div>
 
                         <hr style={{ borderColor: 'var(--border)' }} />

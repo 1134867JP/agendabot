@@ -1,6 +1,7 @@
 import { Head, useForm } from '@inertiajs/react';
-import AppLayout from '@/Layouts/AppLayout';
+import ConfiguracoesLayout from '@/Layouts/ConfiguracoesLayout';
 import { PageProps } from '@/types';
+import Toggle from '@/Components/Toggle';
 
 interface TriagemConfig {
     palavras_chave_humano: string[];
@@ -11,25 +12,6 @@ interface TriagemConfig {
 
 interface Props extends PageProps {
     config: TriagemConfig;
-}
-
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-    return (
-        <button
-            type="button"
-            role="switch"
-            aria-checked={checked}
-            onClick={() => onChange(!checked)}
-            className="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none"
-            style={{ background: checked ? 'var(--jade)' : 'rgba(255,255,255,0.12)' }}
-        >
-            <span
-                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
-                    checked ? 'translate-x-5' : 'translate-x-0.5'
-                }`}
-            />
-        </button>
-    );
 }
 
 export default function Triagem({ config }: Props) {
@@ -53,7 +35,7 @@ export default function Triagem({ config }: Props) {
     };
 
     return (
-        <AppLayout title="Triagem" subtitle="Regras automáticas para o bot passar a conversa a um atendente humano">
+        <ConfiguracoesLayout title="Triagem" subtitle="Regras automáticas para o bot passar a conversa a um atendente humano">
             <Head title="Triagem" />
 
             <div className="mx-auto max-w-2xl space-y-6">
@@ -146,6 +128,6 @@ export default function Triagem({ config }: Props) {
                     </form>
                 </div>
             </div>
-        </AppLayout>
+        </ConfiguracoesLayout>
     );
 }

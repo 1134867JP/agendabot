@@ -29,6 +29,7 @@ export interface Tenant {
     nome_agente?: string | null;
     tom_voz?: 'formal' | 'semiformal' | 'descontraido' | null;
     instrucoes_extras?: string | null;
+    bot_saudacao?: string | null;
     bot_ativo?: boolean | null;
     ramo_negocio?: string | null;
     descricao_negocio?: string | null;
@@ -38,6 +39,8 @@ export interface Tenant {
     modo_bot?: 'agendamento' | 'triagem' | null;
     horario_atendimento?: HorarioAtendimentoDia[] | null;
     mensagem_fora_horario?: string | null;
+    lembrete_ativo?: boolean | null;
+    lembrete_texto?: string | null;
 }
 
 export interface HorarioAtendimentoDia {

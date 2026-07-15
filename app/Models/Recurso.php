@@ -49,6 +49,9 @@ class Recurso extends Model
         $fechamento = Carbon::parse($data->format('Y-m-d') . ' ' . $horario->fechamento);
         $duracao    = $this->duracao_padrao_minutos;
 
+        // Intervalo mínimo exigido entre agendamentos (regra configurável do tenant).
+        $buffer = (int) ($this->tenant?->regrasAgendamentoConfig()['buffer_entre_agendamentos_minutos'] ?? 0);
+
         $agendados = $this->agendamentos()
             ->where('status', '!=', 'cancelado')
             ->whereDate('inicio', $data->format('Y-m-d'))
@@ -60,9 +63,13 @@ class Recurso extends Model
         while ($cursor->copy()->addMinutes($duracao)->lte($fechamento)) {
             $fimSlot = $cursor->copy()->addMinutes($duracao);
 
-            $ocupado = $agendados->contains(function ($ag) use ($cursor, $fimSlot) {
-                return Carbon::parse($ag->inicio)->lt($fimSlot)
-                    && Carbon::parse($ag->fim)->gt($cursor);
+            $ocupado = $agendados->contains(function ($ag) use ($cursor, $fimSlot, $buffer) {
+                // Expande a janela do agendamento pelo buffer nas duas pontas, garantindo
+                // o intervalo mínimo antes e depois de cada reserva.
+                $agInicio = Carbon::parse($ag->inicio)->subMinutes($buffer);
+                $agFim    = Carbon::parse($ag->fim)->addMinutes($buffer);
+
+                return $agInicio->lt($fimSlot) && $agFim->gt($cursor);
             });
 
             $slots[] = [

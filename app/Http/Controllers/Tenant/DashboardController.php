@@ -16,14 +16,17 @@ class DashboardController extends Controller
 
         $profissionalAtivo = $tenant->profissionais()->where('ativo', true)->first();
 
+        $recursoComHorario = $tenant->recursos()->where('ativo', true)
+            ->whereHas('horariosFuncionamento')->exists();
+
         $setupCompleto = [
             'profissionais' => $tenant->profissionais()->where('ativo', true)->exists(),
             'servicos'      => $tenant->servicos()->where('ativo', true)->exists(),
+            'recursos'      => $tenant->recursos()->where('ativo', true)->exists(),
             'whatsapp'      => (bool) $tenant->whatsapp_conectado,
             'bot_config'    => ! empty($tenant->ramo_negocio),
-            'horario'       => $profissionalAtivo
-                ? $profissionalAtivo->horarios()->exists()
-                : false,
+            'horario'       => ($profissionalAtivo && $profissionalAtivo->horarios()->exists())
+                || $recursoComHorario,
         ];
 
         return Inertia::render('Tenant/Dashboard', [

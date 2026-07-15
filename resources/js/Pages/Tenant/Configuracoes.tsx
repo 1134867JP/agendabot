@@ -1,8 +1,9 @@
 import { Head, useForm } from '@inertiajs/react';
-import AppLayout from '@/Layouts/AppLayout';
+import ConfiguracoesLayout from '@/Layouts/ConfiguracoesLayout';
 import { PageProps, Tenant, TipoServico, HorarioAtendimentoDia } from '@/types';
 import TipoServicoSelector from '@/Components/TipoServicoSelector';
 import Toggle from '@/Components/Toggle';
+import { TONS_VOZ, TomVoz } from '@/constants/bot';
 
 interface Props extends PageProps {
     tenant: Tenant;
@@ -10,14 +11,7 @@ interface Props extends PageProps {
 
 // ─── Bot & IA form ────────────────────────────────────────────────────────────
 
-type TomVoz = 'formal' | 'semiformal' | 'descontraido';
 type ModoBot = 'agendamento' | 'triagem';
-
-const TONS: { value: TomVoz; label: string; desc: string }[] = [
-    { value: 'formal',       label: 'Formal',       desc: 'Profissional, sem emojis, "Senhor/Senhora"' },
-    { value: 'semiformal',   label: 'Semiformal',   desc: 'Claro e amigável, emojis moderados' },
-    { value: 'descontraido', label: 'Descontraído', desc: 'Leve, emojis liberados, gírias suaves' },
-];
 
 const MODOS: { value: ModoBot; label: string; desc: string }[] = [
     { value: 'agendamento', label: 'Agendamento automático', desc: 'O bot consulta a agenda e fecha o agendamento sozinho.' },
@@ -45,13 +39,14 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
         endereco:          tenant.endereco          ?? '',
         nome_agente:       tenant.nome_agente       ?? 'Bia',
         tom_voz:           (tenant.tom_voz          ?? 'semiformal') as TomVoz,
+        bot_saudacao:      tenant.bot_saudacao      ?? '',
         instrucoes_extras: tenant.instrucoes_extras ?? '',
         bot_ativo:         tenant.bot_ativo         ?? true,
         modo_bot:          (tenant.modo_bot         ?? 'agendamento') as ModoBot,
         horario_atendimento:   buildHorarioRows(tenant.horario_atendimento),
         mensagem_fora_horario: tenant.mensagem_fora_horario ?? '',
-        lembrete_ativo:    (tenant as any).lembrete_ativo ?? true,
-        lembrete_texto:    (tenant as any).lembrete_texto ?? '',
+        lembrete_ativo:    tenant.lembrete_ativo ?? true,
+        lembrete_texto:    tenant.lembrete_texto ?? '',
     });
 
     const setDia = (idx: number, campo: keyof HorarioAtendimentoDia, valor: string | boolean) =>
@@ -72,25 +67,11 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                     </h2>
                 </div>
                 {/* Bot ativo toggle */}
-                <label className="flex cursor-pointer items-center gap-2">
-                    <span className="text-sm" style={{ color: 'var(--text-2)' }}>
-                        {data.bot_ativo ? 'Bot ativo' : 'Bot inativo'}
-                    </span>
-                    <button
-                        type="button"
-                        role="switch"
-                        aria-checked={data.bot_ativo}
-                        onClick={() => setData('bot_ativo', !data.bot_ativo)}
-                        className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
-                        style={{ background: data.bot_ativo ? 'var(--jade)' : 'rgba(255,255,255,0.12)' }}
-                    >
-                        <span
-                            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
-                                data.bot_ativo ? 'translate-x-5' : 'translate-x-0.5'
-                            }`}
-                        />
-                    </button>
-                </label>
+                <Toggle
+                    checked={data.bot_ativo}
+                    onChange={v => setData('bot_ativo', v)}
+                    label={data.bot_ativo ? 'Bot ativo' : 'Bot inativo'}
+                />
             </div>
 
             {wasSuccessful && (
@@ -168,11 +149,29 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                     </div>
                 </div>
 
+                {/* Mensagem de boas-vindas */}
+                <div>
+                    <label className="label mb-1">Mensagem de boas-vindas</label>
+                    <textarea
+                        value={data.bot_saudacao}
+                        onChange={e => setData('bot_saudacao', e.target.value)}
+                        rows={2}
+                        className="input resize-none"
+                        placeholder="Ex: Olá! Bem-vindo à nossa clínica. Como posso ajudar?"
+                        maxLength={500}
+                    />
+                    <p className="mt-1 flex justify-between text-xs" style={{ color: 'var(--text-3)' }}>
+                        <span>Referência que o bot usa ao saudar o cliente na primeira mensagem.</span>
+                        <span>{(data.bot_saudacao || '').length}/500</span>
+                    </p>
+                    {errors.bot_saudacao && <p className="mt-1 text-xs text-red-400">{errors.bot_saudacao}</p>}
+                </div>
+
                 {/* Tom de voz */}
                 <div>
                     <label className="label mb-3">Tom de voz</label>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                        {TONS.map(ton => {
+                        {TONS_VOZ.map(ton => {
                             const ativo = data.tom_voz === ton.value;
                             return (
                                 <button
@@ -286,20 +285,7 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                                 Envia uma mensagem WhatsApp 24h antes do agendamento
                             </p>
                         </div>
-                        <button
-                            type="button"
-                            role="switch"
-                            aria-checked={data.lembrete_ativo}
-                            onClick={() => setData('lembrete_ativo', !data.lembrete_ativo)}
-                            className="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none"
-                            style={{ background: data.lembrete_ativo ? 'var(--jade)' : 'rgba(255,255,255,0.12)' }}
-                        >
-                            <span
-                                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
-                                    data.lembrete_ativo ? 'translate-x-5' : 'translate-x-0.5'
-                                }`}
-                            />
-                        </button>
+                        <Toggle checked={data.lembrete_ativo} onChange={v => setData('lembrete_ativo', v)} />
                     </div>
 
                     {data.lembrete_ativo && (
@@ -340,7 +326,7 @@ export default function Configuracoes({ tenant }: Props) {
         nome:                       tenant.nome,
         tipo_servico:               tenant.tipo_servico,
         tipo_servico_personalizado: tenant.tipo_servico_personalizado ?? '',
-        horarios_funcionamento:     (tenant as any).horarios_funcionamento ?? '',
+        horarios_funcionamento:     tenant.horarios_funcionamento ?? '',
     });
 
     const submit = (e: React.FormEvent) => {
@@ -349,7 +335,7 @@ export default function Configuracoes({ tenant }: Props) {
     };
 
     return (
-        <AppLayout title="Configurações" subtitle="Nome do estabelecimento, tipo de serviço e personalização do bot">
+        <ConfiguracoesLayout title="Configurações" subtitle="Nome do estabelecimento, tipo de serviço e personalização do bot">
             <Head title="Configurações" />
 
             <div className="mx-auto max-w-2xl space-y-6">
@@ -421,6 +407,6 @@ export default function Configuracoes({ tenant }: Props) {
                 {/* Bot & IA section */}
                 <BotConfigForm tenant={tenant} />
             </div>
-        </AppLayout>
+        </ConfiguracoesLayout>
     );
 }

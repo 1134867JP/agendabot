@@ -1,21 +1,25 @@
 import { Head } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
-import AppLayout from '@/Layouts/AppLayout';
+import ConfiguracoesLayout from '@/Layouts/ConfiguracoesLayout';
 import { PageProps, Tenant } from '@/types';
 
 interface Props extends PageProps {
     tenant: Tenant;
-    webhook_url: string;
 }
 
-export default function WhatsAppPage({ tenant, webhook_url }: Props) {
+export default function WhatsAppPage({ tenant }: Props) {
     const [conectado, setConectado] = useState(tenant.whatsapp_conectado);
     const [qrcode, setQrcode] = useState<string | null>(null);
+    const [qrExpirado, setQrExpirado] = useState(false);
     const [loading, setLoading] = useState(false);
     const [desconectando, setDesconectando] = useState(false);
     const [confirmarDesconectar, setConfirmarDesconectar] = useState(false);
     const [erro, setErro] = useState('');
     const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const expiryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // O QR da Evolution API expira em ~60s; depois disso é preciso gerar um novo.
+    const QR_TTL_MS = 60_000;
 
     const stopPolling = () => {
         if (pollingRef.current) clearInterval(pollingRef.current);
@@ -39,12 +43,23 @@ export default function WhatsAppPage({ tenant, webhook_url }: Props) {
         }
     };
 
-    // Polling contínuo sempre ativo: detecta conexão (após QR) e desconexão (celular desconectado)
+    // Polling com backoff: rápido (3s) enquanto o QR está aberto aguardando a
+    // leitura; lento (30s) no restante do tempo, apenas para detectar desconexão.
     useEffect(() => {
-        pollingRef.current = setInterval(verificarStatus, 5000);
+        const intervalo = qrcode ? 3000 : 30000;
+        pollingRef.current = setInterval(verificarStatus, intervalo);
         return () => stopPolling();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [qrcode]);
+
+    // Marca o QR como expirado após o TTL para oferecer regeneração.
+    useEffect(() => {
+        if (expiryRef.current) clearTimeout(expiryRef.current);
+        if (qrcode && !qrExpirado) {
+            expiryRef.current = setTimeout(() => setQrExpirado(true), QR_TTL_MS);
+        }
+        return () => { if (expiryRef.current) clearTimeout(expiryRef.current); };
+    }, [qrcode, qrExpirado]);
 
     const desconectar = async () => {
         setDesconectando(true);
@@ -77,6 +92,7 @@ export default function WhatsAppPage({ tenant, webhook_url }: Props) {
     const conectar = async () => {
         setErro('');
         setLoading(true);
+        setQrExpirado(false);
         try {
             const res = await fetch(route('tenant.whatsapp.qrcode'), {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -84,6 +100,7 @@ export default function WhatsAppPage({ tenant, webhook_url }: Props) {
             const json = await res.json();
             if (json.connected) {
                 setConectado(true);
+                setQrcode(null);
             } else if (json.qrcode) {
                 setQrcode(json.qrcode);
             } else {
@@ -97,7 +114,7 @@ export default function WhatsAppPage({ tenant, webhook_url }: Props) {
     };
 
     return (
-        <AppLayout title="WhatsApp" subtitle="Conecte seu número para receber agendamentos automáticos">
+        <ConfiguracoesLayout title="WhatsApp" subtitle="Conecte seu número para receber agendamentos automáticos">
             <Head title="WhatsApp" />
 
             <div className="mx-auto max-w-lg">
@@ -275,28 +292,47 @@ export default function WhatsAppPage({ tenant, webhook_url }: Props) {
                         <p className="mb-5 text-sm" style={{ color: 'var(--text-3)' }}>
                             Abra o WhatsApp → Aparelhos conectados → Conectar um aparelho
                         </p>
-                        <img
-                            src={qrcode}
-                            alt="QR Code"
-                            className="mx-auto h-56 w-56 rounded-xl"
-                            style={{ border: '1px solid var(--border)' }}
-                        />
-                        <div className="mt-4 flex items-center justify-center gap-1.5 text-sm" style={{ color: 'var(--text-3)' }}>
-                            <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                            </svg>
-                            Aguardando conexão…
+                        <div className="relative mx-auto h-56 w-56">
+                            <img
+                                src={qrcode}
+                                alt="QR Code"
+                                className="h-56 w-56 rounded-xl"
+                                style={{ border: '1px solid var(--border)', filter: qrExpirado ? 'blur(4px)' : 'none' }}
+                            />
+                            {qrExpirado && (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-xl" style={{ background: 'rgba(0,0,0,0.55)' }}>
+                                    <span className="text-sm font-medium text-white">QR Code expirado</span>
+                                    <span className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>Gere um novo para conectar</span>
+                                </div>
+                            )}
                         </div>
+                        {qrExpirado ? (
+                            <button
+                                onClick={conectar}
+                                disabled={loading}
+                                className="btn-primary mt-4 w-full justify-center"
+                                style={{ background: '#25D366', borderRadius: '0.75rem' }}
+                            >
+                                {loading ? 'Gerando…' : 'Gerar novo QR Code'}
+                            </button>
+                        ) : (
+                            <div className="mt-4 flex items-center justify-center gap-1.5 text-sm" style={{ color: 'var(--text-3)' }}>
+                                <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                </svg>
+                                Aguardando conexão…
+                            </div>
+                        )}
                         <button
-                            onClick={() => { setQrcode(null); stopPolling(); }}
-                            className="btn-secondary mt-5 w-full justify-center"
+                            onClick={() => { setQrcode(null); setQrExpirado(false); }}
+                            className="btn-secondary mt-3 w-full justify-center"
                         >
-                            Cancelar
+                            {qrExpirado ? 'Fechar' : 'Cancelar'}
                         </button>
                     </div>
                 </div>
             )}
-        </AppLayout>
+        </ConfiguracoesLayout>
     );
 }

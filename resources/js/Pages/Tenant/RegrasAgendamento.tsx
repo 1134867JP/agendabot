@@ -1,6 +1,7 @@
 import { Head, useForm } from '@inertiajs/react';
-import AppLayout from '@/Layouts/AppLayout';
+import ConfiguracoesLayout from '@/Layouts/ConfiguracoesLayout';
 import { PageProps } from '@/types';
+import Toggle from '@/Components/Toggle';
 
 interface RegrasAgendamentoConfig {
     antecedencia_minima_minutos: number;
@@ -13,25 +14,6 @@ interface RegrasAgendamentoConfig {
 
 interface Props extends PageProps {
     config: RegrasAgendamentoConfig;
-}
-
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-    return (
-        <button
-            type="button"
-            role="switch"
-            aria-checked={checked}
-            onClick={() => onChange(!checked)}
-            className="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none"
-            style={{ background: checked ? 'var(--jade)' : 'rgba(255,255,255,0.12)' }}
-        >
-            <span
-                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
-                    checked ? 'translate-x-5' : 'translate-x-0.5'
-                }`}
-            />
-        </button>
-    );
 }
 
 export default function RegrasAgendamento({ config }: Props) {
@@ -50,7 +32,7 @@ export default function RegrasAgendamento({ config }: Props) {
     };
 
     return (
-        <AppLayout title="Regras de agendamento" subtitle="Antecedência, intervalo entre horários e política de cancelamento">
+        <ConfiguracoesLayout title="Regras de agendamento" subtitle="Antecedência, intervalo entre horários e política de cancelamento">
             <Head title="Regras de agendamento" />
 
             <div className="mx-auto max-w-2xl space-y-6">
@@ -181,6 +163,6 @@ export default function RegrasAgendamento({ config }: Props) {
                     </form>
                 </div>
             </div>
-        </AppLayout>
+        </ConfiguracoesLayout>
     );
 }

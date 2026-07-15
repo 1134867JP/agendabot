@@ -1,18 +1,4 @@
-interface TipoItem {
-    value: string;
-    label: string;
-    emoji: string;
-    desc: string;
-}
-
-const TIPOS: TipoItem[] = [
-    { value: 'barbeiro',      label: 'Barbearia',        emoji: '✂️',  desc: 'Barbeiros, salões masculinos' },
-    { value: 'quadra',        label: 'Quadra esportiva', emoji: '🏟️', desc: 'Futsal, beach tennis, padel' },
-    { value: 'estetica',      label: 'Estética',         emoji: '💆',  desc: 'Manicure, massagem, depilação' },
-    { value: 'clinica',       label: 'Clínica',          emoji: '🩺',  desc: 'Fisioterapia, psicologia, nutrição' },
-    { value: 'studio',        label: 'Estúdio',          emoji: '🎨',  desc: 'Tatuagem, fotografia, música' },
-    { value: 'personalizado', label: 'Outro',            emoji: '⚙️',  desc: 'Digite o tipo do seu negócio' },
-];
+import { TIPOS_SERVICO } from '@/constants/tiposServico';
 
 interface Props {
     value: string;
@@ -26,7 +12,7 @@ export default function TipoServicoSelector({ value, onChange, customValue, onCh
     return (
         <div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {TIPOS.map(t => (
+                {TIPOS_SERVICO.map(t => (
                     <button
                         key={t.value}
                         type="button"

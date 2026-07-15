@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
-import { PageProps, Agendamento } from '@/types';
+import { PageProps, Agendamento, Tenant } from '@/types';
+import { usaProfissionais } from '@/lib/tenantNav';
 
 interface Stats {
     agendamentos_hoje: number;
@@ -14,6 +15,7 @@ interface Stats {
 interface SetupCompleto {
     profissionais: boolean;
     servicos: boolean;
+    recursos: boolean;
     whatsapp: boolean;
     bot_config: boolean;
     horario: boolean;
@@ -27,6 +29,7 @@ interface UltimaCobranca {
 }
 
 interface Props extends PageProps {
+    tenant: Tenant;
     stats: Stats;
     proximos_agendamentos: Agendamento[];
     setup_completo: SetupCompleto;
@@ -82,13 +85,31 @@ function formatBrl(value: number) {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-export default function TenantDashboard({ stats, proximos_agendamentos, setup_completo, ultima_cobranca_bot }: Props) {
-    const todoConfigurado =
-        setup_completo.bot_config &&
-        setup_completo.profissionais &&
-        setup_completo.servicos &&
-        setup_completo.whatsapp &&
-        setup_completo.horario;
+export default function TenantDashboard({ tenant, stats, proximos_agendamentos, setup_completo, ultima_cobranca_bot }: Props) {
+    // O "catálogo" varia por tipo de estabelecimento: quadras usam Recursos,
+    // enquanto barbearias/clínicas usam Profissionais + Serviços.
+    const comProfissionais = usaProfissionais(tenant.tipo_servico);
+
+    const catalogoItems = comProfissionais
+        ? [
+            {
+                done: setup_completo.profissionais && setup_completo.horario,
+                label: 'Adicione profissionais com horários',
+                href: route('tenant.profissionais.index'),
+            },
+            {
+                done: setup_completo.servicos,
+                label: 'Cadastre seus serviços',
+                href: route('tenant.servicos.index'),
+            },
+        ]
+        : [
+            {
+                done: setup_completo.recursos && setup_completo.horario,
+                label: 'Cadastre seus recursos com horários',
+                href: route('tenant.recursos.index'),
+            },
+        ];
 
     const setupItems = [
         {
@@ -96,22 +117,15 @@ export default function TenantDashboard({ stats, proximos_agendamentos, setup_co
             label: 'Configure o bot (nome, tom de voz, descrição)',
             href: route('tenant.configuracoes.index'),
         },
-        {
-            done: setup_completo.profissionais && setup_completo.horario,
-            label: 'Adicione profissionais com horários',
-            href: route('tenant.profissionais.index'),
-        },
-        {
-            done: setup_completo.servicos,
-            label: 'Cadastre seus serviços',
-            href: route('tenant.servicos.index'),
-        },
+        ...catalogoItems,
         {
             done: setup_completo.whatsapp,
             label: 'Conecte o WhatsApp',
             href: route('tenant.whatsapp'),
         },
     ];
+
+    const todoConfigurado = setupItems.every(item => item.done);
 
     return (
         <AppLayout title="Dashboard" subtitle="Resumo das atividades do seu estabelecimento">
@@ -316,7 +330,9 @@ export default function TenantDashboard({ stats, proximos_agendamentos, setup_co
                     {[
                         { href: route('tenant.agenda'),             label: 'Abrir Agenda',   desc: 'Veja os horários da semana',     icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
                         { href: route('tenant.agendamentos.index'), label: 'Agendamentos',   desc: 'Gerencie reservas e clientes',   icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
-                        { href: route('tenant.recursos.index'),     label: 'Recursos',       desc: 'Barbeiros, quadras e horários',  icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
+                        comProfissionais
+                            ? { href: route('tenant.profissionais.index'), label: 'Profissionais', desc: 'Equipe, serviços e horários',    icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' }
+                            : { href: route('tenant.recursos.index'),     label: 'Recursos',       desc: 'Quadras, salas e horários',      icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
                     ].map(link => (
                         <Link
                             key={link.href}

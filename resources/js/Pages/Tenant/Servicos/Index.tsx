@@ -1,7 +1,7 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState, useRef } from 'react';
 import { useConfirm } from '@/hooks/useConfirm';
-import AppLayout from '@/Layouts/AppLayout';
+import ConfiguracoesLayout from '@/Layouts/ConfiguracoesLayout';
 import { PageProps } from '@/types';
 import Toggle from '@/Components/Toggle';
 
@@ -297,7 +297,7 @@ export default function ServicosIndex({ servicos }: Props) {
     };
 
     return (
-        <AppLayout title="Serviços">
+        <ConfiguracoesLayout title="Serviços" subtitle="Serviços oferecidos, valores e duração">
             <Head title="Serviços" />
 
             <div className="mb-5 flex items-center justify-between">
@@ -379,6 +379,6 @@ export default function ServicosIndex({ servicos }: Props) {
                     )
                 ))}
             </div>
-        </AppLayout>
+        </ConfiguracoesLayout>
     );
 }

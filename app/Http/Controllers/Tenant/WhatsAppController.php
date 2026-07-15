@@ -29,8 +29,7 @@ class WhatsAppController extends Controller
         $tenant = app('tenant');
 
         return Inertia::render('Tenant/WhatsApp', [
-            'tenant'       => $tenant,
-            'webhook_url'  => $this->webhookUrl($tenant),
+            'tenant' => $tenant,
         ]);
     }
 
@@ -40,7 +39,9 @@ class WhatsAppController extends Controller
         $instance = $tenant->evolution_instance;
 
         if (!$instance) {
-            $instance = $tenant->slug . '-instance';
+            // Mesmo nome usado no onboarding e no CreateEvolutionInstanceJob (slug puro),
+            // evitando criar uma instância divergente.
+            $instance = $tenant->slug;
             $tenant->update(['evolution_instance' => $instance]);
         }
 

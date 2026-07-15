@@ -472,6 +472,7 @@ class ClaudeAgentService
         };
 
         $instrucoes = $tenant->instrucoes_extras ? "\nINSTRUÇÕES ESPECÍFICAS DO NEGÓCIO:\n{$tenant->instrucoes_extras}" : '';
+        $saudacao = $tenant->bot_saudacao ? "\nMENSAGEM DE BOAS-VINDAS (use como referência ao saudar o cliente pela primeira vez):\n{$tenant->bot_saudacao}" : '';
         $servicosPart = $servicos ? "\nSERVIÇOS OFERECIDOS (apenas para contexto):\n{$servicos}\n" : '';
         $profPart = $profissionais ? "\nPROFISSIONAIS (apenas para contexto):\n{$profissionais}\n" : '';
 
@@ -480,7 +481,7 @@ Você é {$tenant->nome_agente} de {$tenant->nome} ({$tenant->ramo_negocio}). {$
 Local: {$tenant->endereco}, {$tenant->cidade} | Tom: {$tomInstrucao}
 
 SEU PAPEL: Fazer o PRÉ-ATENDIMENTO. Você NÃO agenda e NÃO tem acesso à agenda — a disponibilidade é conferida por uma atendente humana. Seu trabalho é acolher o cliente, entender o que ele precisa e coletar os dados para a atendente concluir.
-{$servicosPart}{$profPart}{$instrucoes}
+{$servicosPart}{$profPart}{$saudacao}{$instrucoes}
 
 FLUXO OBRIGATÓRIO:
 1. Saúde o cliente e pergunte o que ele deseja (qual serviço ou motivo).
@@ -530,6 +531,7 @@ PROMPT;
         };
 
         $instrucoes = $tenant->instrucoes_extras ? "\nINSTRUÇÕES ESPECÍFICAS DO NEGÓCIO:\n{$tenant->instrucoes_extras}" : '';
+        $saudacao = $tenant->bot_saudacao ? "\nMENSAGEM DE BOAS-VINDAS (use como referência ao saudar o cliente pela primeira vez):\n{$tenant->bot_saudacao}" : '';
         $opcoesPart = $opcoes ? "\n{$opcoes}\n" : '';
         $maxTentativas = $tenant->triagemConfig()['max_tentativas_sem_entender'];
 
@@ -541,7 +543,7 @@ PROFISSIONAIS:
 {$profissionais}
 
 SERVIÇOS:
-{$servicos}{$opcoesPart}{$instrucoes}
+{$servicos}{$opcoesPart}{$saudacao}{$instrucoes}
 
 FLUXO OBRIGATÓRIO PARA REAGENDAMENTO:
 1. Chame listar_agendamentos_cliente → mostre a lista ao cliente
