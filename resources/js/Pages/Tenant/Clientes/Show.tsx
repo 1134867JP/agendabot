@@ -80,7 +80,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 const CONVERSA_STATUS_LABEL: Record<string, string> = {
     ativa:                    'Ativa',
-    aguardando_humano:        'Aguardando humano',
+    aguardando_humano:        'Aguardando equipe',
     em_atendimento_humano:    'Em atendimento',
     encerrada:                'Encerrada',
 };
