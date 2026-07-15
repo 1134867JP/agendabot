@@ -215,7 +215,7 @@ export default function TenantDashboard({ tenant, stats, proximos_agendamentos, 
                 </div>
 
                 {/* Card de cobrança variável bot */}
-                <div className="rounded-xl p-5" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+                <div className="rounded-xl p-4 sm:p-5" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
                     <div className="flex items-start justify-between">
                         <div>
                             <p className="text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--text-3)' }}>
@@ -262,7 +262,7 @@ export default function TenantDashboard({ tenant, stats, proximos_agendamentos, 
 
                 {/* Próximos agendamentos */}
                 <div className="card overflow-hidden">
-                    <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-6" style={{ borderBottom: '1px solid var(--border)' }}>
                         <h2 className="text-sm font-semibold text-primary">Próximos agendamentos</h2>
                         <Link href={route('tenant.agendamentos.index')} className="text-xs transition-colors" style={{ color: 'var(--accent)' }}>
                             Ver todos →
@@ -270,7 +270,7 @@ export default function TenantDashboard({ tenant, stats, proximos_agendamentos, 
                     </div>
 
                     {proximos_agendamentos.length === 0 ? (
-                        <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+                        <div className="flex flex-col items-center gap-3 px-4 py-10 text-center sm:px-6 sm:py-12">
                             <div
                                 className="flex h-12 w-12 items-center justify-center rounded-2xl"
                                 style={{ background: 'var(--bg-surface-2)' }}
@@ -297,23 +297,23 @@ export default function TenantDashboard({ tenant, stats, proximos_agendamentos, 
                             {proximos_agendamentos.map(a => (
                                 <li
                                     key={a.id}
-                                    className="table-row-hover flex items-center justify-between px-6 py-3.5"
+                                    className="table-row-hover flex items-start justify-between gap-3 px-4 py-3.5 sm:items-center sm:px-6"
                                     style={{ borderBottom: '1px solid var(--border)' }}
                                 >
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex min-w-0 items-center gap-3">
                                         <div
                                             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold"
                                             style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}
                                         >
                                             {a.cliente_nome.charAt(0).toUpperCase()}
                                         </div>
-                                        <div>
-                                            <p className="text-sm font-medium text-primary">{a.cliente_nome}</p>
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-medium text-primary">{a.cliente_nome}</p>
                                             <p className="text-xs" style={{ color: 'var(--text-3)' }}>{a.recurso?.nome}</p>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-sm text-primary">{formatDt(a.inicio)}</p>
+                                    <div className="shrink-0 text-right">
+                                        <p className="whitespace-nowrap text-xs text-primary sm:text-sm">{formatDt(a.inicio)}</p>
                                         {a.valor_total && (
                                             <p className="text-xs" style={{ color: 'var(--text-3)' }}>{formatBrl(Number(a.valor_total))}</p>
                                         )}
@@ -336,7 +336,7 @@ export default function TenantDashboard({ tenant, stats, proximos_agendamentos, 
                         <Link
                             key={link.href}
                             href={link.href}
-                            className="card-hover flex items-start gap-3.5 p-5"
+                            className="card-hover flex min-h-20 items-start gap-3.5 p-4 sm:p-5"
                         >
                             <span
                                 className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
