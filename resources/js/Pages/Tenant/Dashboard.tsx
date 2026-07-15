@@ -36,35 +36,35 @@ interface Props extends PageProps {
     ultima_cobranca_bot: UltimaCobranca | null;
 }
 
-function StatCard({ label, value, sub, accent = false, icon }: {
-    label: string; value: string | number; sub?: string; accent?: boolean; icon?: string;
+function StatCard({ label, value, sub, icon }: {
+    label: string; value: string | number; sub?: string; icon?: string;
 }) {
     return (
         <div
-            className="rounded-xl p-5"
+            className="rounded-lg px-4 py-3.5"
             style={{
-                background: accent ? 'var(--accent)' : 'var(--bg-surface)',
-                border: accent ? 'none' : '1px solid var(--border)',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border)',
             }}
         >
             <div className="flex items-start justify-between">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: accent ? 'rgba(255,255,255,0.6)' : 'var(--text-3)' }}>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--text-3)' }}>
                     {label}
                 </p>
                 {icon && (
                     <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"
-                        style={{ color: accent ? 'rgba(255,255,255,0.4)' : 'var(--text-3)', flexShrink: 0 }}>
+                        style={{ color: 'var(--text-3)', flexShrink: 0 }}>
                         <path d={icon} />
                     </svg>
                 )}
             </div>
             <p
-                className="mt-2.5 text-3xl font-bold leading-none"
-                style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: accent ? '#fff' : 'var(--text-1)' }}
+                className="mt-2 text-2xl font-semibold leading-none"
+                style={{ color: 'var(--text-1)' }}
             >
                 {value}
             </p>
-            {sub && <p className="mt-1.5 text-xs" style={{ color: accent ? 'rgba(255,255,255,0.55)' : 'var(--text-3)' }}>{sub}</p>}
+            {sub && <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>{sub}</p>}
         </div>
     );
 }
@@ -186,9 +186,8 @@ export default function TenantDashboard({ tenant, stats, proximos_agendamentos, 
                         label="Receita no mês"
                         value={formatBrl(Number(stats.receita_mes))}
                         icon="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        accent
                     />
-                    <div className="rounded-xl p-5" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+                    <div className="rounded-lg px-4 py-3.5" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
                         <div className="flex items-start justify-between">
                             <p className="text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--text-3)' }}>WhatsApp</p>
                             <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)', flexShrink: 0 }}>
