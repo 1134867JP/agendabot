@@ -76,12 +76,12 @@ export default function Precos({ planos }: Props) {
             <Head title="Planos — Agendou" />
 
             {/* ── Hero ────────────────────────────────────────────────────────── */}
-            <div className="px-6 pb-4 pt-28 text-center">
+            <div className="px-5 pb-4 pt-24 text-center sm:px-6 sm:pt-28">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: JADE }}>
                     Planos e preços
                 </p>
                 <h1
-                    className="mb-3 text-5xl leading-tight"
+                    className="mb-3 text-4xl leading-tight sm:text-5xl"
                     style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'rgba(232,230,225,0.95)' }}
                 >
                     Um preço claro,<br />
@@ -128,12 +128,12 @@ export default function Precos({ planos }: Props) {
             </div>
 
             {/* ── Plans grid ──────────────────────────────────────────────────── */}
-            <div className="px-6 py-12">
+            <div className="px-4 py-10 sm:px-6 sm:py-12">
                 <div className="mx-auto grid max-w-4xl gap-4 md:grid-cols-3">
                     {planoList.map(([slug, plano]) => (
                         <div
                             key={slug}
-                            className="relative flex flex-col rounded-2xl p-6"
+                            className="relative flex flex-col rounded-2xl p-5 sm:p-6"
                             style={{
                                 background: plano.destaque
                                     ? `${INDIGO}12`
@@ -252,11 +252,11 @@ export default function Precos({ planos }: Props) {
             </div>
 
             {/* ── FAQ ─────────────────────────────────────────────────────────── */}
-            <div className="px-6 py-16" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+            <div className="px-5 py-14 sm:px-6 sm:py-16" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                 <div className="mx-auto max-w-2xl">
                     <div className="mb-10 text-center">
                         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: INDIGO }}>FAQ</p>
-                        <h2 className="text-4xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'rgba(232,230,225,0.9)' }}>
+                        <h2 className="text-3xl sm:text-4xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'rgba(232,230,225,0.9)' }}>
                             Perguntas frequentes
                         </h2>
                     </div>
