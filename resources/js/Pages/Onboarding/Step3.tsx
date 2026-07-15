@@ -45,7 +45,7 @@ export default function OnboardingStep3({ tenant }: Props) {
             {/* Step indicator */}
             <div className="flex items-center justify-center gap-2 px-6 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
                 {[{ n: 1, label: 'Conta' }, { n: 2, label: 'Plano' }, { n: 3, label: 'Bot' }].map((s, i) => (
-                    <div key={s.n} className="flex flex-col items-start gap-0.5 sm:flex-row sm:items-center sm:gap-2">
+                    <div key={s.n} className="flex items-center gap-2">
                         {i > 0 && <div className="h-px w-8" style={{ background: 'var(--accent)' }} />}
                         <div className="flex items-center gap-1.5">
                             <div className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold text-white" style={{ background: 'var(--accent)' }}>
@@ -135,7 +135,7 @@ export default function OnboardingStep3({ tenant }: Props) {
                                             className="mt-0.5 accent-[var(--accent)]"
                                         />
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex flex-col items-start gap-0.5 sm:flex-row sm:items-center sm:gap-2">
                                                 <span className="text-sm font-medium text-primary">{opt.label}</span>
                                                 <span className="text-xs" style={{ color: 'var(--text-3)' }}>{opt.desc}</span>
                                             </div>
