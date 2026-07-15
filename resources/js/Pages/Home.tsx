@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react';
 import LandingLayout from '@/Layouts/LandingLayout';
 
 // ── Paleta ────────────────────────────────────────────────────────────────────
-const INDIGO = '#6366F1';
-const JADE   = '#00a884';
-const DARK   = '#08090f';
+const INDIGO = '#2d9d82';
+const JADE   = '#6ed7bd';
+const DARK   = '#0d1012';
 
 // ── Planos ────────────────────────────────────────────────────────────────────
 const PLANOS = [
@@ -29,9 +29,9 @@ const PLANOS = [
 // ── Chat mockup ───────────────────────────────────────────────────────────────
 const chatMessages = [
     { from: 'client', text: 'Oi! Quero marcar um horário com o João pra amanhã' },
-    { from: 'bot',    text: 'Olá! 😊 Aqui estão os horários disponíveis amanhã:\n\n09:00 · 09:30 · 10:00 · 14:00 · 16:30' },
+    { from: 'bot',    text: 'Olá! Aqui estão os horários disponíveis amanhã:\n\n09:00 · 09:30 · 10:00 · 14:00 · 16:30' },
     { from: 'client', text: '10h ta bom' },
-    { from: 'bot',    text: '✅ Confirmado!\nBarbeiro João — amanhã às 10:00\n\nAté lá!' },
+    { from: 'bot',    text: 'Horário confirmado.\nBarbeiro João — amanhã às 10:00\n\nAté lá!' },
 ];
 
 function ChatMockup() {
@@ -108,7 +108,7 @@ function ChatMockup() {
 }
 
 // ── Floating notification cards ────────────────────────────────────────────────
-function FloatCard({ icon, text, sub, style, className = '' }: { icon: string; text: string; sub: string; style: React.CSSProperties; className?: string }) {
+function FloatCard({ text, sub, style, className = '' }: { text: string; sub: string; style: React.CSSProperties; className?: string }) {
     return (
         <div
             className={`absolute flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 shadow-xl ${className}`}
@@ -121,7 +121,6 @@ function FloatCard({ icon, text, sub, style, className = '' }: { icon: string; t
                 ...style,
             }}
         >
-            <span className="text-xl">{icon}</span>
             <div>
                 <p className="text-[11px] font-semibold text-white leading-tight">{text}</p>
                 <p className="text-[10px] leading-tight" style={{ color: 'rgba(255,255,255,0.45)' }}>{sub}</p>
@@ -142,8 +141,8 @@ function FeatureIcon({ path }: { path: string }) {
 const features = [
     {
         icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',
-        title: 'IA que entende qualquer mensagem',
-        desc: 'Sem menus rígidos. O cliente escreve do jeito dele e o bot entende — em português, com gíria e tudo.',
+        title: 'Conversa natural no WhatsApp',
+        desc: 'O cliente conversa normalmente e recebe horários disponíveis, confirmação e lembretes no mesmo canal.',
         color: INDIGO,
     },
     {
@@ -161,10 +160,10 @@ const features = [
 ];
 
 const segments = [
-    { icon: '✂️', title: 'Barbearias e salões', desc: 'Gerencie seus barbeiros, coloristas e horários — tudo sem planilha.' },
-    { icon: '🏟️', title: 'Quadras esportivas', desc: 'Futsal, beach tennis, padel — reservas automáticas 24h por dia.' },
-    { icon: '🦷', title: 'Clínicas e consultórios', desc: 'Dentistas, psicólogos, fisioterapeutas: confirmação automática de consultas.' },
-    { icon: '💆', title: 'Estéticas e spas', desc: 'Manicures, depilação, massagens — agendadas pelo WhatsApp sem te interromper.' },
+    { icon: '', title: 'Barbearias e salões', desc: 'Gerencie seus barbeiros, coloristas e horários — tudo sem planilha.' },
+    { icon: '', title: 'Quadras esportivas', desc: 'Futsal, beach tennis, padel — reservas automáticas 24h por dia.' },
+    { icon: '', title: 'Clínicas e consultórios', desc: 'Dentistas, psicólogos, fisioterapeutas: confirmação automática de consultas.' },
+    { icon: '', title: 'Estéticas e spas', desc: 'Manicures, depilação, massagens — agendadas pelo WhatsApp sem te interromper.' },
 ];
 
 const steps = [
@@ -257,7 +256,7 @@ export default function Home() {
                         </h1>
 
                         <p className="mt-6 max-w-sm text-[17px] leading-relaxed" style={{ color: 'rgba(232,230,225,0.5)' }}>
-                            Clientes mandam mensagem, a IA entende e confirma o horário — sem planilha, sem "anota aí".
+                            Clientes mandam mensagem, encontram um horário e recebem a confirmação — sem planilha, sem "anota aí".
                         </p>
 
                         <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -311,21 +310,18 @@ export default function Home() {
                             {cardsVisible && (
                                 <>
                                     <FloatCard
-                                        icon="✅"
-                                        text="Novo agendamento"
+                                                                                text="Novo agendamento"
                                         sub="Kauê — amanhã às 10:00"
                                         style={{ top: '8px', right: '0', animationDelay: '0s' }}
                                         className="hidden sm:flex"
                                     />
                                     <FloatCard
-                                        icon="📅"
-                                        text="14 reservas confirmadas"
+                                                                                text="14 reservas confirmadas"
                                         sub="hoje via WhatsApp"
                                         style={{ bottom: '40px', left: '0', animationDelay: '0.2s' }}
                                     />
                                     <FloatCard
-                                        icon="💬"
-                                        text="Cliente respondeu"
+                                                                                text="Cliente respondeu"
                                         sub="às 15h fica ótimo"
                                         style={{ top: '50%', right: '0', animationDelay: '0.4s' }}
                                         className="hidden sm:flex"
@@ -576,7 +572,7 @@ export default function Home() {
                     <Link
                         href={route('onboarding.step1')}
                         className="inline-flex items-center gap-2.5 rounded-2xl px-8 py-4 text-base font-semibold text-white transition-all hover:brightness-110 hover:-translate-y-0.5"
-                        style={{ background: `linear-gradient(135deg, ${INDIGO} 0%, #8b5cf6 100%)`, boxShadow: `0 20px 48px -10px ${INDIGO}60` }}
+                        style={{ background: INDIGO, boxShadow: `0 18px 36px -12px ${INDIGO}55` }}
                     >
                         Criar minha conta grátis
                         <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
