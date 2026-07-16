@@ -45,6 +45,7 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
     const [busca, setBusca] = useState(filtros.busca ?? '');
     const [selecionados, setSelecionados] = useState<number[]>([]);
     const [excluindo, setExcluindo] = useState(false);
+    const [erroExclusao, setErroExclusao] = useState<string | null>(null);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const idsPagina = useMemo(() => clientes.data.map(cliente => cliente.id), [clientes.data]);
@@ -84,12 +85,15 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
         if (!quantidade || !window.confirm(`Excluir os dados pessoais de ${quantidade} cliente${quantidade > 1 ? 's' : ''}? Os agendamentos serão preservados de forma anonimizada.`)) return;
 
         setExcluindo(true);
+        setErroExclusao(null);
         try {
-            for (const id of selecionados) {
-                await axios.delete(route('tenant.clientes.destroy', id));
-            }
+            await axios.delete(route('tenant.clientes.destroy-bulk'), {
+                data: { cliente_ids: selecionados },
+            });
             setSelecionados([]);
             router.reload({ only: ['clientes', 'resumo'] });
+        } catch {
+            setErroExclusao('Não foi possível anonimizar os clientes selecionados. Nenhum lote parcial foi processado.');
         } finally {
             setExcluindo(false);
         }
@@ -143,15 +147,21 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
                 <div className="mb-3 flex flex-col gap-3 rounded-xl px-4 py-3 sm:flex-row sm:items-center sm:justify-between" style={{ background: 'var(--accent-light)', border: '1px solid var(--accent)' }}>
                     <div>
                         <p className="text-sm font-medium" style={{ color: 'var(--accent)' }}>{selecionados.length} cliente{selecionados.length > 1 ? 's selecionados' : ' selecionado'}</p>
-                        <p className="text-xs" style={{ color: 'var(--text-3)' }}>A exclusão remove dados pessoais e preserva o histórico anonimizado.</p>
+                        <p className="text-xs" style={{ color: 'var(--text-3)' }}>A anonimização remove dados pessoais e preserva o histórico operacional.</p>
                     </div>
                     <div className="flex gap-2">
                         <button type="button" onClick={() => setSelecionados([])} className="btn-secondary min-h-10">Cancelar</button>
                         <button type="button" onClick={excluirSelecionados} disabled={excluindo} className="min-h-10 rounded-lg px-4 text-sm font-medium text-white disabled:opacity-50" style={{ background: 'var(--danger, #dc2626)' }}>
-                            {excluindo ? 'Excluindo…' : 'Excluir selecionados'}
+                            {excluindo ? 'Anonimizando…' : 'Anonimizar selecionados'}
                         </button>
                     </div>
                 </div>
+            )}
+
+            {erroExclusao && (
+                <p className="mb-3 rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }}>
+                    {erroExclusao}
+                </p>
             )}
 
             <div className="card overflow-hidden">
