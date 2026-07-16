@@ -12,11 +12,25 @@ class ClienteCadastroRapidoTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_cadastra_cliente_normalizando_telefone(): void
+    private function contexto(): array
     {
         $user = User::factory()->create();
-        $tenant = Tenant::factory()->create();
-        $tenant->users()->attach($user->id, ['role' => 'owner']);
+        $tenant = Tenant::create([
+            'nome' => 'Clínica Cadastro Rápido',
+            'slug' => 'clinica-cadastro-rapido-'.uniqid(),
+            'tipo_servico' => 'clinica',
+            'ativo' => true,
+            'subscription_status' => 'trial',
+            'trial_ends_at' => now()->addDays(14),
+        ]);
+        $tenant->users()->attach($user->id, ['papel' => 'admin']);
+
+        return [$user, $tenant];
+    }
+
+    public function test_cadastra_cliente_normalizando_telefone(): void
+    {
+        [$user, $tenant] = $this->contexto();
 
         $this->actingAs($user)
             ->withSession(['tenant_id' => $tenant->id])
@@ -36,9 +50,7 @@ class ClienteCadastroRapidoTest extends TestCase
 
     public function test_impede_telefone_duplicado_no_mesmo_estabelecimento(): void
     {
-        $user = User::factory()->create();
-        $tenant = Tenant::factory()->create();
-        $tenant->users()->attach($user->id, ['role' => 'owner']);
+        [$user, $tenant] = $this->contexto();
 
         Cliente::create([
             'tenant_id' => $tenant->id,
