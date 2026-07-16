@@ -3,12 +3,15 @@
 namespace Tests\Feature;
 
 use App\Jobs\SincronizarConversasWhatsappJob;
+use App\Jobs\SincronizarConversasWhatsappLoteJob;
 use App\Models\Cliente;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\ConversaSyncService;
 use App\Services\EvolutionApiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Bus;
 use Tests\TestCase;
 
 class SincronizarConversasLimiteTest extends TestCase
@@ -34,8 +37,10 @@ class SincronizarConversasLimiteTest extends TestCase
         $this->tenant->users()->attach($user->id, ['papel' => 'admin']);
     }
 
-    public function test_sincroniza_no_maximo_30_conversas_priorizando_as_mais_recentes(): void
+    public function test_sincroniza_todas_as_conversas_em_lotes(): void
     {
+        Bus::fake();
+
         // 40 chats, do mais recente (índice 0) ao mais antigo (índice 39)
         $chats = [];
         for ($i = 0; $i < 40; $i++) {
@@ -54,7 +59,7 @@ class SincronizarConversasLimiteTest extends TestCase
         $this->mock(EvolutionApiService::class, function ($mock) use ($chats) {
             $mock->shouldReceive('fetchContacts')->andReturn([]);
             $mock->shouldReceive('fetchChats')->andReturn($chats);
-            $mock->shouldReceive('fetchMessages')->andReturn([]);
+            $mock->shouldReceive('fetchMessages')->times(40)->andReturn([]);
         });
 
         (new SincronizarConversasWhatsappJob($this->tenant))->handle(
@@ -62,27 +67,47 @@ class SincronizarConversasLimiteTest extends TestCase
             app(ConversaSyncService::class)
         );
 
-        $this->assertSame(30, Cliente::where('tenant_id', $this->tenant->id)->count());
+        Bus::assertChained([
+            SincronizarConversasWhatsappLoteJob::class,
+            SincronizarConversasWhatsappLoteJob::class,
+            SincronizarConversasWhatsappLoteJob::class,
+            SincronizarConversasWhatsappLoteJob::class,
+        ]);
 
-        // Os 30 mais recentes (índices 0–29) devem ter sido sincronizados...
-        for ($i = 0; $i < 30; $i++) {
+        foreach (array_chunk($chats, 10) as $indice => $lote) {
+            (new SincronizarConversasWhatsappLoteJob(
+                $this->tenant,
+                $lote,
+                $indice * 10,
+                40,
+                $indice === 3,
+            ))->handle(
+                app(EvolutionApiService::class),
+                app(ConversaSyncService::class),
+            );
+        }
+
+        $this->assertSame(40, Cliente::where('tenant_id', $this->tenant->id)->count());
+
+        for ($i = 0; $i < 40; $i++) {
             $this->assertDatabaseHas('clientes', [
                 'tenant_id' => $this->tenant->id,
                 'telefone'  => "55519990000{$i}",
             ]);
         }
 
-        // ...e os 10 mais antigos (índices 30–39) devem ter ficado de fora.
-        for ($i = 30; $i < 40; $i++) {
-            $this->assertDatabaseMissing('clientes', [
-                'tenant_id' => $this->tenant->id,
-                'telefone'  => "55519990000{$i}",
-            ]);
-        }
+        $status = Cache::get("sync_whatsapp_tenant_{$this->tenant->id}");
+        $this->assertSame('completed', $status['status']);
+        $this->assertSame(40, $status['processed']);
+        $this->assertSame(40, $status['total']);
     }
 
     public function test_nao_cria_clientes_ou_conversas_para_chats_sem_mensagens(): void
     {
+        Bus::fake();
+
+        $chat = ['remoteJid' => '5551999999999@s.whatsapp.net'];
+
         $this->mock(EvolutionApiService::class, function ($mock) {
             $mock->shouldReceive('fetchContacts')->andReturn([]);
             $mock->shouldReceive('fetchChats')->andReturn([
@@ -92,6 +117,17 @@ class SincronizarConversasLimiteTest extends TestCase
         });
 
         (new SincronizarConversasWhatsappJob($this->tenant))->handle(
+            app(EvolutionApiService::class),
+            app(ConversaSyncService::class),
+        );
+
+        (new SincronizarConversasWhatsappLoteJob(
+            $this->tenant,
+            [$chat],
+            0,
+            1,
+            true,
+        ))->handle(
             app(EvolutionApiService::class),
             app(ConversaSyncService::class),
         );
