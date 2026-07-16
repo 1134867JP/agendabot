@@ -1,6 +1,6 @@
 import { Head, useForm } from '@inertiajs/react';
 import ConfiguracoesLayout from '@/Layouts/ConfiguracoesLayout';
-import { PageProps, Tenant, TipoServico, HorarioAtendimentoDia } from '@/types';
+import { PageProps, Tenant, TipoServico, HorarioAtendimentoDia, HorarioFuncionamentoDia } from '@/types';
 import TipoServicoSelector from '@/Components/TipoServicoSelector';
 import Toggle from '@/Components/Toggle';
 import { TONS_VOZ, TomVoz } from '@/constants/bot';
@@ -19,6 +19,7 @@ const MODOS: { value: ModoBot; label: string; desc: string }[] = [
 ];
 
 const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const DIAS_COMPLETOS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
 function buildHorarioRows(h?: HorarioAtendimentoDia[] | null): HorarioAtendimentoDia[] {
     return DIAS.map((_, i) => {
@@ -29,6 +30,99 @@ function buildHorarioRows(h?: HorarioAtendimentoDia[] | null): HorarioAtendiment
             fechamento: dia?.fechamento ?? '18:00',
         };
     });
+}
+
+function buildFuncionamentoRows(
+    horarios?: HorarioFuncionamentoDia[] | null,
+    legado?: string | null,
+): HorarioFuncionamentoDia[] {
+    if (horarios?.length === 7) {
+        return horarios.map(dia => ({
+            ativo: Boolean(dia.ativo),
+            periodos: dia.periodos?.length
+                ? dia.periodos.map(periodo => ({ ...periodo }))
+                : [{ abertura: '09:00', fechamento: '18:00' }],
+        }));
+    }
+
+    const rows: HorarioFuncionamentoDia[] = DIAS.map(() => ({
+        ativo: false,
+        periodos: [{ abertura: '09:00', fechamento: '18:00' }],
+    }));
+    let encontrouHorario = false;
+
+    for (const trecho of (legado ?? '').split(',')) {
+        const match = trecho.trim().match(/^(Dom|Seg|Ter|Qua|Qui|Sex|Sáb)(?:\s*[–-]\s*(Dom|Seg|Ter|Qua|Qui|Sex|Sáb))?\s+(.+)$/);
+        if (!match) continue;
+
+        const inicio = DIAS.indexOf(match[1]);
+        const fim = match[2] ? DIAS.indexOf(match[2]) : inicio;
+        const periodos = Array.from(match[3].matchAll(/(\d{2}:\d{2})\s*[–-]\s*(\d{2}:\d{2})/g))
+            .map(periodo => ({ abertura: periodo[1], fechamento: periodo[2] }));
+        if (inicio < 0 || fim < inicio || periodos.length === 0) continue;
+
+        encontrouHorario = true;
+        for (let dia = inicio; dia <= fim; dia++) {
+            rows[dia] = { ativo: true, periodos: periodos.map(periodo => ({ ...periodo })) };
+        }
+    }
+
+    if (encontrouHorario) return rows;
+
+    return rows.map((dia, indice) => ({ ...dia, ativo: indice >= 1 && indice <= 5 }));
+}
+
+function resumirFuncionamento(horarios: HorarioFuncionamentoDia[]): string {
+    const grupos: { inicio: number; fim: number; faixa: string }[] = [];
+
+    horarios.forEach((dia, indice) => {
+        if (!dia.ativo || dia.periodos.length === 0) return;
+        const faixa = [...dia.periodos]
+            .sort((a, b) => a.abertura.localeCompare(b.abertura))
+            .map(periodo => `${periodo.abertura}–${periodo.fechamento}`)
+            .join(' e ');
+        const ultimo = grupos[grupos.length - 1];
+
+        if (ultimo && ultimo.faixa === faixa && ultimo.fim === indice - 1) {
+            ultimo.fim = indice;
+        } else {
+            grupos.push({ inicio: indice, fim: indice, faixa });
+        }
+    });
+
+    return grupos.map(grupo => {
+        const dias = grupo.inicio === grupo.fim
+            ? DIAS[grupo.inicio]
+            : `${DIAS[grupo.inicio]}–${DIAS[grupo.fim]}`;
+        return `${dias} ${grupo.faixa}`;
+    }).join(', ');
+}
+
+function validarFuncionamento(horarios: HorarioFuncionamentoDia[]): Record<number, string> {
+    const erros: Record<number, string> = {};
+
+    horarios.forEach((dia, indice) => {
+        if (!dia.ativo) return;
+        if (dia.periodos.length === 0) {
+            erros[indice] = 'Adicione pelo menos um período.';
+            return;
+        }
+
+        const periodos = [...dia.periodos].sort((a, b) => a.abertura.localeCompare(b.abertura));
+        for (let i = 0; i < periodos.length; i++) {
+            const periodo = periodos[i];
+            if (!periodo.abertura || !periodo.fechamento || periodo.fechamento <= periodo.abertura) {
+                erros[indice] = 'O fechamento deve ser depois da abertura.';
+                return;
+            }
+            if (i > 0 && periodo.abertura < periodos[i - 1].fechamento) {
+                erros[indice] = 'Os períodos não podem se sobrepor.';
+                return;
+            }
+        }
+    });
+
+    return erros;
 }
 
 function BotConfigForm({ tenant }: { tenant: Tenant }) {
@@ -326,11 +420,56 @@ export default function Configuracoes({ tenant }: Props) {
         nome:                       tenant.nome,
         tipo_servico:               tenant.tipo_servico,
         tipo_servico_personalizado: tenant.tipo_servico_personalizado ?? '',
-        horarios_funcionamento:     tenant.horarios_funcionamento ?? '',
+        horarios_funcionamento_semana: buildFuncionamentoRows(
+            tenant.horarios_funcionamento_semana,
+            tenant.horarios_funcionamento,
+        ),
     });
+
+    const errosFuncionamento = validarFuncionamento(data.horarios_funcionamento_semana);
+    const resumoFuncionamento = resumirFuncionamento(data.horarios_funcionamento_semana);
+
+    const setHorarioDia = (dia: number, patch: Partial<HorarioFuncionamentoDia>) => {
+        setData('horarios_funcionamento_semana', data.horarios_funcionamento_semana.map((config, indice) =>
+            indice === dia ? { ...config, ...patch } : config
+        ));
+    };
+
+    const setPeriodo = (dia: number, periodo: number, campo: 'abertura' | 'fechamento', valor: string) => {
+        setHorarioDia(dia, {
+            periodos: data.horarios_funcionamento_semana[dia].periodos.map((faixa, indice) =>
+                indice === periodo ? { ...faixa, [campo]: valor } : faixa
+            ),
+        });
+    };
+
+    const adicionarPeriodo = (dia: number) => {
+        const config = data.horarios_funcionamento_semana[dia];
+        const ultimo = config.periodos[config.periodos.length - 1];
+        setHorarioDia(dia, {
+            periodos: [...config.periodos, {
+                abertura: ultimo?.fechamento ?? '13:00',
+                fechamento: (ultimo?.fechamento ?? '13:00') < '18:00' ? '18:00' : '19:00',
+            }],
+        });
+    };
+
+    const removerPeriodo = (dia: number, periodo: number) => {
+        const periodos = data.horarios_funcionamento_semana[dia].periodos.filter((_, indice) => indice !== periodo);
+        setHorarioDia(dia, { periodos });
+    };
+
+    const aplicarPreset = (tipo: 'semana' | 'todos' | 'fechado') => {
+        setData('horarios_funcionamento_semana', data.horarios_funcionamento_semana.map((dia, indice) => ({
+            ...dia,
+            ativo: tipo === 'todos' || (tipo === 'semana' && indice >= 1 && indice <= 5),
+            periodos: [{ abertura: '09:00', fechamento: '18:00' }],
+        })));
+    };
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (Object.keys(errosFuncionamento).length > 0) return;
         put(route('tenant.configuracoes.update'));
     };
 
@@ -376,28 +515,123 @@ export default function Configuracoes({ tenant }: Props) {
                             />
                         </div>
 
-                        <div>
-                            <label className="label mb-1">
-                                Horários de funcionamento{' '}
-                                <span className="font-normal" style={{ color: 'var(--text-3)' }}>(opcional)</span>
-                            </label>
-                            <input
-                                value={data.horarios_funcionamento}
-                                onChange={e => setData('horarios_funcionamento', e.target.value)}
-                                className="input"
-                                placeholder="Ex: Seg–Sex 09:00–19:00, Sáb 09:00–13:00"
-                                maxLength={255}
-                            />
-                            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
-                                Informação exibida para o cliente quando perguntar sobre horários.
-                            </p>
-                            {errors.horarios_funcionamento && (
-                                <p className="mt-1 text-xs text-red-400">{errors.horarios_funcionamento}</p>
-                            )}
+                        <div className="overflow-hidden rounded-xl" style={{ border: '1px solid var(--border-strong)' }}>
+                            <div className="p-4 sm:p-5" style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border)' }}>
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-primary">Horários de funcionamento</p>
+                                        <p className="mt-1 max-w-md text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>
+                                            Configure quando o estabelecimento está aberto. O bot usa esse resumo ao responder perguntas sobre horários.
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        <button type="button" onClick={() => aplicarPreset('semana')} className="btn-secondary px-2.5 py-1.5 text-xs">
+                                            Seg–Sex
+                                        </button>
+                                        <button type="button" onClick={() => aplicarPreset('todos')} className="btn-secondary px-2.5 py-1.5 text-xs">
+                                            Todos os dias
+                                        </button>
+                                        <button type="button" onClick={() => aplicarPreset('fechado')} className="btn-secondary px-2.5 py-1.5 text-xs">
+                                            Fechar todos
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                                {data.horarios_funcionamento_semana.map((dia, diaIndex) => (
+                                    <div
+                                        key={DIAS_COMPLETOS[diaIndex]}
+                                        className="p-3.5 sm:p-4"
+                                        style={{ background: dia.ativo ? 'var(--bg-surface-2)' : 'transparent' }}
+                                    >
+                                        <div className="flex items-center justify-between gap-3">
+                                            <Toggle
+                                                checked={dia.ativo}
+                                                onChange={ativo => setHorarioDia(diaIndex, { ativo })}
+                                                label={DIAS_COMPLETOS[diaIndex]}
+                                            />
+                                            <span
+                                                className="rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide"
+                                                style={{
+                                                    color: dia.ativo ? 'var(--jade)' : 'var(--text-3)',
+                                                    background: dia.ativo ? 'var(--jade-light)' : 'var(--bg-card)',
+                                                }}
+                                            >
+                                                {dia.ativo ? 'Aberto' : 'Fechado'}
+                                            </span>
+                                        </div>
+
+                                        {dia.ativo && (
+                                            <div className="mt-3 space-y-2 sm:pl-8">
+                                                {dia.periodos.map((periodo, periodoIndex) => (
+                                                    <div key={periodoIndex} className="flex flex-wrap items-center gap-2">
+                                                        <input
+                                                            type="time"
+                                                            value={periodo.abertura}
+                                                            onChange={e => setPeriodo(diaIndex, periodoIndex, 'abertura', e.target.value)}
+                                                            aria-label={`Abertura de ${DIAS_COMPLETOS[diaIndex]}`}
+                                                            className="input min-w-0 flex-1 sm:w-32 sm:flex-none"
+                                                        />
+                                                        <span className="text-xs" style={{ color: 'var(--text-3)' }}>às</span>
+                                                        <input
+                                                            type="time"
+                                                            value={periodo.fechamento}
+                                                            onChange={e => setPeriodo(diaIndex, periodoIndex, 'fechamento', e.target.value)}
+                                                            aria-label={`Fechamento de ${DIAS_COMPLETOS[diaIndex]}`}
+                                                            className="input min-w-0 flex-1 sm:w-32 sm:flex-none"
+                                                        />
+                                                        {dia.periodos.length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removerPeriodo(diaIndex, periodoIndex)}
+                                                                className="min-h-10 rounded-lg px-2 text-xs transition-colors hover:bg-red-500/10"
+                                                                style={{ color: '#f87171' }}
+                                                                aria-label={`Remover período de ${DIAS_COMPLETOS[diaIndex]}`}
+                                                            >
+                                                                Remover
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ))}
+
+                                                <div className="flex items-center justify-between gap-3">
+                                                    {dia.periodos.length < 2 ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => adicionarPeriodo(diaIndex)}
+                                                            className="text-xs font-medium transition-opacity hover:opacity-75"
+                                                            style={{ color: 'var(--jade)' }}
+                                                        >
+                                                            + Adicionar intervalo
+                                                        </button>
+                                                    ) : <span />}
+                                                    {errosFuncionamento[diaIndex] && (
+                                                        <p className="text-right text-xs text-red-400">{errosFuncionamento[diaIndex]}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="p-4" style={{ background: 'var(--bg-card)', borderTop: '1px solid var(--border)' }}>
+                                <p className="label mb-1">Como o cliente verá</p>
+                                <p className="text-sm leading-relaxed" style={{ color: resumoFuncionamento ? 'var(--text-2)' : 'var(--text-3)' }}>
+                                    {resumoFuncionamento || 'Estabelecimento fechado todos os dias'}
+                                </p>
+                                <p className="mt-2 text-xs" style={{ color: 'var(--text-3)' }}>
+                                    A disponibilidade de cada profissional continua sendo configurada separadamente.
+                                </p>
+                                {errors.horarios_funcionamento_semana && (
+                                    <p className="mt-2 text-xs text-red-400">{errors.horarios_funcionamento_semana}</p>
+                                )}
+                            </div>
                         </div>
 
                         <div className="pt-2">
-                            <button type="submit" disabled={processing} className="btn-primary w-full justify-center py-2.5">
+                            <button type="submit" disabled={processing || Object.keys(errosFuncionamento).length > 0} className="btn-primary w-full justify-center py-2.5">
                                 {processing ? 'Salvando…' : 'Salvar configurações'}
                             </button>
                         </div>

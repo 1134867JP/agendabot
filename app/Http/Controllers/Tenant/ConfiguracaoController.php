@@ -36,6 +36,7 @@ class ConfiguracaoController extends Controller
                 'endereco',
                 'horarios_funcionamento',
             ]), [
+                'horarios_funcionamento_semana' => $cfg['horarios_funcionamento_semana'] ?? null,
                 'lembrete_ativo' => $cfg['lembrete_ativo'] ?? true,
                 'lembrete_texto' => $cfg['lembrete_texto'] ?? '',
             ]),
@@ -46,7 +47,16 @@ class ConfiguracaoController extends Controller
     {
         $tenant = app('tenant');
 
-        $tenant->update($request->validated());
+        $data = $request->validated();
+        $horarios = $data['horarios_funcionamento_semana'];
+        unset($data['horarios_funcionamento_semana']);
+
+        $data['horarios_funcionamento'] = $this->resumirHorarios($horarios);
+        $data['configuracoes'] = array_merge($tenant->configuracoes ?? [], [
+            'horarios_funcionamento_semana' => $horarios,
+        ]);
+
+        $tenant->update($data);
 
         return back()->with('success', 'Configurações salvas.');
     }
@@ -67,5 +77,37 @@ class ConfiguracaoController extends Controller
         $tenant->update(array_merge($data, ['configuracoes' => $configuracoes]));
 
         return back()->with('success', 'Configurações do bot salvas.');
+    }
+
+    private function resumirHorarios(array $horarios): string
+    {
+        $dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        $grupos = [];
+
+        foreach ($horarios as $indice => $config) {
+            if (empty($config['ativo']) || empty($config['periodos'])) {
+                continue;
+            }
+
+            $faixa = collect($config['periodos'])
+                ->sortBy('abertura')
+                ->map(fn (array $periodo) => "{$periodo['abertura']}–{$periodo['fechamento']}")
+                ->join(' e ');
+            $ultimo = end($grupos) ?: null;
+
+            if ($ultimo && $ultimo['faixa'] === $faixa && $ultimo['fim'] === $indice - 1) {
+                $grupos[array_key_last($grupos)]['fim'] = $indice;
+            } else {
+                $grupos[] = ['inicio' => $indice, 'fim' => $indice, 'faixa' => $faixa];
+            }
+        }
+
+        return collect($grupos)->map(function (array $grupo) use ($dias) {
+            $nomeDias = $grupo['inicio'] === $grupo['fim']
+                ? $dias[$grupo['inicio']]
+                : $dias[$grupo['inicio']].'–'.$dias[$grupo['fim']];
+
+            return "{$nomeDias} {$grupo['faixa']}";
+        })->join(', ');
     }
 }

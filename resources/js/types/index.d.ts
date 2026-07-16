@@ -36,6 +36,7 @@ export interface Tenant {
     cidade?: string | null;
     endereco?: string | null;
     horarios_funcionamento?: string | null;
+    horarios_funcionamento_semana?: HorarioFuncionamentoDia[] | null;
     modo_bot?: 'agendamento' | 'triagem' | null;
     horario_atendimento?: HorarioAtendimentoDia[] | null;
     mensagem_fora_horario?: string | null;
@@ -47,6 +48,16 @@ export interface HorarioAtendimentoDia {
     ativo: boolean;
     abertura: string;
     fechamento: string;
+}
+
+export interface PeriodoFuncionamento {
+    abertura: string;
+    fechamento: string;
+}
+
+export interface HorarioFuncionamentoDia {
+    ativo: boolean;
+    periodos: PeriodoFuncionamento[];
 }
 
 export interface SubscriptionInfo {
