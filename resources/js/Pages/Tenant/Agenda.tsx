@@ -14,12 +14,15 @@ interface AgendamentoCalendario {
     status: 'confirmado' | 'cancelado' | 'concluido';
     valor_total: number | null;
     origem: 'whatsapp' | 'manual';
+    profissional_id: number | null;
+    profissional_nome: string | null;
 }
 
 interface EntidadeAgenda {
     id: number;
     nome: string;
     tipo: 'recurso' | 'profissional';
+    cor: string;
 }
 
 interface Props extends PageProps {
@@ -35,6 +38,15 @@ const HOUR_END    = 21;
 const TOTAL_HOURS  = HOUR_END - HOUR_START;
 const TOTAL_HEIGHT = TOTAL_HOURS * PX_PER_HOUR; // 896px
 const HOURS = Array.from({ length: TOTAL_HOURS + 1 }, (_, i) => i + HOUR_START);
+const ALL_PROFESSIONALS_ID = 0;
+const PROFESSIONAL_COLORS = [
+    { accent: '#34d399', bg: 'rgba(52,211,153,0.10)', text: '#6ee7b7' },
+    { accent: '#60a5fa', bg: 'rgba(59,130,246,0.10)', text: '#93c5fd' },
+    { accent: '#f59e0b', bg: 'rgba(245,158,11,0.10)', text: '#fbbf24' },
+    { accent: '#a78bfa', bg: 'rgba(139,92,246,0.10)', text: '#c4b5fd' },
+    { accent: '#f472b6', bg: 'rgba(236,72,153,0.10)', text: '#f9a8d4' },
+    { accent: '#22d3ee', bg: 'rgba(6,182,212,0.10)', text: '#67e8f9' },
+];
 
 const MONTHS = [
     'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
@@ -85,11 +97,32 @@ function toLocalDateTimeInput(iso: string): string {
     return sp.slice(0, 16).replace(' ', 'T');
 }
 
+function addMinutesToTime(time: string, minutes: number): string {
+    const [hours, currentMinutes] = time.split(':').map(Number);
+    const totalMinutes = (hours * 60 + currentMinutes + minutes) % (24 * 60);
+
+    return `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`;
+}
+
+function normalizePhone(phone: string): string {
+    return phone.replace(/\D/g, '').slice(0, 13);
+}
+
+function isValidPhone(phone: string): boolean {
+    return /^(?:55)?[1-9][0-9]{9,10}$/.test(normalizePhone(phone));
+}
+
+function professionalColor(id: number | null | undefined) {
+    if (!id) return PROFESSIONAL_COLORS[0];
+    return PROFESSIONAL_COLORS[(id - 1) % PROFESSIONAL_COLORS.length];
+}
+
 // ─── Color ───────────────────────────────────────────────────────────────────
 
 function slotColor(a: AgendamentoCalendario): { accent: string; bg: string; text: string } {
     if (a.status === 'cancelado') return { accent: '#f87171', bg: 'rgba(239,68,68,0.07)',   text: '#f87171' };
     if (a.status === 'concluido') return { accent: '#6b7280', bg: 'rgba(107,114,128,0.07)', text: 'rgba(232,230,225,0.4)' };
+    if (a.profissional_id)        return professionalColor(a.profissional_id);
     if (a.origem === 'manual')    return { accent: '#60a5fa', bg: 'rgba(59,130,246,0.08)',  text: '#93c5fd' };
     return                               { accent: '#34d399', bg: 'rgba(52,211,153,0.08)',  text: '#6ee7b7' };
 }
@@ -243,31 +276,64 @@ function eventPosition(a: AgendamentoCalendario): { top: number; height: number 
     return { top, height };
 }
 
+function eventLane(event: AgendamentoCalendario, dayEvents: AgendamentoCalendario[]): { index: number; count: number } {
+    const eventStart = new Date(event.start).getTime();
+    const eventEnd = new Date(event.end).getTime();
+    const simultaneous = dayEvents
+        .filter(other => {
+            const otherStart = new Date(other.start).getTime();
+            const otherEnd = new Date(other.end).getTime();
+            return eventStart < otherEnd && eventEnd > otherStart;
+        })
+        .sort((a, b) => (a.profissional_id ?? 0) - (b.profissional_id ?? 0) || a.id - b.id);
+
+    return {
+        index: Math.max(0, simultaneous.findIndex(item => item.id === event.id)),
+        count: Math.max(1, simultaneous.length),
+    };
+}
+
 function EventBlock({
     event,
+    dayEvents,
     onClick,
 }: {
     event: AgendamentoCalendario;
+    dayEvents: AgendamentoCalendario[];
     onClick: (a: AgendamentoCalendario) => void;
 }) {
     const { top, height }      = eventPosition(event);
+    const lane = eventLane(event, dayEvents);
     const { accent, bg, text } = slotColor(event);
     const compact = height < 40;
 
     return (
         <div
             onClick={e => { e.stopPropagation(); onClick(event); }}
-            className="absolute left-1 right-1 cursor-pointer overflow-hidden rounded-md transition-all hover:brightness-110 hover:z-20"
-            style={{ top, height, background: bg, borderLeft: `3px solid ${accent}`, zIndex: 1 }}
+            className="absolute cursor-pointer overflow-hidden rounded-md transition-all hover:brightness-110 hover:z-20"
+            style={{
+                top,
+                height,
+                left: `calc(${lane.index * 100 / lane.count}% + 4px)`,
+                width: `calc(${100 / lane.count}% - 8px)`,
+                background: bg,
+                borderLeft: `3px solid ${accent}`,
+                zIndex: 1,
+            }}
         >
             <div className="px-1.5 py-1" style={{ color: text }}>
                 <p className={`truncate font-semibold leading-tight ${compact ? 'text-[9px]' : 'text-[11px]'}`}>
                     {event.title}
                 </p>
                 {!compact && (
-                    <p className="mt-0.5 text-[10px] leading-tight opacity-70">
-                        {fmtHora(event.start)}–{fmtHora(event.end)}
-                    </p>
+                    <div className="mt-0.5 flex items-center gap-1 text-[10px] leading-tight opacity-75">
+                        {event.profissional_id && (
+                            <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ background: professionalColor(event.profissional_id).accent }} />
+                        )}
+                        <span className="truncate">
+                            {event.profissional_nome ? `${event.profissional_nome} · ` : ''}{fmtHora(event.start)}–{fmtHora(event.end)}
+                        </span>
+                    </div>
                 )}
             </div>
         </div>
@@ -392,7 +458,7 @@ function WeekGrid({
 
                                     {/* Events */}
                                     {dayEvents.map(a => (
-                                        <EventBlock key={a.id} event={a} onClick={onDetalhe} />
+                                        <EventBlock key={a.id} event={a} dayEvents={dayEvents} onClick={onDetalhe} />
                                     ))}
 
                                     {/* Current time indicator */}
@@ -478,6 +544,12 @@ function DayTimeline({
                             <p className="text-xs opacity-80" style={{ color: text }}>
                                 {fmtHora(a.start)} – {fmtHora(a.end)}
                             </p>
+                            {a.profissional_nome && (
+                                <p className="mt-0.5 flex items-center gap-1 text-[11px] opacity-70" style={{ color: text }}>
+                                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: professionalColor(a.profissional_id).accent }} />
+                                    {a.profissional_nome}
+                                </p>
+                            )}
                         </div>
                         <svg
                             width={14} height={14} viewBox="0 0 24 24" fill="none"
@@ -518,6 +590,7 @@ function DetalheModal({
         status:           detalhe.status,
     });
     const nomeRef = useRef<HTMLInputElement>(null);
+    const telefoneValido = isValidPhone(form.cliente_telefone);
 
     useEffect(() => {
         if (editando) nomeRef.current?.focus();
@@ -574,7 +647,20 @@ function DetalheModal({
                             </div>
                             <div>
                                 <label className="label mb-1">Telefone</label>
-                                <input value={form.cliente_telefone} onChange={e => setForm(f => ({ ...f, cliente_telefone: e.target.value }))} className="input" />
+                                <input
+                                    value={form.cliente_telefone}
+                                    onChange={e => setForm(f => ({ ...f, cliente_telefone: normalizePhone(e.target.value) }))}
+                                    className="input"
+                                    inputMode="tel"
+                                    autoComplete="tel"
+                                    maxLength={13}
+                                    aria-invalid={!telefoneValido}
+                                />
+                                {!telefoneValido && (
+                                    <p className="mt-1 text-xs" style={{ color: '#f87171' }}>
+                                        Informe o telefone com DDD, por exemplo: 54999999999.
+                                    </p>
+                                )}
                             </div>
                             <div>
                                 <label className="label mb-1">Início</label>
@@ -596,7 +682,7 @@ function DetalheModal({
                                 <button onClick={() => setEditando(false)} className="btn-secondary flex-1 justify-center text-xs py-2">Voltar</button>
                                 <button
                                     onClick={salvar}
-                                    disabled={salvando || !form.cliente_nome || !form.inicio || !form.fim}
+                                    disabled={salvando || !form.cliente_nome || !telefoneValido || !form.inicio || !form.fim}
                                     className="btn-primary flex-1 justify-center text-xs py-2"
                                 >
                                     {salvando ? 'Salvando…' : 'Salvar'}
@@ -610,6 +696,15 @@ function DetalheModal({
                                     <span style={{ color: 'var(--text-3)' }}>Horário</span>
                                     <span className="font-medium text-primary">{fmtHora(detalhe.start)} – {fmtHora(detalhe.end)}</span>
                                 </div>
+                                {detalhe.profissional_nome && (
+                                    <div className="flex justify-between gap-4">
+                                        <span style={{ color: 'var(--text-3)' }}>Profissional</span>
+                                        <span className="flex items-center gap-1.5 text-right" style={{ color: 'var(--text-2)' }}>
+                                            <span className="h-2 w-2 rounded-full" style={{ background: professionalColor(detalhe.profissional_id).accent }} />
+                                            {detalhe.profissional_nome}
+                                        </span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between">
                                     <span style={{ color: 'var(--text-3)' }}>Origem</span>
                                     <span style={{ color: 'var(--text-2)' }}>
@@ -663,20 +758,24 @@ function DetalheModal({
 export default function Agenda({ recursos, profissionais }: Props) {
     const entidades = useMemo<EntidadeAgenda[]>(() =>
         recursos.length > 0
-            ? recursos.map(r => ({ id: r.id, nome: r.nome, tipo: 'recurso' as const }))
-            : profissionais.map(p => ({ id: p.id, nome: p.nome, tipo: 'profissional' as const })),
+            ? recursos.map((r, index) => ({ id: r.id, nome: r.nome, tipo: 'recurso' as const, cor: PROFESSIONAL_COLORS[index % PROFESSIONAL_COLORS.length].accent }))
+            : profissionais.map(p => ({ id: p.id, nome: p.nome, tipo: 'profissional' as const, cor: professionalColor(p.id).accent })),
     [recursos, profissionais]);
+
+    const temVisaoGeral = recursos.length === 0 && profissionais.length > 1;
 
     const [semana, setSemana]         = useState(() => startOfWeek(new Date()));
     const [diaAtivo, setDiaAtivo]     = useState(() => new Date());
-    const [entidadeId, setEntidadeId] = useState<number>(() => entidades[0]?.id ?? 0);
+    const [entidadeId, setEntidadeId] = useState<number>(() => temVisaoGeral ? ALL_PROFESSIONALS_ID : (entidades[0]?.id ?? 0));
     const [agendamentos, setAgs]      = useState<AgendamentoCalendario[]>([]);
     const [loading, setLoading]       = useState(false);
     const [detalhe, setDetalhe]       = useState<AgendamentoCalendario | null>(null);
     const [modalNova, setModalNova]   = useState<{ data: string; hora: string } | null>(null);
     const [novaForm, setNovaForm]     = useState({ nome: '', tel: '', fim: '', obs: '' });
+    const [novoProfissionalId, setNovoProfissionalId] = useState<number>(() => profissionais[0]?.id ?? 0);
     const [salvando, setSalvando]     = useState(false);
     const [erroReserva, setErroReserva] = useState<string | null>(null);
+    const telefoneValido = isValidPhone(novaForm.tel);
 
     const tipoEntidade = useMemo(
         () => entidades.find(e => e.id === entidadeId)?.tipo ?? 'profissional',
@@ -692,13 +791,15 @@ export default function Agenda({ recursos, profissionais }: Props) {
     }, [agendamentos]);
 
     const carregar = useCallback(() => {
-        if (!entidadeId) return;
+        if (entidades.length === 0) return;
         setLoading(true);
         const inicio = semana;
         const fim    = addDays(addDays(inicio, 6), 1);
         const param  = tipoEntidade === 'recurso'
             ? `recurso_id=${entidadeId}`
-            : `profissional_id=${entidadeId}`;
+            : entidadeId === ALL_PROFESSIONALS_ID
+                ? 'todos_profissionais=1'
+                : `profissional_id=${entidadeId}`;
         fetch(
             route('tenant.agenda.disponibilidade') +
             `?${param}&data_inicio=${toISO(inicio)}&data_fim=${toISO(fim)}`,
@@ -707,9 +808,22 @@ export default function Agenda({ recursos, profissionais }: Props) {
             .then(r => r.json())
             .then(setAgs)
             .finally(() => setLoading(false));
-    }, [entidadeId, tipoEntidade, semana]);
+    }, [entidadeId, entidades.length, tipoEntidade, semana]);
 
     useEffect(() => { carregar(); }, [carregar]);
+
+    useEffect(() => {
+        if (!modalNova) return;
+
+        setNovaForm(form => ({
+            ...form,
+            fim: addMinutesToTime(modalNova.hora, 30),
+        }));
+        if (tipoEntidade === 'profissional') {
+            setNovoProfissionalId(entidadeId || profissionais[0]?.id || 0);
+        }
+        setErroReserva(null);
+    }, [entidadeId, modalNova, profissionais, tipoEntidade]);
 
     const navegarDia = (d: Date) => {
         setDiaAtivo(d);
@@ -737,22 +851,26 @@ export default function Agenda({ recursos, profissionais }: Props) {
     };
 
     const criarReserva = () => {
-        if (!modalNova || !entidadeId) return;
+        if (!modalNova || (tipoEntidade === 'recurso' ? !entidadeId : !novoProfissionalId)) return;
+        if (!telefoneValido) {
+            setErroReserva('Informe um telefone válido com DDD, por exemplo: 54999999999.');
+            return;
+        }
         setSalvando(true);
         setErroReserva(null);
         const base = {
             cliente_nome:      novaForm.nome,
-            cliente_telefone:  novaForm.tel,
+            cliente_telefone:  normalizePhone(novaForm.tel),
             inicio:            `${modalNova.data}T${modalNova.hora}:00`,
             fim:               novaForm.fim
                 ? `${modalNova.data}T${novaForm.fim}:00`
-                : `${modalNova.data}T${modalNova.hora}:30`,
+                : `${modalNova.data}T${addMinutesToTime(modalNova.hora, 30)}:00`,
             observacoes:       novaForm.obs,
             notificar_cliente: false as boolean,
         };
         const payload = tipoEntidade === 'recurso'
             ? { ...base, recurso_id: entidadeId }
-            : { ...base, profissional_id: entidadeId };
+            : { ...base, profissional_id: novoProfissionalId };
 
         router.post(route('tenant.agendamentos.store'), payload, {
             onSuccess: () => {
@@ -815,6 +933,18 @@ export default function Agenda({ recursos, profissionais }: Props) {
                     {/* Entity pills */}
                     {entidades.length > 1 && (
                         <div className="flex gap-2 overflow-x-auto scroll-hidden px-4 pb-3">
+                            {temVisaoGeral && (
+                                <button
+                                    onClick={() => setEntidadeId(ALL_PROFESSIONALS_ID)}
+                                    className="flex min-h-10 flex-shrink-0 items-center rounded-full px-3 py-1.5 text-xs font-medium transition-all"
+                                    style={{
+                                        background: entidadeId === ALL_PROFESSIONALS_ID ? 'var(--jade)' : 'var(--bg-surface-2)',
+                                        color: entidadeId === ALL_PROFESSIONALS_ID ? 'white' : 'var(--text-2)',
+                                    }}
+                                >
+                                    Todos
+                                </button>
+                            )}
                             {entidades.map(e => (
                                 <button
                                     key={e.id}
@@ -825,6 +955,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
                                         color: entidadeId === e.id ? 'white' : 'var(--text-2)',
                                     }}
                                 >
+                                    <span className="mr-1.5 h-2 w-2 rounded-full" style={{ background: e.cor }} />
                                     {e.nome}
                                 </button>
                             ))}
@@ -882,6 +1013,23 @@ export default function Agenda({ recursos, profissionais }: Props) {
                             <p className="label px-2 mb-2">
                                 {entidades[0].tipo === 'profissional' ? 'Profissionais' : 'Recursos'}
                             </p>
+                            {temVisaoGeral && (
+                                <button
+                                    onClick={() => setEntidadeId(ALL_PROFESSIONALS_ID)}
+                                    className="mb-0.5 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left transition-all"
+                                    style={{
+                                        background: entidadeId === ALL_PROFESSIONALS_ID ? 'var(--jade-light)' : 'transparent',
+                                        color: entidadeId === ALL_PROFESSIONALS_ID ? 'var(--jade)' : 'var(--text-2)',
+                                        fontSize: 13,
+                                        fontWeight: entidadeId === ALL_PROFESSIONALS_ID ? 500 : 400,
+                                    }}
+                                >
+                                    <span className="flex h-3 w-3 items-center justify-center">
+                                        <span className="h-2 w-2 rounded-full bg-[var(--jade)]" />
+                                    </span>
+                                    Visão geral
+                                </button>
+                            )}
                             {entidades.map(e => (
                                 <button
                                     key={e.id}
@@ -896,7 +1044,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
                                 >
                                     <span
                                         className="h-2 w-2 flex-shrink-0 rounded-full"
-                                        style={{ background: entidadeId === e.id ? 'var(--jade)' : 'var(--text-3)' }}
+                                        style={{ background: e.cor }}
                                     />
                                     {e.nome}
                                 </button>
@@ -907,12 +1055,15 @@ export default function Agenda({ recursos, profissionais }: Props) {
                     {/* Legend */}
                     <div style={{ borderTop: '1px solid var(--border)', padding: '12px 10px 8px', marginTop: 'auto' }}>
                         <p className="label px-2 mb-2">Legenda</p>
-                        {[
-                            { accent: '#34d399', label: 'WhatsApp' },
-                            { accent: '#60a5fa', label: 'Manual' },
-                            { accent: '#6b7280', label: 'Concluído' },
-                            { accent: '#f87171', label: 'Cancelado' },
-                        ].map(l => (
+                        {(tipoEntidade === 'profissional'
+                            ? entidades.map(e => ({ accent: e.cor, label: e.nome }))
+                            : [
+                                { accent: '#34d399', label: 'WhatsApp' },
+                                { accent: '#60a5fa', label: 'Manual' },
+                                { accent: '#6b7280', label: 'Concluído' },
+                                { accent: '#f87171', label: 'Cancelado' },
+                            ]
+                        ).map(l => (
                             <div key={l.label} className="flex items-center gap-2 px-2 py-0.5">
                                 <span className="h-2.5 w-2.5 flex-shrink-0 rounded-sm" style={{ background: l.accent, opacity: 0.85 }} />
                                 <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{l.label}</span>
@@ -1046,6 +1197,22 @@ export default function Agenda({ recursos, profissionais }: Props) {
                             </p>
 
                             <div className="space-y-3">
+                                {tipoEntidade === 'profissional' && (
+                                    <div>
+                                        <label className="label mb-1">Profissional</label>
+                                        <select
+                                            value={novoProfissionalId}
+                                            onChange={e => setNovoProfissionalId(Number(e.target.value))}
+                                            className="input"
+                                        >
+                                            {profissionais.map(profissional => (
+                                                <option key={profissional.id} value={profissional.id}>
+                                                    {profissional.nome}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
                                 <div>
                                     <label className="label mb-1">Nome do cliente</label>
                                     <input
@@ -1060,10 +1227,19 @@ export default function Agenda({ recursos, profissionais }: Props) {
                                     <label className="label mb-1">Telefone</label>
                                     <input
                                         value={novaForm.tel}
-                                        onChange={e => setNovaForm(f => ({ ...f, tel: e.target.value }))}
+                                        onChange={e => setNovaForm(f => ({ ...f, tel: normalizePhone(e.target.value) }))}
                                         className="input"
-                                        placeholder="55119…"
+                                        inputMode="tel"
+                                        autoComplete="tel"
+                                        maxLength={13}
+                                        aria-invalid={Boolean(novaForm.tel) && !telefoneValido}
+                                        placeholder="54999999999"
                                     />
+                                    {novaForm.tel && !telefoneValido && (
+                                        <p className="mt-1 text-xs" style={{ color: '#f87171' }}>
+                                            Informe o telefone com DDD, por exemplo: 54999999999.
+                                        </p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="label mb-1">Horário de término</label>
@@ -1100,7 +1276,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
                                 </button>
                                 <button
                                     onClick={criarReserva}
-                                    disabled={salvando || !novaForm.nome || !novaForm.tel}
+                                    disabled={salvando || !novaForm.nome || !telefoneValido || (tipoEntidade === 'profissional' && !novoProfissionalId)}
                                     className="btn-primary flex-1 justify-center"
                                 >
                                     {salvando ? 'Salvando…' : 'Confirmar'}
