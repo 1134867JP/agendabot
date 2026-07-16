@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Agendamento;
 use App\Models\Profissional;
 use App\Models\Recurso;
+use App\Models\Servico;
 use App\Services\AgendamentoService;
 use App\Services\AsaasService;
 use Carbon\Carbon;
@@ -65,6 +66,7 @@ class AgendamentoController extends Controller
         $validated = $request->validate([
             'recurso_id' => ['nullable', 'integer', Rule::exists('recursos', 'id')->where('tenant_id', $tenantId)],
             'profissional_id' => ['nullable', 'integer', Rule::exists('profissionais', 'id')->where('tenant_id', $tenantId)],
+            'servico_id' => ['nullable', 'integer', Rule::exists('servicos', 'id')->where('tenant_id', $tenantId)],
             'cliente_nome' => ['required', 'string', 'max:255'],
             'cliente_telefone' => ['required', 'string', 'regex:/^(?:55)?[1-9][0-9]{9,10}$/'],
             'inicio' => ['required', 'date'],
@@ -79,28 +81,54 @@ class AgendamentoController extends Controller
             return back()->withErrors(['profissional_id' => 'Selecione um profissional ou recurso.']);
         }
 
+        $servico = null;
+        if (! empty($validated['servico_id'])) {
+            $servico = Servico::where('tenant_id', $tenant->id)
+                ->where('ativo', true)
+                ->findOrFail($validated['servico_id']);
+
+            if (! empty($validated['profissional_id'])
+                && $servico->profissionais()->exists()
+                && ! $servico->profissionais()->whereKey($validated['profissional_id'])->exists()) {
+                return back()->withErrors(['servico_id' => 'Este serviço não é realizado pelo profissional selecionado.']);
+            }
+        }
+
+        $inicio = Carbon::parse($validated['inicio']);
+        $fim = $servico && $servico->duracao_minutos
+            ? $inicio->copy()->addMinutes((int) $servico->duracao_minutos)
+            : Carbon::parse($validated['fim']);
+
         $dados = [
             'tenant_id' => $tenant->id,
             'cliente_nome' => $validated['cliente_nome'],
             'cliente_telefone' => $validated['cliente_telefone'],
-            'inicio' => $validated['inicio'],
-            'fim' => $validated['fim'],
+            'inicio' => $inicio,
+            'fim' => $fim,
             'observacoes' => $validated['observacoes'] ?? null,
             'origem' => 'manual',
             'status' => 'confirmado',
+            'servico_id' => $servico?->id,
         ];
+
+        if ($servico && $servico->valor_min !== null
+            && ($servico->valor_max === null || abs((float) $servico->valor_max - (float) $servico->valor_min) < 0.01)) {
+            $dados['valor_total'] = $servico->valor_min;
+        }
 
         if (! empty($validated['recurso_id'])) {
             $recurso = Recurso::where('tenant_id', $tenant->id)->findOrFail($validated['recurso_id']);
             $dados['recurso_id'] = $validated['recurso_id'];
-            $dados['valor_total'] = $recurso->valor_hora
-                ? $recurso->valor_hora * Carbon::parse($validated['inicio'])->diffInMinutes($validated['fim']) / 60
-                : null;
+            if (! array_key_exists('valor_total', $dados)) {
+                $dados['valor_total'] = $recurso->valor_hora
+                    ? $recurso->valor_hora * $inicio->diffInMinutes($fim) / 60
+                    : null;
+            }
         } else {
             Profissional::where('tenant_id', $tenant->id)->findOrFail($validated['profissional_id']);
             $dados['profissional_id'] = $validated['profissional_id'];
-            $dados['data_hora'] = $validated['inicio'];
-            $dados['duracao_minutos'] = (int) Carbon::parse($validated['inicio'])->diffInMinutes($validated['fim']);
+            $dados['data_hora'] = $inicio;
+            $dados['duracao_minutos'] = (int) $inicio->diffInMinutes($fim);
         }
 
         try {

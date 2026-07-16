@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Agendamento;
 use App\Models\Cliente;
 use App\Models\Profissional;
+use App\Models\Servico;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -228,6 +229,42 @@ class AgendamentoManualValidacaoTest extends TestCase
 
         $response->assertSessionDoesntHaveErrors();
         $this->assertDatabaseHas('agendamentos', ['cliente_nome' => 'Cliente Válido']);
+    }
+
+    public function test_criacao_pela_agenda_salva_servico_e_aplica_duracao_configurada(): void
+    {
+        $servico = Servico::create([
+            'tenant_id' => $this->tenant->id,
+            'nome' => 'Corte completo',
+            'duracao_minutos' => 60,
+            'valor_min' => 80,
+            'valor_max' => 80,
+            'ativo' => true,
+        ]);
+        $servico->profissionais()->attach($this->profissional->id);
+
+        $inicio = $this->proximaSegundaAs(10);
+
+        $response = $this->autenticarComTenant()->post(route('tenant.agendamentos.store'), [
+            'profissional_id' => $this->profissional->id,
+            'servico_id' => $servico->id,
+            'cliente_nome' => 'Cliente com Serviço',
+            'cliente_telefone' => '51999999999',
+            'inicio' => $inicio->toDateTimeString(),
+            // O servidor deve usar a duração do serviço, não este fim de 30 minutos.
+            'fim' => $inicio->copy()->addMinutes(30)->toDateTimeString(),
+        ]);
+
+        $response->assertSessionDoesntHaveErrors();
+        $this->assertDatabaseHas('agendamentos', [
+            'cliente_nome' => 'Cliente com Serviço',
+            'servico_id' => $servico->id,
+            'duracao_minutos' => 60,
+            'valor_total' => 80,
+        ]);
+
+        $agendamento = Agendamento::where('cliente_nome', 'Cliente com Serviço')->firstOrFail();
+        $this->assertSame($inicio->copy()->addMinutes(60)->toDateTimeString(), $agendamento->fim->toDateTimeString());
     }
 
     public function test_update_rejeita_mover_para_horario_conflitante(): void
