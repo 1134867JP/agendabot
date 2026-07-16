@@ -79,6 +79,13 @@ class ClienteOperacionalTest extends TestCase
             'status_v2' => 'ativa',
         ]);
         $mensagem = $conversa->registrarMensagem('cliente', 'Mensagem preservada');
+        $outraConversa = Conversa::create([
+            'tenant_id' => $this->tenant->id,
+            'cliente_id' => $cliente->id,
+            'telefone_cliente' => $cliente->telefone.'-alternativo',
+            'status_v2' => 'ativa',
+        ]);
+        $outraMensagem = $outraConversa->registrarMensagem('cliente', 'Outra mensagem preservada');
 
         $response = $this->autenticarComTenant()->delete(route('tenant.clientes.destroy', $cliente));
 
@@ -91,10 +98,17 @@ class ClienteOperacionalTest extends TestCase
         $this->assertDatabaseHas('conversas', [
             'id' => $conversa->id,
             'cliente_id' => null,
-            'telefone_cliente' => "anonimizado-{$cliente->id}",
+            'telefone_cliente' => "anonimizado-{$cliente->id}-{$conversa->id}",
+            'status_v2' => 'encerrada',
+        ]);
+        $this->assertDatabaseHas('conversas', [
+            'id' => $outraConversa->id,
+            'cliente_id' => null,
+            'telefone_cliente' => "anonimizado-{$cliente->id}-{$outraConversa->id}",
             'status_v2' => 'encerrada',
         ]);
         $this->assertDatabaseHas('mensagens', ['id' => $mensagem->id]);
-        $this->assertSame(1, Mensagem::count());
+        $this->assertDatabaseHas('mensagens', ['id' => $outraMensagem->id]);
+        $this->assertSame(2, Mensagem::count());
     }
 }
