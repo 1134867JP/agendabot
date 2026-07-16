@@ -41,6 +41,13 @@ interface ServicoAgenda {
     profissional_ids: number[];
 }
 
+interface ClienteBusca {
+    id: number;
+    nome: string;
+    telefone: string;
+    agendamentos_count: number;
+}
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const PX_PER_HOUR = 64;
@@ -803,10 +810,47 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
     const [detalhe, setDetalhe]       = useState<AgendamentoCalendario | null>(null);
     const [modalNova, setModalNova]   = useState<{ data: string; hora: string } | null>(null);
     const [novaForm, setNovaForm]     = useState({ nome: '', tel: '', fim: '', obs: '', servicoId: 0 });
+    const [clientesEncontrados, setClientesEncontrados] = useState<ClienteBusca[]>([]);
+    const [buscandoCliente, setBuscandoCliente] = useState(false);
+    const [clienteSelecionadoId, setClienteSelecionadoId] = useState<number | null>(null);
+    const clienteBuscaTimer = useRef<number | null>(null);
     const [novoProfissionalId, setNovoProfissionalId] = useState<number>(() => profissionais[0]?.id ?? 0);
     const [salvando, setSalvando]     = useState(false);
     const [erroReserva, setErroReserva] = useState<string | null>(null);
     const telefoneValido = isValidPhone(novaForm.tel);
+
+    const pesquisarCliente = (valor: string) => {
+        setClienteSelecionadoId(null);
+        if (clienteBuscaTimer.current) window.clearTimeout(clienteBuscaTimer.current);
+
+        const termo = valor.trim();
+        if (termo.length < 2) {
+            setClientesEncontrados([]);
+            setBuscandoCliente(false);
+            return;
+        }
+
+        setBuscandoCliente(true);
+        clienteBuscaTimer.current = window.setTimeout(async () => {
+            try {
+                const response = await fetch(`${route('tenant.clientes.search')}?q=${encodeURIComponent(termo)}`, {
+                    headers: { Accept: 'application/json' },
+                });
+                const payload = await response.json() as { clientes?: ClienteBusca[] };
+                setClientesEncontrados(response.ok ? (payload.clientes ?? []) : []);
+            } catch {
+                setClientesEncontrados([]);
+            } finally {
+                setBuscandoCliente(false);
+            }
+        }, 300);
+    };
+
+    const selecionarCliente = (cliente: ClienteBusca) => {
+        setClienteSelecionadoId(cliente.id);
+        setNovaForm(form => ({ ...form, nome: cliente.nome, tel: normalizePhone(cliente.telefone) }));
+        setClientesEncontrados([]);
+    };
 
     const tipoEntidade = useMemo(
         () => entidades.find(e => e.id === entidadeId)?.tipo ?? 'profissional',
@@ -945,6 +989,8 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
             onSuccess: () => {
                 setModalNova(null);
                 setNovaForm({ nome: '', tel: '', fim: '', obs: '', servicoId: 0 });
+                setClientesEncontrados([]);
+                setClienteSelecionadoId(null);
                 carregar();
             },
             onError: errors => {
@@ -1305,21 +1351,63 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
                                         Nenhum serviço disponível para este profissional. A reserva será criada sem serviço, com 30 minutos.
                                     </div>
                                 )}
-                                <div>
-                                    <label className="label mb-1">Nome do cliente</label>
-                                    <input
-                                        autoFocus
-                                        value={novaForm.nome}
-                                        onChange={e => setNovaForm(f => ({ ...f, nome: e.target.value }))}
-                                        className="input"
-                                        placeholder="João Silva"
-                                    />
+                                <div className="relative">
+                                    <label className="label mb-1">Cliente</label>
+                                    <div className="relative">
+                                        <input
+                                            autoFocus
+                                            value={novaForm.nome}
+                                            onChange={event => {
+                                                const nome = event.target.value;
+                                                setNovaForm(form => ({ ...form, nome }));
+                                                pesquisarCliente(nome);
+                                            }}
+                                            className="input pr-9"
+                                            placeholder="Digite o nome para buscar"
+                                            autoComplete="off"
+                                        />
+                                        {buscandoCliente && (
+                                            <svg className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--text-3)' }} aria-label="Buscando cliente">
+                                                <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" opacity=".25" />
+                                                <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                                            </svg>
+                                        )}
+                                    </div>
+                                    {clientesEncontrados.length > 0 && (
+                                        <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-xl p-1 shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
+                                            {clientesEncontrados.map(cliente => (
+                                                <button
+                                                    key={cliente.id}
+                                                    type="button"
+                                                    onClick={() => selecionarCliente(cliente)}
+                                                    className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-[var(--bg-surface-2)]"
+                                                >
+                                                    <span className="min-w-0">
+                                                        <span className="block truncate text-sm font-medium text-primary">{cliente.nome}</span>
+                                                        <span className="block text-xs" style={{ color: 'var(--text-3)' }}>{cliente.telefone}</span>
+                                                    </span>
+                                                    <span className="shrink-0 text-[10px]" style={{ color: 'var(--text-3)' }}>
+                                                        {cliente.agendamentos_count} ag.
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {clienteSelecionadoId && (
+                                        <p className="mt-1 text-xs" style={{ color: 'var(--jade)' }}>
+                                            Cliente existente selecionado. Nome e telefone foram preenchidos automaticamente.
+                                        </p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="label mb-1">Telefone</label>
                                     <input
                                         value={novaForm.tel}
-                                        onChange={e => setNovaForm(f => ({ ...f, tel: normalizePhone(e.target.value) }))}
+                                        onChange={event => {
+                                            const tel = normalizePhone(event.target.value);
+                                            setNovaForm(form => ({ ...form, tel }));
+                                            pesquisarCliente(tel);
+                                        }}
                                         className="input"
                                         inputMode="tel"
                                         autoComplete="tel"
