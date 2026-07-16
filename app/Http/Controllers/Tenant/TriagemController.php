@@ -13,9 +13,14 @@ class TriagemController extends Controller
     public function index(): Response
     {
         $tenant = app('tenant');
+        $horario = $tenant->horarioAtendimentoTexto();
 
         return Inertia::render('Tenant/Triagem', [
             'config' => $tenant->triagemConfig(),
+            'horarioFuncionamento' => [
+                'configurado' => $horario !== '',
+                'resumo' => $horario !== '' ? $horario : 'Horário ainda não configurado',
+            ],
         ]);
     }
 
@@ -31,12 +36,22 @@ class TriagemController extends Controller
             'mensagem_transferencia'      => ['nullable', 'string', 'max:300'],
         ]);
 
+        $palavrasChave = collect($data['palavras_chave_humano'] ?? [])
+            ->map(fn (string $palavra) => trim(mb_strtolower($palavra)))
+            ->filter()
+            ->unique()
+            ->take(20)
+            ->values()
+            ->all();
+
         $configuracoes = array_merge($tenant->configuracoes ?? [], [
             'triagem' => [
-                'palavras_chave_humano'       => array_values(array_filter($data['palavras_chave_humano'] ?? [])),
+                'palavras_chave_humano'       => $palavrasChave,
                 'max_tentativas_sem_entender' => $data['max_tentativas_sem_entender'],
                 'transferir_fora_do_horario'  => $data['transferir_fora_do_horario'] ?? false,
-                'mensagem_transferencia'      => $data['mensagem_transferencia'] ?? null,
+                'mensagem_transferencia'      => filled($data['mensagem_transferencia'] ?? null)
+                    ? trim($data['mensagem_transferencia'])
+                    : null,
             ],
         ]);
 
