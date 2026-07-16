@@ -1,5 +1,6 @@
 import { Head, router, useForm } from "@inertiajs/react";
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import AppLayout from "@/Layouts/AppLayout";
 import { PageProps, Agendamento, Recurso, PaginatedData } from "@/types";
 import { useConfirm } from "@/hooks/useConfirm";
@@ -40,6 +41,153 @@ function fmtDt(iso: string) {
 }
 function duracaoMin(a: string, b: string) {
     return Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000);
+}
+
+const RECURSO_CORES = [
+    "#2dd4bf",
+    "#818cf8",
+    "#f59e0b",
+    "#f472b6",
+    "#38bdf8",
+    "#a3e635",
+];
+
+function nomeRecurso(a: Agendamento) {
+    return a.recurso?.nome ?? (a as any).profissional?.nome ?? "Sem profissional";
+}
+
+function corRecurso(a: Agendamento) {
+    const id = Number(a.recurso?.id ?? (a as any).profissional?.id ?? a.id);
+    return RECURSO_CORES[Math.abs(id) % RECURSO_CORES.length];
+}
+
+function fmtDataCurta(iso: string) {
+    return new Date(iso).toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "short",
+        timeZone: "America/Sao_Paulo",
+    });
+}
+
+function fmtHora(iso: string) {
+    return new Date(iso).toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "America/Sao_Paulo",
+    });
+}
+
+function AcoesAgendamento({
+    agendamento,
+    onEditar,
+    onConcluir,
+    onCancelar,
+    onExcluir,
+}: {
+    agendamento: Agendamento;
+    onEditar: () => void;
+    onConcluir: () => void;
+    onCancelar: () => void;
+    onExcluir: () => void;
+}) {
+    const [aberto, setAberto] = useState(false);
+    const [posicao, setPosicao] = useState({ top: 0, left: 0 });
+    const botaoRef = useRef<HTMLButtonElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+    const ativo = agendamento.status === "confirmado" || agendamento.status === "agendado";
+
+    const alternarMenu = () => {
+        if (!aberto && botaoRef.current) {
+            const rect = botaoRef.current.getBoundingClientRect();
+            const largura = 184;
+            setPosicao({
+                top: rect.bottom + 6,
+                left: Math.max(12, Math.min(rect.right - largura, window.innerWidth - largura - 12)),
+            });
+        }
+        setAberto((valor) => !valor);
+    };
+
+    useEffect(() => {
+        if (!aberto) return;
+
+        const fechar = (event: MouseEvent) => {
+            const alvo = event.target as Node;
+            if (!menuRef.current?.contains(alvo) && !botaoRef.current?.contains(alvo)) {
+                setAberto(false);
+            }
+        };
+        const fecharAoMover = () => setAberto(false);
+
+        document.addEventListener("mousedown", fechar);
+        window.addEventListener("resize", fecharAoMover);
+        window.addEventListener("scroll", fecharAoMover, true);
+        return () => {
+            document.removeEventListener("mousedown", fechar);
+            window.removeEventListener("resize", fecharAoMover);
+            window.removeEventListener("scroll", fecharAoMover, true);
+        };
+    }, [aberto]);
+
+    return (
+        <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+            <button
+                type="button"
+                onClick={onEditar}
+                className="min-h-9 rounded-lg px-3 text-xs font-semibold transition-colors hover:brightness-125"
+                style={{
+                    background: "rgba(99,102,241,0.08)",
+                    color: "var(--accent)",
+                    border: "1px solid rgba(99,102,241,0.25)",
+                }}
+            >
+                Editar
+            </button>
+            <button
+                ref={botaoRef}
+                type="button"
+                onClick={alternarMenu}
+                aria-expanded={aberto}
+                aria-label="Mais ações"
+                className="flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors hover:bg-surface-2"
+                style={{ color: "var(--text-2)", border: "1px solid var(--border-strong)" }}
+            >
+                Ações
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9" />
+                </svg>
+            </button>
+            {aberto && createPortal(
+                <div
+                    ref={menuRef}
+                    className="fixed z-[100] w-[184px] rounded-xl p-1.5 shadow-2xl"
+                    style={{
+                        top: posicao.top,
+                        left: posicao.left,
+                        background: "var(--bg-surface)",
+                        border: "1px solid var(--border-strong)",
+                    }}
+                    role="menu"
+                >
+                    {ativo && (
+                        <>
+                            <button type="button" onClick={() => { setAberto(false); onConcluir(); }} className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-surface-2" style={{ color: "var(--text-2)" }} role="menuitem">
+                                Marcar como concluído
+                            </button>
+                            <button type="button" onClick={() => { setAberto(false); onCancelar(); }} className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-red-500/10" style={{ color: "#f87171" }} role="menuitem">
+                                Cancelar agendamento
+                            </button>
+                        </>
+                    )}
+                    <div className="my-1" style={{ borderTop: "1px solid var(--border)" }} />
+                    <button type="button" onClick={() => { setAberto(false); onExcluir(); }} className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-red-500/10" style={{ color: "#f87171" }} role="menuitem">
+                        Excluir permanentemente
+                    </button>
+                </div>,
+                document.body,
+            )}
+        </div>
+    );
 }
 
 // ─── Modal de edição ─────────────────────────────────────────────────────────
@@ -720,8 +868,76 @@ export default function AgendamentosIndex({
 
             {/* Tabela */}
             <div className="card overflow-hidden">
-                <div className="overflow-x-auto overscroll-x-contain">
-                    <table className="min-w-[860px] text-sm">
+                <div className="divide-y lg:hidden" style={{ borderColor: "var(--border)" }}>
+                    {agendamentos.data.length === 0 ? (
+                        <div className="flex flex-col items-center gap-2 px-5 py-12 text-center">
+                            <p className="text-sm font-medium text-primary">Nenhum agendamento encontrado</p>
+                            <p className="text-xs" style={{ color: "var(--text-3)" }}>Ajuste os filtros ou crie uma reserva manual.</p>
+                            <button type="button" onClick={() => setModalAberto(true)} className="btn-primary mt-2 min-h-11">
+                                Criar agendamento
+                            </button>
+                        </div>
+                    ) : agendamentos.data.map((a) => {
+                        const inicio = (a as any).data_hora ?? a.inicio;
+                        return (
+                            <article key={a.id} className="p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <p className="truncate text-sm font-semibold text-primary">{a.cliente_nome}</p>
+                                        <p className="mt-0.5 text-xs" style={{ color: "var(--text-3)" }}>{a.cliente_telefone}</p>
+                                    </div>
+                                    <span className={`badge shrink-0 ${STATUS_BADGE[a.status] ?? "badge-gray"}`}>
+                                        {STATUS_LABEL[a.status] ?? a.status}
+                                    </span>
+                                </div>
+
+                                <div className="mt-4 grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-3">
+                                    <div className="flex h-11 w-12 flex-col items-center justify-center rounded-xl" style={{ background: "var(--bg-surface-2)", border: "1px solid var(--border)" }}>
+                                        <span className="text-[10px] font-semibold uppercase" style={{ color: "var(--text-3)" }}>{fmtDataCurta(inicio).split(" ")[1]}</span>
+                                        <span className="text-base font-semibold leading-none text-primary">{fmtDataCurta(inicio).split(" ")[0]}</span>
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-base font-semibold text-primary">{fmtHora(inicio)}</p>
+                                        <div className="mt-1 flex min-w-0 items-center gap-2">
+                                            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: corRecurso(a) }} />
+                                            <p className="truncate text-xs" style={{ color: "var(--text-2)" }}>{nomeRecurso(a)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 flex flex-wrap items-center gap-2 text-xs" style={{ color: "var(--text-3)" }}>
+                                    <span>{a.fim ? duracaoMin(a.inicio, a.fim) : ((a as any).duracao_minutos ?? "—")} min</span>
+                                    <span aria-hidden="true">•</span>
+                                    <span>{a.origem === "bot" || a.origem === "whatsapp" ? "WhatsApp" : "Manual"}</span>
+                                    {(a as any).servico?.nome && <><span aria-hidden="true">•</span><span>{(a as any).servico.nome}</span></>}
+                                </div>
+
+                                <div className="mt-4 border-t pt-3" style={{ borderColor: "var(--border)" }}>
+                                    <AcoesAgendamento
+                                        agendamento={a}
+                                        onEditar={() => setAgendamentoEditando(a)}
+                                        onConcluir={() => concluir(a.id)}
+                                        onCancelar={() => cancelar(a.id)}
+                                        onExcluir={() => excluir(a.id)}
+                                    />
+                                </div>
+                            </article>
+                        );
+                    })}
+                </div>
+
+                <div className="hidden overflow-x-auto overscroll-x-contain lg:block">
+                    <table className="w-full min-w-[1120px] text-sm">
+                        <colgroup>
+                            <col className="w-[16%]" />
+                            <col className="w-[17%]" />
+                            <col className="w-[15%]" />
+                            <col className="w-[8%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[11%]" />
+                            <col className="w-[15%]" />
+                        </colgroup>
                         <thead>
                             <tr
                                 style={{
@@ -737,11 +953,11 @@ export default function AgendamentosIndex({
                                     "Valor",
                                     "Origem",
                                     "Status",
-                                    "",
+                                    "Ações",
                                 ].map((h) => (
                                     <th
                                         key={h}
-                                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+                                        className={`px-4 py-3 text-xs font-semibold uppercase tracking-wide ${h === "Ações" ? "text-right" : "text-left"}`}
                                         style={{ color: "var(--text-3)" }}
                                     >
                                         {h}
@@ -843,12 +1059,15 @@ export default function AgendamentosIndex({
                                             className="px-4 py-3"
                                             style={{ color: "var(--text-2)" }}
                                         >
-                                            <p>
+                                            <div className="flex items-center gap-2">
+                                                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: corRecurso(a) }} />
+                                                <p className="truncate">
                                                 {a.recurso?.nome ??
                                                     (a as any).profissional
                                                         ?.nome ??
                                                     "—"}
-                                            </p>
+                                                </p>
+                                            </div>
                                             {(a as any).servico?.nome && (
                                                 <p
                                                     className="text-xs"
@@ -911,70 +1130,13 @@ export default function AgendamentosIndex({
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <div className="flex gap-1">
-                                                <button
-                                                    onClick={() =>
-                                                        setAgendamentoEditando(a)
-                                                    }
-                                                    className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors hover:brightness-125"
-                                                    style={{
-                                                        background:
-                                                            "rgba(99,102,241,0.08)",
-                                                        color: "var(--accent)",
-                                                        border: "1px solid rgba(99,102,241,0.25)",
-                                                    }}
-                                                >
-                                                    Editar
-                                                </button>
-                                                {(a.status === "confirmado" ||
-                                                    a.status === "agendado") && (
-                                                    <>
-                                                        <button
-                                                            onClick={() =>
-                                                                concluir(a.id)
-                                                            }
-                                                            className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors hover:brightness-125"
-                                                            style={{
-                                                                background:
-                                                                    "rgba(255,255,255,0.06)",
-                                                                color: "var(--text-2)",
-                                                                border: "1px solid var(--border)",
-                                                            }}
-                                                        >
-                                                            Concluir
-                                                        </button>
-                                                        <button
-                                                            onClick={() =>
-                                                                cancelar(a.id)
-                                                            }
-                                                            className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
-                                                            style={{
-                                                                background:
-                                                                    "rgba(239,68,68,0.08)",
-                                                                color: "#f87171",
-                                                                border: "1px solid rgba(239,68,68,0.2)",
-                                                            }}
-                                                        >
-                                                            Cancelar
-                                                        </button>
-                                                    </>
-                                                )}
-                                                <button
-                                                    onClick={() =>
-                                                        excluir(a.id)
-                                                    }
-                                                    className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
-                                                    style={{
-                                                        background:
-                                                            "rgba(239,68,68,0.04)",
-                                                        color: "#f87171",
-                                                        border: "1px solid rgba(239,68,68,0.15)",
-                                                    }}
-                                                    title="Excluir permanentemente"
-                                                >
-                                                    Excluir
-                                                </button>
-                                            </div>
+                                            <AcoesAgendamento
+                                                agendamento={a}
+                                                onEditar={() => setAgendamentoEditando(a)}
+                                                onConcluir={() => concluir(a.id)}
+                                                onCancelar={() => cancelar(a.id)}
+                                                onExcluir={() => excluir(a.id)}
+                                            />
                                         </td>
                                     </tr>
                                 ))
