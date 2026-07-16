@@ -75,8 +75,79 @@ class AgendamentoManualValidacaoTest extends TestCase
             'fim' => $fim->toDateTimeString(),
         ]);
 
-        $response->assertSessionHasErrors('inicio');
+        $response->assertSessionHasErrors([
+            'inicio' => 'Profissional Manual atende neste dia das 08:00 às 18:00. Escolha um horário dentro desse período.',
+        ]);
         $this->assertDatabaseMissing('agendamentos', ['cliente_nome' => 'Cliente Teste']);
+    }
+
+    public function test_visao_geral_da_agenda_retorna_profissional_da_reserva(): void
+    {
+        $inicio = $this->proximaSegundaAs(10);
+
+        Agendamento::create([
+            'tenant_id' => $this->tenant->id,
+            'profissional_id' => $this->profissional->id,
+            'cliente_nome' => 'Cliente Visão Geral',
+            'cliente_telefone' => '54999999999',
+            'inicio' => $inicio,
+            'fim' => $inicio->copy()->addMinutes(30),
+            'data_hora' => $inicio,
+            'duracao_minutos' => 30,
+            'status' => 'agendado',
+            'origem' => 'manual',
+        ]);
+
+        $response = $this->autenticarComTenant()->get(route('tenant.agenda.disponibilidade', [
+            'todos_profissionais' => 1,
+            'data_inicio' => $inicio->copy()->startOfDay()->toDateString(),
+            'data_fim' => $inicio->copy()->endOfDay()->toDateString(),
+        ]));
+
+        $response->assertOk()
+            ->assertJsonCount(1)
+            ->assertJsonFragment([
+                'title' => 'Cliente Visão Geral',
+                'profissional_id' => $this->profissional->id,
+                'profissional_nome' => 'Profissional Manual',
+            ]);
+    }
+
+    public function test_rejeita_telefone_invalido_na_criacao_manual(): void
+    {
+        $inicio = $this->proximaSegundaAs(10);
+        $fim = $inicio->copy()->addMinutes(30);
+
+        $response = $this->autenticarComTenant()->post(route('tenant.agendamentos.store'), [
+            'profissional_id' => $this->profissional->id,
+            'cliente_nome' => 'Cliente Telefone Inválido',
+            'cliente_telefone' => '54984',
+            'inicio' => $inicio->toDateTimeString(),
+            'fim' => $fim->toDateTimeString(),
+        ]);
+
+        $response->assertSessionHasErrors('cliente_telefone');
+        $this->assertDatabaseMissing('agendamentos', ['cliente_nome' => 'Cliente Telefone Inválido']);
+    }
+
+    public function test_aceita_telefone_formatado_e_salva_apenas_digitos(): void
+    {
+        $inicio = $this->proximaSegundaAs(10);
+        $fim = $inicio->copy()->addMinutes(30);
+
+        $response = $this->autenticarComTenant()->post(route('tenant.agendamentos.store'), [
+            'profissional_id' => $this->profissional->id,
+            'cliente_nome' => 'Cliente Telefone Válido',
+            'cliente_telefone' => '(54) 99999-9999',
+            'inicio' => $inicio->toDateTimeString(),
+            'fim' => $fim->toDateTimeString(),
+        ]);
+
+        $response->assertSessionDoesntHaveErrors();
+        $this->assertDatabaseHas('agendamentos', [
+            'cliente_nome' => 'Cliente Telefone Válido',
+            'cliente_telefone' => '54999999999',
+        ]);
     }
 
     public function test_rejeita_criacao_manual_dentro_da_antecedencia_minima_configurada(): void

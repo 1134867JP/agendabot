@@ -32,26 +32,28 @@ class AgendaController extends Controller
         $request->validate([
             'recurso_id'      => ['nullable', Rule::exists('recursos', 'id')->where('tenant_id', $tenantId)],
             'profissional_id' => ['nullable', Rule::exists('profissionais', 'id')->where('tenant_id', $tenantId)],
+            'todos_profissionais' => ['nullable', 'boolean'],
             'data_inicio'     => ['required', 'date'],
             'data_fim'        => ['required', 'date'],
         ]);
 
         $query = Agendamento::where('tenant_id', $tenant->id)
-            ->where('status', '!=', 'cancelado');
+            ->where('status', '!=', 'cancelado')
+            ->with('profissional:id,nome');
 
         $dataFim = Carbon::parse($request->data_fim)->endOfDay()->toIso8601String();
 
+        $query->where(function ($q) use ($request, $dataFim) {
+            $q->whereBetween('inicio', [$request->data_inicio, $dataFim])
+                ->orWhereBetween('data_hora', [$request->data_inicio, $dataFim]);
+        });
+
         if ($request->filled('recurso_id')) {
-            $query->where('recurso_id', $request->recurso_id)
-                  ->where(function ($q) use ($request, $dataFim) {
-                      $q->whereBetween('inicio', [$request->data_inicio, $dataFim]);
-                  });
+            $query->where('recurso_id', $request->recurso_id);
         } elseif ($request->filled('profissional_id')) {
-            $query->where('profissional_id', $request->profissional_id)
-                  ->where(function ($q) use ($request, $dataFim) {
-                $q->whereBetween('inicio', [$request->data_inicio, $dataFim])
-                  ->orWhereBetween('data_hora', [$request->data_inicio, $dataFim]);
-            });
+            $query->where('profissional_id', $request->profissional_id);
+        } elseif ($request->boolean('todos_profissionais')) {
+            $query->whereNotNull('profissional_id');
         } else {
             return response()->json([]);
         }
@@ -78,6 +80,8 @@ class AgendaController extends Controller
                     'status'      => in_array($a->status, ['confirmado', 'agendado']) ? 'confirmado' : $a->status,
                     'valor_total' => $a->valor_total,
                     'origem'      => $a->origem ?? 'manual',
+                    'profissional_id' => $a->profissional_id,
+                    'profissional_nome' => $a->profissional?->nome,
                 ];
             })
         );
