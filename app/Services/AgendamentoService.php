@@ -152,13 +152,17 @@ class AgendamentoService
         }
         $horarioDia = $profissional->horarios()->where('dia_semana', $diaSemana)->first();
         if (! $horarioDia) {
-            throw new HorarioIndisponivelException('Profissional não atende neste dia da semana.');
+            throw new HorarioIndisponivelException(
+                "{$profissional->nome} não atende neste dia. Escolha outro dia disponível."
+            );
         }
         $expedienteInicio = Carbon::createFromFormat('Y-m-d H:i:s', $inicio->format('Y-m-d').' '.$horarioDia->hora_inicio, $tz);
         $expedienteFim = Carbon::createFromFormat('Y-m-d H:i:s', $inicio->format('Y-m-d').' '.$horarioDia->hora_fim, $tz);
         if ($inicio->lt($expedienteInicio) || $fim->gt($expedienteFim)) {
+            $abertura = substr($horarioDia->hora_inicio, 0, 5);
+            $fechamento = substr($horarioDia->hora_fim, 0, 5);
             throw new HorarioIndisponivelException(
-                "Horário fora do expediente ({$horarioDia->hora_inicio}–{$horarioDia->hora_fim})."
+                "{$profissional->nome} atende neste dia das {$abertura} às {$fechamento}. Escolha um horário dentro desse período."
             );
         }
     }
