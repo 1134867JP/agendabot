@@ -479,7 +479,6 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
         router.reload({
             only: ['conversas'],
             reset: ['conversas'],
-            preserveScroll: true,
         });
 
         if (selecionada && ultimaConversaId === selecionada.id) {
