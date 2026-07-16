@@ -155,6 +155,13 @@ class ConversaController extends Controller
 
         $tenant = app('tenant');
 
+        // Enviar enquanto o bot está ativo também assume o atendimento. Fazer isso
+        // no mesmo request evita que uma segunda navegação do Inertia cancele o envio.
+        if ($conversa->status_v2 !== 'em_atendimento_humano') {
+            $conversa->update(['status_v2' => 'em_atendimento_humano']);
+            $conversa->registrarMensagem('bot', 'Atendimento assumido por uma pessoa da equipe.');
+        }
+
         $conversa->registrarMensagem('humano', $data['conteudo']);
         $evolution->enviarMensagem($tenant->evolution_instance, $conversa->telefone_cliente, $data['conteudo']);
 
