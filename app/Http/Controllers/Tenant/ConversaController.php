@@ -35,9 +35,30 @@ class ConversaController extends Controller
             $query->where('status_v2', $status);
         }
 
+        if ($busca = trim((string) $request->busca)) {
+            $termo = mb_strtolower($busca);
+            $termoLike = '%'.addcslashes($termo, '%_\\').'%';
+            $telefone = preg_replace('/\D/', '', $busca);
+
+            $query->where(function ($q) use ($termoLike, $telefone) {
+                $q->whereHas('cliente', function ($cliente) use ($termoLike, $telefone) {
+                    $cliente->whereRaw('LOWER(nome) LIKE ?', [$termoLike]);
+                    if ($telefone !== '') {
+                        $cliente->orWhere('telefone', 'like', "%{$telefone}%");
+                    }
+                });
+
+                if ($telefone !== '') {
+                    $q->orWhere('telefone_cliente', 'like', "%{$telefone}%");
+                }
+            });
+        }
+
         return Inertia::render('Tenant/Conversas/Index', [
-            'conversas' => $query->paginate(30)->withQueryString(),
-            'filtros' => $request->only('status_v2'),
+            'conversas' => Inertia::scroll(
+                fn () => $query->paginate(30)->withQueryString()
+            ),
+            'filtros' => $request->only('status_v2', 'busca'),
         ]);
     }
 
@@ -60,6 +81,14 @@ class ConversaController extends Controller
     public function notificacoes(): JsonResponse
     {
         $tenant = app('tenant');
+
+        $ultimaMensagem = Mensagem::whereHas(
+            'conversa',
+            fn ($q) => $q->where('tenant_id', $tenant->id),
+        )
+            ->orderByDesc('enviada_em')
+            ->orderByDesc('id')
+            ->first(['id', 'conversa_id', 'enviada_em']);
 
         $query = Conversa::where('tenant_id', $tenant->id)
             ->whereNotNull('ultima_mensagem_em')
@@ -91,6 +120,9 @@ class ConversaController extends Controller
         return response()->json([
             'conversas_nao_lidas' => $total,
             'preview' => $preview,
+            'ultima_conversa_id' => $ultimaMensagem?->conversa_id,
+            'ultima_mensagem_id' => $ultimaMensagem?->id,
+            'ultima_mensagem_em' => $ultimaMensagem?->enviada_em,
         ]);
     }
 
