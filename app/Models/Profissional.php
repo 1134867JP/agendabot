@@ -17,6 +17,7 @@ class Profissional extends Model
     public function tenant(): BelongsTo { return $this->belongsTo(Tenant::class); }
     public function horarios(): HasMany { return $this->hasMany(HorarioProfissional::class); }
     public function agendamentos(): HasMany { return $this->hasMany(Agendamento::class); }
+    public function bloqueiosAgenda(): HasMany { return $this->hasMany(BloqueioAgenda::class); }
     public function servicos(): BelongsToMany { return $this->belongsToMany(Servico::class, 'profissional_servico'); }
 
     public function slotsDisponiveis(Carbon $data): array
@@ -54,6 +55,14 @@ class Profissional extends Model
             ->all();
 
         $agendadosCollection = collect($agendados);
+        $bloqueios = $this->bloqueiosAgenda()
+            ->where('inicio', '<', $fimDia)
+            ->where('fim', '>', $inicioDia)
+            ->get(['inicio', 'fim'])
+            ->map(fn ($bloqueio) => [
+                'inicio' => Carbon::parse($bloqueio->inicio, $tz),
+                'fim' => Carbon::parse($bloqueio->fim, $tz),
+            ]);
         $agora  = Carbon::now($tz);
         $cursor = $inicio->copy();
         while ($cursor->copy()->addMinutes($duracao)->lte($fim)) {
@@ -62,6 +71,8 @@ class Profissional extends Model
             if ($cursor->gt($agora)) {
                 $ocupado = $agendadosCollection->contains(
                     fn ($a) => $cursor->lt($a['fim']) && $slotFim->gt($a['inicio'])
+                ) || $bloqueios->contains(
+                    fn ($bloqueio) => $cursor->lt($bloqueio['fim']) && $slotFim->gt($bloqueio['inicio'])
                 );
                 $slots[] = ['hora' => $hora, 'disponivel' => ! $ocupado];
             }
