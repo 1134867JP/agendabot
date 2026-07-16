@@ -12,77 +12,54 @@ use Inertia\Response;
 
 class LogController extends Controller
 {
-    private const MAX_LINES  = 2000; // linhas varridas do final do arquivo
-    private const MAX_ENTRIES = 150; // entradas retornadas
+    private const MAX_LINES = 2000;
+    private const MAX_ENTRIES = 150;
 
     public function index(): Response
     {
-        $tenants = Tenant::where('ativo', true)->orderBy('nome')->get(['id', 'nome', 'slug']);
-        return Inertia::render('SuperAdmin/Logs', ['tenants' => $tenants]);
+        return Inertia::render('SuperAdmin/Logs', [
+            'tenants' => Tenant::where('ativo', true)->orderBy('nome')->get(['id', 'nome', 'slug']),
+        ]);
     }
 
     public function json(Request $request): JsonResponse
     {
-        $nivel     = strtoupper($request->query('nivel', 'all'));
-        $canal     = $request->query('canal', 'laravel'); // laravel | jobs | db
-        $tenantId  = $request->query('tenant_id');
-        $hoje      = now()->format('Y-m-d');
-
-        // Buscar slug/nome do tenant para filtrar nas linhas de log
-        $tenantFiltro = null;
-        if ($tenantId) {
-            $tenant = Tenant::find($tenantId);
-            $tenantFiltro = $tenant ? $tenant->slug : null;
-        }
+        $nivel = strtoupper((string) $request->query('nivel', 'all'));
+        $canal = (string) $request->query('canal', 'laravel');
+        $tenantId = $request->integer('tenant_id') ?: null;
+        $tenant = $tenantId ? Tenant::find($tenantId) : null;
+        $hoje = now()->format('Y-m-d');
 
         $path = match ($canal) {
             'jobs' => storage_path("logs/jobs-{$hoje}.log"),
-            'db'   => storage_path("logs/db-{$hoje}.log"),
-            default => storage_path('logs/laravel.log'),
+            'db' => storage_path("logs/db-{$hoje}.log"),
+            default => $this->arquivoSistema($hoje),
         };
 
         if (! file_exists($path)) {
             return response()->json(['entries' => [], 'size' => 0, 'arquivo' => basename($path)]);
         }
 
-        $size  = filesize($path);
-        $lines = $this->lerUltimasLinhas($path, self::MAX_LINES);
         $entries = [];
-
-        foreach ($lines as $line) {
-            // Formato Laravel: [2026-01-01 12:00:00] production.ERROR: mensagem {"context":...}
-            if (! preg_match('/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] \w+\.(ERROR|WARNING|INFO|DEBUG): (.+)$/s', rtrim($line), $m)) {
+        foreach ($this->lerUltimasLinhas($path, self::MAX_LINES) as $line) {
+            if (! preg_match('/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] [^.]+\.(ERROR|WARNING|INFO|DEBUG): (.+)$/s', rtrim($line), $m)) {
                 continue;
             }
 
-            $lvl = $m[2];
-
-            if ($nivel !== 'ALL' && $lvl !== $nivel) {
+            if ($nivel !== 'ALL' && $m[2] !== $nivel) {
                 continue;
             }
 
-            // Separar mensagem do contexto JSON
-            $raw     = $m[3];
-            $context = null;
-            $msg     = $raw;
+            [$message, $context] = $this->separarContexto($m[3]);
 
-            if (preg_match('/^(.+?)(\s*\{.+\}|\s*\[.+\])$/s', $raw, $parts)) {
-                $msg     = trim($parts[1]);
-                $decoded = json_decode(trim($parts[2]), true);
-                if (json_last_error() === JSON_ERROR_NONE) {
-                    $context = $decoded;
-                }
-            }
-
-            // Filtro por tenant: busca slug no texto da linha
-            if ($tenantFiltro && ! str_contains(strtolower($line), strtolower($tenantFiltro))) {
+            if ($tenant && ! $this->pertenceAoTenant($line, $context, $tenant)) {
                 continue;
             }
 
             $entries[] = [
-                'at'      => $m[1],
-                'level'   => $lvl,
-                'message' => substr($msg, 0, 800),
+                'at' => $m[1],
+                'level' => $m[2],
+                'message' => substr($message, 0, 800),
                 'context' => $context,
             ];
 
@@ -93,7 +70,7 @@ class LogController extends Controller
 
         return response()->json([
             'entries' => $entries,
-            'size'    => $size,
+            'size' => filesize($path),
             'arquivo' => basename($path),
         ]);
     }
@@ -104,55 +81,86 @@ class LogController extends Controller
             return Inertia::render('SuperAdmin/LogsConversas');
         }
 
-        $tenantId = $request->query('tenant_id');
-        $telefone = $request->query('telefone');
-
-        $query = Mensagem::with('conversa.tenant')
-            ->latest('enviada_em')
-            ->limit(200);
-
-        if ($tenantId) {
-            $query->whereHas('conversa', fn ($q) => $q->where('tenant_id', $tenantId));
+        $query = Mensagem::with('conversa.tenant')->latest('enviada_em')->limit(200);
+        if ($request->filled('tenant_id')) {
+            $query->whereHas('conversa', fn ($q) => $q->where('tenant_id', $request->integer('tenant_id')));
         }
-        if ($telefone) {
+        if ($request->filled('telefone')) {
+            $telefone = (string) $request->query('telefone');
             $query->whereHas('conversa', fn ($q) => $q->where('telefone_cliente', 'like', "%{$telefone}%"));
         }
 
-        $mensagens = $query->get()->map(fn ($m) => [
-            'id'         => $m->id,
-            'tenant'     => $m->conversa?->tenant?->nome,
-            'telefone'   => $m->conversa?->telefone_cliente,
-            'remetente'  => $m->remetente,
-            'conteudo'   => $m->conteudo,
-            'enviada_em' => $m->enviada_em?->format('d/m H:i:s'),
+        return response()->json([
+            'mensagens' => $query->get()->map(fn ($m) => [
+                'id' => $m->id,
+                'tenant' => $m->conversa?->tenant?->nome,
+                'telefone' => $this->mascararTelefone($m->conversa?->telefone_cliente),
+                'remetente' => $m->remetente,
+                'conteudo' => '[conteúdo oculto no painel operacional]',
+                'enviada_em' => $m->enviada_em?->format('d/m H:i:s'),
+            ]),
+            'tenants' => Tenant::where('ativo', true)->orderBy('nome')->get(['id', 'nome']),
         ]);
-
-        $tenants = Tenant::where('ativo', true)->orderBy('nome')->get(['id', 'nome']);
-
-        return response()->json(['mensagens' => $mensagens, 'tenants' => $tenants]);
     }
 
-    /** Lê as últimas $n linhas do arquivo de trás para frente sem carregar tudo na memória. */
-    private function lerUltimasLinhas(string $path, int $n): array
+    private function arquivoSistema(string $hoje): string
     {
-        $fp    = fopen($path, 'rb');
-        $pos   = filesize($path);
-        $buf   = '';
-        $count = 0;
-        $chunk = 4096;
+        $daily = storage_path("logs/laravel-{$hoje}.log");
+        return file_exists($daily) ? $daily : storage_path('logs/laravel.log');
+    }
 
-        while ($pos > 0 && $count < $n) {
-            $read  = min($chunk, $pos);
-            $pos  -= $read;
-            fseek($fp, $pos);
-            $buf   = fread($fp, $read) . $buf;
-            $count = substr_count($buf, "\n");
+    private function mascararTelefone(?string $telefone): ?string
+    {
+        if (! $telefone) {
+            return null;
         }
 
+        $digitos = preg_replace('/\D+/', '', $telefone);
+        return str_repeat('*', max(0, strlen($digitos) - 4)).substr($digitos, -4);
+    }
+
+    private function separarContexto(string $raw): array
+    {
+        if (preg_match('/^(.+?)(\s*\{.+\}|\s*\[.+\])$/s', $raw, $parts)) {
+            $decoded = json_decode(trim($parts[2]), true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                return [trim($parts[1]), $decoded];
+            }
+        }
+
+        return [$raw, null];
+    }
+
+    private function pertenceAoTenant(string $line, ?array $context, Tenant $tenant): bool
+    {
+        $contextTenant = data_get($context, 'tenant_id')
+            ?? data_get($context, 'tenant.id')
+            ?? data_get($context, 'context.tenant_id');
+
+        if ($contextTenant !== null) {
+            return (int) $contextTenant === (int) $tenant->id;
+        }
+
+        $line = strtolower($line);
+        return str_contains($line, strtolower($tenant->slug))
+            || str_contains($line, '"tenant_id":'.$tenant->id)
+            || str_contains($line, 'tenant #'.$tenant->id);
+    }
+
+    private function lerUltimasLinhas(string $path, int $n): array
+    {
+        $fp = fopen($path, 'rb');
+        $pos = filesize($path);
+        $buffer = '';
+
+        while ($pos > 0 && substr_count($buffer, "\n") < $n) {
+            $read = min(4096, $pos);
+            $pos -= $read;
+            fseek($fp, $pos);
+            $buffer = fread($fp, $read).$buffer;
+        }
         fclose($fp);
 
-        $lines = array_reverse(explode("\n", trim($buf)));
-
-        return array_slice($lines, 0, $n);
+        return array_slice(array_reverse(explode("\n", trim($buffer))), 0, $n);
     }
 }
