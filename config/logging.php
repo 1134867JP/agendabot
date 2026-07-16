@@ -136,6 +136,7 @@ return [
             'path' => storage_path('logs/db.log'),
             'level' => 'debug',
             'days' => 7,
+            'tap' => [RedactSensitiveData::class],
         ],
 
         // Log separado para Jobs e integrações (WhatsApp, Claude, Asaas)
