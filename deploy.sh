@@ -42,6 +42,13 @@ docker compose rm -f worker worker-batch scheduler 2>/dev/null || true
 echo "--- recriando container app ---"
 docker compose up -d --no-deps --force-recreate app
 
+echo "--- ajustando permissões do storage ---"
+docker exec -u root agendabot-app sh -c '
+mkdir -p /var/www/html/storage/app/private/whatsapp-backups &&
+chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache &&
+chmod -R ug+rwX /var/www/html/storage /var/www/html/bootstrap/cache
+'
+
 echo "--- aguardando app subir ---"
 for i in $(seq 1 12); do
     if docker exec agendabot-app curl -fsS http://127.0.0.1/health > /dev/null 2>&1; then
