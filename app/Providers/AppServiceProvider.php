@@ -114,7 +114,8 @@ class AppServiceProvider extends ServiceProvider
 
     private function registrarAuditoriaDml(): void
     {
-        if (! config('app.db_query_log', true)) {
+        // A auditoria é operacional e não deve interferir em testes que mockam a facade Log.
+        if ($this->app->environment('testing') || ! config('app.db_query_log', true)) {
             return;
         }
 
