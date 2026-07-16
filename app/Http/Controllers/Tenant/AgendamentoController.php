@@ -57,16 +57,22 @@ class AgendamentoController extends Controller
     {
         $tenant = app('tenant');
 
+        $request->merge([
+            'cliente_telefone' => preg_replace('/\D+/', '', (string) $request->input('cliente_telefone')),
+        ]);
+
         $tenantId = $tenant->id;
         $validated = $request->validate([
             'recurso_id' => ['nullable', 'integer', Rule::exists('recursos', 'id')->where('tenant_id', $tenantId)],
             'profissional_id' => ['nullable', 'integer', Rule::exists('profissionais', 'id')->where('tenant_id', $tenantId)],
             'cliente_nome' => ['required', 'string', 'max:255'],
-            'cliente_telefone' => ['required', 'string', 'max:20'],
+            'cliente_telefone' => ['required', 'string', 'regex:/^(?:55)?[1-9][0-9]{9,10}$/'],
             'inicio' => ['required', 'date'],
             'fim' => ['required', 'date', 'after:inicio'],
             'observacoes' => ['nullable', 'string'],
             'notificar_cliente' => ['boolean'],
+        ], [
+            'cliente_telefone.regex' => 'Informe um telefone válido com DDD, por exemplo: 54999999999.',
         ]);
 
         if (empty($validated['recurso_id']) && empty($validated['profissional_id'])) {
@@ -111,14 +117,20 @@ class AgendamentoController extends Controller
         $tenant = app('tenant');
         abort_unless($agendamento->tenant_id === $tenant->id, 403);
 
+        $request->merge([
+            'cliente_telefone' => preg_replace('/\D+/', '', (string) $request->input('cliente_telefone')),
+        ]);
+
         $validated = $request->validate([
             'recurso_id' => ['nullable', 'integer', Rule::exists('recursos', 'id')->where('tenant_id', $tenant->id)],
             'cliente_nome' => ['required', 'string', 'max:255'],
-            'cliente_telefone' => ['required', 'string', 'max:20'],
+            'cliente_telefone' => ['required', 'string', 'regex:/^(?:55)?[1-9][0-9]{9,10}$/'],
             'inicio' => ['required', 'date'],
             'fim' => ['required', 'date', 'after:inicio'],
             'observacoes' => ['nullable', 'string'],
             'status' => ['nullable', 'in:confirmado,cancelado,concluido'],
+        ], [
+            'cliente_telefone.regex' => 'Informe um telefone válido com DDD, por exemplo: 54999999999.',
         ]);
 
         try {
