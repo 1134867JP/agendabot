@@ -7,6 +7,7 @@ use App\Models\OperationalEvent;
 use App\Support\FailedJobsFormatter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -106,6 +107,9 @@ class JobsController extends Controller
     private function statsQueue(array $fila): array
     {
         try {
+            $workerLastSeen = Cache::get('queue_worker_last_seen_at');
+            $workerHealthy = $workerLastSeen && now()->diffInSeconds($workerLastSeen) <= 120;
+
             return [
                 'failed' => DB::table('failed_jobs')->count(),
                 'pending' => count(array_filter($fila, fn ($job) => $job['status'] === 'waiting')),
@@ -113,9 +117,11 @@ class JobsController extends Controller
                 'delayed' => count(array_filter($fila, fn ($job) => $job['status'] === 'delayed')),
                 'total' => DB::table('jobs')->count(),
                 'oldest_wait_seconds' => collect($fila)->where('status', 'waiting')->max('waiting_seconds') ?? 0,
+                'worker_status' => $workerHealthy ? 'online' : 'offline',
+                'worker_last_seen_at' => $workerLastSeen,
             ];
         } catch (\Throwable) {
-            return ['failed' => 0, 'pending' => 0, 'processing' => 0, 'delayed' => 0, 'total' => 0, 'oldest_wait_seconds' => 0];
+            return ['failed' => 0, 'pending' => 0, 'processing' => 0, 'delayed' => 0, 'total' => 0, 'oldest_wait_seconds' => 0, 'worker_status' => 'unknown', 'worker_last_seen_at' => null];
         }
     }
 
