@@ -43,26 +43,11 @@ class ConversaSyncService
             return null;
         }
 
-        $nomeInicial = $pushName ?? 'Cliente WhatsApp';
-        $cliente = $this->firstOrCreateSafe(
-            Cliente::class,
-            ['tenant_id' => $tenant->id, 'telefone' => $telefone],
-            ['nome' => $nomeInicial],
+        [, $conversa] = $this->upsertClienteEConversa(
+            $tenant,
+            $telefone,
+            $this->nomeValido($pushName),
         );
-
-        if ($pushName && $cliente->nome === 'Cliente WhatsApp') {
-            $cliente->update(['nome' => $pushName]);
-        }
-
-        $conversa = $this->firstOrCreateSafe(
-            Conversa::class,
-            ['tenant_id' => $tenant->id, 'telefone_cliente' => $telefone],
-            ['status_v2' => 'ativa', 'cliente_id' => $cliente->id],
-        );
-
-        if (! $conversa->cliente_id) {
-            $conversa->update(['cliente_id' => $cliente->id]);
-        }
 
         try {
             return DB::transaction(fn () => $conversa->registrarMensagem('cliente', $conteudo, $evolutionMessageId, $tipo));
@@ -162,10 +147,9 @@ class ConversaSyncService
         }
 
         $lastMsgFromMe = (bool) data_get($chat, 'lastMessage.key.fromMe', false);
-        $nomeChat = $this->nomeValido($nomesPorTelefone[$telefone] ?? null)
-            ?? $this->nomeValido($nomesPorTelefone[$this->normalizar($telefone)] ?? null)
-            ?? $this->nomeValido(data_get($chat, 'pushName'))
-            ?? ($lastMsgFromMe ? null : $this->nomeValido(data_get($chat, 'lastMessage.pushName')));
+        $nomeChat = $this->buscarNomeNoMapa($nomesPorTelefone, $telefone)
+            ?? $this->extrairNome($chat)
+            ?? ($lastMsgFromMe ? null : $this->extrairNome((array) data_get($chat, 'lastMessage', [])));
 
         if (! $nomeChat) {
             foreach ($msgs as $msg) {
@@ -173,7 +157,7 @@ class ConversaSyncService
                     continue;
                 }
 
-                $nomeChat = $this->nomeValido(data_get($msg, 'pushName'));
+                $nomeChat = $this->extrairNome($msg);
                 if ($nomeChat) {
                     break;
                 }
@@ -232,8 +216,8 @@ class ConversaSyncService
         }
 
         $lastMsgFromMe = (bool) data_get($chat, 'lastMessage.key.fromMe', false);
-        $nomeChat = $this->nomeValido(data_get($chat, 'pushName'))
-            ?? ($lastMsgFromMe ? null : $this->nomeValido(data_get($chat, 'lastMessage.pushName')));
+        $nomeChat = $this->extrairNome($chat)
+            ?? ($lastMsgFromMe ? null : $this->extrairNome((array) data_get($chat, 'lastMessage', [])));
 
         [, $conversa] = $this->upsertClienteEConversa($tenant, $telefone, $nomeChat);
 
@@ -256,23 +240,24 @@ class ConversaSyncService
             data_get($contato, 'phoneNumber'),
             $jid,
         ]);
-        $nome = $this->nomeValido(
-            data_get($contato, 'pushName') ?? data_get($contato, 'notify') ?? data_get($contato, 'name')
-        );
+        $nome = $this->extrairNome($contato);
 
         if (! $telefone || ! $nome) {
             return null;
         }
 
-        $cliente = Cliente::firstOrCreate(
-            ['tenant_id' => $tenant->id, 'telefone' => $telefone],
-            ['nome' => $nome]
-        );
+        $cliente = $this->encontrarMelhorCliente($tenant, $telefone)
+            ?? $this->firstOrCreateSafe(
+                Cliente::class,
+                ['tenant_id' => $tenant->id, 'telefone' => $telefone],
+                ['nome' => $nome],
+            );
 
-        $ehPlaceholder = $cliente->nome === $telefone || in_array(strtolower(trim($cliente->nome)), self::NOMES_INVALIDOS, true);
-        if ($ehPlaceholder && $nome !== $cliente->nome) {
+        if ($this->nomeEhPlaceholder($cliente->nome) && $nome !== $cliente->nome) {
             $cliente->update(['nome' => $nome]);
         }
+
+        $this->reconciliarConversasDoCliente($tenant, $telefone, $cliente);
 
         return $cliente;
     }
@@ -316,11 +301,7 @@ class ConversaSyncService
         $mapa = [];
 
         foreach ($contatos as $contato) {
-            $nome = $this->nomeValido(
-                data_get($contato, 'pushName')
-                    ?? data_get($contato, 'notify')
-                    ?? data_get($contato, 'name')
-            );
+            $nome = $this->extrairNome($contato);
             $telefone = $this->primeiroTelefoneValido([
                 data_get($contato, 'remoteJidAlt'),
                 data_get($contato, 'phoneNumber'),
@@ -333,8 +314,9 @@ class ConversaSyncService
                 continue;
             }
 
-            $mapa[$telefone] = $nome;
-            $mapa[$this->normalizar($telefone)] = $nome;
+            foreach ($this->variantesTelefone($telefone) as $variante) {
+                $mapa[$variante] = $nome;
+            }
         }
 
         return $mapa;
@@ -512,15 +494,34 @@ class ConversaSyncService
      */
     private function upsertClienteEConversa(Tenant $tenant, string $telefone, ?string $nomeChat): array
     {
-        $cliente = Cliente::firstOrCreate(
+        $variantes = $this->variantesTelefone($telefone);
+        $conversas = Conversa::where('tenant_id', $tenant->id)
+            ->whereIn('telefone_cliente', $variantes)
+            ->with('cliente')
+            ->get();
+        $conversa = $conversas->firstWhere('telefone_cliente', $telefone) ?? $conversas->first();
+
+        $cliente = $conversa?->cliente && ! $this->nomeEhPlaceholder($conversa->cliente->nome)
+            ? $conversa->cliente
+            : $this->encontrarMelhorCliente($tenant, $telefone);
+
+        $cliente ??= $this->firstOrCreateSafe(
+            Cliente::class,
             ['tenant_id' => $tenant->id, 'telefone' => $telefone],
-            ['nome' => $nomeChat ?? $telefone]
+            ['nome' => $nomeChat ?? $telefone],
         );
 
-        $conversa = Conversa::firstOrCreate(
+        $conversa ??= $this->firstOrCreateSafe(
+            Conversa::class,
             ['tenant_id' => $tenant->id, 'telefone_cliente' => $telefone],
-            ['cliente_id' => $cliente->id, 'status_v2' => 'ativa']
+            ['cliente_id' => $cliente->id, 'status_v2' => 'ativa'],
         );
+
+        $clienteAtual = $conversa->cliente;
+        if (! $conversa->cliente_id || ($clienteAtual && $this->nomeEhPlaceholder($clienteAtual->nome))) {
+            $conversa->update(['cliente_id' => $cliente->id]);
+            $conversa->setRelation('cliente', $cliente);
+        }
 
         $this->atualizarNomeSePlaceholder($cliente, $conversa, $nomeChat);
 
@@ -529,13 +530,83 @@ class ConversaSyncService
 
     private function atualizarNomeSePlaceholder(Cliente $cliente, Conversa $conversa, ?string $nomeChat): void
     {
-        $ehPlaceholder = $cliente->nome === $cliente->telefone
-            || in_array(strtolower(trim($cliente->nome)), self::NOMES_INVALIDOS, true);
-
-        if ($nomeChat && $ehPlaceholder) {
+        if ($nomeChat && $this->nomeEhPlaceholder($cliente->nome)) {
             $cliente->update(['nome' => $nomeChat]);
-            $conversa->cliente()->update(['nome' => $nomeChat]);
         }
+    }
+
+    private function encontrarMelhorCliente(Tenant $tenant, string $telefone): ?Cliente
+    {
+        $clientes = Cliente::where('tenant_id', $tenant->id)
+            ->whereIn('telefone', $this->variantesTelefone($telefone))
+            ->get();
+
+        $exato = $clientes->firstWhere('telefone', $telefone);
+        if ($exato && ! $this->nomeEhPlaceholder($exato->nome)) {
+            return $exato;
+        }
+
+        return $clientes->first(fn (Cliente $cliente) => ! $this->nomeEhPlaceholder($cliente->nome))
+            ?? $exato
+            ?? $clientes->first();
+    }
+
+    private function reconciliarConversasDoCliente(Tenant $tenant, string $telefone, Cliente $cliente): void
+    {
+        $conversas = Conversa::where('tenant_id', $tenant->id)
+            ->whereIn('telefone_cliente', $this->variantesTelefone($telefone))
+            ->with('cliente')
+            ->get();
+
+        foreach ($conversas as $conversa) {
+            if (! $conversa->cliente_id || $this->nomeEhPlaceholder($conversa->cliente?->nome)) {
+                $conversa->update(['cliente_id' => $cliente->id]);
+            }
+        }
+    }
+
+    private function buscarNomeNoMapa(array $nomesPorTelefone, string $telefone): ?string
+    {
+        foreach ($this->variantesTelefone($telefone) as $variante) {
+            $nome = $this->nomeValido($nomesPorTelefone[$variante] ?? null);
+            if ($nome) {
+                return $nome;
+            }
+        }
+
+        return null;
+    }
+
+    private function extrairNome(array $fonte): ?string
+    {
+        $campos = [
+            'name', 'contactName', 'savedName', 'formattedName', 'fullName', 'shortName',
+            'pushName', 'notify', 'verifiedName', 'businessName', 'senderName',
+            'contact.name', 'contact.pushName',
+        ];
+
+        foreach ($campos as $campo) {
+            $valor = data_get($fonte, $campo);
+            $nome = is_string($valor) ? $this->nomeValido($valor) : null;
+
+            if ($nome) {
+                return $nome;
+            }
+        }
+
+        return null;
+    }
+
+    private function nomeEhPlaceholder(?string $nome): bool
+    {
+        if (! $nome) {
+            return true;
+        }
+
+        $limpo = trim($nome);
+
+        return preg_match('/^\+?[\d\s().-]+$/', $limpo) === 1
+            || in_array(strtolower($limpo), self::NOMES_INVALIDOS, true);
     }
 
     /**
@@ -543,10 +614,11 @@ class ConversaSyncService
      */
     private function nomeValido(?string $nome): ?string
     {
-        if (! $nome || in_array(strtolower(trim($nome)), self::NOMES_INVALIDOS, true)) {
+        if ($this->nomeEhPlaceholder($nome)) {
             return null;
         }
-        return $nome;
+
+        return trim($nome);
     }
 
     private function limparJid(string $jid): string
@@ -569,11 +641,25 @@ class ConversaSyncService
         return str_contains($tel, '-');
     }
 
-    private function normalizar(string $tel): string
+    private function variantesTelefone(string $telefone): array
     {
-        if (strlen($tel) === 13 && str_starts_with($tel, '55')) {
-            return '55' . substr($tel, 2, 2) . substr($tel, 5);
+        $telefone = preg_replace('/\D/', '', $telefone);
+        $variantes = [$telefone];
+
+        if (str_starts_with($telefone, '55') && strlen($telefone) === 13 && $telefone[4] === '9') {
+            $variantes[] = substr($telefone, 0, 4).substr($telefone, 5);
+        } elseif (str_starts_with($telefone, '55') && strlen($telefone) === 12) {
+            $variantes[] = substr($telefone, 0, 4).'9'.substr($telefone, 4);
+        } elseif (strlen($telefone) === 11) {
+            $variantes[] = '55'.$telefone;
+            if ($telefone[2] === '9') {
+                $variantes[] = '55'.substr($telefone, 0, 2).substr($telefone, 3);
+            }
+        } elseif (strlen($telefone) === 10) {
+            $variantes[] = '55'.$telefone;
+            $variantes[] = '55'.substr($telefone, 0, 2).'9'.substr($telefone, 2);
         }
-        return $tel;
+
+        return array_values(array_unique(array_filter($variantes)));
     }
 }
