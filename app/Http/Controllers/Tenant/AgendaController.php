@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agendamento;
+use App\Models\BloqueioAgenda;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -73,8 +74,7 @@ class AgendaController extends Controller
 
         $tz = new \DateTimeZone('America/Sao_Paulo');
 
-        return response()->json(
-            $query->get()->map(function ($a) use ($tz) {
+        $agendamentos = $query->get()->map(function ($a) use ($tz) {
                 $inicio = $a->inicio ?? $a->data_hora;
                 $fimRaw = $a->fim ?? ($a->data_hora
                     ? Carbon::parse($a->data_hora)->addMinutes($a->duracao_minutos ?? 30)
@@ -85,6 +85,7 @@ class AgendaController extends Controller
                     : null;
 
                 return [
+                    'tipo'        => 'agendamento',
                     'id'          => $a->id,
                     'title'       => $a->cliente_nome,
                     'start'       => $fmtSP($inicio),
@@ -97,7 +98,40 @@ class AgendaController extends Controller
                     'profissional_nome' => $a->profissional?->nome,
                     'servico_nome' => $a->servico?->nome,
                 ];
-            })
-        );
+            });
+
+        $bloqueiosQuery = BloqueioAgenda::where('tenant_id', $tenant->id)
+            ->where('inicio', '<', $dataFim)
+            ->where('fim', '>', $request->data_inicio)
+            ->with('profissional:id,nome');
+
+        if ($request->filled('recurso_id')) {
+            $bloqueiosQuery->where('recurso_id', $request->recurso_id);
+        } elseif ($request->filled('profissional_id')) {
+            $bloqueiosQuery->where('profissional_id', $request->profissional_id);
+        } else {
+            $bloqueiosQuery->whereNotNull('profissional_id');
+        }
+
+        $bloqueios = $bloqueiosQuery->get()->map(function (BloqueioAgenda $bloqueio) use ($tz) {
+            $fmtSP = fn ($dt) => Carbon::parse($dt)->setTimezone($tz)->format('Y-m-d\TH:i:s');
+
+            return [
+                'id' => $bloqueio->id,
+                'tipo' => 'bloqueio',
+                'title' => $bloqueio->motivo ?: 'Horário bloqueado',
+                'start' => $fmtSP($bloqueio->inicio),
+                'end' => $fmtSP($bloqueio->fim),
+                'telefone' => '',
+                'status' => 'bloqueado',
+                'valor_total' => null,
+                'origem' => 'manual',
+                'profissional_id' => $bloqueio->profissional_id,
+                'profissional_nome' => $bloqueio->profissional?->nome,
+                'servico_nome' => null,
+            ];
+        });
+
+        return response()->json($agendamentos->concat($bloqueios)->values());
     }
 }
