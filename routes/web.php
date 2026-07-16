@@ -118,6 +118,7 @@ Route::middleware('auth')->group(function () {
         Route::get('conversas', [ConversaController::class, 'index'])->name('conversas.index');
         Route::get('conversas/notificacoes', [ConversaController::class, 'notificacoes'])->name('conversas.notificacoes');
         Route::post('conversas/{conversa}/marcar-lida', [ConversaController::class, 'marcarLida'])->name('conversas.marcar-lida');
+        Route::patch('conversas/{conversa}/cliente/nome', [ConversaController::class, 'atualizarNomeCliente'])->name('conversas.cliente.nome');
         Route::post('conversas/iniciar', [ConversaController::class, 'iniciar'])->name('conversas.iniciar');
         Route::get('conversas/sincronizacao/status', [ConversaController::class, 'statusSincronizacao'])->name('conversas.sincronizacao.status');
         Route::post('conversas/sincronizar', [ConversaController::class, 'sincronizar'])->name('conversas.sincronizar');
