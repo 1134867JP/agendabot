@@ -111,6 +111,7 @@ Route::middleware('auth')->group(function () {
 
         // Clientes
         Route::get('clientes', [ClienteController::class, 'index'])->name('clientes.index');
+        Route::post('clientes', [ClienteController::class, 'store'])->name('clientes.store');
         Route::delete('clientes', [ClienteController::class, 'destroyBulk'])->name('clientes.destroy-bulk');
         Route::get('clientes/buscar', [ClienteController::class, 'search'])->name('clientes.search');
         Route::get('clientes/{cliente}', [ClienteController::class, 'show'])->name('clientes.show');
