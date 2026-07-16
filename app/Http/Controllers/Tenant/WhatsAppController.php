@@ -4,16 +4,24 @@ namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Services\EvolutionApiService;
+use App\Services\WhatsAppConversationBackupService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class WhatsAppController extends Controller
 {
-    public function __construct(private EvolutionApiService $evolution) {}
+    public function __construct(
+        private EvolutionApiService $evolution,
+        private WhatsAppConversationBackupService $backups,
+    ) {}
 
     private function webhookUrl(\App\Models\Tenant $tenant): string
     {
@@ -21,7 +29,7 @@ class WhatsAppController extends Controller
             $tenant->update(['webhook_token' => Str::random(32)]);
             $tenant->refresh();
         }
-        return route('webhook', $tenant->slug) . '?token=' . $tenant->webhook_token;
+        return route('webhook', $tenant->slug);
     }
 
     public function index(): Response
@@ -30,6 +38,7 @@ class WhatsAppController extends Controller
 
         return Inertia::render('Tenant/WhatsApp', [
             'tenant' => $tenant,
+            'ultimo_backup' => $this->backups->ultimoBackup($tenant),
         ]);
     }
 
@@ -51,14 +60,14 @@ class WhatsAppController extends Controller
         // Já conectado — garantir webhook atualizado e avisar o frontend
         if ($status === 'open') {
             $tenant->update(['whatsapp_conectado' => true]);
-            $this->evolution->configurarWebhook($instance, $webhookUrl);
+            $this->evolution->configurarWebhook($instance, $webhookUrl, $tenant->webhook_token);
             return response()->json(['connected' => true]);
         }
 
         // Instância não existe — criar e configurar webhook
         if ($status === 'desconhecido') {
             $result = $this->evolution->criarInstancia($instance);
-            $this->evolution->configurarWebhook($instance, $webhookUrl);
+            $this->evolution->configurarWebhook($instance, $webhookUrl, $tenant->webhook_token);
 
             $qrcode = data_get($result, 'qrcode.base64') ?? data_get($result, 'base64');
             if ($qrcode) {
@@ -67,7 +76,7 @@ class WhatsAppController extends Controller
         }
 
         // Instância existe mas não conectada — garantir webhook atualizado e buscar QR
-        $this->evolution->configurarWebhook($instance, $webhookUrl);
+        $this->evolution->configurarWebhook($instance, $webhookUrl, $tenant->webhook_token);
         $qrcode = $this->evolution->obterQrCode($instance);
         return response()->json(['qrcode' => $qrcode]);
     }
@@ -76,15 +85,52 @@ class WhatsAppController extends Controller
     {
         $tenant = app('tenant');
 
-        if (!$tenant->evolution_instance) {
+        if (! $tenant->evolution_instance) {
             return response()->json(['ok' => false, 'erro' => 'Instância não configurada.'], 400);
         }
 
-        $ok = $this->evolution->desconectar($tenant->evolution_instance);
+        if (! $this->evolution->desconectar($tenant->evolution_instance)) {
+            return response()->json([
+                'ok' => false,
+                'erro' => 'O WhatsApp não confirmou a desconexão. Nada foi removido.',
+            ], 502);
+        }
 
         $tenant->update(['whatsapp_conectado' => false]);
+        Cache::forget("sync_whatsapp_tenant_{$tenant->id}");
 
-        return response()->json(['ok' => $ok]);
+        try {
+            $backup = $this->backups->criarBackup($tenant);
+            $limpeza = $this->backups->limparConversas($tenant);
+        } catch (\Throwable $e) {
+            Log::error('WHATSAPP_BACKUP_FALHOU', [
+                'tenant' => $tenant->id,
+                'erro' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'ok' => false,
+                'desconectado' => true,
+                'erro' => 'WhatsApp desconectado, mas o backup falhou. As conversas foram preservadas.',
+            ], 500);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'backup' => $backup,
+            'limpeza' => $limpeza,
+        ]);
+    }
+
+    public function baixarBackup(string $arquivo): StreamedResponse
+    {
+        $tenant = app('tenant');
+        $caminho = $this->backups->caminho($tenant, $arquivo);
+
+        return Storage::disk('local')->download($caminho, $arquivo, [
+            'Content-Type' => 'application/json; charset=UTF-8',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     public function status(): JsonResponse

@@ -42,6 +42,12 @@ class SincronizarConversasLimiteTest extends TestCase
             $chats[] = [
                 'remoteJid' => "55519990000{$i}@s.whatsapp.net",
                 'updatedAt' => now()->subMinutes($i)->toIso8601String(),
+                'lastMessage' => [
+                    'key' => ['id' => "MSG-LIMITE-{$i}", 'fromMe' => false],
+                    'messageType' => 'conversation',
+                    'message' => ['conversation' => "Mensagem {$i}"],
+                    'messageTimestamp' => now()->subMinutes($i)->timestamp,
+                ],
             ];
         }
 
@@ -73,6 +79,47 @@ class SincronizarConversasLimiteTest extends TestCase
                 'telefone'  => "55519990000{$i}",
             ]);
         }
+    }
+
+    public function test_nao_cria_clientes_ou_conversas_para_chats_sem_mensagens(): void
+    {
+        $this->mock(EvolutionApiService::class, function ($mock) {
+            $mock->shouldReceive('fetchContacts')->andReturn([]);
+            $mock->shouldReceive('fetchChats')->andReturn([
+                ['remoteJid' => '5551999999999@s.whatsapp.net'],
+            ]);
+            $mock->shouldReceive('fetchMessages')->andReturn([]);
+        });
+
+        (new SincronizarConversasWhatsappJob($this->tenant))->handle(
+            app(EvolutionApiService::class),
+            app(ConversaSyncService::class),
+        );
+
+        $this->assertDatabaseMissing('clientes', [
+            'tenant_id' => $this->tenant->id,
+            'telefone' => '5551999999999',
+        ]);
+        $this->assertDatabaseCount('conversas', 0);
+    }
+
+    public function test_resolve_numero_real_quando_whatsapp_envia_identificador_lid(): void
+    {
+        $sync = app(ConversaSyncService::class);
+
+        $this->assertSame(
+            '5551999999999',
+            $sync->resolverTelefoneMensagem([
+                'key' => [
+                    'remoteJid' => '123456789012345@lid',
+                    'remoteJidAlt' => '5551999999999@s.whatsapp.net',
+                ],
+            ]),
+        );
+
+        $this->assertNull($sync->resolverTelefoneMensagem([
+            'key' => ['remoteJid' => '123456789012345@lid'],
+        ]));
     }
 
     public function test_chatsrecenteslimitados_ordena_do_mais_recente_para_o_mais_antigo(): void

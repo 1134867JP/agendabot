@@ -3,11 +3,19 @@ import { useState, useEffect, useRef } from 'react';
 import ConfiguracoesLayout from '@/Layouts/ConfiguracoesLayout';
 import { PageProps, Tenant } from '@/types';
 
-interface Props extends PageProps {
-    tenant: Tenant;
+interface BackupInfo {
+    arquivo: string;
+    tamanho: number;
+    criado_em: string;
+    url: string;
 }
 
-export default function WhatsAppPage({ tenant }: Props) {
+interface Props extends PageProps {
+    tenant: Tenant;
+    ultimo_backup: BackupInfo | null;
+}
+
+export default function WhatsAppPage({ tenant, ultimo_backup }: Props) {
     const [conectado, setConectado] = useState(tenant.whatsapp_conectado);
     const [qrcode, setQrcode] = useState<string | null>(null);
     const [qrExpirado, setQrExpirado] = useState(false);
@@ -15,6 +23,8 @@ export default function WhatsAppPage({ tenant }: Props) {
     const [desconectando, setDesconectando] = useState(false);
     const [confirmarDesconectar, setConfirmarDesconectar] = useState(false);
     const [erro, setErro] = useState('');
+    const [sucesso, setSucesso] = useState('');
+    const [ultimoBackup, setUltimoBackup] = useState<BackupInfo | null>(ultimo_backup);
     const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const expiryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -64,6 +74,7 @@ export default function WhatsAppPage({ tenant }: Props) {
     const desconectar = async () => {
         setDesconectando(true);
         setErro('');
+        setSucesso('');
         setConfirmarDesconectar(false);
         try {
             const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content;
@@ -79,7 +90,17 @@ export default function WhatsAppPage({ tenant }: Props) {
             const json = await res.json();
             if (json.ok) {
                 setConectado(false);
+                setUltimoBackup(json.backup);
+                setSucesso(`Backup criado. ${json.limpeza?.conversas ?? 0} conversas e ${json.limpeza?.mensagens ?? 0} mensagens foram removidas deste painel.`);
+
+                const download = document.createElement('a');
+                download.href = json.backup.url;
+                download.download = json.backup.arquivo;
+                document.body.appendChild(download);
+                download.click();
+                download.remove();
             } else {
+                if (json.desconectado) setConectado(false);
                 setErro(json.erro ?? 'Não foi possível desconectar. Tente novamente.');
             }
         } catch {
@@ -91,6 +112,7 @@ export default function WhatsAppPage({ tenant }: Props) {
 
     const conectar = async () => {
         setErro('');
+        setSucesso('');
         setLoading(true);
         setQrExpirado(false);
         try {
@@ -114,7 +136,7 @@ export default function WhatsAppPage({ tenant }: Props) {
     };
 
     return (
-        <ConfiguracoesLayout title="WhatsApp" subtitle="Conecte seu número para receber agendamentos automáticos">
+        <ConfiguracoesLayout title="WhatsApp" subtitle="Conecte seu número para centralizar mensagens e atendimentos">
             <Head title="WhatsApp" />
 
             <div className="mx-auto max-w-lg">
@@ -163,6 +185,12 @@ export default function WhatsAppPage({ tenant }: Props) {
                     {erro && (
                         <div className="mb-4 rounded-lg px-4 py-3 text-sm text-red-400" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
                             {erro}
+                        </div>
+                    )}
+
+                    {sucesso && (
+                        <div className="mb-4 rounded-lg px-4 py-3 text-sm" style={{ background: 'var(--jade-light)', border: '1px solid rgba(0,168,132,.25)', color: 'var(--jade)' }}>
+                            {sucesso}
                         </div>
                     )}
 
@@ -220,6 +248,21 @@ export default function WhatsAppPage({ tenant }: Props) {
                     )}
                 </div>
 
+                {ultimoBackup && (
+                    <div className="card mt-5 flex flex-col gap-4 p-4 text-left sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                        <div className="min-w-0">
+                            <p className="text-sm font-semibold text-primary">Último backup das conversas</p>
+                            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
+                                {new Date(ultimoBackup.criado_em).toLocaleString('pt-BR')} · {(ultimoBackup.tamanho / 1024).toFixed(1)} KB
+                            </p>
+                            <p className="mt-1 truncate text-[11px]" style={{ color: 'var(--text-3)' }}>{ultimoBackup.arquivo}</p>
+                        </div>
+                        <a href={ultimoBackup.url} className="btn-secondary min-h-11 shrink-0 justify-center" download>
+                            Baixar backup
+                        </a>
+                    </div>
+                )}
+
                 <div className="card mt-6 p-6">
                     <h3 className="mb-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
                         Como funciona
@@ -257,10 +300,13 @@ export default function WhatsAppPage({ tenant }: Props) {
                         <h3 className="mb-1 text-lg font-semibold" style={{ color: 'var(--text-1)', fontFamily: 'Instrument Serif, Georgia, serif' }}>
                             Desconectar WhatsApp?
                         </h3>
-                        <p className="mb-6 text-sm" style={{ color: 'var(--text-3)' }}>
-                            O bot vai parar de responder mensagens imediatamente. Para voltar a funcionar, você precisará escanear um novo QR Code.
+                        <p className="mb-3 text-sm" style={{ color: 'var(--text-3)' }}>
+                            Antes de desconectar, o sistema salvará um backup privado em JSON. Depois, as conversas e mensagens serão removidas deste painel.
                         </p>
-                        <div className="flex gap-3">
+                        <p className="mb-6 text-xs" style={{ color: 'var(--text-3)' }}>
+                            Os clientes e seus dados de relacionamento serão mantidos. Para voltar a atender, será necessário escanear um novo QR Code.
+                        </p>
+                        <div className="flex flex-col-reverse gap-3 sm:flex-row">
                             <button
                                 onClick={() => setConfirmarDesconectar(false)}
                                 className="btn-secondary flex-1 justify-center"
@@ -269,10 +315,11 @@ export default function WhatsAppPage({ tenant }: Props) {
                             </button>
                             <button
                                 onClick={desconectar}
-                                className="btn-primary flex-1 justify-center"
+                                disabled={desconectando}
+                                className="btn-primary min-h-11 flex-1 justify-center"
                                 style={{ background: 'var(--red)' }}
                             >
-                                Desconectar
+                                {desconectando ? 'Criando backup…' : 'Criar backup e desconectar'}
                             </button>
                         </div>
                     </div>

@@ -587,6 +587,13 @@ export default function AgendamentosIndex({
     filtros,
 }: Props) {
     const [modalAberto, setModalAberto] = useState(false);
+
+    useEffect(() => {
+        if (new URLSearchParams(window.location.search).get("novo") === "1") {
+            setModalAberto(true);
+        }
+    }, []);
+
     const [agendamentoEditando, setAgendamentoEditando] =
         useState<Agendamento | null>(null);
     const { confirm, modal: confirmModal } = useConfirm();
@@ -795,13 +802,17 @@ export default function AgendamentosIndex({
                                             </p>
                                             <p
                                                 className="text-xs"
-                                                style={{
-                                                    color: "var(--text-3)",
-                                                }}
+                                                style={{ color: "var(--text-3)" }}
                                             >
-                                                Ajuste os filtros ou aguarde
-                                                novos agendamentos via WhatsApp.
+                                                Ajuste os filtros ou crie uma reserva manual.
                                             </p>
+                                            <button
+                                                type="button"
+                                                onClick={() => setModalAberto(true)}
+                                                className="btn-primary mt-2 min-h-11"
+                                            >
+                                                Criar agendamento
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>

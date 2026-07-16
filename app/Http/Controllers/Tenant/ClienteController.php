@@ -26,9 +26,20 @@ class ClienteController extends Controller
             });
         }
 
+        if ($request->segmento === 'recorrentes') {
+            $query->has('agendamentos', '>=', 2);
+        } elseif ($request->segmento === 'sem_agendamento') {
+            $query->doesntHave('agendamentos');
+        }
+
         return Inertia::render('Tenant/Clientes/Index', [
             'clientes' => $query->paginate(30)->withQueryString(),
-            'filtros' => $request->only('busca'),
+            'filtros' => $request->only('busca', 'segmento'),
+            'resumo' => [
+                'total' => $tenant->clientes()->count(),
+                'recorrentes' => $tenant->clientes()->has('agendamentos', '>=', 2)->count(),
+                'sem_agendamento' => $tenant->clientes()->doesntHave('agendamentos')->count(),
+            ],
         ]);
     }
 
@@ -48,6 +59,21 @@ class ClienteController extends Controller
                 ->limit(20)
                 ->get(),
         ]);
+    }
+
+
+    public function update(Request $request, Cliente $cliente): RedirectResponse
+    {
+        abort_if((int) $cliente->tenant_id !== (int) app('tenant')->id, 403);
+
+        $data = $request->validate([
+            'nome' => ['required', 'string', 'max:120'],
+            'observacoes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $cliente->update($data);
+
+        return back()->with('success', 'Dados do cliente atualizados.');
     }
 
     public function destroy(Cliente $cliente): RedirectResponse

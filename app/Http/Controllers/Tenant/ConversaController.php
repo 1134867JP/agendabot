@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -26,6 +27,8 @@ class ConversaController extends Controller
                 'cliente',
                 'mensagens' => fn ($q) => $q->orderByDesc('enviada_em')->limit(1),
             ])
+            ->whereHas('mensagens')
+            ->orderByRaw("CASE status_v2 WHEN 'aguardando_humano' THEN 0 WHEN 'em_atendimento_humano' THEN 1 WHEN 'ativa' THEN 2 ELSE 3 END")
             ->orderByDesc('ultima_mensagem_em');
 
         if ($status = $request->status_v2) {
@@ -104,7 +107,7 @@ class ConversaController extends Controller
         abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
 
         $conversa->update(['status_v2' => 'em_atendimento_humano']);
-        $conversa->registrarMensagem('bot', '⚠️ Atendimento assumido por um humano.');
+        $conversa->registrarMensagem('bot', 'Atendimento assumido por uma pessoa da equipe.');
 
         return back()->with('success', 'Atendimento assumido.');
     }
@@ -114,7 +117,7 @@ class ConversaController extends Controller
         abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
 
         $conversa->update(['status_v2' => 'ativa']);
-        $conversa->registrarMensagem('bot', '🤖 Bot reativado. Continuando atendimento automático.');
+        $conversa->registrarMensagem('bot', 'Atendimento automático reativado.');
 
         return back()->with('success', 'Bot reativado.');
     }
@@ -191,26 +194,49 @@ class ConversaController extends Controller
         ]);
     }
 
+    public function statusSincronizacao(): JsonResponse
+    {
+        $tenant = app('tenant');
+        $status = Cache::get("sync_whatsapp_tenant_{$tenant->id}");
+
+        if (! is_array($status)) {
+            return response()->json([
+                'status' => 'idle',
+                'message' => 'Pronto para sincronizar.',
+            ]);
+        }
+
+        return response()->json($status);
+    }
+
     public function sincronizar(): RedirectResponse
     {
         $tenant = app('tenant');
 
         if (! $tenant->evolution_instance) {
-            return back()->withErrors(['erro' => 'WhatsApp não configurado.']);
+            return back()->withErrors(['erro' => 'Conecte o WhatsApp antes de sincronizar.']);
         }
 
         $lockKey = "sync_whatsapp_tenant_{$tenant->id}";
+        $statusAtual = Cache::get($lockKey);
 
-        // Não coloca na fila se já há um job rodando ou pendente para este tenant
-        if (\Cache::has($lockKey)) {
-            return back()->with('success', 'Sincronização já está em andamento. Aguarde…');
+        if (is_array($statusAtual) && in_array($statusAtual['status'] ?? null, ['queued', 'running'], true)) {
+            return back();
         }
 
-        // Marca como "em andamento" por 10 min (tempo máximo do job)
-        \Cache::put($lockKey, true, now()->addMinutes(10));
+        Cache::put($lockKey, [
+            'status' => 'queued',
+            'processed' => 0,
+            'total' => 0,
+            'imported' => 0,
+            'ignored' => 0,
+            'errors' => 0,
+            'message' => 'Sincronização aguardando processamento.',
+            'updated_at' => now()->toIso8601String(),
+        ], now()->addMinutes(15));
 
         SincronizarConversasWhatsappJob::dispatch($tenant)->onQueue('sync');
 
-        return back()->with('success', 'Sincronização iniciada em segundo plano. As conversas aparecem em instantes.');
+        return back();
     }
 }

@@ -110,6 +110,7 @@ Route::middleware('auth')->group(function () {
         // Clientes
         Route::get('clientes', [ClienteController::class, 'index'])->name('clientes.index');
         Route::get('clientes/{cliente}', [ClienteController::class, 'show'])->name('clientes.show');
+        Route::patch('clientes/{cliente}', [ClienteController::class, 'update'])->name('clientes.update');
         Route::get('clientes/{cliente}/exportar', [ClienteController::class, 'export'])->name('clientes.export');
         Route::delete('clientes/{cliente}', [ClienteController::class, 'destroy'])->name('clientes.destroy');
 
@@ -118,6 +119,7 @@ Route::middleware('auth')->group(function () {
         Route::get('conversas/notificacoes', [ConversaController::class, 'notificacoes'])->name('conversas.notificacoes');
         Route::post('conversas/{conversa}/marcar-lida', [ConversaController::class, 'marcarLida'])->name('conversas.marcar-lida');
         Route::post('conversas/iniciar', [ConversaController::class, 'iniciar'])->name('conversas.iniciar');
+        Route::get('conversas/sincronizacao/status', [ConversaController::class, 'statusSincronizacao'])->name('conversas.sincronizacao.status');
         Route::post('conversas/sincronizar', [ConversaController::class, 'sincronizar'])->name('conversas.sincronizar');
         Route::get('conversas/{conversa}/mensagens', [ConversaController::class, 'mensagens'])->name('conversas.mensagens');
         Route::get('conversas/{conversa}/mensagens/{mensagem}/media', [ConversaController::class, 'media'])->name('conversas.media');
@@ -135,6 +137,9 @@ Route::middleware('auth')->group(function () {
         Route::get('whatsapp', [Tenant\WhatsAppController::class, 'index'])->name('whatsapp');
         Route::get('whatsapp/qrcode', [Tenant\WhatsAppController::class, 'qrcode'])->name('whatsapp.qrcode');
         Route::get('whatsapp/status', [Tenant\WhatsAppController::class, 'status'])->name('whatsapp.status');
+        Route::get('whatsapp/backups/{arquivo}', [Tenant\WhatsAppController::class, 'baixarBackup'])
+            ->where('arquivo', 'whatsapp-[0-9]{8}-[0-9]{6}\\.json')
+            ->name('whatsapp.backup');
         Route::post('whatsapp/desconectar', [Tenant\WhatsAppController::class, 'desconectar'])->name('whatsapp.desconectar');
 
         // Configurações
