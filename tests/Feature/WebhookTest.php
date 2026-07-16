@@ -77,7 +77,7 @@ class WebhookTest extends TestCase
         $response->assertStatus(404);
     }
 
-    public function test_webhook_ignora_quando_bot_inativo(): void
+    public function test_webhook_salva_mensagem_sem_disparar_resposta_quando_bot_inativo(): void
     {
         Queue::fake();
 
@@ -89,6 +89,14 @@ class WebhookTest extends TestCase
 
         $response->assertStatus(200);
         Queue::assertNothingPushed();
+        $this->assertDatabaseHas('clientes', [
+            'tenant_id' => $this->tenant->id,
+            'telefone' => '5551999999999',
+        ]);
+        $this->assertDatabaseHas('mensagens', [
+            'remetente' => 'cliente',
+            'conteudo' => 'Oi',
+        ]);
     }
 
     private function payloadEvolution(string $remoteJid, string $text, bool $fromMe = false): array
