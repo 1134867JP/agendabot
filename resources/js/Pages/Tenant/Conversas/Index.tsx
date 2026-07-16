@@ -81,6 +81,31 @@ function fmtRelativo(iso: string | null) {
     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
+function nomeRealDe(c: Conversa): string | null {
+    const nome = c.cliente?.nome?.trim();
+    if (!nome) return null;
+
+    const normalizado = nome.toLowerCase();
+    const placeholders = ['', 'você', 'you', 'cliente whatsapp'];
+    const pareceTelefone = /^\+?[\d\s().-]+$/.test(nome);
+
+    return pareceTelefone || placeholders.includes(normalizado) ? null : nome;
+}
+
+function formatarTelefone(telefone: string): string {
+    const n = telefone.replace(/\D/g, '');
+    const br = n.startsWith('55') ? n.slice(2) : n;
+
+    if (br.length === 11) return `+55 (${br.slice(0, 2)}) ${br.slice(2, 7)}-${br.slice(7)}`;
+    if (br.length === 10) return `+55 (${br.slice(0, 2)}) ${br.slice(2, 6)}-${br.slice(6)}`;
+
+    return telefone;
+}
+
+function nomeDe(c: Conversa): string {
+    return nomeRealDe(c) ?? formatarTelefone(c.telefone_cliente);
+}
+
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
 const AVATAR_PALETTES = [
@@ -92,16 +117,20 @@ const AVATAR_PALETTES = [
     { bg: 'rgba(59,130,246,0.20)',  color: '#93c5fd' },
 ];
 
-function Avatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' | 'lg' }) {
-    const letter = name.charAt(0).toUpperCase();
-    const palette = AVATAR_PALETTES[name.charCodeAt(0) % AVATAR_PALETTES.length];
+function Avatar({ name, size = 'md', placeholder = false }: { name: string; size?: 'sm' | 'md' | 'lg'; placeholder?: boolean }) {
+    const letter = name.charAt(0).toUpperCase() || '?';
+    const palette = AVATAR_PALETTES[(name.charCodeAt(0) || 0) % AVATAR_PALETTES.length];
     const dim = size === 'sm' ? 'h-8 w-8 text-[12px]' : size === 'lg' ? 'h-11 w-11 text-base' : 'h-10 w-10 text-sm';
     return (
         <div
             className={`flex shrink-0 items-center justify-center rounded-full font-semibold ${dim}`}
             style={{ background: palette.bg, color: palette.color }}
         >
-            {letter}
+            {placeholder ? (
+                <svg width={size === 'lg' ? 20 : 17} height={size === 'lg' ? 20 : 17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/>
+                </svg>
+            ) : letter}
         </div>
     );
 }
@@ -311,6 +340,80 @@ function NovaConversaModal({ onClose, initialTelefone = '' }: { onClose: () => v
     );
 }
 
+function RenomearContatoModal({ conversa, onClose, onSaved }: { conversa: Conversa; onClose: () => void; onSaved: (nome: string) => void }) {
+    const { data, setData, patch, processing, errors } = useForm({
+        nome: nomeRealDe(conversa) ?? '',
+    });
+
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const nome = data.nome.trim();
+        if (!nome) return;
+
+        patch(route('tenant.conversas.cliente.nome', conversa.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                onSaved(nome);
+                onClose();
+            },
+        });
+    };
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center sm:px-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="renomear-contato-titulo"
+            onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+        >
+            <div
+                className="w-full max-w-sm rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl sm:p-6"
+                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}
+            >
+                <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                        <h3 id="renomear-contato-titulo" className="text-lg font-semibold text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                            Nome do contato
+                        </h3>
+                        <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>{formatarTelefone(conversa.telefone_cliente)}</p>
+                    </div>
+                    <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-lg p-2 transition-colors hover:bg-surface-2" style={{ color: 'var(--text-3)' }}>
+                        <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <form onSubmit={submit}>
+                    <label htmlFor="nome-contato" className="label mb-1">Como sua equipe reconhece esse cliente?</label>
+                    <input
+                        id="nome-contato"
+                        value={data.nome}
+                        onChange={e => setData('nome', e.target.value)}
+                        placeholder="Ex: Mariana Silva"
+                        maxLength={120}
+                        className="input"
+                        autoFocus
+                    />
+                    {errors.nome && <p className="mt-1 text-xs text-red-400">{errors.nome}</p>}
+
+                    <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                        <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
+                        <button type="submit" disabled={processing || !data.nome.trim()} className="btn-primary">
+                            {processing ? 'Salvando…' : 'Salvar nome'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function ConversasIndex({ conversas, filtros }: Props) {
@@ -320,8 +423,10 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
     const [assumindo,      setAssumindo]      = useState(false);
     const [showChat,       setShowChat]       = useState(false);
     const [showModalNova,  setShowModalNova]  = useState(false);
+    const [showRenomear,   setShowRenomear]   = useState(false);
     const [sincronizando,  setSincronizando]  = useState(false);
     const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+    const [syncVisivel, setSyncVisivel] = useState(false);
 
     useEffect(() => {
         if (new URLSearchParams(window.location.search).get('nova') === '1') {
@@ -377,6 +482,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
     const selecionar = (c: Conversa) => {
         pararPolling();
         setSelecionada(c);
+        setShowRenomear(false);
         setMensagens([]);
         setShowChat(true);
         buscarMensagens(c).then(() => scrollBottom());
@@ -433,6 +539,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
 
             const status = await response.json() as SyncStatus;
             setSyncStatus(status);
+            if (status.status !== 'idle') setSyncVisivel(true);
 
             const ativo = status.status === 'queued' || status.status === 'running';
             const estavaAtivo = syncWasActiveRef.current;
@@ -467,8 +574,16 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
         };
     }, []);
 
+    useEffect(() => {
+        if (syncStatus?.status !== 'completed') return;
+
+        const timeout = window.setTimeout(() => setSyncVisivel(false), 8000);
+        return () => window.clearTimeout(timeout);
+    }, [syncStatus?.status]);
+
     const sincronizar = () => {
         setSincronizando(true);
+        setSyncVisivel(true);
         syncWasActiveRef.current = true;
         setSyncStatus({
             status: 'queued',
@@ -491,10 +606,9 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
         });
     };
 
-    const nomeDe = (c: Conversa) => c.cliente?.nome ?? c.telefone_cliente;
     const previewDe = (c: Conversa) => {
         const texto = c.mensagens?.[0]?.conteudo;
-        if (!texto) return c.telefone_cliente;
+        if (!texto) return formatarTelefone(c.telefone_cliente);
         return texto.length > 48 ? texto.slice(0, 48) + '…' : texto;
     };
 
@@ -573,9 +687,9 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                             </div>
                         </div>
 
-                        {syncStatus && syncStatus.status !== 'idle' && (
+                        {syncVisivel && syncStatus && syncStatus.status !== 'idle' && (
                             <div
-                                className="mb-3 rounded-xl p-3"
+                                className={`rounded-xl ${syncStatus.status === 'completed' ? 'mb-2 p-2.5' : 'mb-3 p-3'}`}
                                 style={{
                                     background: syncStatus.status === 'failed' ? 'rgba(239,68,68,.08)' : 'var(--bg-surface-2)',
                                     border: `1px solid ${syncStatus.status === 'failed' ? 'rgba(239,68,68,.22)' : 'var(--border)'}`,
@@ -588,15 +702,34 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                         <p className="text-xs font-semibold text-primary">
                                             {syncStatus.status === 'queued' && 'Aguardando processamento'}
                                             {syncStatus.status === 'running' && 'Sincronizando conversas'}
-                                            {syncStatus.status === 'completed' && 'Sincronização concluída'}
+                                            {syncStatus.status === 'completed' && 'Conversas atualizadas'}
                                             {syncStatus.status === 'failed' && 'Falha na sincronização'}
                                         </p>
-                                        <p className="mt-0.5 text-[11px] leading-relaxed" style={{ color: 'var(--text-3)' }}>
-                                            {syncStatus.message}
-                                        </p>
+                                        {syncStatus.status === 'completed' ? (
+                                            <p className="mt-0.5 text-[10px] leading-relaxed" style={{ color: 'var(--text-3)' }}>
+                                                {syncStatus.imported ?? 0} mensagens importadas
+                                                {(syncStatus.removed ?? 0) > 0 && ` · ${syncStatus.removed} itens vazios limpos`}
+                                                {(syncStatus.errors ?? 0) > 0 && ` · ${syncStatus.errors} falhas`}
+                                            </p>
+                                        ) : (
+                                            <p className="mt-0.5 text-[11px] leading-relaxed" style={{ color: 'var(--text-3)' }}>
+                                                {syncStatus.message}
+                                            </p>
+                                        )}
                                     </div>
                                     {syncAtivo && (
                                         <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[var(--border-strong)] border-t-[var(--jade)]" />
+                                    )}
+                                    {!syncAtivo && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setSyncVisivel(false)}
+                                            aria-label="Fechar aviso de sincronização"
+                                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-surface"
+                                            style={{ color: 'var(--text-3)' }}
+                                        >
+                                            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                                        </button>
                                     )}
                                 </div>
 
@@ -612,16 +745,8 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                     </div>
                                 )}
 
-                                {syncStatus.status === 'completed' && (
-                                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px]" style={{ color: 'var(--text-3)' }}>
-                                        <span>{syncStatus.imported ?? 0} mensagens importadas</span>
-                                        {(syncStatus.removed ?? 0) > 0 && <span>{syncStatus.removed} conversas vazias removidas</span>}
-                                        {(syncStatus.errors ?? 0) > 0 && <span>{syncStatus.errors} falhas</span>}
-                                    </div>
-                                )}
-
                                 {syncStatus.status === 'failed' && (
-                                    <button type="button" onClick={sincronizar} className="mt-2 text-xs font-semibold" style={{ color: 'var(--danger)' }}>
+                                    <button type="button" onClick={sincronizar} className="mt-2 text-xs font-semibold" style={{ color: 'var(--danger-text)' }}>
                                         Tentar novamente
                                     </button>
                                 )}
@@ -687,7 +812,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                     </div>
 
                     {/* Lista */}
-                    <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: 'var(--border) transparent' }}>
+                    <div className="scrollbar-stable flex-1 overflow-y-auto">
                         {conversasFiltradas.length === 0 ? (
                             <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
                                 <svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
@@ -719,7 +844,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                     }}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <Avatar name={nomeDe(c)} />
+                                        <Avatar name={nomeDe(c)} placeholder={!nomeRealDe(c)} />
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center justify-between gap-1">
                                                 <p className="truncate text-[13px] font-semibold text-primary">{nomeDe(c)}</p>
@@ -762,16 +887,29 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                     </svg>
                                 </button>
 
-                                <Avatar name={nomeDe(selecionada)} />
+                                <Avatar name={nomeDe(selecionada)} placeholder={!nomeRealDe(selecionada)} />
 
                                 <div className="min-w-0">
-                                    <p className="truncate text-[15px] font-semibold text-primary">{nomeDe(selecionada)}</p>
+                                    <div className="flex min-w-0 items-center gap-1.5">
+                                        <p className="truncate text-[15px] font-semibold text-primary">{nomeDe(selecionada)}</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowRenomear(true)}
+                                            title={nomeRealDe(selecionada) ? 'Editar nome do contato' : 'Adicionar nome ao contato'}
+                                            aria-label={nomeRealDe(selecionada) ? 'Editar nome do contato' : 'Adicionar nome ao contato'}
+                                            className="flex h-7 shrink-0 items-center gap-1 rounded-md px-1.5 text-[10px] font-medium transition-colors hover:bg-surface-2"
+                                            style={{ color: nomeRealDe(selecionada) ? 'var(--text-3)' : 'var(--jade)' }}
+                                        >
+                                            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                            {!nomeRealDe(selecionada) && <span className="hidden lg:inline">Adicionar nome</span>}
+                                        </button>
+                                    </div>
                                     <div className="flex items-center gap-1.5 mt-0.5">
                                         <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: dotColor }} />
                                         <p className="text-[11px]" style={{ color: dotColor }}>
                                             {STATUS_LABEL[selecionada.status_v2]}
                                         </p>
-                                        <span className="hidden text-[11px] sm:inline" style={{ color: 'var(--text-3)' }}>· {selecionada.telefone_cliente}</span>
+                                        <span className="hidden text-[11px] sm:inline" style={{ color: 'var(--text-3)' }}>· {formatarTelefone(selecionada.telefone_cliente)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -810,7 +948,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                         {/* Mensagens */}
                         <div
                             ref={chatRef}
-                            className="flex-1 overflow-y-auto px-3 py-4 sm:px-4 sm:py-5 md:px-6"
+                            className="scrollbar-stable flex-1 overflow-y-auto px-3 py-4 sm:px-4 sm:py-5 md:px-6"
                             style={{
                                 background: 'var(--bg-app)',
                                 backgroundImage: 'radial-gradient(circle, var(--border) 1px, transparent 1px)',
@@ -902,6 +1040,21 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                 <NovaConversaModal
                     initialTelefone={new URLSearchParams(window.location.search).get('telefone') ?? ''}
                     onClose={() => setShowModalNova(false)}
+                />
+            )}
+
+            {showRenomear && selecionada && (
+                <RenomearContatoModal
+                    conversa={selecionada}
+                    onClose={() => setShowRenomear(false)}
+                    onSaved={nome => {
+                        setSelecionada(atual => atual ? {
+                            ...atual,
+                            cliente: atual.cliente
+                                ? { ...atual.cliente, nome }
+                                : { id: 0, nome, telefone: atual.telefone_cliente },
+                        } : null);
+                    }}
                 />
             )}
         </AppLayout>
