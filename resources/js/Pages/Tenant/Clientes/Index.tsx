@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import axios from 'axios';
 import { useMemo, useRef, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
@@ -41,12 +41,22 @@ function fmtTelefone(tel: string) {
     return digits;
 }
 
+function maskTelefone(value: string) {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
 export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
     const [busca, setBusca] = useState(filtros.busca ?? '');
     const [selecionados, setSelecionados] = useState<number[]>([]);
     const [excluindo, setExcluindo] = useState(false);
     const [erroExclusao, setErroExclusao] = useState<string | null>(null);
+    const [cadastroAberto, setCadastroAberto] = useState(false);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const cadastro = useForm({ nome: '', telefone: '', observacoes: '' });
 
     const idsPagina = useMemo(() => clientes.data.map(cliente => cliente.id), [clientes.data]);
     const todosSelecionados = idsPagina.length > 0 && idsPagina.every(id => selecionados.includes(id));
@@ -99,6 +109,17 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
         }
     };
 
+    const abrirCadastro = () => {
+        cadastro.reset();
+        cadastro.clearErrors();
+        setCadastroAberto(true);
+    };
+
+    const salvarCliente = (event: React.FormEvent) => {
+        event.preventDefault();
+        cadastro.post(route('tenant.clientes.store'));
+    };
+
     const segmentos = [
         { value: '', label: 'Todos', count: resumo.total },
         { value: 'recorrentes', label: 'Recorrentes', count: resumo.recorrentes },
@@ -138,7 +159,7 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
                     </svg>
                     <input type="text" value={busca} onChange={event => pesquisar(event.target.value)} placeholder="Buscar por nome ou telefone…" className="input pl-9" />
                 </div>
-                <button type="button" onClick={() => router.visit(route('tenant.conversas.index', { nova: 1 }))} className="btn-primary min-h-11 justify-center">
+                <button type="button" onClick={abrirCadastro} className="btn-primary min-h-11 justify-center">
                     Novo cliente
                 </button>
             </div>
@@ -176,7 +197,7 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
                         {busca || filtros.segmento ? (
                             <button type="button" onClick={() => { setBusca(''); filtrarSegmento(''); }} className="btn-secondary min-h-11">Limpar filtros</button>
                         ) : (
-                            <button type="button" onClick={() => router.visit(route('tenant.conversas.index', { nova: 1 }))} className="btn-primary min-h-11">Cadastrar cliente</button>
+                            <button type="button" onClick={abrirCadastro} className="btn-primary min-h-11">Cadastrar cliente</button>
                         )}
                     </div>
                 ) : (
@@ -226,6 +247,44 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
                     </div>
                 )}
             </div>
+
+            {cadastroAberto && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:p-4">
+                    <form onSubmit={salvarCliente} className="w-full rounded-t-2xl p-5 shadow-2xl sm:max-w-md sm:rounded-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
+                        <div className="mb-5 flex items-start justify-between gap-3">
+                            <div>
+                                <h2 className="text-lg font-semibold text-primary">Novo cliente</h2>
+                                <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>Cadastre somente o necessário para agendar ou iniciar uma conversa.</p>
+                            </div>
+                            <button type="button" onClick={() => setCadastroAberto(false)} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[var(--bg-surface-2)]" style={{ color: 'var(--text-3)' }} aria-label="Fechar cadastro">
+                                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="label mb-1">Nome</label>
+                                <input autoFocus value={cadastro.data.nome} onChange={event => cadastro.setData('nome', event.target.value)} className="input" maxLength={120} />
+                                {cadastro.errors.nome && <p className="mt-1 text-xs" style={{ color: '#f87171' }}>{cadastro.errors.nome}</p>}
+                            </div>
+                            <div>
+                                <label className="label mb-1">Telefone com DDD</label>
+                                <input value={cadastro.data.telefone} onChange={event => cadastro.setData('telefone', maskTelefone(event.target.value))} className="input" inputMode="tel" autoComplete="tel" placeholder="(54) 99999-1234" />
+                                {cadastro.errors.telefone && <p className="mt-1 text-xs" style={{ color: '#f87171' }}>{cadastro.errors.telefone}</p>}
+                            </div>
+                            <div>
+                                <label className="label mb-1">Observação <span style={{ color: 'var(--text-3)' }}>(opcional)</span></label>
+                                <textarea value={cadastro.data.observacoes} onChange={event => cadastro.setData('observacoes', event.target.value)} className="input min-h-20 resize-none" maxLength={2000} />
+                            </div>
+                        </div>
+                        <div className="mt-5 flex gap-2">
+                            <button type="button" onClick={() => setCadastroAberto(false)} className="btn-secondary min-h-11 flex-1 justify-center">Cancelar</button>
+                            <button type="submit" disabled={cadastro.processing || !cadastro.data.nome || !cadastro.data.telefone} className="btn-primary min-h-11 flex-1 justify-center">
+                                {cadastro.processing ? 'Salvando…' : 'Salvar cliente'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
         </AppLayout>
     );
 }
