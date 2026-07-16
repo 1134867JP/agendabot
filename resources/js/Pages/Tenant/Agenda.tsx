@@ -16,6 +16,7 @@ interface AgendamentoCalendario {
     origem: 'whatsapp' | 'manual';
     profissional_id: number | null;
     profissional_nome: string | null;
+    servico_nome: string | null;
 }
 
 interface EntidadeAgenda {
@@ -28,6 +29,16 @@ interface EntidadeAgenda {
 interface Props extends PageProps {
     recursos: Recurso[];
     profissionais: { id: number; nome: string }[];
+    servicos: ServicoAgenda[];
+}
+
+interface ServicoAgenda {
+    id: number;
+    nome: string;
+    duracao_minutos: number;
+    valor_min: number | string | null;
+    valor_max: number | string | null;
+    profissional_ids: number[];
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -115,6 +126,20 @@ function isValidPhone(phone: string): boolean {
 function professionalColor(id: number | null | undefined) {
     if (!id) return PROFESSIONAL_COLORS[0];
     return PROFESSIONAL_COLORS[(id - 1) % PROFESSIONAL_COLORS.length];
+}
+
+function descricaoServico(servico: ServicoAgenda) {
+    const partes = [`${servico.duracao_minutos} min`];
+    const minimo = servico.valor_min != null ? Number(servico.valor_min) : null;
+    const maximo = servico.valor_max != null ? Number(servico.valor_max) : null;
+
+    if (minimo != null && maximo != null && Math.abs(minimo - maximo) < 0.01) {
+        partes.push(minimo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
+    } else if (minimo != null) {
+        partes.push(`a partir de ${minimo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`);
+    }
+
+    return partes.join(' · ');
 }
 
 // ─── Color ───────────────────────────────────────────────────────────────────
@@ -705,6 +730,12 @@ function DetalheModal({
                                         </span>
                                     </div>
                                 )}
+                                {detalhe.servico_nome && (
+                                    <div className="flex justify-between gap-4">
+                                        <span style={{ color: 'var(--text-3)' }}>Serviço</span>
+                                        <span className="text-right" style={{ color: 'var(--text-2)' }}>{detalhe.servico_nome}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between">
                                     <span style={{ color: 'var(--text-3)' }}>Origem</span>
                                     <span style={{ color: 'var(--text-2)' }}>
@@ -755,7 +786,7 @@ function DetalheModal({
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function Agenda({ recursos, profissionais }: Props) {
+export default function Agenda({ recursos, profissionais, servicos }: Props) {
     const entidades = useMemo<EntidadeAgenda[]>(() =>
         recursos.length > 0
             ? recursos.map((r, index) => ({ id: r.id, nome: r.nome, tipo: 'recurso' as const, cor: PROFESSIONAL_COLORS[index % PROFESSIONAL_COLORS.length].accent }))
@@ -771,7 +802,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
     const [loading, setLoading]       = useState(false);
     const [detalhe, setDetalhe]       = useState<AgendamentoCalendario | null>(null);
     const [modalNova, setModalNova]   = useState<{ data: string; hora: string } | null>(null);
-    const [novaForm, setNovaForm]     = useState({ nome: '', tel: '', fim: '', obs: '' });
+    const [novaForm, setNovaForm]     = useState({ nome: '', tel: '', fim: '', obs: '', servicoId: 0 });
     const [novoProfissionalId, setNovoProfissionalId] = useState<number>(() => profissionais[0]?.id ?? 0);
     const [salvando, setSalvando]     = useState(false);
     const [erroReserva, setErroReserva] = useState<string | null>(null);
@@ -781,6 +812,38 @@ export default function Agenda({ recursos, profissionais }: Props) {
         () => entidades.find(e => e.id === entidadeId)?.tipo ?? 'profissional',
         [entidades, entidadeId],
     );
+
+    const servicosDisponiveis = useMemo(() => servicos.filter(servico =>
+        tipoEntidade === 'recurso'
+        || servico.profissional_ids.length === 0
+        || servico.profissional_ids.includes(novoProfissionalId)
+    ), [novoProfissionalId, servicos, tipoEntidade]);
+
+    const atualizarServico = (servicoId: number) => {
+        const servico = servicos.find(item => item.id === servicoId);
+        setNovaForm(form => ({
+            ...form,
+            servicoId,
+            fim: modalNova && servico
+                ? addMinutesToTime(modalNova.hora, servico.duracao_minutos)
+                : form.fim,
+        }));
+    };
+
+    const atualizarProfissional = (profissionalId: number) => {
+        setNovoProfissionalId(profissionalId);
+        const opcoes = servicos.filter(servico =>
+            servico.profissional_ids.length === 0 || servico.profissional_ids.includes(profissionalId)
+        );
+        const servico = opcoes[0];
+        setNovaForm(form => ({
+            ...form,
+            servicoId: servico?.id ?? 0,
+            fim: modalNova
+                ? addMinutesToTime(modalNova.hora, servico?.duracao_minutos ?? 30)
+                : form.fim,
+        }));
+    };
 
     const dias = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(semana, i)), [semana]);
 
@@ -815,15 +878,20 @@ export default function Agenda({ recursos, profissionais }: Props) {
     useEffect(() => {
         if (!modalNova) return;
 
-        setNovaForm(form => ({
-            ...form,
-            fim: addMinutesToTime(modalNova.hora, 30),
-        }));
+        setNovaForm(form => {
+            const servicoInicial = servicosDisponiveis.find(servico => servico.id === form.servicoId)
+                ?? servicosDisponiveis[0];
+            return {
+                ...form,
+                servicoId: servicoInicial?.id ?? 0,
+                fim: addMinutesToTime(modalNova.hora, servicoInicial?.duracao_minutos ?? 30),
+            };
+        });
         if (tipoEntidade === 'profissional') {
             setNovoProfissionalId(entidadeId || profissionais[0]?.id || 0);
         }
         setErroReserva(null);
-    }, [entidadeId, modalNova, profissionais, tipoEntidade]);
+    }, [entidadeId, modalNova, profissionais, servicosDisponiveis, tipoEntidade]);
 
     const navegarDia = (d: Date) => {
         setDiaAtivo(d);
@@ -866,6 +934,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
                 ? `${modalNova.data}T${novaForm.fim}:00`
                 : `${modalNova.data}T${addMinutesToTime(modalNova.hora, 30)}:00`,
             observacoes:       novaForm.obs,
+            servico_id:        novaForm.servicoId || undefined,
             notificar_cliente: false as boolean,
         };
         const payload = tipoEntidade === 'recurso'
@@ -875,7 +944,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
         router.post(route('tenant.agendamentos.store'), payload, {
             onSuccess: () => {
                 setModalNova(null);
-                setNovaForm({ nome: '', tel: '', fim: '', obs: '' });
+                setNovaForm({ nome: '', tel: '', fim: '', obs: '', servicoId: 0 });
                 carregar();
             },
             onError: errors => {
@@ -1169,7 +1238,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
             {modalNova && (
                 <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:px-4">
                     <div
-                        className="w-full max-w-sm rounded-t-2xl shadow-2xl sm:rounded-2xl"
+                        className="max-h-[92dvh] w-full max-w-sm overflow-y-auto rounded-t-2xl shadow-2xl sm:rounded-2xl"
                         style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}
                     >
                         <div className="p-6">
@@ -1202,7 +1271,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
                                         <label className="label mb-1">Profissional</label>
                                         <select
                                             value={novoProfissionalId}
-                                            onChange={e => setNovoProfissionalId(Number(e.target.value))}
+                                            onChange={e => atualizarProfissional(Number(e.target.value))}
                                             className="input"
                                         >
                                             {profissionais.map(profissional => (
@@ -1211,6 +1280,29 @@ export default function Agenda({ recursos, profissionais }: Props) {
                                                 </option>
                                             ))}
                                         </select>
+                                    </div>
+                                )}
+                                {servicosDisponiveis.length > 0 ? (
+                                    <div>
+                                        <label className="label mb-1">Serviço</label>
+                                        <select
+                                            value={novaForm.servicoId}
+                                            onChange={e => atualizarServico(Number(e.target.value))}
+                                            className="input"
+                                        >
+                                            {servicosDisponiveis.map(servico => (
+                                                <option key={servico.id} value={servico.id}>
+                                                    {servico.nome} — {descricaoServico(servico)}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
+                                            O término é calculado pela duração do serviço.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="rounded-xl px-3 py-2.5 text-xs" style={{ background: 'var(--bg-surface-2)', color: 'var(--text-3)', border: '1px solid var(--border)' }}>
+                                        Nenhum serviço disponível para este profissional. A reserva será criada sem serviço, com 30 minutos.
                                     </div>
                                 )}
                                 <div>
@@ -1276,7 +1368,7 @@ export default function Agenda({ recursos, profissionais }: Props) {
                                 </button>
                                 <button
                                     onClick={criarReserva}
-                                    disabled={salvando || !novaForm.nome || !telefoneValido || (tipoEntidade === 'profissional' && !novoProfissionalId)}
+                                    disabled={salvando || !novaForm.nome || !telefoneValido || (tipoEntidade === 'profissional' && !novoProfissionalId) || (servicosDisponiveis.length > 0 && !novaForm.servicoId)}
                                     className="btn-primary flex-1 justify-center"
                                 >
                                     {salvando ? 'Salvando…' : 'Confirmar'}
