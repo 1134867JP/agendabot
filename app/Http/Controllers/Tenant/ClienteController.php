@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -79,6 +80,48 @@ class ClienteController extends Controller
             ]);
 
         return response()->json(['clientes' => $clientes]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $tenant = app('tenant');
+        $data = $request->validate([
+            'nome' => ['required', 'string', 'max:120'],
+            'telefone' => ['required', 'string', 'max:30'],
+            'observacoes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $telefone = $this->normalizarTelefone($data['telefone']);
+        if (! preg_match('/^55[1-9]\d{9,10}$/', $telefone)) {
+            throw ValidationException::withMessages([
+                'telefone' => 'Informe um telefone brasileiro válido com DDD.',
+            ]);
+        }
+
+        $cliente = DB::transaction(function () use ($tenant, $data, $telefone): Cliente {
+            DB::table('tenants')->where('id', $tenant->id)->lockForUpdate()->first();
+
+            $existente = $tenant->clientes()
+                ->where('telefone', $telefone)
+                ->where('nome', '!=', 'Cliente anonimizado')
+                ->first();
+
+            if ($existente) {
+                throw ValidationException::withMessages([
+                    'telefone' => "Este telefone já pertence a {$existente->nome}.",
+                ]);
+            }
+
+            return $tenant->clientes()->create([
+                'nome' => trim($data['nome']),
+                'telefone' => $telefone,
+                'observacoes' => filled($data['observacoes'] ?? null) ? trim($data['observacoes']) : null,
+            ]);
+        });
+
+        return redirect()
+            ->route('tenant.clientes.show', $cliente)
+            ->with('success', 'Cliente cadastrado. Agora você pode agendar ou iniciar uma conversa.');
     }
 
     public function show(Cliente $cliente): Response
@@ -178,6 +221,15 @@ class ClienteController extends Controller
             'data_nascimento' => null,
             'observacoes' => null,
         ]);
+    }
+
+    private function normalizarTelefone(string $telefone): string
+    {
+        $digitos = preg_replace('/\D+/', '', $telefone);
+
+        return str_starts_with($digitos, '55') && strlen($digitos) >= 12
+            ? $digitos
+            : '55'.$digitos;
     }
 
     public function export(Cliente $cliente): JsonResponse
