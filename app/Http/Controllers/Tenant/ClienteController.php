@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -17,7 +18,10 @@ class ClienteController extends Controller
     {
         $tenant = app('tenant');
 
-        $query = $tenant->clientes()->withCount('agendamentos')->orderBy('nome');
+        $query = $tenant->clientes()
+            ->where('nome', '!=', 'Cliente anonimizado')
+            ->withCount('agendamentos')
+            ->orderBy('nome');
 
         if ($busca = $request->busca) {
             $query->where(function ($q) use ($busca) {
@@ -36,9 +40,9 @@ class ClienteController extends Controller
             'clientes' => $query->paginate(30)->withQueryString(),
             'filtros' => $request->only('busca', 'segmento'),
             'resumo' => [
-                'total' => $tenant->clientes()->count(),
-                'recorrentes' => $tenant->clientes()->has('agendamentos', '>=', 2)->count(),
-                'sem_agendamento' => $tenant->clientes()->doesntHave('agendamentos')->count(),
+                'total' => $tenant->clientes()->where('nome', '!=', 'Cliente anonimizado')->count(),
+                'recorrentes' => $tenant->clientes()->where('nome', '!=', 'Cliente anonimizado')->has('agendamentos', '>=', 2)->count(),
+                'sem_agendamento' => $tenant->clientes()->where('nome', '!=', 'Cliente anonimizado')->doesntHave('agendamentos')->count(),
             ],
         ]);
     }
@@ -114,31 +118,66 @@ class ClienteController extends Controller
     {
         abort_if((int) $cliente->tenant_id !== (int) app('tenant')->id, 403);
 
-        DB::transaction(function () use ($cliente): void {
-            $cliente->conversas()->get()->each(function ($conversa) use ($cliente): void {
-                $conversa->update([
-                    'cliente_id' => null,
-                    'telefone_cliente' => "anonimizado-{$cliente->id}-{$conversa->id}",
-                    'status_v2' => 'encerrada',
-                ]);
-            });
-            $cliente->agendamentos()->update([
-                'cliente_nome' => 'Cliente anonimizado',
-                'cliente_telefone' => 'anonimizado',
-                'observacoes' => null,
-            ]);
-            $cliente->update([
-                'nome' => 'Cliente anonimizado',
-                'telefone' => "anonimizado-{$cliente->id}",
-                'cpf' => null,
-                'data_nascimento' => null,
-                'observacoes' => null,
-            ]);
-        });
+        DB::transaction(fn () => $this->anonimizarCliente($cliente));
 
         return redirect()
             ->route('tenant.clientes.index')
             ->with('success', 'Cliente anonimizado. O histórico operacional foi preservado.');
+    }
+
+    public function destroyBulk(Request $request): RedirectResponse
+    {
+        $tenant = app('tenant');
+        $data = $request->validate([
+            'cliente_ids' => ['required', 'array', 'min:1', 'max:100'],
+            'cliente_ids.*' => [
+                'required',
+                'integer',
+                'distinct',
+                Rule::exists('clientes', 'id')->where('tenant_id', $tenant->id),
+            ],
+        ]);
+
+        $quantidade = DB::transaction(function () use ($tenant, $data): int {
+            $clientes = $tenant->clientes()
+                ->whereIn('id', $data['cliente_ids'])
+                ->where('nome', '!=', 'Cliente anonimizado')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            $clientes->each(fn (Cliente $cliente) => $this->anonimizarCliente($cliente));
+
+            return $clientes->count();
+        });
+
+        return back()->with(
+            'success',
+            "{$quantidade} cliente".($quantidade === 1 ? '' : 's')." anonimizado".($quantidade === 1 ? '' : 's').'. O histórico operacional foi preservado.'
+        );
+    }
+
+    private function anonimizarCliente(Cliente $cliente): void
+    {
+        $cliente->conversas()->get()->each(function ($conversa) use ($cliente): void {
+            $conversa->update([
+                'cliente_id' => null,
+                'telefone_cliente' => "anonimizado-{$cliente->id}-{$conversa->id}",
+                'status_v2' => 'encerrada',
+            ]);
+        });
+        $cliente->agendamentos()->update([
+            'cliente_nome' => 'Cliente anonimizado',
+            'cliente_telefone' => 'anonimizado',
+            'observacoes' => null,
+        ]);
+        $cliente->update([
+            'nome' => 'Cliente anonimizado',
+            'telefone' => "anonimizado-{$cliente->id}",
+            'cpf' => null,
+            'data_nascimento' => null,
+            'observacoes' => null,
+        ]);
     }
 
     public function export(Cliente $cliente): JsonResponse
