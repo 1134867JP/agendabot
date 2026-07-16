@@ -7,11 +7,12 @@ import { PageProps, Recurso } from '@/types';
 
 interface AgendamentoCalendario {
     id: number;
+    tipo: 'agendamento' | 'bloqueio';
     title: string;
     start: string;
     end: string;
     telefone: string;
-    status: 'confirmado' | 'cancelado' | 'concluido';
+    status: 'confirmado' | 'cancelado' | 'concluido' | 'bloqueado';
     valor_total: number | null;
     origem: 'whatsapp' | 'manual';
     profissional_id: number | null;
@@ -152,6 +153,7 @@ function descricaoServico(servico: ServicoAgenda) {
 // ─── Color ───────────────────────────────────────────────────────────────────
 
 function slotColor(a: AgendamentoCalendario): { accent: string; bg: string; text: string } {
+    if (a.tipo === 'bloqueio')   return { accent: '#94a3b8', bg: 'rgba(100,116,139,0.16)', text: '#cbd5e1' };
     if (a.status === 'cancelado') return { accent: '#f87171', bg: 'rgba(239,68,68,0.07)',   text: '#f87171' };
     if (a.status === 'concluido') return { accent: '#6b7280', bg: 'rgba(107,114,128,0.07)', text: 'rgba(232,230,225,0.4)' };
     if (a.profissional_id)        return professionalColor(a.profissional_id);
@@ -490,7 +492,7 @@ function WeekGrid({
 
                                     {/* Events */}
                                     {dayEvents.map(a => (
-                                        <EventBlock key={a.id} event={a} dayEvents={dayEvents} onClick={onDetalhe} />
+                                        <EventBlock key={`${a.tipo}-${a.id}`} event={a} dayEvents={dayEvents} onClick={onDetalhe} />
                                     ))}
 
                                     {/* Current time indicator */}
@@ -558,7 +560,7 @@ function DayTimeline({
                 const initials = a.title.trim().split(/\s+/).map(w => w[0] ?? '').slice(0, 2).join('').toUpperCase();
                 return (
                     <button
-                        key={a.id}
+                        key={`${a.tipo}-${a.id}`}
                         onClick={() => onDetalhe(a)}
                         className="flex w-full items-center gap-3 overflow-hidden rounded-xl px-3 py-3 text-left transition-opacity hover:opacity-80"
                         style={{ background: bg, borderLeft: `4px solid ${accent}` }}
@@ -567,7 +569,11 @@ function DayTimeline({
                             className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"
                             style={{ background: accent + '30', color: accent }}
                         >
-                            {initials}
+                            {a.tipo === 'bloqueio' ? (
+                                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <rect x="5" y="10" width="14" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                                </svg>
+                            ) : initials}
                         </div>
                         <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-semibold" style={{ color: text }}>
@@ -808,7 +814,12 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
     const [agendamentos, setAgs]      = useState<AgendamentoCalendario[]>([]);
     const [loading, setLoading]       = useState(false);
     const [detalhe, setDetalhe]       = useState<AgendamentoCalendario | null>(null);
+    const [detalheBloqueio, setDetalheBloqueio] = useState<AgendamentoCalendario | null>(null);
     const [modalNova, setModalNova]   = useState<{ data: string; hora: string } | null>(null);
+    const [modalBloqueio, setModalBloqueio] = useState<{ data: string; hora: string } | null>(null);
+    const [bloqueioForm, setBloqueioForm] = useState({ fim: '10:00', motivo: '' });
+    const [bloqueioEntidadeId, setBloqueioEntidadeId] = useState<number>(() => entidades[0]?.id ?? 0);
+    const [erroBloqueio, setErroBloqueio] = useState<string | null>(null);
     const [novaForm, setNovaForm]     = useState({ nome: '', tel: '', fim: '', obs: '', servicoId: 0 });
     const [clientesEncontrados, setClientesEncontrados] = useState<ClienteBusca[]>([]);
     const [buscandoCliente, setBuscandoCliente] = useState(false);
@@ -850,6 +861,18 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
         setClienteSelecionadoId(cliente.id);
         setNovaForm(form => ({ ...form, nome: cliente.nome, tel: normalizePhone(cliente.telefone) }));
         setClientesEncontrados([]);
+    };
+
+    const abrirBloqueio = (data: string, hora: string) => {
+        setBloqueioEntidadeId(entidadeId || entidades[0]?.id || 0);
+        setBloqueioForm({ fim: addMinutesToTime(hora, 60), motivo: '' });
+        setErroBloqueio(null);
+        setModalBloqueio({ data, hora });
+    };
+
+    const abrirDetalhe = (evento: AgendamentoCalendario) => {
+        if (evento.tipo === 'bloqueio') setDetalheBloqueio(evento);
+        else setDetalhe(evento);
     };
 
     const tipoEntidade = useMemo(
@@ -1001,6 +1024,45 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
         });
     };
 
+    const criarBloqueio = () => {
+        if (!modalBloqueio || !bloqueioEntidadeId) return;
+        if (bloqueioForm.fim <= modalBloqueio.hora) {
+            setErroBloqueio('O término deve ser posterior ao início.');
+            return;
+        }
+
+        setSalvando(true);
+        setErroBloqueio(null);
+        const entidade = entidades.find(item => item.id === bloqueioEntidadeId);
+        const payload = {
+            inicio: `${modalBloqueio.data}T${modalBloqueio.hora}:00`,
+            fim: `${modalBloqueio.data}T${bloqueioForm.fim}:00`,
+            motivo: bloqueioForm.motivo,
+            ...(entidade?.tipo === 'recurso'
+                ? { recurso_id: bloqueioEntidadeId }
+                : { profissional_id: bloqueioEntidadeId }),
+        };
+
+        router.post(route('tenant.agenda.bloqueios.store'), payload, {
+            onSuccess: () => {
+                setModalBloqueio(null);
+                carregar();
+            },
+            onError: errors => setErroBloqueio((Object.values(errors)[0] as string) ?? 'Erro ao bloquear horário.'),
+            onFinish: () => setSalvando(false),
+        });
+    };
+
+    const removerBloqueio = (id: number) => {
+        if (!window.confirm('Remover este bloqueio e liberar o horário?')) return;
+        router.delete(route('tenant.agenda.bloqueios.destroy', id), {
+            onSuccess: () => {
+                setDetalheBloqueio(null);
+                carregar();
+            },
+        });
+    };
+
     const fmtRange = () => {
         const d0 = dias[0];
         const d6 = dias[6];
@@ -1042,6 +1104,18 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
                             <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M9 18l6-6-6-6" />
                             </svg>
+                        </button>
+                    </div>
+
+                    <div className="flex justify-end px-4 pb-3">
+                        <button
+                            onClick={() => abrirBloqueio(toISO(diaAtivo), '09:00')}
+                            className="btn-secondary min-h-10 text-xs"
+                        >
+                            <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <rect x="5" y="10" width="14" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                            </svg>
+                            Bloquear horário
                         </button>
                     </div>
 
@@ -1091,7 +1165,7 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
                         <DayTimeline
                             dia={diaAtivo}
                             agendamentos={agendamentos}
-                            onDetalhe={setDetalhe}
+                            onDetalhe={abrirDetalhe}
                             onNovo={hora => setModalNova({ data: toISO(diaAtivo), hora })}
                             loading={loading}
                         />
@@ -1184,6 +1258,10 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
                                 <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{l.label}</span>
                             </div>
                         ))}
+                        <div className="mt-1 flex items-center gap-2 px-2 py-0.5">
+                            <span className="h-2.5 w-2.5 flex-shrink-0 rounded-sm" style={{ background: '#94a3b8', opacity: 0.85 }} />
+                            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Bloqueado</span>
+                        </div>
                     </div>
                 </aside>
 
@@ -1236,6 +1314,16 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
                         )}
 
                         <button
+                            onClick={() => abrirBloqueio(toISO(diaAtivo), '09:00')}
+                            className="btn-secondary text-sm"
+                        >
+                            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <rect x="5" y="10" width="14" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                            </svg>
+                            Bloquear
+                        </button>
+
+                        <button
                             onClick={() => setModalNova({ data: toISO(diaAtivo), hora: '09:00' })}
                             className="btn-primary text-sm"
                         >
@@ -1263,7 +1351,7 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
                             agendamentos={agendamentos}
                             loading={false}
                             onSlotClick={(data, hora) => setModalNova({ data, hora })}
-                            onDetalhe={setDetalhe}
+                            onDetalhe={abrirDetalhe}
                         />
                     )}
                 </div>
@@ -1278,6 +1366,88 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
                     onCancelar={cancelar}
                     onSalvar={salvarEdicao}
                 />
+            )}
+
+            {detalheBloqueio && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:px-4">
+                    <div className="w-full max-w-sm rounded-t-2xl p-6 shadow-2xl sm:rounded-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
+                        <div className="mb-4 flex items-start justify-between">
+                            <div>
+                                <p className="label mb-1">Horário bloqueado</p>
+                                <h3 className="text-xl font-semibold text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                                    {detalheBloqueio.title}
+                                </h3>
+                            </div>
+                            <button onClick={() => setDetalheBloqueio(null)} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[var(--bg-surface-2)]" style={{ color: 'var(--text-3)' }}>
+                                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                        <div className="rounded-xl px-4 py-3 text-sm" style={{ background: 'var(--bg-surface-2)', color: 'var(--text-2)' }}>
+                            <p>{new Date(detalheBloqueio.start).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', timeZone: 'America/Sao_Paulo' })}</p>
+                            <p className="mt-1 font-medium">{fmtHora(detalheBloqueio.start)} – {fmtHora(detalheBloqueio.end)}</p>
+                            {detalheBloqueio.profissional_nome && <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>{detalheBloqueio.profissional_nome}</p>}
+                        </div>
+                        <div className="mt-5 flex gap-2">
+                            <button onClick={() => setDetalheBloqueio(null)} className="btn-secondary flex-1 justify-center">Fechar</button>
+                            <button onClick={() => removerBloqueio(detalheBloqueio.id)} className="flex-1 justify-center rounded-lg px-4 py-2 text-sm font-medium" style={{ background: 'rgba(239,68,68,0.12)', color: '#f87171' }}>
+                                Remover bloqueio
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {modalBloqueio && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:px-4">
+                    <div className="w-full max-w-sm rounded-t-2xl shadow-2xl sm:rounded-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
+                        <div className="p-6">
+                            <div className="mb-4 flex items-start justify-between">
+                                <div>
+                                    <p className="label mb-1">Indisponibilidade</p>
+                                    <h3 className="text-xl font-semibold text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>Bloquear horário</h3>
+                                </div>
+                                <button onClick={() => setModalBloqueio(null)} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[var(--bg-surface-2)]" style={{ color: 'var(--text-3)' }}>
+                                    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                                </button>
+                            </div>
+                            <div className="space-y-3">
+                                <p className="rounded-xl px-3 py-2 text-sm" style={{ background: 'var(--bg-surface-2)', color: 'var(--text-2)' }}>
+                                    {new Date(modalBloqueio.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+                                </p>
+                                <div>
+                                    <label className="label mb-1">{tipoEntidade === 'recurso' ? 'Recurso' : 'Profissional'}</label>
+                                    <select value={bloqueioEntidadeId} onChange={e => setBloqueioEntidadeId(Number(e.target.value))} className="input">
+                                        {entidades.map(entidade => <option key={`${entidade.tipo}-${entidade.id}`} value={entidade.id}>{entidade.nome}</option>)}
+                                    </select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="label mb-1">Início</label>
+                                        <input
+                                            type="time"
+                                            value={modalBloqueio.hora}
+                                            onChange={e => setModalBloqueio(current => current ? { ...current, hora: e.target.value } : current)}
+                                            className="input"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="label mb-1">Término</label>
+                                        <input type="time" value={bloqueioForm.fim} onChange={e => setBloqueioForm(form => ({ ...form, fim: e.target.value }))} className="input" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="label mb-1">Motivo</label>
+                                    <input value={bloqueioForm.motivo} onChange={e => setBloqueioForm(form => ({ ...form, motivo: e.target.value }))} maxLength={120} className="input" placeholder="Ex.: almoço, reunião ou folga" />
+                                </div>
+                            </div>
+                            {erroBloqueio && <p className="mt-3 rounded-lg px-3 py-2 text-sm" style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171' }}>{erroBloqueio}</p>}
+                            <div className="mt-5 flex gap-2">
+                                <button onClick={() => setModalBloqueio(null)} className="btn-secondary flex-1 justify-center">Cancelar</button>
+                                <button onClick={criarBloqueio} disabled={salvando || !bloqueioEntidadeId} className="btn-primary flex-1 justify-center">{salvando ? 'Salvando…' : 'Bloquear'}</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* ── New booking modal ── */}

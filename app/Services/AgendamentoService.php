@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Exceptions\HorarioIndisponivelException;
 use App\Jobs\SyncGoogleCalendarJob;
 use App\Models\Agendamento;
+use App\Models\BloqueioAgenda;
 use App\Models\OperationalEvent;
 use App\Models\Profissional;
 use App\Models\Recurso;
@@ -185,6 +186,13 @@ class AgendamentoService
         if ($query->exists()) {
             throw new HorarioIndisponivelException('Horário não disponível.');
         }
+
+        if (BloqueioAgenda::where('profissional_id', $profissionalId)
+            ->where('inicio', '<', $fim)
+            ->where('fim', '>', $inicio)
+            ->exists()) {
+            throw new HorarioIndisponivelException('Este horário está bloqueado na agenda.');
+        }
     }
 
     /**
@@ -204,6 +212,13 @@ class AgendamentoService
 
         if ($query->exists()) {
             throw new HorarioIndisponivelException('Horário não disponível.');
+        }
+
+        if (BloqueioAgenda::where('recurso_id', $recursoId)
+            ->where('inicio', '<', $fim)
+            ->where('fim', '>', $inicio)
+            ->exists()) {
+            throw new HorarioIndisponivelException('Este horário está bloqueado na agenda.');
         }
     }
 
@@ -238,16 +253,16 @@ class AgendamentoService
                 throw new HorarioIndisponivelException('Não é possível reagendar para datas passadas.');
             }
 
-            $conflito = Agendamento::where('profissional_id', $profissionalId)
-                ->where('id', '!=', $agendamento->id)
-                ->whereNotIn('status', ['cancelado'])
-                ->where('data_hora', '<', $fim)
-                ->whereRaw("(data_hora + (duracao_minutos * INTERVAL '1 minute')) > ?", [$inicio])
-                ->exists();
-
-            if ($conflito) {
-                throw new HorarioIndisponivelException('Horário não disponível.');
-            }
+            $profissional = Profissional::findOrFail($profissionalId);
+            $this->validarExpediente($profissional, $inicio, $fim, $tz);
+            $buffer = (int) $agendamento->tenant->regrasAgendamentoConfig()['buffer_entre_agendamentos_minutos'];
+            $this->validarConflitoProfissional(
+                $profissionalId,
+                $inicio,
+                $fim,
+                $buffer,
+                ignorarAgendamentoId: $agendamento->id,
+            );
 
             $agendamento->update([
                 'profissional_id' => $profissionalId,

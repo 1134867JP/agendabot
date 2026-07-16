@@ -58,6 +58,7 @@ class Tenant extends Model
     public function servicos(): HasMany { return $this->hasMany(Servico::class); }
     public function opcoes_extras(): HasMany { return $this->hasMany(OpcaoExtra::class); }
     public function clientes(): HasMany { return $this->hasMany(Cliente::class); }
+    public function bloqueiosAgenda(): HasMany { return $this->hasMany(BloqueioAgenda::class); }
 
     /**
      * Regras de handoff automático bot→humano, com defaults equivalentes ao comportamento
