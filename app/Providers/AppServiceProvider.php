@@ -13,6 +13,7 @@ use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
@@ -42,6 +43,10 @@ class AppServiceProvider extends ServiceProvider
     private function registrarObservabilidadeDaFila(): void
     {
         $inicios = [];
+
+        Queue::looping(function (): void {
+            Cache::put('queue_worker_last_seen_at', now()->toIso8601String(), now()->addMinutes(5));
+        });
 
         Queue::before(function (JobProcessing $event) use (&$inicios): void {
             $contexto = $this->contextoDoJob($event->connectionName, $event->job);
