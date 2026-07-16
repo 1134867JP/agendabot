@@ -65,13 +65,22 @@ const STATUS_DOT: Record<string, string> = {
     encerrada:             'var(--text-3)',
 };
 
+function dataDaApi(valor: string): Date {
+    const normalizado = valor.includes('T') ? valor : valor.replace(' ', 'T');
+    const temFuso = /(?:Z|[+-]\d{2}:?\d{2})$/.test(normalizado);
+
+    // Alguns registros chegam como UTC sem o sufixo Z. Sem ele, o navegador
+    // interpreta 01:19 como hora local e exibe três horas adiantado no Brasil.
+    return new Date(temFuso ? normalizado : `${normalizado}Z`);
+}
+
 function fmtHora(iso: string) {
-    return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return dataDaApi(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
 function fmtRelativo(iso: string | null) {
     if (!iso) return '';
-    const d = new Date(iso);
+    const d = dataDaApi(iso);
     const agora = new Date();
     const diffMin = Math.floor((agora.getTime() - d.getTime()) / 60000);
     if (diffMin < 1)  return 'agora';
