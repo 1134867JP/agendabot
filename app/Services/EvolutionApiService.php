@@ -75,15 +75,17 @@ class EvolutionApiService
         $response = $this->http()
             ->post("{$this->baseUrl}/chat/findChats/{$instance}", []);
 
-        return $response->json() ?? [];
+        return $this->extrairRegistros($response->json(), ['chats']);
     }
 
     public function fetchContacts(string $instance): array
     {
         $response = $this->http()
-            ->post("{$this->baseUrl}/chat/findContacts/{$instance}", []);
+            ->post("{$this->baseUrl}/chat/findContacts/{$instance}", [
+                'where' => (object) [],
+            ]);
 
-        return $response->json() ?? [];
+        return $this->extrairRegistros($response->json(), ['contacts']);
     }
 
     public function fetchMessages(string $instance, string $remoteJid, int $count = 50): array
@@ -139,6 +141,44 @@ class EvolutionApiService
             'jid' => $remoteJid,
             'keys' => array_keys($body),
         ]);
+
+        return [];
+    }
+
+    /**
+     * A Evolution já retornou coleções em formatos diferentes entre versões e
+     * provedores: lista na raiz, { records: [] }, { data: [] } ou um contêiner
+     * específico como { contacts: { records: [] } }. Normaliza todos eles aqui.
+     */
+    private function extrairRegistros(mixed $body, array $containers = []): array
+    {
+        if (! is_array($body)) {
+            return [];
+        }
+
+        if (array_is_list($body)) {
+            return $body;
+        }
+
+        foreach ([...$containers, 'data'] as $container) {
+            $value = $body[$container] ?? null;
+
+            if (! is_array($value)) {
+                continue;
+            }
+
+            if (isset($value['records']) && is_array($value['records'])) {
+                return $value['records'];
+            }
+
+            if (array_is_list($value)) {
+                return $value;
+            }
+        }
+
+        if (isset($body['records']) && is_array($body['records'])) {
+            return $body['records'];
+        }
 
         return [];
     }
