@@ -61,6 +61,8 @@ Route::middleware('auth')->group(function () {
         // Agenda visual
         Route::get('agenda', [Tenant\AgendaController::class, 'index'])->name('agenda');
         Route::get('agenda/disponibilidade', [Tenant\AgendaController::class, 'disponibilidade'])->name('agenda.disponibilidade');
+        Route::post('agenda/bloqueios', [Tenant\BloqueioAgendaController::class, 'store'])->name('agenda.bloqueios.store');
+        Route::delete('agenda/bloqueios/{bloqueio}', [Tenant\BloqueioAgendaController::class, 'destroy'])->name('agenda.bloqueios.destroy');
 
         // Agendamentos
         Route::get('agendamentos', [Tenant\AgendamentoController::class, 'index'])->name('agendamentos.index');
