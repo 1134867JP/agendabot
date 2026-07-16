@@ -102,6 +102,29 @@ class ConversaController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    public function atualizarNomeCliente(Request $request, Conversa $conversa): RedirectResponse
+    {
+        $tenant = app('tenant');
+        abort_if((int) $conversa->tenant_id !== (int) $tenant->id, 403);
+
+        $data = $request->validate([
+            'nome' => ['required', 'string', 'max:120'],
+        ]);
+        $nome = trim($data['nome']);
+
+        $cliente = $conversa->cliente ?? Cliente::firstOrCreate(
+            ['tenant_id' => $tenant->id, 'telefone' => $conversa->telefone_cliente],
+            ['nome' => $nome]
+        );
+
+        $cliente->update(['nome' => $nome]);
+        if ((int) $conversa->cliente_id !== (int) $cliente->id) {
+            $conversa->update(['cliente_id' => $cliente->id]);
+        }
+
+        return back()->with('success', 'Nome do contato atualizado.');
+    }
+
     public function assumir(Conversa $conversa): RedirectResponse
     {
         abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
