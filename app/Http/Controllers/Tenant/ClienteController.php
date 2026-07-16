@@ -115,11 +115,13 @@ class ClienteController extends Controller
         abort_if((int) $cliente->tenant_id !== (int) app('tenant')->id, 403);
 
         DB::transaction(function () use ($cliente): void {
-            $cliente->conversas()->update([
-                'cliente_id' => null,
-                'telefone_cliente' => "anonimizado-{$cliente->id}",
-                'status_v2' => 'encerrada',
-            ]);
+            $cliente->conversas()->get()->each(function ($conversa) use ($cliente): void {
+                $conversa->update([
+                    'cliente_id' => null,
+                    'telefone_cliente' => "anonimizado-{$cliente->id}-{$conversa->id}",
+                    'status_v2' => 'encerrada',
+                ]);
+            });
             $cliente->agendamentos()->update([
                 'cliente_nome' => 'Cliente anonimizado',
                 'cliente_telefone' => 'anonimizado',
