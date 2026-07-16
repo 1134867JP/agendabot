@@ -510,12 +510,15 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
     const enviar = (e: React.FormEvent) => {
         e.preventDefault();
         if (!selecionada || !data.conteudo.trim()) return;
-        const doPost = () => post(route('tenant.conversas.enviar', selecionada.id), {
+
+        post(route('tenant.conversas.enviar', selecionada.id), {
             preserveScroll: true,
-            onSuccess: () => { reset('conteudo'); buscarMensagens(selecionada).then(() => scrollBottom()); },
+            onSuccess: () => {
+                setSelecionada(atual => atual ? { ...atual, status_v2: 'em_atendimento_humano' } : null);
+                reset('conteudo');
+                buscarMensagens(selecionada).then(() => scrollBottom());
+            },
         });
-        if (selecionada.status_v2 !== 'em_atendimento_humano') assumir(doPost);
-        else doPost();
     };
 
     const filtrarStatus = (status: string) => {
