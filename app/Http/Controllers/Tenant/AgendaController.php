@@ -21,6 +21,19 @@ class AgendaController extends Controller
             'tenant'        => $tenant,
             'recursos'      => $tenant->recursos()->where('ativo', true)->get(),
             'profissionais' => $tenant->profissionais()->where('ativo', true)->get(['id', 'nome']),
+            'servicos'      => $tenant->servicos()
+                ->where('ativo', true)
+                ->with('profissionais:id')
+                ->orderBy('nome')
+                ->get(['id', 'tenant_id', 'nome', 'duracao_minutos', 'valor_min', 'valor_max'])
+                ->map(fn ($servico) => [
+                    'id' => $servico->id,
+                    'nome' => $servico->nome,
+                    'duracao_minutos' => (int) ($servico->duracao_minutos ?? 30),
+                    'valor_min' => $servico->valor_min,
+                    'valor_max' => $servico->valor_max,
+                    'profissional_ids' => $servico->profissionais->pluck('id')->values(),
+                ]),
         ]);
     }
 
@@ -39,7 +52,7 @@ class AgendaController extends Controller
 
         $query = Agendamento::where('tenant_id', $tenant->id)
             ->where('status', '!=', 'cancelado')
-            ->with('profissional:id,nome');
+            ->with(['profissional:id,nome', 'servico:id,nome']);
 
         $dataFim = Carbon::parse($request->data_fim)->endOfDay()->toIso8601String();
 
@@ -82,6 +95,7 @@ class AgendaController extends Controller
                     'origem'      => $a->origem ?? 'manual',
                     'profissional_id' => $a->profissional_id,
                     'profissional_nome' => $a->profissional?->nome,
+                    'servico_nome' => $a->servico?->nome,
                 ];
             })
         );
