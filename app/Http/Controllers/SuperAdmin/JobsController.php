@@ -15,14 +15,13 @@ class JobsController extends Controller
 {
     public function index(): Response
     {
-        $failed = $this->listarFailed(50);
-        $queue = $this->statsQueue();
-        $falhasRecentes = $this->listarFalhasRecentes(30);
+        $fila = $this->listarFila(100);
 
         return Inertia::render('SuperAdmin/Jobs', [
-            'failed' => $failed,
-            'queue' => $queue,
-            'falhasRecentes' => $falhasRecentes,
+            'failed' => $this->listarFailed(50),
+            'queue' => $this->statsQueue($fila),
+            'queuedJobs' => $fila,
+            'falhasRecentes' => $this->listarFalhasRecentes(30),
         ]);
     }
 
@@ -30,7 +29,6 @@ class JobsController extends Controller
     {
         try {
             Artisan::call('queue:retry', ['id' => [$id]]);
-
             return back()->with('success', "Job #{$id} reenfileirado.");
         } catch (\Throwable $e) {
             return back()->with('erro', "Falha ao retentar: {$e->getMessage()}");
@@ -41,7 +39,6 @@ class JobsController extends Controller
     {
         try {
             Artisan::call('queue:retry', ['id' => ['all']]);
-
             return back()->with('success', 'Todos os jobs reenfileirados.');
         } catch (\Throwable $e) {
             return back()->with('erro', "Falha: {$e->getMessage()}");
@@ -52,7 +49,6 @@ class JobsController extends Controller
     {
         try {
             DB::table('failed_jobs')->where('id', $id)->delete();
-
             return back()->with('success', "Job #{$id} removido.");
         } catch (\Throwable $e) {
             return back()->with('erro', "Falha ao remover: {$e->getMessage()}");
@@ -63,55 +59,72 @@ class JobsController extends Controller
     {
         try {
             Artisan::call('queue:flush');
-
             return back()->with('success', 'Fila de falhas limpa.');
         } catch (\Throwable $e) {
             return back()->with('erro', "Falha: {$e->getMessage()}");
         }
     }
 
-    // ── helpers ───────────────────────────────────────────────────────────────
+    private function listarFila(int $limit): array
+    {
+        try {
+            $agora = now()->timestamp;
+
+            return DB::table('jobs')->orderByDesc('id')->limit($limit)->get()->map(function ($job) use ($agora) {
+                $payload = json_decode($job->payload, true) ?: [];
+                $status = $job->reserved_at
+                    ? 'processing'
+                    : ($job->available_at > $agora ? 'delayed' : 'waiting');
+
+                return [
+                    'id' => $job->id,
+                    'job' => class_basename((string) ($payload['displayName'] ?? 'Job desconhecido')),
+                    'queue' => $job->queue,
+                    'status' => $status,
+                    'attempts' => $job->attempts,
+                    'created_at' => date(DATE_ATOM, $job->created_at),
+                    'available_at' => date(DATE_ATOM, $job->available_at),
+                    'reserved_at' => $job->reserved_at ? date(DATE_ATOM, $job->reserved_at) : null,
+                    'waiting_seconds' => max(0, $agora - $job->created_at),
+                ];
+            })->toArray();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
 
     private function listarFailed(int $limit): array
     {
         try {
-            return DB::table('failed_jobs')
-                ->orderByDesc('failed_at')
-                ->limit($limit)
-                ->get()
-                ->map(fn ($job) => FailedJobsFormatter::formatar($job))
-                ->toArray();
+            return DB::table('failed_jobs')->orderByDesc('failed_at')->limit($limit)->get()
+                ->map(fn ($job) => FailedJobsFormatter::formatar($job))->toArray();
         } catch (\Throwable) {
-            return []; // tabela pode não existir
+            return [];
         }
     }
 
-    private function statsQueue(): array
+    private function statsQueue(array $fila): array
     {
         try {
             return [
                 'failed' => DB::table('failed_jobs')->count(),
-                'pending' => DB::table('jobs')->count(),
+                'pending' => count(array_filter($fila, fn ($job) => $job['status'] === 'waiting')),
+                'processing' => count(array_filter($fila, fn ($job) => $job['status'] === 'processing')),
+                'delayed' => count(array_filter($fila, fn ($job) => $job['status'] === 'delayed')),
+                'total' => DB::table('jobs')->count(),
+                'oldest_wait_seconds' => collect($fila)->where('status', 'waiting')->max('waiting_seconds') ?? 0,
             ];
         } catch (\Throwable) {
-            return ['failed' => 0, 'pending' => 0];
+            return ['failed' => 0, 'pending' => 0, 'processing' => 0, 'delayed' => 0, 'total' => 0, 'oldest_wait_seconds' => 0];
         }
     }
 
-    /**
-     * Falhas estruturadas de jobs e integrações (evento por evento, com tenant),
-     * registradas via OperationalEvent::record() em Job::failed() e nos serviços de
-     * integração. Complementa a tabela failed_jobs, que só existe enquanto o job não
-     * é retentado/removido e não guarda contexto de qual tenant foi afetado.
-     */
     private function listarFalhasRecentes(int $limit): array
     {
         try {
             return OperationalEvent::with('tenant:id,nome')
                 ->whereIn('type', ['job_failure', 'integration_failure'])
-                ->latest()
-                ->limit($limit)
-                ->get()
+                ->latest()->limit($limit)->get()
                 ->map(fn (OperationalEvent $evento) => [
                     'id' => $evento->id,
                     'tipo' => $evento->type,
@@ -120,8 +133,7 @@ class JobsController extends Controller
                     'mensagem' => data_get($evento->metadata, 'message') ?? data_get($evento->metadata, 'evento'),
                     'metadata' => $evento->metadata,
                     'ocorrido_em' => $evento->created_at,
-                ])
-                ->toArray();
+                ])->toArray();
         } catch (\Throwable) {
             return [];
         }
