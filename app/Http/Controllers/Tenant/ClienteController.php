@@ -43,6 +43,40 @@ class ClienteController extends Controller
         ]);
     }
 
+    public function search(Request $request): JsonResponse
+    {
+        $tenant = app('tenant');
+        $termo = trim((string) $request->query('q', ''));
+
+        if (mb_strlen($termo) < 2) {
+            return response()->json(['clientes' => []]);
+        }
+
+        $digitos = preg_replace('/\\D+/', '', $termo);
+
+        $clientes = $tenant->clientes()
+            ->where('nome', '!=', 'Cliente anonimizado')
+            ->withCount('agendamentos')
+            ->where(function ($query) use ($termo, $digitos): void {
+                $query->whereRaw('LOWER(nome) LIKE ?', ['%'.mb_strtolower($termo).'%']);
+                if ($digitos !== '') {
+                    $query->orWhere('telefone', 'like', "%{$digitos}%");
+                }
+            })
+            ->orderByDesc('agendamentos_count')
+            ->orderBy('nome')
+            ->limit(8)
+            ->get(['id', 'nome', 'telefone'])
+            ->map(fn (Cliente $cliente) => [
+                'id' => $cliente->id,
+                'nome' => $cliente->nome,
+                'telefone' => $cliente->telefone,
+                'agendamentos_count' => $cliente->agendamentos_count,
+            ]);
+
+        return response()->json(['clientes' => $clientes]);
+    }
+
     public function show(Cliente $cliente): Response
     {
         abort_if((int) $cliente->tenant_id !== (int) app('tenant')->id, 403);
@@ -81,9 +115,12 @@ class ClienteController extends Controller
         abort_if((int) $cliente->tenant_id !== (int) app('tenant')->id, 403);
 
         DB::transaction(function () use ($cliente): void {
-            $cliente->conversas()->each(function ($conversa): void {
-                $conversa->mensagens()->delete();
-                $conversa->delete();
+            $cliente->conversas()->get()->each(function ($conversa) use ($cliente): void {
+                $conversa->update([
+                    'cliente_id' => null,
+                    'telefone_cliente' => "anonimizado-{$cliente->id}-{$conversa->id}",
+                    'status_v2' => 'encerrada',
+                ]);
             });
             $cliente->agendamentos()->update([
                 'cliente_nome' => 'Cliente anonimizado',
@@ -99,7 +136,9 @@ class ClienteController extends Controller
             ]);
         });
 
-        return redirect()->route('tenant.clientes.index');
+        return redirect()
+            ->route('tenant.clientes.index')
+            ->with('success', 'Cliente anonimizado. O histórico operacional foi preservado.');
     }
 
     public function export(Cliente $cliente): JsonResponse

@@ -109,6 +109,7 @@ Route::middleware('auth')->group(function () {
 
         // Clientes
         Route::get('clientes', [ClienteController::class, 'index'])->name('clientes.index');
+        Route::get('clientes/buscar', [ClienteController::class, 'search'])->name('clientes.search');
         Route::get('clientes/{cliente}', [ClienteController::class, 'show'])->name('clientes.show');
         Route::patch('clientes/{cliente}', [ClienteController::class, 'update'])->name('clientes.update');
         Route::get('clientes/{cliente}/exportar', [ClienteController::class, 'export'])->name('clientes.export');

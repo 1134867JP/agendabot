@@ -26,6 +26,15 @@ class TriagemControllerTest extends TestCase
             'ativo'               => true,
             'subscription_status' => 'trial',
             'trial_ends_at'       => now()->addDays(14),
+            'horario_atendimento' => [
+                0 => ['ativo' => false, 'abertura' => '08:00', 'fechamento' => '18:00'],
+                1 => ['ativo' => true, 'abertura' => '08:00', 'fechamento' => '18:00'],
+                2 => ['ativo' => true, 'abertura' => '08:00', 'fechamento' => '18:00'],
+                3 => ['ativo' => true, 'abertura' => '08:00', 'fechamento' => '18:00'],
+                4 => ['ativo' => true, 'abertura' => '08:00', 'fechamento' => '18:00'],
+                5 => ['ativo' => true, 'abertura' => '08:00', 'fechamento' => '18:00'],
+                6 => ['ativo' => false, 'abertura' => '08:00', 'fechamento' => '18:00'],
+            ],
         ]);
         $this->tenant->users()->attach($this->user->id, ['papel' => 'admin']);
     }
@@ -44,13 +53,15 @@ class TriagemControllerTest extends TestCase
             ->component('Tenant/Triagem')
             ->where('config.max_tentativas_sem_entender', 2)
             ->where('config.palavras_chave_humano', [])
+            ->where('horarioFuncionamento.configurado', true)
+            ->where('horarioFuncionamento.resumo', 'Seg–Sex 08:00–18:00')
         );
     }
 
     public function test_update_persiste_regras_de_triagem(): void
     {
         $response = $this->autenticarComTenant()->put(route('tenant.triagem.update'), [
-            'palavras_chave_humano'       => ['atendente', 'humano'],
+            'palavras_chave_humano'       => [' Atendente ', 'ATENDENTE', 'humano'],
             'max_tentativas_sem_entender' => 3,
             'transferir_fora_do_horario'  => true,
             'mensagem_transferencia'      => 'Já te transfiro!',
