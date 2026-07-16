@@ -72,10 +72,6 @@ class WebhookController extends Controller
             return response('ok');
         }
 
-        if (! $tenant->bot_ativo) {
-            return response('ok');
-        }
-
         if (! in_array($event, ['messages.upsert', 'MESSAGES_UPSERT'], true)) {
             return response('ok');
         }
@@ -140,6 +136,12 @@ class WebhookController extends Controller
 
         if (! $mensagem) {
             // Duplicata (mesmo evolution_message_id) — nada a processar
+            return response('ok');
+        }
+
+        // Bot desativado impede apenas a resposta automática. A mensagem precisa
+        // continuar salva para aparecer no painel e poder ser assumida pela equipe.
+        if (! $tenant->bot_ativo) {
             return response('ok');
         }
 

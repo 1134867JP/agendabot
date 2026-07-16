@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, InfiniteScroll, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { PageProps } from '@/types';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
@@ -35,7 +35,7 @@ interface Conversa {
 
 interface Props extends PageProps {
     conversas: { data: Conversa[] };
-    filtros: { status_v2?: string };
+    filtros: { status_v2?: string; busca?: string };
 }
 
 interface SyncStatus {
@@ -65,13 +65,22 @@ const STATUS_DOT: Record<string, string> = {
     encerrada:             'var(--text-3)',
 };
 
+function dataDaApi(valor: string): Date {
+    const normalizado = valor.includes('T') ? valor : valor.replace(' ', 'T');
+    const temFuso = /(?:Z|[+-]\d{2}:?\d{2})$/.test(normalizado);
+
+    // Alguns registros chegam como UTC sem o sufixo Z. Sem ele, o navegador
+    // interpreta 01:19 como hora local e exibe três horas adiantado no Brasil.
+    return new Date(temFuso ? normalizado : `${normalizado}Z`);
+}
+
 function fmtHora(iso: string) {
-    return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return dataDaApi(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
 function fmtRelativo(iso: string | null) {
     if (!iso) return '';
-    const d = new Date(iso);
+    const d = dataDaApi(iso);
     const agora = new Date();
     const diffMin = Math.floor((agora.getTime() - d.getTime()) / 60000);
     if (diffMin < 1)  return 'agora';
@@ -433,7 +442,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
             setShowModalNova(true);
         }
     }, []);
-    const [busca,          setBusca]          = useState('');
+    const [busca,          setBusca]          = useState(filtros.busca ?? '');
     const buscaRef = useRef<HTMLInputElement>(null);
 
     const chatRef      = useRef<HTMLDivElement>(null);
@@ -442,15 +451,6 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
     const syncWasActiveRef = useRef(false);
 
     const { data, setData, post, processing, reset } = useForm<{ conteudo: string }>({ conteudo: '' });
-
-    // Mantém a lista de conversas atualizada sem exigir reload manual: sempre que o
-    // contador de não lidas mudar (nova mensagem ou conversa nova), recarrega a lista.
-    const { novaMensagem, resetarNovaMensagem } = useNotificacoes(true);
-    useEffect(() => {
-        if (!novaMensagem) return;
-        router.reload({ only: ['conversas'] });
-        resetarNovaMensagem();
-    }, [novaMensagem, resetarNovaMensagem]);
 
     const scrollBottom = () => {
         setTimeout(() => { if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight; }, 60);
@@ -469,6 +469,25 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
             if (!silent) setCarregando(false);
         }
     }, []);
+
+    // Detecta a mensagem mais recente pela identidade e horário, sem depender do
+    // contador de não lidas. Assim a conversa aberta e a lista se atualizam juntas.
+    const { novaMensagem, ultimaConversaId, resetarNovaMensagem } = useNotificacoes(true);
+    useEffect(() => {
+        if (!novaMensagem) return;
+
+        router.reload({
+            only: ['conversas'],
+            reset: ['conversas'],
+            preserveScroll: true,
+        });
+
+        if (selecionada && ultimaConversaId === selecionada.id) {
+            void buscarMensagens(selecionada, true);
+        }
+
+        resetarNovaMensagem();
+    }, [buscarMensagens, novaMensagem, resetarNovaMensagem, selecionada, ultimaConversaId]);
 
     const pararPolling = () => {
         if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
@@ -510,17 +529,49 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
     const enviar = (e: React.FormEvent) => {
         e.preventDefault();
         if (!selecionada || !data.conteudo.trim()) return;
-        const doPost = () => post(route('tenant.conversas.enviar', selecionada.id), {
+
+        post(route('tenant.conversas.enviar', selecionada.id), {
             preserveScroll: true,
-            onSuccess: () => { reset('conteudo'); buscarMensagens(selecionada).then(() => scrollBottom()); },
+            onSuccess: () => {
+                setSelecionada(atual => atual ? { ...atual, status_v2: 'em_atendimento_humano' } : null);
+                reset('conteudo');
+                buscarMensagens(selecionada).then(() => scrollBottom());
+            },
         });
-        if (selecionada.status_v2 !== 'em_atendimento_humano') assumir(doPost);
-        else doPost();
     };
 
     const filtrarStatus = (status: string) => {
-        router.get(route('tenant.conversas.index'), status ? { status_v2: status } : {}, { preserveState: true });
+        router.get(route('tenant.conversas.index'), {
+            status_v2: status || undefined,
+            busca: busca.trim() || undefined,
+        }, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: ['conversas', 'filtros'],
+            reset: ['conversas'],
+        });
     };
+
+    useEffect(() => {
+        const termoAtual = filtros.busca ?? '';
+        if (busca === termoAtual) return;
+
+        const timeout = window.setTimeout(() => {
+            router.get(route('tenant.conversas.index'), {
+                status_v2: filtros.status_v2 || undefined,
+                busca: busca.trim() || undefined,
+            }, {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+                only: ['conversas', 'filtros'],
+                reset: ['conversas'],
+            });
+        }, 350);
+
+        return () => window.clearTimeout(timeout);
+    }, [busca, filtros.busca, filtros.status_v2]);
 
     const pararSyncPolling = () => {
         if (syncRef.current) {
@@ -552,7 +603,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                     syncRef.current = null;
                 }
                 if (status.status === 'completed' && estavaAtivo) {
-                    router.reload({ only: ['conversas'] });
+                    router.reload({ only: ['conversas'], reset: ['conversas'] });
                 }
             }
         } catch {
@@ -611,15 +662,6 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
         if (!texto) return formatarTelefone(c.telefone_cliente);
         return texto.length > 48 ? texto.slice(0, 48) + '…' : texto;
     };
-
-    const conversasFiltradas = busca.trim()
-        ? conversas.data.filter(c => {
-            const q = busca.toLowerCase().replace(/\D/g, '');
-            const nome = nomeDe(c).toLowerCase();
-            const tel  = c.telefone_cliente.replace(/\D/g, '');
-            return nome.includes(busca.toLowerCase()) || tel.includes(q);
-          })
-        : conversas.data;
 
     const statusFiltros = [
         { label: 'Todas',          value: '' },
@@ -813,7 +855,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
 
                     {/* Lista */}
                     <div className="scrollbar-stable flex-1 overflow-y-auto">
-                        {conversasFiltradas.length === 0 ? (
+                        {conversas.data.length === 0 ? (
                             <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
                                 <svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
                                     <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
@@ -830,39 +872,53 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                     </button>
                                 )}
                             </div>
-                        ) : conversasFiltradas.map(c => {
-                            const ativo = selecionada?.id === c.id;
-                            return (
-                                <button
-                                    key={c.id}
-                                    onClick={() => selecionar(c)}
-                                    className="table-row-hover w-full px-3 py-3 text-left"
-                                    style={{
-                                        borderBottom: '1px solid var(--border)',
-                                        background: ativo ? 'var(--accent-light)' : 'transparent',
-                                        borderLeft: `3px solid ${ativo ? 'var(--accent)' : 'transparent'}`,
-                                    }}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <Avatar name={nomeDe(c)} placeholder={!nomeRealDe(c)} />
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex items-center justify-between gap-1">
-                                                <p className="truncate text-[13px] font-semibold text-primary">{nomeDe(c)}</p>
-                                                <span className="shrink-0 text-[10px]" style={{ color: 'var(--text-3)' }}>
-                                                    {fmtRelativo(c.ultima_mensagem_em)}
-                                                </span>
-                                            </div>
-                                            <div className="mt-0.5 flex items-center justify-between gap-1">
-                                                <p className="truncate text-[11px]" style={{ color: 'var(--text-3)' }}>
-                                                    {previewDe(c)}
-                                                </p>
-                                                <StatusBadge status={c.status_v2} />
-                                            </div>
-                                        </div>
+                        ) : (
+                            <InfiniteScroll
+                                data="conversas"
+                                buffer={400}
+                                preserveUrl
+                                onlyNext
+                                loading={() => (
+                                    <div className="flex justify-center px-3 py-4">
+                                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" style={{ color: 'var(--text-3)' }} />
                                     </div>
-                                </button>
-                            );
-                        })}
+                                )}
+                            >
+                                {conversas.data.map(c => {
+                                    const ativo = selecionada?.id === c.id;
+                                    return (
+                                        <button
+                                            key={c.id}
+                                            onClick={() => selecionar(c)}
+                                            className="table-row-hover w-full px-3 py-3 text-left"
+                                            style={{
+                                                borderBottom: '1px solid var(--border)',
+                                                background: ativo ? 'var(--accent-light)' : 'transparent',
+                                                borderLeft: `3px solid ${ativo ? 'var(--accent)' : 'transparent'}`,
+                                            }}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <Avatar name={nomeDe(c)} placeholder={!nomeRealDe(c)} />
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <p className="truncate text-[13px] font-semibold text-primary">{nomeDe(c)}</p>
+                                                        <span className="shrink-0 text-[10px]" style={{ color: 'var(--text-3)' }}>
+                                                            {fmtRelativo(c.ultima_mensagem_em)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="mt-0.5 flex items-center justify-between gap-1">
+                                                        <p className="truncate text-[11px]" style={{ color: 'var(--text-3)' }}>
+                                                            {previewDe(c)}
+                                                        </p>
+                                                        <StatusBadge status={c.status_v2} />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </InfiniteScroll>
+                        )}
                     </div>
                 </div>
 
