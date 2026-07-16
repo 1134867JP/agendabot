@@ -19,12 +19,10 @@ use App\Http\Controllers\TenantController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-// Site público
 Route::get('/', [LandingController::class, 'index'])->name('home');
 Route::get('/precos', [LandingController::class, 'precos'])->name('precos');
 Route::get('/health', HealthController::class)->name('health');
 
-// Onboarding
 Route::get('/cadastro', [OnboardingController::class, 'step1'])->name('onboarding.step1');
 Route::post('/cadastro', [OnboardingController::class, 'step1Store'])->middleware('throttle:6,1');
 Route::middleware('auth')->group(function () {
@@ -37,34 +35,27 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    // Seleção de tenant (tela inicial para donos)
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/tenants/{tenant}/selecionar', [TenantController::class, 'selecionar'])->name('tenants.selecionar');
     Route::get('/tenants/novo', [TenantController::class, 'create'])->name('tenants.create');
     Route::post('/tenants', [TenantController::class, 'store'])->name('tenants.store');
-
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Tela de renovação (bloqueio)
     Route::middleware(['tenant'])->group(function () {
         Route::get('/renovar', [SubscriptionController::class, 'renovar'])->name('tenant.renovar');
         Route::post('/renovar', [SubscriptionController::class, 'processarRenovacao'])->name('tenant.renovar.store');
         Route::post('/assinar/cancelar', [SubscriptionController::class, 'cancelar'])->name('tenant.cancelar');
     });
 
-    // ── Painel do Dono ────────────────────────────────────────────────────────
     Route::middleware(['tenant', 'subscription'])->prefix('painel')->name('tenant.')->group(function () {
         Route::get('/', [Tenant\DashboardController::class, 'index'])->name('dashboard');
-
-        // Agenda visual
         Route::get('agenda', [Tenant\AgendaController::class, 'index'])->name('agenda');
         Route::get('agenda/disponibilidade', [Tenant\AgendaController::class, 'disponibilidade'])->name('agenda.disponibilidade');
         Route::post('agenda/bloqueios', [Tenant\BloqueioAgendaController::class, 'store'])->name('agenda.bloqueios.store');
         Route::delete('agenda/bloqueios/{bloqueio}', [Tenant\BloqueioAgendaController::class, 'destroy'])->name('agenda.bloqueios.destroy');
 
-        // Agendamentos
         Route::get('agendamentos', [Tenant\AgendamentoController::class, 'index'])->name('agendamentos.index');
         Route::get('agendamentos/exportar', [Tenant\AgendamentoController::class, 'exportar'])->name('agendamentos.exportar');
         Route::post('agendamentos', [Tenant\AgendamentoController::class, 'store'])->name('agendamentos.store');
@@ -73,7 +64,6 @@ Route::middleware('auth')->group(function () {
         Route::patch('agendamentos/{agendamento}/concluir', [Tenant\AgendamentoController::class, 'concluir'])->name('agendamentos.concluir');
         Route::delete('agendamentos/{agendamento}', [Tenant\AgendamentoController::class, 'destroy'])->name('agendamentos.destroy');
 
-        // Analytics
         Route::get('analytics', [Tenant\AnalyticsController::class, 'index'])->name('analytics');
         Route::post('lista-espera', [Tenant\WaitlistController::class, 'store'])->name('waitlist.store');
         Route::delete('lista-espera/{waitlistEntry}', [Tenant\WaitlistController::class, 'destroy'])->name('waitlist.destroy');
@@ -83,41 +73,25 @@ Route::middleware('auth')->group(function () {
         Route::get('integracoes/google-calendar/callback', [Tenant\GoogleCalendarController::class, 'callback'])->name('calendar.callback');
         Route::delete('integracoes/google-calendar', [Tenant\GoogleCalendarController::class, 'disconnect'])->name('calendar.disconnect');
 
-        // Recursos
         Route::resource('recursos', Tenant\RecursoController::class)->except(['show']);
-
-        // Horários
         Route::post('recursos/{recurso}/horarios', [Tenant\HorarioController::class, 'sync'])->name('horarios.sync');
-
-        // Profissionais
-        Route::resource('profissionais', ProfissionalController::class)
-            ->except(['show'])
-            ->parameters(['profissionais' => 'profissional']);
-        Route::post('profissionais/{profissional}/horarios', [HorarioProfissionalController::class, 'sync'])
-            ->name('profissionais.horarios.sync');
-
-        // Serviços
+        Route::resource('profissionais', ProfissionalController::class)->except(['show'])->parameters(['profissionais' => 'profissional']);
+        Route::post('profissionais/{profissional}/horarios', [HorarioProfissionalController::class, 'sync'])->name('profissionais.horarios.sync');
         Route::resource('servicos', ServicoController::class)->except(['show']);
+        Route::resource('opcoes-extras', OpcaoExtraController::class)->except(['show'])->parameters(['opcoes-extras' => 'opcaoExtra']);
 
-        // Opções extras (convênios, pagamentos)
-        Route::resource('opcoes-extras', OpcaoExtraController::class)
-            ->except(['show'])
-            ->parameters(['opcoes-extras' => 'opcaoExtra']);
-
-        // Equipe
         Route::get('equipe', [EquipeController::class, 'index'])->name('equipe.index');
         Route::post('equipe', [EquipeController::class, 'store'])->name('equipe.store');
         Route::delete('equipe/{user}', [EquipeController::class, 'destroy'])->name('equipe.destroy');
 
-        // Clientes
         Route::get('clientes', [ClienteController::class, 'index'])->name('clientes.index');
+        Route::post('clientes', [ClienteController::class, 'store'])->name('clientes.store');
         Route::get('clientes/buscar', [ClienteController::class, 'search'])->name('clientes.search');
         Route::get('clientes/{cliente}', [ClienteController::class, 'show'])->name('clientes.show');
         Route::patch('clientes/{cliente}', [ClienteController::class, 'update'])->name('clientes.update');
         Route::get('clientes/{cliente}/exportar', [ClienteController::class, 'export'])->name('clientes.export');
         Route::delete('clientes/{cliente}', [ClienteController::class, 'destroy'])->name('clientes.destroy');
 
-        // Conversas WhatsApp
         Route::get('conversas', [ConversaController::class, 'index'])->name('conversas.index');
         Route::get('conversas/notificacoes', [ConversaController::class, 'notificacoes'])->name('conversas.notificacoes');
         Route::post('conversas/{conversa}/marcar-lida', [ConversaController::class, 'marcarLida'])->name('conversas.marcar-lida');
@@ -131,60 +105,40 @@ Route::middleware('auth')->group(function () {
         Route::post('conversas/{conversa}/devolver', [ConversaController::class, 'devolver'])->name('conversas.devolver');
         Route::post('conversas/{conversa}/enviar', [ConversaController::class, 'enviarMensagem'])->name('conversas.enviar');
 
-        // Simulador local: não envia mensagens ao WhatsApp nem chama a API de IA
         Route::get('bot/simulador', fn () => Inertia::render('Tenant/BotSimulator'))->name('bot.simulador');
-
-        // Config bot
         Route::put('configuracoes/bot', [Tenant\ConfiguracaoController::class, 'updateBot'])->name('configuracoes.bot');
-
-        // WhatsApp
         Route::get('whatsapp', [Tenant\WhatsAppController::class, 'index'])->name('whatsapp');
         Route::get('whatsapp/qrcode', [Tenant\WhatsAppController::class, 'qrcode'])->name('whatsapp.qrcode');
         Route::get('whatsapp/status', [Tenant\WhatsAppController::class, 'status'])->name('whatsapp.status');
-        Route::get('whatsapp/backups/{arquivo}', [Tenant\WhatsAppController::class, 'baixarBackup'])
-            ->where('arquivo', 'whatsapp-[0-9]{8}-[0-9]{6}\\.json')
-            ->name('whatsapp.backup');
+        Route::get('whatsapp/backups/{arquivo}', [Tenant\WhatsAppController::class, 'baixarBackup'])->where('arquivo', 'whatsapp-[0-9]{8}-[0-9]{6}\\.json')->name('whatsapp.backup');
         Route::post('whatsapp/desconectar', [Tenant\WhatsAppController::class, 'desconectar'])->name('whatsapp.desconectar');
 
-        // Configurações
         Route::get('configuracoes', [Tenant\ConfiguracaoController::class, 'index'])->name('configuracoes.index');
         Route::put('configuracoes', [Tenant\ConfiguracaoController::class, 'update'])->name('configuracoes.update');
-
-        // Triagem (handoff automático bot→humano)
         Route::get('triagem', [Tenant\TriagemController::class, 'index'])->name('triagem.index');
         Route::put('triagem', [Tenant\TriagemController::class, 'update'])->name('triagem.update');
-
-        // Regras de agendamento
         Route::get('regras-agendamento', [Tenant\RegraAgendamentoController::class, 'index'])->name('regras-agendamento.index');
         Route::put('regras-agendamento', [Tenant\RegraAgendamentoController::class, 'update'])->name('regras-agendamento.update');
-
-        // Cobrança variável bot
         Route::get('cobranca/resumo', [Tenant\CobrancaController::class, 'resumo'])->name('cobranca.resumo');
     });
 });
 
-// ── Super Admin ───────────────────────────────────────────────────────────────
 Route::middleware(['auth', 'superadmin'])->prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/', [SuperAdmin\DashboardController::class, 'index'])->name('dashboard');
-
     Route::resource('tenants', SuperAdmin\TenantController::class);
     Route::patch('tenants/{tenant}/toggle-ativo', [SuperAdmin\TenantController::class, 'toggleAtivo'])->name('tenants.toggle-ativo');
     Route::patch('tenants/{tenant}/toggle-isento', [SuperAdmin\TenantController::class, 'toggleIsento'])->name('tenants.toggle-isento');
     Route::post('tenants/{tenant}/impersonar', [SuperAdmin\TenantController::class, 'impersonar'])->name('tenants.impersonar');
     Route::delete('impersonar', [SuperAdmin\TenantController::class, 'pararImpersonar'])->name('impersonar.parar');
-
     Route::get('agendamentos', [SuperAdmin\AgendamentoController::class, 'index'])->name('agendamentos');
-    Route::get('financeiro', [SuperAdmin\FinanceiroController::class,  'index'])->name('financeiro');
-
+    Route::get('financeiro', [SuperAdmin\FinanceiroController::class, 'index'])->name('financeiro');
     Route::get('logs', [SuperAdmin\LogController::class, 'index'])->name('logs');
     Route::get('logs/json', [SuperAdmin\LogController::class, 'json'])->name('logs.json');
-
     Route::get('jobs', [SuperAdmin\JobsController::class, 'index'])->name('jobs');
     Route::post('jobs/{id}/retry', [SuperAdmin\JobsController::class, 'retry'])->name('jobs.retry');
     Route::post('jobs/retry-all', [SuperAdmin\JobsController::class, 'retryAll'])->name('jobs.retry-all');
     Route::delete('jobs/{id}', [SuperAdmin\JobsController::class, 'destroy'])->name('jobs.destroy');
     Route::delete('jobs', [SuperAdmin\JobsController::class, 'destroyAll'])->name('jobs.destroy-all');
-
     Route::get('tokens', [SuperAdmin\TokenUsageController::class, 'index'])->name('tokens');
 });
 
