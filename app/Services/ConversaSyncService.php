@@ -105,6 +105,7 @@ class ConversaSyncService
         string $instance,
         array $chat,
         array $nomesPorTelefone,
+        ?callable $deveInterromper = null,
     ): array {
         $remoteJid = data_get($chat, 'remoteJid') ?? data_get($chat, 'id');
         if (! $remoteJid || $this->deveIgnorar($remoteJid)) {
@@ -123,6 +124,10 @@ class ConversaSyncService
             $isLid,
             $telefone,
         );
+
+        if ($deveInterromper && $deveInterromper()) {
+            return ['importados' => 0, 'sem_mensagem' => false, 'ignorado' => false, 'interrompido' => true];
+        }
 
         if (! $telefone) {
             $telefone = $this->resolverTelefoneDasMensagens($msgs);
@@ -164,10 +169,23 @@ class ConversaSyncService
             }
         }
 
+        if ($deveInterromper && $deveInterromper()) {
+            return ['importados' => 0, 'sem_mensagem' => false, 'ignorado' => false, 'interrompido' => true];
+        }
+
         [$cliente, $conversa] = $this->upsertClienteEConversa($tenant, $telefone, $nomeChat);
         $importados = 0;
 
         foreach ($mensagensImportaveis as $msg) {
+            if ($deveInterromper && $deveInterromper()) {
+                return [
+                    'importados' => $importados,
+                    'sem_mensagem' => false,
+                    'ignorado' => false,
+                    'interrompido' => true,
+                ];
+            }
+
             if (Mensagem::where('evolution_message_id', $msg['evolution_id'])->exists()) {
                 continue;
             }

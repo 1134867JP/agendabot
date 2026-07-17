@@ -127,6 +127,7 @@ Route::middleware('auth')->group(function () {
         Route::post('conversas/iniciar', [ConversaController::class, 'iniciar'])->name('conversas.iniciar');
         Route::get('conversas/sincronizacao/status', [ConversaController::class, 'statusSincronizacao'])->name('conversas.sincronizacao.status');
         Route::post('conversas/sincronizar', [ConversaController::class, 'sincronizar'])->name('conversas.sincronizar');
+        Route::post('conversas/sincronizacao/cancelar', [ConversaController::class, 'cancelarSincronizacao'])->name('conversas.sincronizacao.cancelar');
         Route::get('conversas/{conversa}/mensagens', [ConversaController::class, 'mensagens'])->name('conversas.mensagens');
         Route::get('conversas/{conversa}/mensagens/{mensagem}/media', [ConversaController::class, 'media'])->name('conversas.media');
         Route::post('conversas/{conversa}/assumir', [ConversaController::class, 'assumir'])->name('conversas.assumir');

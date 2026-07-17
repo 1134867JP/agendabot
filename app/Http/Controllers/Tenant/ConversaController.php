@@ -8,11 +8,11 @@ use App\Models\Cliente;
 use App\Models\Conversa;
 use App\Models\Mensagem;
 use App\Services\EvolutionApiService;
+use App\Services\WhatsAppSyncState;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
-use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -256,12 +256,12 @@ class ConversaController extends Controller
         ]);
     }
 
-    public function statusSincronizacao(): JsonResponse
+    public function statusSincronizacao(WhatsAppSyncState $syncState): JsonResponse
     {
         $tenant = app('tenant');
-        $status = Cache::get("sync_whatsapp_tenant_{$tenant->id}");
+        $status = $syncState->status($tenant);
 
-        if (! is_array($status)) {
+        if ($status === []) {
             return response()->json([
                 'status' => 'idle',
                 'message' => 'Pronto para sincronizar.',
@@ -271,34 +271,34 @@ class ConversaController extends Controller
         return response()->json($status);
     }
 
-    public function sincronizar(): RedirectResponse
+    public function sincronizar(WhatsAppSyncState $syncState): RedirectResponse
     {
         $tenant = app('tenant');
 
-        if (! $tenant->evolution_instance) {
+        if (! $tenant->evolution_instance || ! $tenant->whatsapp_conectado) {
             return back()->withErrors(['erro' => 'Conecte o WhatsApp antes de sincronizar.']);
         }
 
-        $lockKey = "sync_whatsapp_tenant_{$tenant->id}";
-        $statusAtual = Cache::get($lockKey);
+        $statusAtual = $syncState->status($tenant);
 
         if (is_array($statusAtual) && in_array($statusAtual['status'] ?? null, ['queued', 'running'], true)) {
             return back();
         }
 
-        Cache::put($lockKey, [
-            'status' => 'queued',
-            'processed' => 0,
-            'total' => 0,
-            'imported' => 0,
-            'ignored' => 0,
-            'errors' => 0,
-            'message' => 'Sincronização aguardando processamento.',
-            'updated_at' => now()->toIso8601String(),
-        ], now()->addMinutes(15));
-
-        SincronizarConversasWhatsappJob::dispatch($tenant)->onQueue('sync');
+        $executionId = $syncState->iniciar($tenant);
+        SincronizarConversasWhatsappJob::dispatch($tenant, $executionId)->onQueue('sync');
 
         return back();
+    }
+
+    public function cancelarSincronizacao(WhatsAppSyncState $syncState): JsonResponse
+    {
+        $tenant = app('tenant');
+        $status = $syncState->cancelar($tenant);
+
+        return response()->json([
+            'ok' => true,
+            'status' => $status,
+        ]);
     }
 }

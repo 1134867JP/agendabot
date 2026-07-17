@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Tenant;
 use App\Http\Controllers\Controller;
 use App\Services\EvolutionApiService;
 use App\Services\WhatsAppConversationBackupService;
+use App\Services\WhatsAppSyncState;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -21,6 +21,7 @@ class WhatsAppController extends Controller
     public function __construct(
         private EvolutionApiService $evolution,
         private WhatsAppConversationBackupService $backups,
+        private WhatsAppSyncState $syncState,
     ) {}
 
     private function webhookUrl(\App\Models\Tenant $tenant): string
@@ -97,7 +98,10 @@ class WhatsAppController extends Controller
         }
 
         $tenant->update(['whatsapp_conectado' => false]);
-        Cache::forget("sync_whatsapp_tenant_{$tenant->id}");
+        $this->syncState->cancelar(
+            $tenant,
+            'Sincronização interrompida porque o WhatsApp foi desconectado.',
+        );
 
         try {
             $backup = $this->backups->criarBackup($tenant);
@@ -141,6 +145,13 @@ class WhatsAppController extends Controller
         $conectado = $status === 'open';
         if ($conectado !== $tenant->whatsapp_conectado) {
             $tenant->update(['whatsapp_conectado' => $conectado]);
+        }
+
+        if (! $conectado) {
+            $this->syncState->cancelar(
+                $tenant,
+                'Sincronização interrompida porque a conexão com o WhatsApp foi perdida.',
+            );
         }
 
         return response()->json(['status' => $status]);

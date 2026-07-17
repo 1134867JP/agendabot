@@ -39,7 +39,7 @@ interface Props extends PageProps {
 }
 
 interface SyncStatus {
-    status: 'idle' | 'queued' | 'running' | 'completed' | 'failed';
+    status: 'idle' | 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
     processed?: number;
     total?: number;
     imported?: number;
@@ -434,6 +434,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
     const [showModalNova,  setShowModalNova]  = useState(false);
     const [showRenomear,   setShowRenomear]   = useState(false);
     const [sincronizando,  setSincronizando]  = useState(false);
+    const [cancelandoSync, setCancelandoSync] = useState(false);
     const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
     const [syncVisivel, setSyncVisivel] = useState(false);
 
@@ -656,6 +657,33 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
         });
     };
 
+    const cancelarSincronizacao = async () => {
+        if (!sincronizando || cancelandoSync) return;
+
+        setCancelandoSync(true);
+        try {
+            const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content;
+            const response = await fetch(route('tenant.conversas.sincronizacao.cancelar'), {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'X-CSRF-TOKEN': csrf ?? '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    Accept: 'application/json',
+                },
+            });
+
+            if (!response.ok) return;
+
+            const result = await response.json() as { status: SyncStatus };
+            setSyncStatus(result.status);
+            syncWasActiveRef.current = false;
+            pararSyncPolling();
+        } finally {
+            setCancelandoSync(false);
+        }
+    };
+
     const previewDe = (c: Conversa) => {
         const texto = c.mensagens?.[0]?.conteudo;
         if (!texto) return formatarTelefone(c.telefone_cliente);
@@ -745,6 +773,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                             {syncStatus.status === 'running' && 'Sincronizando conversas'}
                                             {syncStatus.status === 'completed' && 'Conversas atualizadas'}
                                             {syncStatus.status === 'failed' && 'Falha na sincronização'}
+                                            {syncStatus.status === 'cancelled' && 'Sincronização interrompida'}
                                         </p>
                                         {syncStatus.status === 'completed' ? (
                                             <p className="mt-0.5 text-[10px] leading-relaxed" style={{ color: 'var(--text-3)' }}>
@@ -758,9 +787,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                             </p>
                                         )}
                                     </div>
-                                    {syncAtivo && (
-                                        <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[var(--border-strong)] border-t-[var(--jade)]" />
-                                    )}
+                                    {syncAtivo && <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[var(--border-strong)] border-t-[var(--jade)]" />}
                                     {!syncAtivo && (
                                         <button
                                             type="button"
@@ -786,7 +813,19 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                     </div>
                                 )}
 
-                                {syncStatus.status === 'failed' && (
+                                {syncAtivo && (
+                                    <button
+                                        type="button"
+                                        onClick={cancelarSincronizacao}
+                                        disabled={cancelandoSync}
+                                        className="mt-2 text-xs font-semibold disabled:opacity-60"
+                                        style={{ color: 'var(--danger-text)' }}
+                                    >
+                                        {cancelandoSync ? 'Interrompendo…' : 'Parar sincronização'}
+                                    </button>
+                                )}
+
+                                {(syncStatus.status === 'failed' || syncStatus.status === 'cancelled') && (
                                     <button type="button" onClick={sincronizar} className="mt-2 text-xs font-semibold" style={{ color: 'var(--danger-text)' }}>
                                         Tentar novamente
                                     </button>
