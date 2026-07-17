@@ -7,7 +7,9 @@ use App\Models\Cliente;
 use App\Models\Conversa;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\ConversaSyncService;
 use App\Services\EvolutionApiService;
+use App\Services\WhatsAppSyncState;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -28,6 +30,7 @@ class SincronizarConversasNomeTest extends TestCase
             'tipo_servico'        => 'barbeiro',
             'ativo'               => true,
             'evolution_instance'  => 'instancia-teste',
+            'whatsapp_conectado'  => true,
             'subscription_status' => 'trial',
             'trial_ends_at'       => now()->addDays(14),
         ]);
@@ -63,10 +66,7 @@ class SincronizarConversasNomeTest extends TestCase
             ],
         ]);
 
-        (new SincronizarConversasWhatsappJob($this->tenant))->handle(
-            app(EvolutionApiService::class),
-            app(\App\Services\ConversaSyncService::class)
-        );
+        $this->sincronizar();
 
         $cliente = Cliente::where('tenant_id', $this->tenant->id)->where('telefone', $telefone)->first();
 
@@ -96,10 +96,7 @@ class SincronizarConversasNomeTest extends TestCase
             ]],
         ]);
 
-        (new SincronizarConversasWhatsappJob($this->tenant))->handle(
-            app(EvolutionApiService::class),
-            app(\App\Services\ConversaSyncService::class)
-        );
+        $this->sincronizar();
 
         $cliente = Cliente::where('tenant_id', $this->tenant->id)->where('telefone', $telefone)->first();
 
@@ -128,10 +125,7 @@ class SincronizarConversasNomeTest extends TestCase
             ]],
         ]);
 
-        (new SincronizarConversasWhatsappJob($this->tenant))->handle(
-            app(EvolutionApiService::class),
-            app(\App\Services\ConversaSyncService::class)
-        );
+        $this->sincronizar();
 
         $conversa = Conversa::where('tenant_id', $this->tenant->id)
             ->where('telefone_cliente', $telefoneWhatsapp)
@@ -165,10 +159,7 @@ class SincronizarConversasNomeTest extends TestCase
             ]],
         ]);
 
-        (new SincronizarConversasWhatsappJob($this->tenant))->handle(
-            app(EvolutionApiService::class),
-            app(\App\Services\ConversaSyncService::class)
-        );
+        $this->sincronizar();
 
         $this->assertDatabaseHas('clientes', [
             'tenant_id' => $this->tenant->id,
@@ -184,5 +175,17 @@ class SincronizarConversasNomeTest extends TestCase
             $mock->shouldReceive('fetchChats')->andReturn($dados['chats']);
             $mock->shouldReceive('fetchMessages')->andReturn($dados['mensagens']);
         });
+    }
+
+    private function sincronizar(): void
+    {
+        $syncState = app(WhatsAppSyncState::class);
+        $executionId = $syncState->iniciar($this->tenant);
+
+        (new SincronizarConversasWhatsappJob($this->tenant, $executionId))->handle(
+            app(EvolutionApiService::class),
+            app(ConversaSyncService::class),
+            $syncState,
+        );
     }
 }
