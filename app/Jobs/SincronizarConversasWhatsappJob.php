@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Tenant;
 use App\Services\ConversaSyncService;
 use App\Services\EvolutionApiService;
+use App\Services\WhatsAppSyncState;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -25,26 +26,28 @@ class SincronizarConversasWhatsappJob implements ShouldQueue, ShouldBeUnique
 
     private const TAMANHO_LOTE = 10;
 
-    public function __construct(private readonly Tenant $tenant) {}
+    public function __construct(
+        private readonly Tenant $tenant,
+        private readonly string $executionId,
+    ) {}
 
     public function uniqueId(): string
     {
-        return (string) $this->tenant->id;
+        return $this->tenant->id.':'.$this->executionId;
     }
 
-    public function handle(EvolutionApiService $evolution, ConversaSyncService $sync): void
+    public function handle(
+        EvolutionApiService $evolution,
+        ConversaSyncService $sync,
+        WhatsAppSyncState $syncState,
+    ): void
     {
-        if (! $this->tenant->evolution_instance) {
-            $this->atualizarStatus([
-                'status' => 'failed',
-                'message' => 'WhatsApp não configurado.',
-            ], 5);
-
+        if ($syncState->deveInterromper($this->tenant, $this->executionId)) {
             return;
         }
 
         $instance = $this->tenant->evolution_instance;
-        $this->atualizarStatus([
+        $syncState->atualizar($this->tenant, $this->executionId, [
             'status' => 'running',
             'processed' => 0,
             'total' => 0,
@@ -58,13 +61,19 @@ class SincronizarConversasWhatsappJob implements ShouldQueue, ShouldBeUnique
         Log::info('SYNC_START', ['tenant' => $this->tenant->slug]);
 
         $nomesPorTelefone = $sync->buildNomesMap($evolution->fetchContacts($instance));
-        Cache::put($this->chaveNomes(), $nomesPorTelefone, now()->addHour());
+        if ($syncState->deveInterromper($this->tenant, $this->executionId)) {
+            return;
+        }
+        Cache::put($syncState->chaveNomes($this->tenant), $nomesPorTelefone, now()->addHour());
 
         $chatsApi = $evolution->fetchChats($instance);
+        if ($syncState->deveInterromper($this->tenant, $this->executionId)) {
+            return;
+        }
         $chats = $sync->chatsRecentesLimitados($chatsApi, count($chatsApi));
         $total = count($chats);
 
-        $this->atualizarStatus([
+        $syncState->atualizar($this->tenant, $this->executionId, [
             'status' => 'running',
             'processed' => 0,
             'total' => $total,
@@ -75,9 +84,9 @@ class SincronizarConversasWhatsappJob implements ShouldQueue, ShouldBeUnique
 
         if ($total === 0) {
             $removidos = $sync->limparRegistrosVazios($this->tenant);
-            Cache::forget($this->chaveNomes());
+            Cache::forget($syncState->chaveNomes($this->tenant));
 
-            $this->atualizarStatus([
+            $syncState->atualizar($this->tenant, $this->executionId, [
                 'status' => 'completed',
                 'processed' => 0,
                 'total' => 0,
@@ -101,6 +110,7 @@ class SincronizarConversasWhatsappJob implements ShouldQueue, ShouldBeUnique
                 $offset,
                 $total,
                 $offset + count($lote) >= $total,
+                $this->executionId,
             );
         }
 
@@ -111,9 +121,10 @@ class SincronizarConversasWhatsappJob implements ShouldQueue, ShouldBeUnique
 
     public function failed(\Throwable $e): void
     {
-        Cache::forget($this->chaveNomes());
+        $syncState = app(WhatsAppSyncState::class);
+        Cache::forget($syncState->chaveNomes($this->tenant));
 
-        $this->atualizarStatus([
+        $syncState->atualizar($this->tenant, $this->executionId, [
             'status' => 'failed',
             'message' => 'Não foi possível preparar a sincronização. Tente novamente.',
             'error' => app()->environment('production') ? null : $e->getMessage(),
@@ -126,24 +137,4 @@ class SincronizarConversasWhatsappJob implements ShouldQueue, ShouldBeUnique
         ]);
     }
 
-    private function chaveNomes(): string
-    {
-        return "sync_whatsapp_nomes_tenant_{$this->tenant->id}";
-    }
-
-    private function atualizarStatus(array $dados, int $ttlMinutos = 15): void
-    {
-        $key = "sync_whatsapp_tenant_{$this->tenant->id}";
-        $atual = Cache::get($key, []);
-
-        if (! is_array($atual)) {
-            $atual = [];
-        }
-
-        Cache::put(
-            $key,
-            array_merge($atual, $dados, ['updated_at' => now()->toIso8601String()]),
-            now()->addMinutes($ttlMinutos),
-        );
-    }
 }
