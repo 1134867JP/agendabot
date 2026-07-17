@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\ConversaSyncService;
 use App\Services\EvolutionApiService;
+use App\Services\WhatsAppSyncState;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Bus;
@@ -31,6 +32,7 @@ class SincronizarConversasLimiteTest extends TestCase
             'tipo_servico'        => 'barbeiro',
             'ativo'               => true,
             'evolution_instance'  => 'instancia-teste',
+            'whatsapp_conectado'  => true,
             'subscription_status' => 'trial',
             'trial_ends_at'       => now()->addDays(14),
         ]);
@@ -40,6 +42,8 @@ class SincronizarConversasLimiteTest extends TestCase
     public function test_sincroniza_todas_as_conversas_em_lotes(): void
     {
         Bus::fake();
+        $syncState = app(WhatsAppSyncState::class);
+        $executionId = $syncState->iniciar($this->tenant);
 
         // 40 chats, do mais recente (índice 0) ao mais antigo (índice 39)
         $chats = [];
@@ -62,9 +66,10 @@ class SincronizarConversasLimiteTest extends TestCase
             $mock->shouldReceive('fetchMessages')->times(40)->andReturn([]);
         });
 
-        (new SincronizarConversasWhatsappJob($this->tenant))->handle(
+        (new SincronizarConversasWhatsappJob($this->tenant, $executionId))->handle(
             app(EvolutionApiService::class),
-            app(ConversaSyncService::class)
+            app(ConversaSyncService::class),
+            $syncState,
         );
 
         Bus::assertChained([
@@ -81,9 +86,11 @@ class SincronizarConversasLimiteTest extends TestCase
                 $indice * 10,
                 40,
                 $indice === 3,
+                $executionId,
             ))->handle(
                 app(EvolutionApiService::class),
                 app(ConversaSyncService::class),
+                $syncState,
             );
         }
 
@@ -105,6 +112,8 @@ class SincronizarConversasLimiteTest extends TestCase
     public function test_nao_cria_clientes_ou_conversas_para_chats_sem_mensagens(): void
     {
         Bus::fake();
+        $syncState = app(WhatsAppSyncState::class);
+        $executionId = $syncState->iniciar($this->tenant);
 
         $chat = ['remoteJid' => '5551999999999@s.whatsapp.net'];
 
@@ -116,9 +125,10 @@ class SincronizarConversasLimiteTest extends TestCase
             $mock->shouldReceive('fetchMessages')->andReturn([]);
         });
 
-        (new SincronizarConversasWhatsappJob($this->tenant))->handle(
+        (new SincronizarConversasWhatsappJob($this->tenant, $executionId))->handle(
             app(EvolutionApiService::class),
             app(ConversaSyncService::class),
+            $syncState,
         );
 
         (new SincronizarConversasWhatsappLoteJob(
@@ -127,9 +137,11 @@ class SincronizarConversasLimiteTest extends TestCase
             0,
             1,
             true,
+            $executionId,
         ))->handle(
             app(EvolutionApiService::class),
             app(ConversaSyncService::class),
+            $syncState,
         );
 
         $this->assertDatabaseMissing('clientes', [
@@ -174,5 +186,77 @@ class SincronizarConversasLimiteTest extends TestCase
             ['recente@s.whatsapp.net', 'intermediario@s.whatsapp.net', 'antigo@s.whatsapp.net'],
             array_column($ordenados, 'remoteJid')
         );
+    }
+
+    public function test_cancelamento_impede_lote_pendente_de_processar_conversas(): void
+    {
+        $syncState = app(WhatsAppSyncState::class);
+        $executionId = $syncState->iniciar($this->tenant);
+        $syncState->atualizar($this->tenant, $executionId, [
+            'status' => 'running',
+            'processed' => 3,
+            'total' => 10,
+        ]);
+        $status = $syncState->cancelar($this->tenant);
+
+        $this->mock(EvolutionApiService::class, function ($mock) {
+            $mock->shouldNotReceive('fetchContacts');
+            $mock->shouldNotReceive('fetchMessages');
+        });
+
+        (new SincronizarConversasWhatsappLoteJob(
+            $this->tenant,
+            [['remoteJid' => '5551999999999@s.whatsapp.net']],
+            3,
+            10,
+            false,
+            $executionId,
+        ))->handle(
+            app(EvolutionApiService::class),
+            app(ConversaSyncService::class),
+            $syncState,
+        );
+
+        $this->assertSame('cancelled', $status['status']);
+        $this->assertSame(3, $status['processed']);
+        $this->assertDatabaseCount('clientes', 0);
+    }
+
+    public function test_execucao_antiga_nao_sobrescreve_nova_sincronizacao(): void
+    {
+        $syncState = app(WhatsAppSyncState::class);
+        $executionIdAntigo = $syncState->iniciar($this->tenant);
+        $syncState->cancelar($this->tenant);
+        $executionIdNovo = $syncState->iniciar($this->tenant);
+
+        $atualizou = $syncState->atualizar($this->tenant, $executionIdAntigo, [
+            'status' => 'completed',
+            'processed' => 10,
+        ]);
+
+        $status = $syncState->status($this->tenant);
+        $this->assertFalse($atualizou);
+        $this->assertSame($executionIdNovo, $status['execution_id']);
+        $this->assertSame('queued', $status['status']);
+    }
+
+    public function test_perda_de_conexao_impede_job_de_iniciar(): void
+    {
+        $syncState = app(WhatsAppSyncState::class);
+        $executionId = $syncState->iniciar($this->tenant);
+        $this->tenant->update(['whatsapp_conectado' => false]);
+
+        $this->mock(EvolutionApiService::class, function ($mock) {
+            $mock->shouldNotReceive('fetchContacts');
+            $mock->shouldNotReceive('fetchChats');
+        });
+
+        (new SincronizarConversasWhatsappJob($this->tenant, $executionId))->handle(
+            app(EvolutionApiService::class),
+            app(ConversaSyncService::class),
+            $syncState,
+        );
+
+        $this->assertSame('cancelled', $syncState->status($this->tenant)['status']);
     }
 }
