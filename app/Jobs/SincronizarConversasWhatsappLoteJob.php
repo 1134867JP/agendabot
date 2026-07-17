@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Tenant;
 use App\Services\ConversaSyncService;
 use App\Services\EvolutionApiService;
+use App\Services\WhatsAppSyncState;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -26,28 +27,40 @@ class SincronizarConversasWhatsappLoteJob implements ShouldQueue
         private readonly int $offset,
         private readonly int $total,
         private readonly bool $ultimoLote,
+        private readonly string $executionId,
     ) {}
 
-    public function handle(EvolutionApiService $evolution, ConversaSyncService $sync): void
+    public function handle(
+        EvolutionApiService $evolution,
+        ConversaSyncService $sync,
+        WhatsAppSyncState $syncState,
+    ): void
     {
-        if (! $this->tenant->evolution_instance) {
-            throw new \RuntimeException('WhatsApp não configurado durante a sincronização.');
+        if ($syncState->deveInterromper($this->tenant, $this->executionId)) {
+            return;
         }
 
         $instance = $this->tenant->evolution_instance;
-        $nomesPorTelefone = Cache::get($this->chaveNomes());
+        $nomesPorTelefone = Cache::get($syncState->chaveNomes($this->tenant));
 
         if (! is_array($nomesPorTelefone)) {
             $nomesPorTelefone = $sync->buildNomesMap($evolution->fetchContacts($instance));
-            Cache::put($this->chaveNomes(), $nomesPorTelefone, now()->addHour());
+            if ($syncState->deveInterromper($this->tenant, $this->executionId)) {
+                return;
+            }
+            Cache::put($syncState->chaveNomes($this->tenant), $nomesPorTelefone, now()->addHour());
         }
 
-        $status = Cache::get($this->chaveStatus(), []);
+        $status = $syncState->status($this->tenant);
         $importados = (int) data_get($status, 'imported', 0);
         $ignorados = (int) data_get($status, 'ignored', 0);
         $erros = (int) data_get($status, 'errors', 0);
 
         foreach ($this->chats as $indice => $chat) {
+            if ($syncState->deveInterromper($this->tenant, $this->executionId)) {
+                return;
+            }
+
             try {
                 $result = $sync->processarChat(
                     $this->tenant,
@@ -55,7 +68,12 @@ class SincronizarConversasWhatsappLoteJob implements ShouldQueue
                     $instance,
                     $chat,
                     $nomesPorTelefone,
+                    fn () => $syncState->deveInterromper($this->tenant, $this->executionId),
                 );
+
+                if ($result['interrompido'] ?? false) {
+                    return;
+                }
 
                 $importados += (int) $result['importados'];
                 if (($result['sem_mensagem'] ?? false) || ($result['ignorado'] ?? false)) {
@@ -71,7 +89,7 @@ class SincronizarConversasWhatsappLoteJob implements ShouldQueue
             }
 
             $processados = min($this->offset + $indice + 1, $this->total);
-            $this->atualizarStatus([
+            if (! $syncState->atualizar($this->tenant, $this->executionId, [
                 'status' => 'running',
                 'processed' => $processados,
                 'total' => $this->total,
@@ -79,7 +97,9 @@ class SincronizarConversasWhatsappLoteJob implements ShouldQueue
                 'ignored' => $ignorados,
                 'errors' => $erros,
                 'message' => "Sincronizando {$processados} de {$this->total} conversas.",
-            ]);
+            ])) {
+                return;
+            }
         }
 
         Log::info('SYNC_BATCH_DONE', [
@@ -93,8 +113,12 @@ class SincronizarConversasWhatsappLoteJob implements ShouldQueue
             return;
         }
 
+        if ($syncState->deveInterromper($this->tenant, $this->executionId)) {
+            return;
+        }
+
         $removidos = $sync->limparRegistrosVazios($this->tenant);
-        Cache::forget($this->chaveNomes());
+        Cache::forget($syncState->chaveNomes($this->tenant));
 
         Log::info('SYNC_DONE', [
             'tenant' => $this->tenant->slug,
@@ -107,7 +131,7 @@ class SincronizarConversasWhatsappLoteJob implements ShouldQueue
             'clientes_vazios_removidos' => $removidos['clientes'],
         ]);
 
-        $this->atualizarStatus([
+        $syncState->atualizar($this->tenant, $this->executionId, [
             'status' => 'completed',
             'processed' => $this->total,
             'total' => $this->total,
@@ -124,9 +148,10 @@ class SincronizarConversasWhatsappLoteJob implements ShouldQueue
 
     public function failed(\Throwable $e): void
     {
-        Cache::forget($this->chaveNomes());
+        $syncState = app(WhatsAppSyncState::class);
+        Cache::forget($syncState->chaveNomes($this->tenant));
 
-        $this->atualizarStatus([
+        $syncState->atualizar($this->tenant, $this->executionId, [
             'status' => 'failed',
             'message' => 'A sincronização foi interrompida em um dos lotes. Tente novamente.',
             'error' => app()->environment('production') ? null : $e->getMessage(),
@@ -140,28 +165,4 @@ class SincronizarConversasWhatsappLoteJob implements ShouldQueue
         ]);
     }
 
-    private function chaveStatus(): string
-    {
-        return "sync_whatsapp_tenant_{$this->tenant->id}";
-    }
-
-    private function chaveNomes(): string
-    {
-        return "sync_whatsapp_nomes_tenant_{$this->tenant->id}";
-    }
-
-    private function atualizarStatus(array $dados, int $ttlMinutos = 15): void
-    {
-        $atual = Cache::get($this->chaveStatus(), []);
-
-        if (! is_array($atual)) {
-            $atual = [];
-        }
-
-        Cache::put(
-            $this->chaveStatus(),
-            array_merge($atual, $dados, ['updated_at' => now()->toIso8601String()]),
-            now()->addMinutes($ttlMinutos),
-        );
-    }
 }
