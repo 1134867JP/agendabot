@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Head, InfiniteScroll, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
+import Modal from '@/Components/Modal';
+import FormField from '@/Components/UI/FormField';
 import { PageProps } from '@/types';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
 
@@ -270,12 +272,6 @@ function NovaConversaModal({ onClose, initialTelefone = '' }: { onClose: () => v
         mensagem: '',
     });
 
-    useEffect(() => {
-        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-        document.addEventListener('keydown', onKey);
-        return () => document.removeEventListener('keydown', onKey);
-    }, [onClose]);
-
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         post(route('tenant.conversas.iniciar'), {
@@ -284,16 +280,8 @@ function NovaConversaModal({ onClose, initialTelefone = '' }: { onClose: () => v
     };
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center sm:px-4"
-            role="dialog"
-            aria-modal="true"
-            onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-        >
-            <div
-                className="max-h-[92dvh] w-full max-w-sm overflow-y-auto rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl sm:p-6"
-                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}
-            >
+        <Modal show maxWidth="sm" onClose={onClose}>
+            <div className="p-5 sm:p-6">
                 <div className="mb-4 flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
                         Nova conversa
@@ -308,8 +296,7 @@ function NovaConversaModal({ onClose, initialTelefone = '' }: { onClose: () => v
                 </div>
 
                 <form onSubmit={submit} className="space-y-3">
-                    <div>
-                        <label className="label mb-1">Telefone (com DDD e código do país)</label>
+                    <FormField label="Telefone (com DDD e código do país)" error={errors.telefone} required>
                         <input
                             type="tel"
                             value={data.telefone}
@@ -318,10 +305,8 @@ function NovaConversaModal({ onClose, initialTelefone = '' }: { onClose: () => v
                             className="input"
                             autoFocus
                         />
-                        {errors.telefone && <p className="mt-1 text-xs text-red-400">{errors.telefone}</p>}
-                    </div>
-                    <div>
-                        <label className="label mb-1">Mensagem</label>
+                    </FormField>
+                    <FormField label="Mensagem" error={errors.mensagem} required>
                         <textarea
                             value={data.mensagem}
                             onChange={e => setData('mensagem', e.target.value)}
@@ -329,8 +314,7 @@ function NovaConversaModal({ onClose, initialTelefone = '' }: { onClose: () => v
                             rows={3}
                             className="input resize-none"
                         />
-                        {errors.mensagem && <p className="mt-1 text-xs text-red-400">{errors.mensagem}</p>}
-                    </div>
+                    </FormField>
                     <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
                         <button type="button" onClick={onClose} className="btn-secondary">
                             Cancelar
@@ -345,7 +329,7 @@ function NovaConversaModal({ onClose, initialTelefone = '' }: { onClose: () => v
                     </div>
                 </form>
             </div>
-        </div>
+        </Modal>
     );
 }
 
@@ -353,12 +337,6 @@ function RenomearContatoModal({ conversa, onClose, onSaved }: { conversa: Conver
     const { data, setData, patch, processing, errors } = useForm({
         nome: nomeRealDe(conversa) ?? '',
     });
-
-    useEffect(() => {
-        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-        document.addEventListener('keydown', onKey);
-        return () => document.removeEventListener('keydown', onKey);
-    }, [onClose]);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -375,17 +353,8 @@ function RenomearContatoModal({ conversa, onClose, onSaved }: { conversa: Conver
     };
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center sm:px-4"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="renomear-contato-titulo"
-            onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-        >
-            <div
-                className="w-full max-w-sm rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl sm:p-6"
-                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}
-            >
+        <Modal show maxWidth="sm" onClose={onClose}>
+            <div className="p-5 sm:p-6">
                 <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
                         <h3 id="renomear-contato-titulo" className="text-lg font-semibold text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
@@ -399,17 +368,17 @@ function RenomearContatoModal({ conversa, onClose, onSaved }: { conversa: Conver
                 </div>
 
                 <form onSubmit={submit}>
-                    <label htmlFor="nome-contato" className="label mb-1">Como sua equipe reconhece esse cliente?</label>
-                    <input
-                        id="nome-contato"
-                        value={data.nome}
-                        onChange={e => setData('nome', e.target.value)}
-                        placeholder="Ex: Mariana Silva"
-                        maxLength={120}
-                        className="input"
-                        autoFocus
-                    />
-                    {errors.nome && <p className="mt-1 text-xs text-red-400">{errors.nome}</p>}
+                    <FormField label="Como sua equipe reconhece esse cliente?" htmlFor="nome-contato" error={errors.nome} required>
+                        <input
+                            id="nome-contato"
+                            value={data.nome}
+                            onChange={e => setData('nome', e.target.value)}
+                            placeholder="Ex: Mariana Silva"
+                            maxLength={120}
+                            className="input"
+                            autoFocus
+                        />
+                    </FormField>
 
                     <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                         <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
@@ -419,7 +388,7 @@ function RenomearContatoModal({ conversa, onClose, onSaved }: { conversa: Conver
                     </div>
                 </form>
             </div>
-        </div>
+        </Modal>
     );
 }
 
