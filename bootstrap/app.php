@@ -3,8 +3,10 @@
 use App\Http\Middleware\CheckSubscription;
 use App\Http\Middleware\EnsureHasTenant;
 use App\Http\Middleware\EnsureSuperAdmin;
+use App\Http\Middleware\EnsureTenantAdmin;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\LimitRequestBody;
 use App\Http\Middleware\ValidateMonitorToken;
 use App\Support\ErrorAlerter;
 use Illuminate\Auth\AuthenticationException;
@@ -28,7 +30,11 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->trustProxies(at: '*');
+        $trustedProxies = array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('TRUSTED_PROXIES', '127.0.0.1,::1,172.16.0.0/12')),
+        )));
+        $middleware->trustProxies(at: $trustedProxies);
 
         $middleware->web(append: [
             HandleInertiaRequests::class,
@@ -43,9 +49,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'tenant' => EnsureHasTenant::class,
+            'tenant.admin' => EnsureTenantAdmin::class,
             'superadmin' => EnsureSuperAdmin::class,
             'subscription' => CheckSubscription::class,
             'monitor.token' => ValidateMonitorToken::class,
+            'body.limit' => LimitRequestBody::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
