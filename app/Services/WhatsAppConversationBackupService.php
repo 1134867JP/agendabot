@@ -6,6 +6,7 @@ use App\Models\Cliente;
 use App\Models\Conversa;
 use App\Models\Mensagem;
 use App\Models\Tenant;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -14,10 +15,12 @@ class WhatsAppConversationBackupService
 {
     private const MAX_BACKUPS = 5;
 
+    private const RETENTION_DAYS = 30;
+
     public function criarBackup(Tenant $tenant): array
     {
         $diretorio = $this->diretorio($tenant);
-        $arquivo = 'whatsapp-'.now()->format('Ymd-His').'.json';
+        $arquivo = 'whatsapp-'.now()->format('Ymd-His').'.json.enc';
         $caminho = $diretorio.'/'.$arquivo;
 
         $clientes = Cliente::where('tenant_id', $tenant->id)
@@ -78,7 +81,7 @@ class WhatsAppConversationBackupService
             JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR,
         );
 
-        if (! Storage::disk('local')->put($caminho, $json)) {
+        if (! Storage::disk('local')->put($caminho, Crypt::encryptString($json))) {
             throw new RuntimeException('Não foi possível salvar o backup das conversas.');
         }
 
@@ -108,7 +111,7 @@ class WhatsAppConversationBackupService
     {
         $diretorio = $this->diretorio($tenant);
         $arquivos = collect(Storage::disk('local')->files($diretorio))
-            ->filter(fn (string $path) => str_ends_with($path, '.json'))
+            ->filter(fn (string $path) => $this->ehBackup($path))
             ->sortDesc();
 
         $caminho = $arquivos->first();
@@ -122,7 +125,7 @@ class WhatsAppConversationBackupService
     public function caminho(Tenant $tenant, string $arquivo): string
     {
         abort_unless(
-            preg_match('/^whatsapp-\d{8}-\d{6}\.json$/', $arquivo) === 1,
+            preg_match('/^whatsapp-\\d{8}-\\d{6}\\.json(?:\\.enc)?$/', $arquivo) === 1,
             404,
         );
 
@@ -130,6 +133,35 @@ class WhatsAppConversationBackupService
         abort_unless(Storage::disk('local')->exists($caminho), 404);
 
         return $caminho;
+    }
+
+    public function conteudo(Tenant $tenant, string $arquivo): string
+    {
+        $conteudo = Storage::disk('local')->get($this->caminho($tenant, $arquivo));
+
+        return str_ends_with($arquivo, '.enc')
+            ? Crypt::decryptString($conteudo)
+            : $conteudo;
+    }
+
+    public function criptografarBackupsLegados(): int
+    {
+        return collect(Storage::disk('local')->allFiles('whatsapp-backups'))
+            ->filter(fn (string $path) => str_ends_with($path, '.json'))
+            ->reduce(function (int $total, string $path): int {
+                $destino = $path.'.enc';
+
+                if (! Storage::disk('local')->exists($destino)) {
+                    $conteudo = Storage::disk('local')->get($path);
+                    if (! Storage::disk('local')->put($destino, Crypt::encryptString($conteudo))) {
+                        throw new RuntimeException("Não foi possível criptografar {$path}.");
+                    }
+                }
+
+                Storage::disk('local')->delete($path);
+
+                return $total + 1;
+            }, 0);
     }
 
     private function dadosArquivo(Tenant $tenant, string $arquivo): array
@@ -147,10 +179,20 @@ class WhatsAppConversationBackupService
     private function removerBackupsAntigos(string $diretorio): void
     {
         collect(Storage::disk('local')->files($diretorio))
-            ->filter(fn (string $path) => str_ends_with($path, '.json'))
+            ->filter(fn (string $path) => $this->ehBackup($path))
             ->sortDesc()
-            ->slice(self::MAX_BACKUPS)
-            ->each(fn (string $path) => Storage::disk('local')->delete($path));
+            ->values()
+            ->each(function (string $path, int $indice): void {
+                $expirado = Storage::disk('local')->lastModified($path) < now()->subDays(self::RETENTION_DAYS)->timestamp;
+                if ($indice >= self::MAX_BACKUPS || $expirado) {
+                    Storage::disk('local')->delete($path);
+                }
+            });
+    }
+
+    private function ehBackup(string $path): bool
+    {
+        return str_ends_with($path, '.json') || str_ends_with($path, '.json.enc');
     }
 
     private function diretorio(Tenant $tenant): string

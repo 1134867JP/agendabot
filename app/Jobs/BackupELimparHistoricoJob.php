@@ -12,6 +12,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -68,7 +69,7 @@ class BackupELimparHistoricoJob implements ShouldQueue
     private function gerarBackup(array $conversaIds, Carbon $threshold): void
     {
         $data = Carbon::now()->format('Y-m-d_H-i');
-        $filename = "backups/{$this->tenant->slug}_{$data}.txt";
+        $filename = "backups/tenant-{$this->tenant->id}/conversas_{$data}.txt.enc";
 
         $conversas = Conversa::whereIn('id', $conversaIds)
             ->with(['cliente', 'mensagens' => fn ($q) => $q->where('enviada_em', '<', $threshold)->orderBy('enviada_em')])
@@ -118,7 +119,13 @@ class BackupELimparHistoricoJob implements ShouldQueue
         $linhas[] = str_repeat('=', 60);
         $linhas[] = "Fim do backup — {$total} mensagens";
 
-        Storage::put($filename, implode("\n", $linhas));
+        Storage::put($filename, Crypt::encryptString(implode("\n", $linhas)));
+
+        collect(Storage::files("backups/tenant-{$this->tenant->id}"))
+            ->filter(fn (string $path) => str_ends_with($path, '.txt.enc'))
+            ->sortDesc()
+            ->slice(5)
+            ->each(fn (string $path) => Storage::delete($path));
 
         Log::info('BACKUP_CRIADO', ['tenant' => $this->tenant->slug, 'arquivo' => $filename]);
     }

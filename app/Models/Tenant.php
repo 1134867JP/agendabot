@@ -19,9 +19,15 @@ class Tenant extends Model
         // v2
         'ramo_negocio', 'descricao_negocio', 'cidade', 'endereco',
         'horarios_funcionamento', 'nome_agente', 'tom_voz', 'instrucoes_extras', 'bot_saudacao', 'bot_ativo',
-        'webhook_token',
+        'webhook_token', 'webhook_token_rotated_at',
         // triagem / horário de atendimento
         'modo_bot', 'horario_atendimento', 'mensagem_fora_horario',
+    ];
+
+    protected $hidden = [
+        'webhook_token',
+        'asaas_customer_id',
+        'asaas_subscription_id',
     ];
 
     protected $casts = [
@@ -33,6 +39,7 @@ class Tenant extends Model
         'isento_cobranca'      => 'boolean',
         'trial_ends_at'        => 'datetime',
         'subscription_ends_at' => 'datetime',
+        'webhook_token_rotated_at' => 'datetime',
     ];
 
     /** Dias da semana no índice 0=Dom .. 6=Sáb usado por horario_atendimento. */

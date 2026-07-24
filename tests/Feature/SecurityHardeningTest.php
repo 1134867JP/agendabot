@@ -2,11 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\WhatsAppConversationBackupService;
+use App\Support\Csv;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class SecurityHardeningTest extends TestCase
@@ -102,7 +107,8 @@ class SecurityHardeningTest extends TestCase
         $response->assertHeader('X-Content-Type-Options', 'nosniff');
         $response->assertHeader('X-Frame-Options', 'DENY');
         $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-        $response->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+        $response->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+        $response->assertHeader('Content-Security-Policy');
     }
 
     public function test_hsts_ausente_em_requisicao_http_simples(): void
@@ -162,5 +168,120 @@ class SecurityHardeningTest extends TestCase
             ]);
 
         $response->assertOk();
+    }
+
+    public function test_tenant_secrets_are_never_serialized(): void
+    {
+        $tenant = new Tenant([
+            'nome' => 'Estabelecimento',
+            'slug' => 'estabelecimento',
+            'webhook_token' => 'segredo',
+            'asaas_customer_id' => 'cus_123',
+            'asaas_subscription_id' => 'sub_123',
+        ]);
+
+        $serialized = $tenant->toArray();
+
+        $this->assertArrayNotHasKey('webhook_token', $serialized);
+        $this->assertArrayNotHasKey('asaas_customer_id', $serialized);
+        $this->assertArrayNotHasKey('asaas_subscription_id', $serialized);
+    }
+
+    public function test_super_admin_cannot_be_granted_by_mass_assignment(): void
+    {
+        $user = User::create([
+            'name' => 'Usuário',
+            'email' => 'usuario-'.uniqid().'@example.test',
+            'password' => 'password',
+            'is_super_admin' => true,
+        ]);
+
+        $this->assertFalse($user->fresh()->is_super_admin);
+    }
+
+    public function test_inertia_shared_props_use_an_explicit_allow_list(): void
+    {
+        $user = User::factory()->create();
+        $tenant = new Tenant([
+            'nome' => 'Estabelecimento',
+            'slug' => 'estabelecimento',
+            'webhook_token' => 'segredo',
+        ]);
+
+        app()->instance('tenant', $tenant);
+
+        $request = Request::create('/painel', 'GET');
+        $request->setUserResolver(fn () => $user);
+
+        $props = app(HandleInertiaRequests::class)->share($request);
+        $sharedTenant = $props['currentTenant']();
+        $sharedUser = $props['auth']['user']();
+
+        $this->assertArrayNotHasKey('webhook_token', $sharedTenant);
+        $this->assertArrayNotHasKey('password', $sharedUser);
+        $this->assertSame(
+            ['id', 'name', 'email', 'telefone', 'is_super_admin'],
+            array_keys($sharedUser),
+        );
+    }
+
+    public function test_operator_is_forbidden_from_tenant_configuration(): void
+    {
+        $user = User::factory()->create();
+        $tenant = $this->tenant(['subscription_status' => 'active']);
+        $tenant->users()->attach($user->id, ['papel' => 'operador']);
+
+        $this->actingAs($user)
+            ->withSession(['tenant_id' => $tenant->id])
+            ->get(route('tenant.configuracoes.index'))
+            ->assertForbidden();
+    }
+
+    public function test_super_admin_requires_second_factor_when_enabled(): void
+    {
+        config(['auth.superadmin_two_factor' => true]);
+
+        $user = User::factory()->create();
+        $user->forceFill(['is_super_admin' => true])->save();
+
+        $this->actingAs($user)
+            ->get(route('superadmin.dashboard'))
+            ->assertRedirect(route('superadmin.two-factor.challenge'));
+    }
+
+    public function test_common_user_cannot_open_super_admin_second_factor_challenge(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('superadmin.two-factor.challenge'))
+            ->assertForbidden();
+    }
+
+    public function test_whatsapp_backup_is_encrypted_at_rest(): void
+    {
+        Storage::fake('local');
+        $tenant = $this->tenant(['nome' => 'Nome confidencial']);
+
+        $backup = app(WhatsAppConversationBackupService::class)->criarBackup($tenant);
+        $path = "whatsapp-backups/tenant-{$tenant->id}/{$backup['arquivo']}";
+
+        Storage::disk('local')->assertExists($path);
+        $this->assertStringNotContainsString(
+            'Nome confidencial',
+            Storage::disk('local')->get($path),
+        );
+        $this->assertStringContainsString(
+            'Nome confidencial',
+            app(WhatsAppConversationBackupService::class)->conteudo($tenant, $backup['arquivo']),
+        );
+    }
+
+    public function test_csv_cells_that_can_execute_formulas_are_neutralized(): void
+    {
+        $this->assertSame(
+            ["'=SUM(1,1)", "' +CMD", 'cliente normal', 10],
+            Csv::row(['=SUM(1,1)', ' +CMD', 'cliente normal', 10]),
+        );
     }
 }

@@ -35,7 +35,10 @@ class ClienteOperacionalTest extends TestCase
 
     private function autenticarComTenant()
     {
-        return $this->actingAs($this->user)->withSession(['tenant_id' => $this->tenant->id]);
+        return $this->actingAs($this->user)->withSession([
+            'tenant_id' => $this->tenant->id,
+            'auth.password_confirmed_at' => time(),
+        ]);
     }
 
     public function test_busca_retorna_apenas_clientes_do_tenant(): void

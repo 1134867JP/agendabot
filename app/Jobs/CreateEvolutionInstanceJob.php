@@ -22,8 +22,12 @@ class CreateEvolutionInstanceJob implements ShouldQueue
     {
         $evolution->criarInstancia($this->tenant->evolution_instance);
 
-        $webhookUrl = route('webhook', $this->tenant->slug).'?token='.$this->tenant->webhook_token;
-        $evolution->configurarWebhook($this->tenant->evolution_instance, $webhookUrl);
+        $webhookUrl = route('webhook', $this->tenant->slug);
+        $evolution->configurarWebhook(
+            $this->tenant->evolution_instance,
+            $webhookUrl,
+            $this->tenant->webhook_token,
+        );
 
         $this->tenant->update(['ativo' => true]);
     }
