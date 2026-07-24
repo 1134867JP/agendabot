@@ -125,7 +125,7 @@ class WhatsAppConversationBackupService
     public function caminho(Tenant $tenant, string $arquivo): string
     {
         abort_unless(
-            preg_match('/^whatsapp-\d{8}-\d{6}\.json$/', $arquivo) === 1,
+            preg_match('/^whatsapp-\\d{8}-\\d{6}\\.json(?:\\.enc)?$/', $arquivo) === 1,
             404,
         );
 
