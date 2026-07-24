@@ -148,7 +148,7 @@ Route::middleware('auth')->group(function () {
         Route::get('whatsapp/qrcode', [Tenant\WhatsAppController::class, 'qrcode'])->middleware('tenant.admin')->name('whatsapp.qrcode');
         Route::get('whatsapp/status', [Tenant\WhatsAppController::class, 'status'])->name('whatsapp.status');
         Route::get('whatsapp/backups/{arquivo}', [Tenant\WhatsAppController::class, 'baixarBackup'])
-            ->where('arquivo', 'whatsapp-[0-9]{8}-[0-9]{6}\\.json')
+            ->where('arquivo', 'whatsapp-[0-9]{8}-[0-9]{6}\\.json(?:\\.enc)?')
             ->middleware(['tenant.admin', 'password.confirm'])
             ->name('whatsapp.backup');
         Route::post('whatsapp/desconectar', [Tenant\WhatsAppController::class, 'desconectar'])->middleware(['tenant.admin', 'password.confirm', 'throttle:6,1'])->name('whatsapp.desconectar');
