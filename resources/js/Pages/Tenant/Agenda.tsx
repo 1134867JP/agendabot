@@ -2,6 +2,8 @@ import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import AgendaViewTabs from '@/Components/AgendaViewTabs';
+import Modal from '@/Components/Modal';
+import StatusBadge from '@/Components/UI/StatusBadge';
 import { PageProps, Recurso } from '@/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -649,11 +651,8 @@ function DetalheModal({
     const { accent } = slotColor(detalhe);
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 backdrop-blur-sm sm:items-center">
-            <div
-                className="w-full max-w-sm overflow-hidden rounded-t-2xl shadow-2xl sm:rounded-2xl"
-                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}
-            >
+        <Modal show maxWidth="sm" onClose={onClose}>
+            <div className="overflow-hidden">
                 {/* Accent top bar */}
                 <div style={{ height: 3, background: accent }} />
 
@@ -766,9 +765,9 @@ function DetalheModal({
                                 )}
                                 <div className="flex justify-between">
                                     <span style={{ color: 'var(--text-3)' }}>Status</span>
-                                    <span className={`badge ${detalhe.status === 'confirmado' ? 'badge-green' : detalhe.status === 'cancelado' ? 'badge-red' : 'badge-gray'}`}>
+                                    <StatusBadge tone={detalhe.status === 'confirmado' ? 'success' : detalhe.status === 'cancelado' ? 'danger' : 'neutral'} dot>
                                         {detalhe.status}
-                                    </span>
+                                    </StatusBadge>
                                 </div>
                             </div>
 
@@ -794,7 +793,7 @@ function DetalheModal({
                     )}
                 </div>
             </div>
-        </div>
+        </Modal>
     );
 }
 
@@ -1371,8 +1370,8 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
             )}
 
             {detalheBloqueio && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:px-4">
-                    <div className="w-full max-w-sm rounded-t-2xl p-6 shadow-2xl sm:rounded-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
+                <Modal show maxWidth="sm" onClose={() => setDetalheBloqueio(null)}>
+                    <div className="p-6">
                         <div className="mb-4 flex items-start justify-between">
                             <div>
                                 <p className="label mb-1">Horário bloqueado</p>
@@ -1396,12 +1395,12 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
                             </button>
                         </div>
                     </div>
-                </div>
+                </Modal>
             )}
 
             {modalBloqueio && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:px-4">
-                    <div className="w-full max-w-sm rounded-t-2xl shadow-2xl sm:rounded-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
+                <Modal show maxWidth="sm" onClose={() => setModalBloqueio(null)}>
+                    <div>
                         <div className="p-6">
                             <div className="mb-4 flex items-start justify-between">
                                 <div>
@@ -1449,16 +1448,13 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
                             </div>
                         </div>
                     </div>
-                </div>
+                </Modal>
             )}
 
             {/* ── New booking modal ── */}
             {modalNova && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:px-4">
-                    <div
-                        className="max-h-[92dvh] w-full max-w-sm overflow-y-auto rounded-t-2xl shadow-2xl sm:rounded-2xl"
-                        style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}
-                    >
+                <Modal show maxWidth="sm" onClose={() => { setModalNova(null); setErroReserva(null); }}>
+                    <div>
                         <div className="p-6">
                             <div className="mb-1 flex items-start justify-between">
                                 <h3
@@ -1636,7 +1632,7 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
                             </div>
                         </div>
                     </div>
-                </div>
+                </Modal>
             )}
         </AppLayout>
     );
