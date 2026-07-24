@@ -49,7 +49,7 @@ Route::middleware('auth')->group(function () {
 
     // Tela de renovação (bloqueio)
     Route::middleware(['tenant'])->group(function () {
-        Route::get('/renovar', [SubscriptionController::class, 'renovar'])->name('tenant.renovar');
+        Route::get('/renovar', [SubscriptionController::class, 'renovar'])->middleware('tenant.admin')->name('tenant.renovar');
         Route::post('/renovar', [SubscriptionController::class, 'processarRenovacao'])->middleware('tenant.admin')->name('tenant.renovar.store');
         Route::post('/assinar/cancelar', [SubscriptionController::class, 'cancelar'])->middleware(['tenant.admin', 'password.confirm', 'throttle:6,1'])->name('tenant.cancelar');
     });
@@ -71,7 +71,7 @@ Route::middleware('auth')->group(function () {
         Route::put('agendamentos/{agendamento}', [Tenant\AgendamentoController::class, 'update'])->name('agendamentos.update');
         Route::patch('agendamentos/{agendamento}/cancelar', [Tenant\AgendamentoController::class, 'cancelar'])->name('agendamentos.cancelar');
         Route::patch('agendamentos/{agendamento}/concluir', [Tenant\AgendamentoController::class, 'concluir'])->name('agendamentos.concluir');
-        Route::delete('agendamentos/{agendamento}', [Tenant\AgendamentoController::class, 'destroy'])->name('agendamentos.destroy');
+        Route::delete('agendamentos/{agendamento}', [Tenant\AgendamentoController::class, 'destroy'])->middleware(['tenant.admin', 'password.confirm'])->name('agendamentos.destroy');
 
         // Analytics
         Route::get('analytics', [Tenant\AnalyticsController::class, 'index'])->name('analytics');
@@ -174,7 +174,7 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'superadmin'])->prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/', [SuperAdmin\DashboardController::class, 'index'])->name('dashboard');
 
-    Route::resource('tenants', SuperAdmin\TenantController::class)->only(['index', 'create', 'show', 'edit']);
+    Route::resource('tenants', SuperAdmin\TenantController::class)->only(['index', 'create', 'edit']);
     Route::resource('tenants', SuperAdmin\TenantController::class)->only(['store', 'update', 'destroy'])
         ->middleware(['password.confirm', 'throttle:10,1']);
     Route::patch('tenants/{tenant}/toggle-ativo', [SuperAdmin\TenantController::class, 'toggleAtivo'])->middleware(['password.confirm', 'throttle:10,1'])->name('tenants.toggle-ativo');
