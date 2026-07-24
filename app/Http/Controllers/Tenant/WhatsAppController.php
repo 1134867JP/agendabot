@@ -26,7 +26,7 @@ class WhatsAppController extends Controller
     private function webhookUrl(\App\Models\Tenant $tenant): string
     {
         if (! $tenant->webhook_token) {
-            $tenant->update(['webhook_token' => Str::random(32)]);
+            $tenant->update(['webhook_token' => Str::random(64)]);
             $tenant->refresh();
         }
         return route('webhook', $tenant->slug);
