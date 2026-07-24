@@ -5,11 +5,13 @@ namespace Tests\Feature;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\WhatsAppConversationBackupService;
 use App\Support\Csv;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class SecurityHardeningTest extends TestCase
@@ -245,6 +247,34 @@ class SecurityHardeningTest extends TestCase
         $this->actingAs($user)
             ->get(route('superadmin.dashboard'))
             ->assertRedirect(route('superadmin.two-factor.challenge'));
+    }
+
+    public function test_common_user_cannot_open_super_admin_second_factor_challenge(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('superadmin.two-factor.challenge'))
+            ->assertForbidden();
+    }
+
+    public function test_whatsapp_backup_is_encrypted_at_rest(): void
+    {
+        Storage::fake('local');
+        $tenant = $this->tenant(['nome' => 'Nome confidencial']);
+
+        $backup = app(WhatsAppConversationBackupService::class)->criarBackup($tenant);
+        $path = "whatsapp-backups/tenant-{$tenant->id}/{$backup['arquivo']}";
+
+        Storage::disk('local')->assertExists($path);
+        $this->assertStringNotContainsString(
+            'Nome confidencial',
+            Storage::disk('local')->get($path),
+        );
+        $this->assertStringContainsString(
+            'Nome confidencial',
+            app(WhatsAppConversationBackupService::class)->conteudo($tenant, $backup['arquivo']),
+        );
     }
 
     public function test_csv_cells_that_can_execute_formulas_are_neutralized(): void
