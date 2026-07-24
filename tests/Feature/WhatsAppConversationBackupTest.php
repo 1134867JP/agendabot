@@ -15,7 +15,7 @@ class WhatsAppConversationBackupTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_cria_backup_antes_de_limpar_e_preserva_clientes(): void
+    public function test_cria_backup_criptografado_antes_de_limpar_e_preserva_clientes(): void
     {
         Storage::fake('local');
 
@@ -54,13 +54,16 @@ class WhatsAppConversationBackupTest extends TestCase
 
         $service = app(WhatsAppConversationBackupService::class);
         $backup = $service->criarBackup($tenant);
+        $path = "whatsapp-backups/tenant-{$tenant->id}/{$backup['arquivo']}";
 
-        Storage::disk('local')->assertExists(
-            "whatsapp-backups/tenant-{$tenant->id}/{$backup['arquivo']}",
+        Storage::disk('local')->assertExists($path);
+        $this->assertStringNotContainsString(
+            'Olá, gostaria de agendar.',
+            Storage::disk('local')->get($path),
         );
 
         $json = json_decode(
-            Storage::disk('local')->get("whatsapp-backups/tenant-{$tenant->id}/{$backup['arquivo']}"),
+            $service->conteudo($tenant, $backup['arquivo']),
             true,
             flags: JSON_THROW_ON_ERROR,
         );
