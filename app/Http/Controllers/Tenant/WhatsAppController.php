@@ -10,7 +10,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Inertia\Inertia;
@@ -27,7 +26,7 @@ class WhatsAppController extends Controller
     private function webhookUrl(\App\Models\Tenant $tenant): string
     {
         if (! $tenant->webhook_token) {
-            $tenant->update(['webhook_token' => Str::random(32)]);
+            $tenant->update(['webhook_token' => Str::random(64)]);
             $tenant->refresh();
         }
         return route('webhook', $tenant->slug);
@@ -129,12 +128,17 @@ class WhatsAppController extends Controller
     public function baixarBackup(string $arquivo): StreamedResponse
     {
         $tenant = app('tenant');
-        $caminho = $this->backups->caminho($tenant, $arquivo);
+        $nomeDownload = preg_replace('/\\.enc$/', '', $arquivo);
 
-        return Storage::disk('local')->download($caminho, $arquivo, [
-            'Content-Type' => 'application/json; charset=UTF-8',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        return response()->streamDownload(
+            fn () => print $this->backups->conteudo($tenant, $arquivo),
+            $nomeDownload,
+            [
+                'Content-Type' => 'application/json; charset=UTF-8',
+                'X-Content-Type-Options' => 'nosniff',
+                'Cache-Control' => 'no-store, private',
+            ],
+        );
     }
 
     public function status(): JsonResponse
