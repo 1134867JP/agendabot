@@ -59,8 +59,12 @@ class WhatsAppConversationBackupTest extends TestCase
             "whatsapp-backups/tenant-{$tenant->id}/{$backup['arquivo']}",
         );
 
+        $conteudoCriptografado = Storage::disk('local')
+            ->get("whatsapp-backups/tenant-{$tenant->id}/{$backup['arquivo']}");
+        $this->assertStringNotContainsString('Olá, gostaria de agendar.', $conteudoCriptografado);
+
         $json = json_decode(
-            Storage::disk('local')->get("whatsapp-backups/tenant-{$tenant->id}/{$backup['arquivo']}"),
+            $service->conteudo($tenant, $backup['arquivo']),
             true,
             flags: JSON_THROW_ON_ERROR,
         );
