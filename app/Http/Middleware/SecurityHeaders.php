@@ -14,7 +14,8 @@ class SecurityHeaders
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $nonce = Vite::useCspNonce();
+        Vite::useCspNonce();
+        $nonce = Vite::cspNonce();
         $response = $next($request);
 
         $response->headers->set('X-Content-Type-Options', 'nosniff');
@@ -47,8 +48,7 @@ class SecurityHeaders
             $response->headers->set('Cache-Control', 'no-store, private');
         }
 
-        // HSTS apenas em HTTPS (atrás do proxy, secure() reflete X-Forwarded-Proto
-        // pois trustProxies('*') está configurado em bootstrap/app.php)
+        // HSTS apenas em HTTPS; secure() respeita somente os proxies confiáveis.
         if ($request->secure()) {
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         }
