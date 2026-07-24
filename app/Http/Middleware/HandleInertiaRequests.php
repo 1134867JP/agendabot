@@ -32,9 +32,23 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => fn () => $request->user()?->only([
+                    'id', 'name', 'email', 'telefone', 'is_super_admin',
+                ]),
             ],
-            'currentTenant'  => fn () => app()->bound('tenant') ? app('tenant') : null,
+            'currentTenant'  => function () {
+                if (! app()->bound('tenant')) {
+                    return null;
+                }
+
+                return app('tenant')->only([
+                    'id', 'nome', 'slug', 'tipo_servico', 'tipo_servico_personalizado',
+                    'telefone_whatsapp', 'whatsapp_conectado', 'ramo_negocio',
+                    'descricao_negocio', 'cidade', 'endereco', 'horarios_funcionamento',
+                    'nome_agente', 'tom_voz', 'bot_saudacao', 'bot_ativo', 'modo_bot',
+                    'horario_atendimento', 'mensagem_fora_horario', 'ativo',
+                ]);
+            },
             'impersonando'   => fn () => (bool) session('impersonando_tenant_id'),
             'tenantPapel'    => function () use ($request) {
                 if (! app()->bound('tenant') || ! $request->user()) return null;
