@@ -1,7 +1,4 @@
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
+import FormField from '@/Components/UI/FormField';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, useForm } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
@@ -21,35 +18,30 @@ export default function ConfirmPassword() {
 
     return (
         <GuestLayout>
-            <Head title="Confirm Password" />
+            <Head title="Confirmar senha" />
 
-            <div className="mb-4 text-sm text-gray-600">
-                This is a secure area of the application. Please confirm your
-                password before continuing.
+            <div className="mb-6">
+                <h1 className="text-2xl font-semibold text-primary">Confirme sua senha</h1>
+                <p className="mt-1 text-sm text-secondary">Esta é uma área protegida. Confirme sua senha para continuar.</p>
             </div>
 
-            <form onSubmit={submit}>
-                <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
-
-                    <TextInput
+            <form onSubmit={submit} className="space-y-4">
+                <FormField label="Senha" htmlFor="password" error={errors.password} required>
+                    <input
                         id="password"
                         type="password"
                         name="password"
                         value={data.password}
-                        className="mt-1 block w-full"
-                        isFocused={true}
+                        className="input"
+                        autoFocus
+                        autoComplete="current-password"
                         onChange={(e) => setData('password', e.target.value)}
                     />
+                </FormField>
 
-                    <InputError message={errors.password} className="mt-2" />
-                </div>
-
-                <div className="mt-4 flex items-center justify-end">
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Confirm
-                    </PrimaryButton>
-                </div>
+                <button type="submit" className="btn-primary min-h-11 w-full justify-center" disabled={processing}>
+                    {processing ? 'Confirmando…' : 'Confirmar e continuar'}
+                </button>
             </form>
         </GuestLayout>
     );
