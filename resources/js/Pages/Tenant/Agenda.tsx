@@ -1,6 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
+import AgendaViewTabs from '@/Components/AgendaViewTabs';
 import { PageProps, Recurso } from '@/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -1074,6 +1075,7 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
     return (
         <AppLayout fullHeight>
             <Head title="Agenda" />
+            <AgendaViewTabs active="calendar" />
 
             {/* ───────────── Mobile ───────────── */}
             <div className="flex flex-1 flex-col md:hidden overflow-hidden">

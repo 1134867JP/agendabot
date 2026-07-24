@@ -2,6 +2,7 @@ import { Head, router, useForm } from "@inertiajs/react";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import AppLayout from "@/Layouts/AppLayout";
+import AgendaViewTabs from "@/Components/AgendaViewTabs";
 import { PageProps, Agendamento, Recurso, PaginatedData } from "@/types";
 import { useConfirm } from "@/hooks/useConfirm";
 
@@ -792,11 +793,13 @@ export default function AgendamentosIndex({
 
     return (
         <AppLayout
-            title="Agendamentos"
-            subtitle="Reservas confirmadas, concluídas e canceladas"
+            title="Agenda"
+            subtitle="Visualização em lista das reservas confirmadas, concluídas e canceladas"
         >
-            <Head title="Agendamentos" />
+            <Head title="Agenda — Lista" />
             {confirmModal}
+
+            <AgendaViewTabs active="list" />
 
             {/* Filtros */}
             <form

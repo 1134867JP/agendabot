@@ -1,5 +1,5 @@
 import { TipoServico } from '@/types';
-import { usaRecursos, usaProfissionais } from '@/lib/tenantNav';
+import { rotuloRecursos, usaRecursos, usaProfissionais } from '@/lib/tenantNav';
 
 // Define as abas do hub de configurações. Type/admin-aware, reaproveitando a
 // mesma lógica de catálogo por tipo usada na Sidebar e no Dashboard.
@@ -29,7 +29,7 @@ export function buildConfigTabs(tipo: TipoServico, isAdmin: boolean): ConfigTab[
     ];
 
     if (usaRecursos(tipo)) {
-        tabs.push({ label: 'Recursos', routeName: 'tenant.recursos.index', path: '/painel/recursos', icon: ICONS.recursos });
+        tabs.push({ label: rotuloRecursos(tipo), routeName: 'tenant.recursos.index', path: '/painel/recursos', icon: ICONS.recursos });
     }
     if (usaProfissionais(tipo)) {
         tabs.push({ label: 'Profissionais', routeName: 'tenant.profissionais.index', path: '/painel/profissionais', icon: ICONS.profissionais });
