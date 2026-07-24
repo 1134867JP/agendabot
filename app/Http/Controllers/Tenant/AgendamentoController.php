@@ -10,6 +10,7 @@ use App\Models\Recurso;
 use App\Models\Servico;
 use App\Services\AgendamentoService;
 use App\Services\AsaasService;
+use App\Support\Csv;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -250,7 +251,7 @@ class AgendamentoController extends Controller
                             ? Carbon::parse($ag->inicio)->diffInMinutes($ag->fim)
                             : '–'
                     );
-                    fputcsv($handle, [
+                    fputcsv($handle, Csv::row([
                         $ag->id,
                         $ag->cliente_nome ?? $ag->cliente?->nome ?? '–',
                         $ag->cliente_telefone ?? $ag->cliente?->telefone ?? '–',
@@ -260,7 +261,7 @@ class AgendamentoController extends Controller
                         $ag->valor_total ? number_format($ag->valor_total, 2, ',', '.') : '–',
                         $ag->status,
                         $ag->origem ?? 'manual',
-                    ], ';');
+                    ]), ';');
                 }
             });
 
