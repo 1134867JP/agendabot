@@ -4,6 +4,9 @@ import ConfiguracoesLayout from '@/Layouts/ConfiguracoesLayout';
 import { useConfirm } from '@/hooks/useConfirm';
 import { PageProps } from '@/types';
 import Toggle from '@/Components/Toggle';
+import EmptyState from '@/Components/UI/EmptyState';
+import StatusBadge from '@/Components/UI/StatusBadge';
+import Toolbar from '@/Components/UI/Toolbar';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -270,7 +273,7 @@ export default function ProfissionaisIndex({ profissionais }: Props) {
         <ConfiguracoesLayout title="Profissionais" subtitle="Sua equipe, especialidades e horários de atendimento">
             <Head title="Profissionais" />
 
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <Toolbar className="mb-5">
                 <p className="text-sm" style={{ color: 'var(--text-3)' }}>
                     {profissionais.length} profissional{profissionais.length !== 1 ? 'is' : ''} cadastrado{profissionais.length !== 1 ? 's' : ''}
                 </p>
@@ -279,7 +282,7 @@ export default function ProfissionaisIndex({ profissionais }: Props) {
                         + Novo profissional
                     </button>
                 )}
-            </div>
+            </Toolbar>
 
             <div className="space-y-3">
                 {/* Formulário novo profissional inline */}
@@ -288,12 +291,12 @@ export default function ProfissionaisIndex({ profissionais }: Props) {
                 )}
 
                 {profissionais.length === 0 && !novoAberto && (
-                    <div className="card flex flex-col items-center gap-3 p-8 text-center sm:p-10" style={{ color: 'var(--text-3)' }}>
-                        <div>
-                            <p className="text-sm font-medium text-primary">Cadastre seu primeiro profissional</p>
-                            <p className="mt-1 text-xs">Defina quem atende, especialidades e horários disponíveis.</p>
-                        </div>
-                        <button type="button" onClick={() => setNovoAberto(true)} className="btn-primary min-h-11">Criar profissional</button>
+                    <div className="card overflow-hidden">
+                        <EmptyState
+                            title="Cadastre seu primeiro profissional"
+                            description="Defina quem atende, especialidades e horários disponíveis."
+                            action={<button type="button" onClick={() => setNovoAberto(true)} className="btn-primary min-h-11">Criar profissional</button>}
+                        />
                     </div>
                 )}
 
@@ -331,9 +334,7 @@ export default function ProfissionaisIndex({ profissionais }: Props) {
                                     </div>
 
                                     <div className="grid w-full grid-cols-2 gap-2 pl-14 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:pl-0">
-                                        <span className={`badge ${p.ativo ? 'badge-green' : 'badge-gray'}`}>
-                                            {p.ativo ? 'Ativo' : 'Inativo'}
-                                        </span>
+                                        <StatusBadge tone={p.ativo ? 'success' : 'neutral'} dot>{p.ativo ? 'Ativo' : 'Inativo'}</StatusBadge>
                                         <button
                                             onClick={() => setExpandido(expandido === p.id ? null : p.id)}
                                             className="btn-secondary min-h-10 justify-center py-1.5 text-xs"
