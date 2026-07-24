@@ -11,6 +11,7 @@ class RotateWebhookTokens extends Command
 {
     protected $signature = 'security:rotate-webhook-tokens
         {--tenant=* : IDs dos tenants que serão rotacionados}
+        {--stale : Rotaciona apenas tenants que ainda não passaram pela rotação segura}
         {--dry-run : Apenas lista os tenants afetados}
         {--force : Executa sem confirmação interativa}';
 
@@ -23,6 +24,9 @@ class RotateWebhookTokens extends Command
 
         if ($tenantIds !== []) {
             $query->whereKey($tenantIds);
+        }
+        if ($this->option('stale')) {
+            $query->whereNull('webhook_token_rotated_at');
         }
 
         $tenants = $query->get();
@@ -49,12 +53,24 @@ class RotateWebhookTokens extends Command
             $novoToken = Str::random(64);
             $url = route('webhook', $tenant->slug);
 
-            $tenant->forceFill(['webhook_token' => $novoToken])->save();
-
             if (! $evolution->configurarWebhook($tenant->evolution_instance, $url, $novoToken)) {
-                $tenant->forceFill(['webhook_token' => $tokenAnterior])->save();
-                $evolution->configurarWebhook($tenant->evolution_instance, $url, $tokenAnterior);
-                $this->error("#{$tenant->id} falhou; token anterior restaurado.");
+                $this->error("#{$tenant->id} falhou; token anterior preservado.");
+                $falhas++;
+
+                continue;
+            }
+
+            try {
+                $tenant->forceFill([
+                    'webhook_token' => $novoToken,
+                    'webhook_token_rotated_at' => now(),
+                ])->save();
+            } catch (\Throwable $e) {
+                if ($tokenAnterior) {
+                    $evolution->configurarWebhook($tenant->evolution_instance, $url, $tokenAnterior);
+                }
+                report($e);
+                $this->error("#{$tenant->id} falhou ao persistir; configuração anterior restaurada.");
                 $falhas++;
 
                 continue;
