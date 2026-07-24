@@ -1,10 +1,15 @@
 import { router } from '@inertiajs/react';
 import { Agendamento, PaginatedData } from '@/types';
+import Card from '@/Components/UI/Card';
+import EmptyState from '@/Components/UI/EmptyState';
+import FormField from '@/Components/UI/FormField';
+import StatusBadge from '@/Components/UI/StatusBadge';
+import Toolbar from '@/Components/UI/Toolbar';
 
-const STATUS_COLORS: Record<string, string> = {
-    confirmado: 'bg-blue-100 text-blue-700',
-    cancelado:  'bg-red-100 text-red-600',
-    concluido:  'bg-green-100 text-green-700',
+const statusConfig = {
+    confirmado: { label: 'Confirmado', tone: 'info' as const },
+    cancelado: { label: 'Cancelado', tone: 'danger' as const },
+    concluido: { label: 'Concluído', tone: 'success' as const },
 };
 
 interface Props {
@@ -14,88 +19,146 @@ interface Props {
 
 export default function AgendamentosTable({ agendamentos, filtros }: Props) {
     const fmt = (iso: string) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-    const fmtVal = (v: number | null) => v != null ? `R$ ${v.toFixed(2)}` : '—';
+    const fmtVal = (value: number | null) => value != null
+        ? value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+        : '—';
 
-    const cancelar = (ag: Agendamento) => {
-        if (!confirm(`Cancelar agendamento de ${ag.cliente_nome}?`)) return;
-        router.patch(route('agendamentos.cancelar', ag.id));
+    const cancelar = (agendamento: Agendamento) => {
+        if (!confirm(`Cancelar agendamento de ${agendamento.cliente_nome}?`)) return;
+        router.patch(route('agendamentos.cancelar', agendamento.id));
     };
 
-    const filtrar = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        const fd = new FormData(e.currentTarget);
-        router.get(route('agendamentos.index'), Object.fromEntries(fd) as Record<string, string>, { preserveState: true });
+    const filtrar = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        router.get(route('agendamentos.index'), Object.fromEntries(formData) as Record<string, string>, { preserveState: true });
+    };
+
+    const badge = (status: string) => {
+        const config = statusConfig[status as keyof typeof statusConfig] ?? { label: status, tone: 'neutral' as const };
+        return <StatusBadge tone={config.tone} dot>{config.label}</StatusBadge>;
     };
 
     return (
         <div className="space-y-4">
-            <form onSubmit={filtrar} className="flex flex-wrap gap-3">
-                <input type="date" name="data" defaultValue={filtros.data ?? ''}
-                    className="rounded-md border-gray-300 text-sm shadow-sm" />
-                <select name="status" defaultValue={filtros.status ?? ''}
-                    className="rounded-md border-gray-300 text-sm shadow-sm">
-                    <option value="">Todos os status</option>
-                    <option value="confirmado">Confirmado</option>
-                    <option value="cancelado">Cancelado</option>
-                    <option value="concluido">Concluído</option>
-                </select>
-                <button type="submit" className="rounded-md bg-gray-700 px-3 py-1.5 text-sm font-medium text-primary hover:bg-gray-800">
-                    Filtrar
-                </button>
-            </form>
+            <Toolbar>
+                <form onSubmit={filtrar} className="contents">
+                    <FormField label="Data" htmlFor="filtro-data" className="min-w-0 flex-1 sm:max-w-[190px]">
+                        <input id="filtro-data" type="date" name="data" defaultValue={filtros.data ?? ''} className="input" />
+                    </FormField>
+                    <FormField label="Status" htmlFor="filtro-status" className="min-w-0 flex-1 sm:max-w-[210px]">
+                        <select id="filtro-status" name="status" defaultValue={filtros.status ?? ''} className="input">
+                            <option value="">Todos os status</option>
+                            <option value="confirmado">Confirmado</option>
+                            <option value="cancelado">Cancelado</option>
+                            <option value="concluido">Concluído</option>
+                        </select>
+                    </FormField>
+                    <button type="submit" className="btn-primary w-full sm:w-auto">Aplicar filtros</button>
+                </form>
+            </Toolbar>
 
-            <div className="overflow-x-auto rounded-lg border">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            {['Cliente', 'Recurso', 'Início', 'Fim', 'Status', 'Valor', 'Ação'].map(h => (
-                                <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">{h}</th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 bg-white">
-                        {agendamentos.data.length === 0 && (
-                            <tr><td colSpan={7} className="px-4 py-6 text-center text-gray-400">Nenhum agendamento encontrado.</td></tr>
-                        )}
-                        {agendamentos.data.map(ag => (
-                            <tr key={ag.id}>
-                                <td className="px-4 py-3 font-medium text-gray-900">
-                                    <div>{ag.cliente_nome}</div>
-                                    <div className="text-xs text-gray-400">{ag.cliente_telefone}</div>
-                                </td>
-                                <td className="px-4 py-3 text-gray-600">{ag.recurso.nome}</td>
-                                <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{fmt(ag.inicio)}</td>
-                                <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{fmt(ag.fim)}</td>
-                                <td className="px-4 py-3">
-                                    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[ag.status]}`}>
-                                        {ag.status}
-                                    </span>
-                                </td>
-                                <td className="px-4 py-3 text-gray-600">{fmtVal(ag.valor_total)}</td>
-                                <td className="px-4 py-3">
-                                    {ag.status === 'confirmado' && (
-                                        <button onClick={() => cancelar(ag)}
-                                            className="text-xs text-red-600 hover:underline">
-                                            Cancelar
-                                        </button>
-                                    )}
-                                </td>
-                            </tr>
+            {agendamentos.data.length === 0 ? (
+                <Card padding="none">
+                    <EmptyState
+                        title="Nenhum agendamento encontrado"
+                        description="Altere os filtros ou crie um novo agendamento para começar."
+                    />
+                </Card>
+            ) : (
+                <>
+                    <Card padding="none" className="hidden overflow-hidden md:block">
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full text-sm">
+                                <thead style={{ background: 'var(--bg-surface-2)', borderBottom: '1px solid var(--border)' }}>
+                                    <tr>
+                                        {['Cliente', 'Recurso', 'Início', 'Fim', 'Status', 'Valor', 'Ação'].map(header => (
+                                            <th key={header} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
+                                                {header}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {agendamentos.data.map(agendamento => (
+                                        <tr key={agendamento.id} className="table-row-hover" style={{ borderBottom: '1px solid var(--border)' }}>
+                                            <td className="px-4 py-3">
+                                                <div className="font-medium text-primary">{agendamento.cliente_nome}</div>
+                                                <div className="mt-0.5 text-xs text-muted">{agendamento.cliente_telefone}</div>
+                                            </td>
+                                            <td className="px-4 py-3 text-secondary">{agendamento.recurso.nome}</td>
+                                            <td className="whitespace-nowrap px-4 py-3 text-secondary">{fmt(agendamento.inicio)}</td>
+                                            <td className="whitespace-nowrap px-4 py-3 text-secondary">{fmt(agendamento.fim)}</td>
+                                            <td className="px-4 py-3">{badge(agendamento.status)}</td>
+                                            <td className="whitespace-nowrap px-4 py-3 text-secondary">{fmtVal(agendamento.valor_total)}</td>
+                                            <td className="px-4 py-3">
+                                                {agendamento.status === 'confirmado' && (
+                                                    <button onClick={() => cancelar(agendamento)} className="text-xs font-medium" style={{ color: 'var(--danger-text)' }}>
+                                                        Cancelar
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </Card>
+
+                    <div className="space-y-3 md:hidden">
+                        {agendamentos.data.map(agendamento => (
+                            <Card key={agendamento.id} padding="md">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <h3 className="truncate text-sm font-semibold text-primary">{agendamento.cliente_nome}</h3>
+                                        <p className="mt-0.5 truncate text-xs text-muted">{agendamento.cliente_telefone}</p>
+                                    </div>
+                                    {badge(agendamento.status)}
+                                </div>
+                                <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
+                                    <div className="col-span-2">
+                                        <dt className="label">Recurso</dt>
+                                        <dd className="mt-1 text-sm text-secondary">{agendamento.recurso.nome}</dd>
+                                    </div>
+                                    <div>
+                                        <dt className="label">Início</dt>
+                                        <dd className="mt-1 text-sm text-secondary">{fmt(agendamento.inicio)}</dd>
+                                    </div>
+                                    <div>
+                                        <dt className="label">Fim</dt>
+                                        <dd className="mt-1 text-sm text-secondary">{fmt(agendamento.fim)}</dd>
+                                    </div>
+                                    <div>
+                                        <dt className="label">Valor</dt>
+                                        <dd className="mt-1 text-sm text-secondary">{fmtVal(agendamento.valor_total)}</dd>
+                                    </div>
+                                </dl>
+                                {agendamento.status === 'confirmado' && (
+                                    <button onClick={() => cancelar(agendamento)} className="btn-danger mt-4 w-full">Cancelar agendamento</button>
+                                )}
+                            </Card>
                         ))}
-                    </tbody>
-                </table>
-            </div>
+                    </div>
+                </>
+            )}
 
             {agendamentos.last_page > 1 && (
-                <div className="flex gap-1">
-                    {agendamentos.links.map((link, i) => (
-                        <button key={i} disabled={!link.url}
+                <nav className="flex flex-wrap justify-center gap-1.5 sm:justify-end" aria-label="Paginação">
+                    {agendamentos.links.map((link, index) => (
+                        <button
+                            key={index}
+                            disabled={!link.url}
                             onClick={() => link.url && router.get(link.url, filtros, { preserveState: true })}
-                            className={`rounded px-3 py-1 text-sm ${link.active ? 'bg-indigo-600 text-primary' : 'border text-gray-600 hover:bg-gray-50 disabled:opacity-40'}`}
+                            className="min-h-10 min-w-10 rounded-lg px-3 text-sm transition-colors disabled:opacity-40"
+                            style={{
+                                background: link.active ? 'var(--accent)' : 'var(--bg-surface)',
+                                border: `1px solid ${link.active ? 'var(--accent)' : 'var(--border)'}`,
+                                color: link.active ? 'white' : 'var(--text-2)',
+                            }}
                             dangerouslySetInnerHTML={{ __html: link.label }}
                         />
                     ))}
-                </div>
+                </nav>
             )}
         </div>
     );

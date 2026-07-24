@@ -1,0 +1,53 @@
+:root,
+.dark {
+    --text-2: rgba(237, 241, 239, 0.78);
+    --text-3: rgba(210, 222, 217, 0.68);
+}
+
+.light {
+    --text-2: #3d4c46;
+    --text-3: #53675f;
+}
+
+.label {
+    color: var(--text-3);
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    letter-spacing: 0.07em;
+}
+
+.page-title {
+    font-weight: 400;
+    letter-spacing: -0.015em;
+}
+
+.ui-skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-surface-2);
+}
+
+.ui-skeleton::after {
+    position: absolute;
+    inset: 0;
+    content: '';
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text-3) 16%, transparent), transparent);
+    animation: ui-shimmer 1.4s infinite;
+}
+
+@keyframes ui-shimmer {
+    100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ui-skeleton::after {
+        animation: none;
+    }
+}
+
+@media (max-width: 1023px) {
+    .app-content-with-bottom-nav {
+        padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+    }
+}

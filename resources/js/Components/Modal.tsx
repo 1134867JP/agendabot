@@ -19,9 +19,7 @@ export default function Modal({
     onClose: CallableFunction;
 }>) {
     const close = () => {
-        if (closeable) {
-            onClose();
-        }
+        if (closeable) onClose();
     };
 
     const maxWidthClass = {
@@ -48,21 +46,29 @@ export default function Modal({
                     leaveFrom="opacity-100"
                     leaveTo="opacity-0"
                 >
-                    <div className="absolute inset-0 bg-gray-500/75" />
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" aria-hidden />
                 </TransitionChild>
 
                 <TransitionChild
                     enter="ease-out duration-300"
-                    enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                    enterTo="opacity-100 translate-y-0 sm:scale-100"
+                    enterFrom="translate-y-full sm:translate-y-0 sm:scale-95 sm:opacity-0"
+                    enterTo="translate-y-0 sm:scale-100 sm:opacity-100"
                     leave="ease-in duration-200"
-                    leaveFrom="opacity-100 translate-y-0 sm:scale-100"
-                    leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    leaveFrom="translate-y-0 sm:scale-100 sm:opacity-100"
+                    leaveTo="translate-y-full sm:translate-y-0 sm:scale-95 sm:opacity-0"
                 >
                     <DialogPanel
-                        className={`max-h-[92dvh] w-full transform overflow-y-auto rounded-t-2xl shadow-xl transition-all sm:mx-auto sm:mb-6 sm:w-full sm:rounded-lg ${maxWidthClass}`}
-                        style={{ background: 'var(--bg-surface)', color: 'var(--text-1)' }}
+                        className={`relative max-h-[92dvh] w-full transform overflow-y-auto rounded-t-2xl shadow-2xl transition-all sm:mx-auto sm:mb-6 sm:w-full sm:rounded-xl ${maxWidthClass}`}
+                        style={{
+                            background: 'var(--bg-surface)',
+                            color: 'var(--text-1)',
+                            border: '1px solid var(--border-strong)',
+                            paddingBottom: 'env(safe-area-inset-bottom)',
+                        }}
                     >
+                        <div className="sticky top-0 z-10 flex h-5 items-center justify-center bg-[var(--bg-surface)] sm:hidden" aria-hidden>
+                            <span className="h-1 w-10 rounded-full" style={{ background: 'var(--border-strong)' }} />
+                        </div>
                         {children}
                     </DialogPanel>
                 </TransitionChild>
