@@ -793,10 +793,10 @@ export default function AgendamentosIndex({
 
     return (
         <AppLayout
-            title="Agendamentos"
-            subtitle="Reservas confirmadas, concluídas e canceladas"
+            title="Agenda"
+            subtitle="Visualização em lista das reservas confirmadas, concluídas e canceladas"
         >
-            <Head title="Agendamentos" />
+            <Head title="Agenda — Lista" />
             {confirmModal}
 
             <AgendaViewTabs active="list" />
