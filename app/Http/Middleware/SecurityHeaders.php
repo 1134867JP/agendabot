@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Vite;
 use Symfony\Component\HttpFoundation\Response;
 
 class SecurityHeaders
@@ -13,6 +14,7 @@ class SecurityHeaders
      */
     public function handle(Request $request, Closure $next): Response
     {
+        $nonce = Vite::useCspNonce();
         $response = $next($request);
 
         $response->headers->set('X-Content-Type-Options', 'nosniff');
@@ -23,8 +25,8 @@ class SecurityHeaders
         $response->headers->set('Cross-Origin-Resource-Policy', 'same-origin');
 
         $scriptSrc = app()->environment('local')
-            ? "'self' 'unsafe-eval' http://localhost:* http://127.0.0.1:*"
-            : "'self'";
+            ? "'self' 'nonce-{$nonce}' 'unsafe-eval' http://localhost:* http://127.0.0.1:*"
+            : "'self' 'nonce-{$nonce}'";
         $csp = implode('; ', [
             "default-src 'self'",
             "base-uri 'self'",
@@ -32,9 +34,9 @@ class SecurityHeaders
             "frame-ancestors 'none'",
             "form-action 'self'",
             "script-src {$scriptSrc}",
-            "style-src 'self' 'unsafe-inline'",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "img-src 'self' data: blob: https:",
-            "font-src 'self' data:",
+            "font-src 'self' data: https://fonts.gstatic.com",
             "connect-src 'self' https: wss: http://localhost:* ws://localhost:* http://127.0.0.1:* ws://127.0.0.1:*",
             "media-src 'self' data: blob: https:",
             "worker-src 'self' blob:",
