@@ -135,6 +135,9 @@ class AppServiceProvider extends ServiceProvider
                 'time_ms' => $query->time,
                 'connection' => $query->connectionName,
                 'tenant_id' => $tenant instanceof Tenant ? $tenant->id : null,
+                'user_id' => auth()->id(),
+                'route' => request()->route()?->getName(),
+                'ip' => request()->ip(),
             ], static fn ($value) => $value !== null));
         });
     }
