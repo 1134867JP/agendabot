@@ -4,6 +4,9 @@ import { useConfirm } from '@/hooks/useConfirm';
 import ConfiguracoesLayout from '@/Layouts/ConfiguracoesLayout';
 import { PageProps } from '@/types';
 import Toggle from '@/Components/Toggle';
+import EmptyState from '@/Components/UI/EmptyState';
+import StatusBadge from '@/Components/UI/StatusBadge';
+import Toolbar from '@/Components/UI/Toolbar';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -300,7 +303,7 @@ export default function ServicosIndex({ servicos }: Props) {
         <ConfiguracoesLayout title="Serviços" subtitle="Serviços oferecidos, valores e duração">
             <Head title="Serviços" />
 
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <Toolbar className="mb-5">
                 <p className="text-sm" style={{ color: 'var(--text-3)' }}>
                     {servicos.length} serviço{servicos.length !== 1 ? 's' : ''} cadastrado{servicos.length !== 1 ? 's' : ''}
                 </p>
@@ -309,7 +312,7 @@ export default function ServicosIndex({ servicos }: Props) {
                         + Novo serviço
                     </button>
                 )}
-            </div>
+            </Toolbar>
 
             <div className="space-y-3">
                 {/* Formulário novo serviço inline */}
@@ -318,12 +321,12 @@ export default function ServicosIndex({ servicos }: Props) {
                 )}
 
                 {servicos.length === 0 && !novoAberto && (
-                    <div className="card flex flex-col items-center gap-3 p-8 text-center sm:p-10" style={{ color: 'var(--text-3)' }}>
-                        <div>
-                            <p className="text-sm font-medium text-primary">Cadastre seu primeiro serviço</p>
-                            <p className="mt-1 text-xs">Informe o que pode ser reservado, duração e valores.</p>
-                        </div>
-                        <button type="button" onClick={() => setNovoAberto(true)} className="btn-primary min-h-11">Criar serviço</button>
+                    <div className="card overflow-hidden">
+                        <EmptyState
+                            title="Cadastre seu primeiro serviço"
+                            description="Informe o que pode ser reservado, duração e valores."
+                            action={<button type="button" onClick={() => setNovoAberto(true)} className="btn-primary min-h-11">Criar serviço</button>}
+                        />
                     </div>
                 )}
 
@@ -355,17 +358,15 @@ export default function ServicosIndex({ servicos }: Props) {
                                             <span>{s.duracao_minutos} min</span>
                                             <span>{faixaValor(s)}</span>
                                             {s.requer_avaliacao && (
-                                                <span className="rounded px-1.5 py-0.5" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-3)' }}>
-                                                    Requer avaliação
-                                                </span>
+                                                <StatusBadge tone="info">Requer avaliação</StatusBadge>
                                             )}
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
-                                    <span className={`badge col-span-2 justify-self-start sm:col-span-1 ${s.ativo ? 'badge-green' : 'badge-gray'}`}>
-                                        {s.ativo ? 'Ativo' : 'Inativo'}
+                                    <span className="col-span-2 justify-self-start sm:col-span-1">
+                                        <StatusBadge tone={s.ativo ? 'success' : 'neutral'} dot>{s.ativo ? 'Ativo' : 'Inativo'}</StatusBadge>
                                     </span>
                                     <button
                                         onClick={() => { setEditando(s.id); setNovoAberto(false); }}
