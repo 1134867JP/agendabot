@@ -46,7 +46,7 @@ class TenantController extends Controller
         DB::transaction(function () use ($validated) {
             $slug = Str::slug($validated['nome']) . '-' . Str::random(4);
 
-            $webhookToken = Str::random(32);
+            $webhookToken = Str::random(64);
 
             $tenant = Tenant::create([
                 'nome'                       => $validated['nome'],
