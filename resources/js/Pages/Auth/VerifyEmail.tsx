@@ -1,4 +1,3 @@
-import PrimaryButton from '@/Components/PrimaryButton';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
@@ -14,35 +13,34 @@ export default function VerifyEmail({ status }: { status?: string }) {
 
     return (
         <GuestLayout>
-            <Head title="Email Verification" />
+            <Head title="Verificar e-mail" />
 
-            <div className="mb-4 text-sm text-gray-600">
-                Thanks for signing up! Before getting started, could you verify
-                your email address by clicking on the link we just emailed to
-                you? If you didn't receive the email, we will gladly send you
-                another.
+            <div className="mb-6">
+                <h1 className="text-2xl font-semibold text-primary">Verifique seu e-mail</h1>
+                <p className="mt-1 text-sm leading-6 text-secondary">
+                    Enviamos um link de confirmação para seu e-mail. Abra a mensagem e confirme o endereço para continuar.
+                </p>
             </div>
 
             {status === 'verification-link-sent' && (
-                <div className="mb-4 text-sm font-medium text-green-600">
-                    A new verification link has been sent to the email address
-                    you provided during registration.
+                <div className="mb-5 rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(110,231,183,0.08)', border: '1px solid rgba(110,231,183,0.2)', color: '#6ee7b7' }} role="status">
+                    Um novo link de verificação foi enviado.
                 </div>
             )}
 
             <form onSubmit={submit}>
-                <div className="mt-4 flex items-center justify-between">
-                    <PrimaryButton disabled={processing}>
-                        Resend Verification Email
-                    </PrimaryButton>
+                <div className="flex flex-col gap-3 sm:flex-row">
+                    <button type="submit" className="btn-primary min-h-11 flex-1 justify-center" disabled={processing}>
+                        {processing ? 'Enviando…' : 'Reenviar verificação'}
+                    </button>
 
                     <Link
                         href={route('logout')}
                         method="post"
                         as="button"
-                        className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                        className="btn-secondary min-h-11 flex-1 justify-center"
                     >
-                        Log Out
+                        Sair da conta
                     </Link>
                 </div>
             </form>
