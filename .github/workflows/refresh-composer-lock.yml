@@ -46,9 +46,6 @@ jobs:
           --no-interaction
           --prefer-dist
 
-      - name: Auditar lock atualizado
-        run: composer audit --locked --no-interaction
-
       - name: Publicar lock atualizado
         run: |
           if git diff --quiet -- composer.lock; then
@@ -60,3 +57,6 @@ jobs:
           git add composer.lock
           git commit -m "Atualiza dependências vulneráveis [skip lock-refresh]"
           git push origin HEAD:agent/security-hardening
+
+      - name: Auditar lock atualizado
+        run: composer audit --locked --no-interaction
