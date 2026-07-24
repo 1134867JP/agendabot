@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\SuperAdminTwoFactorController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
@@ -39,6 +40,15 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('superadmin/two-factor', [SuperAdminTwoFactorController::class, 'challenge'])
+        ->name('superadmin.two-factor.challenge');
+    Route::post('superadmin/two-factor', [SuperAdminTwoFactorController::class, 'verify'])
+        ->middleware('throttle:5,10')
+        ->name('superadmin.two-factor.verify');
+    Route::post('superadmin/two-factor/resend', [SuperAdminTwoFactorController::class, 'resend'])
+        ->middleware('throttle:3,10')
+        ->name('superadmin.two-factor.resend');
+
     Route::get('verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');
 
