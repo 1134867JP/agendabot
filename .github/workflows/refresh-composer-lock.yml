@@ -1,0 +1,62 @@
+name: Atualizar lock do Composer
+
+on:
+  push:
+    branches:
+      - agent/security-hardening
+    paths:
+      - .github/workflows/refresh-composer-lock.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  atualizar-lock:
+    if: ${{ !contains(github.event.head_commit.message, '[skip lock-refresh]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Baixar branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/security-hardening
+          fetch-depth: 0
+
+      - name: Preparar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          coverage: none
+
+      - name: Atualizar somente dependências afetadas
+        run: >-
+          composer update
+          guzzlehttp/guzzle
+          guzzlehttp/psr7
+          laravel/framework
+          symfony/http-foundation
+          symfony/http-kernel
+          symfony/mailer
+          symfony/mime
+          symfony/polyfill-intl-idn
+          symfony/routing
+          --with-all-dependencies
+          --no-interaction
+          --prefer-dist
+
+      - name: Auditar lock atualizado
+        run: composer audit --locked --no-interaction
+
+      - name: Publicar lock atualizado
+        run: |
+          if git diff --quiet -- composer.lock; then
+            echo "composer.lock já está atualizado."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add composer.lock
+          git commit -m "Atualiza dependências vulneráveis [skip lock-refresh]"
+          git push origin HEAD:agent/security-hardening
