@@ -15,6 +15,8 @@ class SuperAdminTwoFactorController extends Controller
 {
     public function challenge(Request $request): View|RedirectResponse
     {
+        abort_unless($request->user()?->is_super_admin, 403);
+
         if ($this->verificado($request)) {
             return redirect()->intended(route('superadmin.dashboard'));
         }
@@ -28,6 +30,8 @@ class SuperAdminTwoFactorController extends Controller
 
     public function verify(Request $request): RedirectResponse
     {
+        abort_unless($request->user()?->is_super_admin, 403);
+
         $data = $request->validate([
             'code' => ['required', 'digits:6'],
         ]);
@@ -48,6 +52,8 @@ class SuperAdminTwoFactorController extends Controller
 
     public function resend(Request $request): RedirectResponse
     {
+        abort_unless($request->user()?->is_super_admin, 403);
+
         Cache::forget($this->cacheKey($request));
         $this->enviarSeNecessario($request);
 
