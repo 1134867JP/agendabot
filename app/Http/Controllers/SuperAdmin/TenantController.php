@@ -66,8 +66,8 @@ class TenantController extends Controller
             $tenant->users()->attach($dono->id, ['papel' => 'admin']);
 
             $this->evolution->criarInstancia($slug);
-            $webhookUrl = route('webhook', $slug) . '?token=' . $webhookToken;
-            $this->evolution->configurarWebhook($slug, $webhookUrl);
+            $webhookUrl = route('webhook', $slug);
+            $this->evolution->configurarWebhook($slug, $webhookUrl, $webhookToken);
         });
 
         return redirect()->route('superadmin.tenants.index')
