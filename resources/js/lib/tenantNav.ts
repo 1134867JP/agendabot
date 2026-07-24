@@ -12,3 +12,10 @@ export const TIPOS_COM_PROFISSIONAIS: TipoServico[] = ['barbeiro', 'estetica', '
 
 export const usaRecursos = (tipo: TipoServico): boolean => TIPOS_COM_RECURSOS.includes(tipo);
 export const usaProfissionais = (tipo: TipoServico): boolean => TIPOS_COM_PROFISSIONAIS.includes(tipo);
+
+/**
+ * Mantém "recurso" como conceito técnico, mas apresenta ao usuário o nome
+ * natural para o seu negócio. Quadras continuam sendo recursos reserváveis.
+ */
+export const rotuloRecursos = (tipo: TipoServico): string =>
+    tipo === 'quadra' ? 'Quadras' : 'Espaços e recursos';
