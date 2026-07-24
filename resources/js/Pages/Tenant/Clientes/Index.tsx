@@ -2,6 +2,11 @@ import { Head, router, useForm } from '@inertiajs/react';
 import axios from 'axios';
 import { useMemo, useRef, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
+import Modal from '@/Components/Modal';
+import EmptyState from '@/Components/UI/EmptyState';
+import FormField from '@/Components/UI/FormField';
+import StatusBadge from '@/Components/UI/StatusBadge';
+import Toolbar from '@/Components/UI/Toolbar';
 import { PageProps, PaginatedData } from '@/types';
 
 interface Cliente {
@@ -117,7 +122,12 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
 
     const salvarCliente = (event: React.FormEvent) => {
         event.preventDefault();
-        cadastro.post(route('tenant.clientes.store'));
+        cadastro.post(route('tenant.clientes.store'), {
+            onSuccess: () => {
+                cadastro.reset();
+                setCadastroAberto(false);
+            },
+        });
     };
 
     const segmentos = [
@@ -130,39 +140,40 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
         <AppLayout title="Clientes" subtitle="Encontre, selecione e resolva ações sem abrir várias telas">
             <Head title="Clientes" />
 
-            <div className="mb-4 flex gap-2 overflow-x-auto scroll-hidden pb-1">
-                {segmentos.map(item => {
-                    const active = (filtros.segmento ?? '') === item.value;
-                    return (
-                        <button
-                            key={item.value}
-                            type="button"
-                            onClick={() => filtrarSegmento(item.value)}
-                            className="flex min-h-10 shrink-0 items-center gap-2 rounded-full px-3 text-xs font-medium transition-colors"
-                            style={{
-                                background: active ? 'var(--accent-light)' : 'var(--bg-surface)',
-                                color: active ? 'var(--accent)' : 'var(--text-2)',
-                                border: '1px solid ' + (active ? 'var(--accent)' : 'var(--border)'),
-                            }}
-                        >
-                            {item.label}
-                            <span className="rounded-full px-1.5 py-0.5 text-[10px]" style={{ background: 'var(--bg-surface-2)', color: 'var(--text-3)' }}>{item.count}</span>
-                        </button>
-                    );
-                })}
-            </div>
-
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row">
-                <div className="relative flex-1">
-                    <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
-                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                    </svg>
-                    <input type="text" value={busca} onChange={event => pesquisar(event.target.value)} placeholder="Buscar por nome ou telefone…" className="input pl-9" />
+            <Toolbar className="mb-4">
+                <div className="min-w-0 flex-1 space-y-3">
+                    <div className="flex gap-2 overflow-x-auto scroll-hidden pb-1">
+                        {segmentos.map(item => {
+                            const active = (filtros.segmento ?? '') === item.value;
+                            return (
+                                <button
+                                    key={item.value}
+                                    type="button"
+                                    onClick={() => filtrarSegmento(item.value)}
+                                    className="flex min-h-10 shrink-0 items-center gap-2 rounded-full px-3 text-xs font-medium transition-colors"
+                                    style={{
+                                        background: active ? 'var(--accent-light)' : 'var(--bg-surface-2)',
+                                        color: active ? 'var(--accent)' : 'var(--text-2)',
+                                        border: '1px solid ' + (active ? 'var(--accent)' : 'var(--border)'),
+                                    }}
+                                >
+                                    {item.label}
+                                    <span className="rounded-full px-1.5 py-0.5 text-[10px]" style={{ background: 'var(--bg-surface)', color: 'var(--text-3)' }}>{item.count}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="relative">
+                        <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
+                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                        <input type="search" value={busca} onChange={event => pesquisar(event.target.value)} placeholder="Buscar por nome ou telefone…" className="input pl-9" />
+                    </div>
                 </div>
                 <button type="button" onClick={abrirCadastro} className="btn-primary min-h-11 justify-center">
                     Novo cliente
                 </button>
-            </div>
+            </Toolbar>
 
             {selecionados.length > 0 && (
                 <div className="mb-3 flex flex-col gap-3 rounded-xl px-4 py-3 sm:flex-row sm:items-center sm:justify-between" style={{ background: 'var(--accent-light)', border: '1px solid var(--accent)' }}>
@@ -187,19 +198,15 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
 
             <div className="card overflow-hidden">
                 {clientes.data.length === 0 ? (
-                    <div className="flex flex-col items-center gap-3 px-5 py-12 text-center">
-                        <div>
-                            <p className="text-sm font-medium text-primary">{busca || filtros.segmento ? 'Nenhum cliente neste filtro' : 'Nenhum cliente cadastrado'}</p>
-                            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
-                                {busca || filtros.segmento ? 'Tente limpar a busca ou escolher outro grupo.' : 'Cadastre pela conversa ou deixe o WhatsApp criar o contato automaticamente.'}
-                            </p>
-                        </div>
-                        {busca || filtros.segmento ? (
+                    <EmptyState
+                        title={busca || filtros.segmento ? 'Nenhum cliente neste filtro' : 'Nenhum cliente cadastrado'}
+                        description={busca || filtros.segmento ? 'Tente limpar a busca ou escolher outro grupo.' : 'Cadastre pela conversa ou deixe o WhatsApp criar o contato automaticamente.'}
+                        action={busca || filtros.segmento ? (
                             <button type="button" onClick={() => { setBusca(''); filtrarSegmento(''); }} className="btn-secondary min-h-11">Limpar filtros</button>
                         ) : (
                             <button type="button" onClick={abrirCadastro} className="btn-primary min-h-11">Cadastrar cliente</button>
                         )}
-                    </div>
+                    />
                 ) : (
                     <>
                         <div className="flex min-h-12 items-center gap-3 px-4" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
@@ -219,9 +226,9 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
                                                 <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>{fmtTelefone(cliente.telefone)}</p>
                                             </div>
                                             <div className="flex shrink-0 items-center gap-2">
-                                                <span className="rounded-full px-2 py-0.5 text-[11px] font-medium" style={{ background: cliente.agendamentos_count > 0 ? 'var(--accent-light)' : 'var(--bg-surface-2)', color: cliente.agendamentos_count > 0 ? 'var(--accent)' : 'var(--text-3)' }}>
+                                                <StatusBadge tone={cliente.agendamentos_count > 0 ? 'brand' : 'neutral'}>
                                                     {cliente.agendamentos_count > 0 ? cliente.agendamentos_count + ' ag.' : 'Novo'}
-                                                </span>
+                                                </StatusBadge>
                                                 <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}><polyline points="9 18 15 12 9 6"/></svg>
                                             </div>
                                         </button>
@@ -248,9 +255,8 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
                 )}
             </div>
 
-            {cadastroAberto && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:p-4">
-                    <form onSubmit={salvarCliente} className="w-full rounded-t-2xl p-5 shadow-2xl sm:max-w-md sm:rounded-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
+            <Modal show={cadastroAberto} maxWidth="md" onClose={() => setCadastroAberto(false)}>
+                    <form onSubmit={salvarCliente} className="p-5">
                         <div className="mb-5 flex items-start justify-between gap-3">
                             <div>
                                 <h2 className="text-lg font-semibold text-primary">Novo cliente</h2>
@@ -261,20 +267,15 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
                             </button>
                         </div>
                         <div className="space-y-4">
-                            <div>
-                                <label className="label mb-1">Nome</label>
+                            <FormField label="Nome" error={cadastro.errors.nome} required>
                                 <input autoFocus value={cadastro.data.nome} onChange={event => cadastro.setData('nome', event.target.value)} className="input" maxLength={120} />
-                                {cadastro.errors.nome && <p className="mt-1 text-xs" style={{ color: '#f87171' }}>{cadastro.errors.nome}</p>}
-                            </div>
-                            <div>
-                                <label className="label mb-1">Telefone com DDD</label>
+                            </FormField>
+                            <FormField label="Telefone com DDD" error={cadastro.errors.telefone} required>
                                 <input value={cadastro.data.telefone} onChange={event => cadastro.setData('telefone', maskTelefone(event.target.value))} className="input" inputMode="tel" autoComplete="tel" placeholder="(54) 99999-1234" />
-                                {cadastro.errors.telefone && <p className="mt-1 text-xs" style={{ color: '#f87171' }}>{cadastro.errors.telefone}</p>}
-                            </div>
-                            <div>
-                                <label className="label mb-1">Observação <span style={{ color: 'var(--text-3)' }}>(opcional)</span></label>
+                            </FormField>
+                            <FormField label="Observação" hint="Opcional. Use para preferências ou informações úteis no atendimento.">
                                 <textarea value={cadastro.data.observacoes} onChange={event => cadastro.setData('observacoes', event.target.value)} className="input min-h-20 resize-none" maxLength={2000} />
-                            </div>
+                            </FormField>
                         </div>
                         <div className="mt-5 flex gap-2">
                             <button type="button" onClick={() => setCadastroAberto(false)} className="btn-secondary min-h-11 flex-1 justify-center">Cancelar</button>
@@ -283,8 +284,7 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
                             </button>
                         </div>
                     </form>
-                </div>
-            )}
+            </Modal>
         </AppLayout>
     );
 }

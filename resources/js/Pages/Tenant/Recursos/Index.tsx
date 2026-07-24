@@ -4,6 +4,9 @@ import ConfiguracoesLayout from '@/Layouts/ConfiguracoesLayout';
 import { PageProps, Recurso, HorarioFuncionamento } from '@/types';
 import Toggle from '@/Components/Toggle';
 import { useConfirm } from '@/hooks/useConfirm';
+import EmptyState from '@/Components/UI/EmptyState';
+import StatusBadge from '@/Components/UI/StatusBadge';
+import Toolbar from '@/Components/UI/Toolbar';
 
 interface Props extends PageProps {
     recursos: Recurso[];
@@ -235,7 +238,7 @@ export default function RecursosIndex({ recursos }: Props) {
         <ConfiguracoesLayout title="Recursos" subtitle="O que pode ser agendado e seus horários de funcionamento">
             <Head title="Recursos" />
 
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <Toolbar className="mb-5">
                 <p className="text-sm" style={{ color: 'var(--text-3)' }}>
                     {recursos.length} recurso{recursos.length !== 1 ? 's' : ''} cadastrado{recursos.length !== 1 ? 's' : ''}
                 </p>
@@ -244,7 +247,7 @@ export default function RecursosIndex({ recursos }: Props) {
                         + Novo recurso
                     </button>
                 )}
-            </div>
+            </Toolbar>
 
             <div className="space-y-3">
                 {novoAberto && (
@@ -252,9 +255,12 @@ export default function RecursosIndex({ recursos }: Props) {
                 )}
 
                 {recursos.length === 0 && !novoAberto && (
-                    <div className="card p-10 text-center" style={{ color: 'var(--text-3)' }}>
-                        <p className="text-sm">Nenhum recurso cadastrado ainda.</p>
-                        <p className="mt-1 text-xs">Crie seus barbeiros, quadras ou serviços.</p>
+                    <div className="card overflow-hidden">
+                        <EmptyState
+                            title="Cadastre seu primeiro recurso"
+                            description="Crie quadras, salas, equipamentos ou outros espaços que podem ser reservados."
+                            action={<button type="button" onClick={() => setNovoAberto(true)} className="btn-primary min-h-11">Criar recurso</button>}
+                        />
                     </div>
                 )}
 
@@ -287,8 +293,8 @@ export default function RecursosIndex({ recursos }: Props) {
                                     </div>
 
                                     <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
-                                        <span className={`badge col-span-2 justify-self-start sm:col-span-1 ${r.ativo ? 'badge-green' : 'badge-gray'}`}>
-                                            {r.ativo ? 'Ativo' : 'Inativo'}
+                                        <span className="col-span-2 justify-self-start sm:col-span-1">
+                                            <StatusBadge tone={r.ativo ? 'success' : 'neutral'} dot>{r.ativo ? 'Ativo' : 'Inativo'}</StatusBadge>
                                         </span>
                                         <button
                                             onClick={() => setExpandido(expandido === r.id ? null : r.id)}
