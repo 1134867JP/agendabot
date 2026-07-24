@@ -59,7 +59,7 @@ export default function QuickActions() {
     ];
 
     return (
-        <div ref={ref} className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-40 lg:bottom-6 lg:right-6">
+        <div ref={ref} className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-40 lg:bottom-6 lg:right-6">
             {open && (
                 <div
                     className="mb-3 w-[min(21rem,calc(100vw-2rem))] overflow-hidden rounded-2xl shadow-2xl"
