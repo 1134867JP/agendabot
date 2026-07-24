@@ -71,6 +71,12 @@ docker exec agendabot-app php artisan view:cache
 
 echo "--- migrações pendentes ---"
 docker exec agendabot-app php artisan migrate --force
+echo "--- criptografando backups legados ---"
+docker exec agendabot-app php artisan whatsapp:encrypt-backups
+echo "--- rotacionando tokens de webhook expostos ---"
+if ! docker exec agendabot-app php artisan security:rotate-webhook-tokens --stale --force; then
+    echo "    alguns tokens não foram rotacionados; serão tentados novamente no próximo deploy"
+fi
 echo "--- reconfigurando webhooks com autenticação por header ---"
 docker exec agendabot-app php artisan whatsapp:reconfigure-webhooks
 
