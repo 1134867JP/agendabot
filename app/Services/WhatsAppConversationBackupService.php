@@ -144,6 +144,26 @@ class WhatsAppConversationBackupService
             : $conteudo;
     }
 
+    public function criptografarBackupsLegados(): int
+    {
+        return collect(Storage::disk('local')->allFiles('whatsapp-backups'))
+            ->filter(fn (string $path) => str_ends_with($path, '.json'))
+            ->reduce(function (int $total, string $path): int {
+                $destino = $path.'.enc';
+
+                if (! Storage::disk('local')->exists($destino)) {
+                    $conteudo = Storage::disk('local')->get($path);
+                    if (! Storage::disk('local')->put($destino, Crypt::encryptString($conteudo))) {
+                        throw new RuntimeException("Não foi possível criptografar {$path}.");
+                    }
+                }
+
+                Storage::disk('local')->delete($path);
+
+                return $total + 1;
+            }, 0);
+    }
+
     private function dadosArquivo(Tenant $tenant, string $arquivo): array
     {
         $caminho = $this->diretorio($tenant).'/'.$arquivo;
