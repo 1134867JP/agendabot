@@ -24,6 +24,12 @@ class Tenant extends Model
         'modo_bot', 'horario_atendimento', 'mensagem_fora_horario',
     ];
 
+    protected $hidden = [
+        'webhook_token',
+        'asaas_customer_id',
+        'asaas_subscription_id',
+    ];
+
     protected $casts = [
         'configuracoes'        => 'array',
         'horario_atendimento'  => 'array',
