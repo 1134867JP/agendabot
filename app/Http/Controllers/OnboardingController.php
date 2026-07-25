@@ -7,6 +7,7 @@ use App\Http\Requests\Onboarding\Step3Request;
 use App\Jobs\CreateEvolutionInstanceJob;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\OnboardingPresetService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -85,7 +86,7 @@ class OnboardingController extends Controller
 
         return redirect()->route('onboarding.step3');
     }
-    public function step3(): Response|RedirectResponse
+    public function step3(OnboardingPresetService $presets): Response|RedirectResponse
     {
         $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->first();
 
@@ -101,10 +102,11 @@ class OnboardingController extends Controller
                 'tom_voz' => $tenant->tom_voz,
                 'bot_saudacao' => $tenant->bot_saudacao,
             ],
+            'defaults' => $presets->defaults($tenant, auth()->user()->name),
         ]);
     }
 
-    public function step3Store(Step3Request $request): RedirectResponse
+    public function step3Store(Step3Request $request, OnboardingPresetService $presets): RedirectResponse
     {
         $validated = $request->validated();
 
@@ -114,11 +116,7 @@ class OnboardingController extends Controller
             return redirect()->route('dashboard')->with('erro', 'Complete o cadastro do seu estabelecimento antes de continuar.');
         }
 
-        $tenant->update([
-            'nome_agente' => $validated['bot_nome'],
-            'tom_voz' => $validated['bot_tom'],
-            'bot_saudacao' => $validated['bot_saudacao'],
-        ]);
+        $presets->aplicar($tenant, $validated);
 
         return redirect()->route('onboarding.sucesso');
     }
