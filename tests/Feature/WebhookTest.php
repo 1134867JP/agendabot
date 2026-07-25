@@ -64,11 +64,15 @@ class WebhookTest extends TestCase
         Queue::fake();
 
         $payload = $this->payloadEvolution('5551999999999-1234567890@g.us', 'Mensagem de grupo');
+        $payload['data']['key']['participantAlt'] = '5551999999999@s.whatsapp.net';
 
         $response = $this->withHeader('X-Webhook-Token', 'token-teste-webhook')->postJson("/webhook/{$this->tenant->slug}", $payload);
 
         $response->assertStatus(200);
         Queue::assertNothingPushed();
+        $this->assertDatabaseCount('clientes', 0);
+        $this->assertDatabaseCount('conversas', 0);
+        $this->assertDatabaseCount('mensagens', 0);
     }
 
     public function test_webhook_retorna_404_para_tenant_inexistente(): void
