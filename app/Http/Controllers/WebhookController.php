@@ -93,6 +93,16 @@ class WebhookController extends Controller
             return response('ok');
         }
 
+        // Em mensagens de grupo, a Evolution também informa participantAlt com o
+        // telefone de quem escreveu. O participante nunca deve ser tratado como
+        // uma conversa privada: descarte o evento pelo JID do chat primeiro.
+        $remoteJid = (string) data_get($msgData, 'key.remoteJid', '');
+        if (str_contains($remoteJid, '@g.us')) {
+            Log::info('WEBHOOK_GROUP_MESSAGE_IGNORED', ['tenant_id' => $tenant->id]);
+
+            return response('ok');
+        }
+
         // WhatsApp pode entregar identificadores @lid. Usa o número alternativo real
         // quando disponível e ignora grupos, newsletters e identificadores sem telefone.
         $telefone = $sync->resolverTelefoneMensagem($msgData);
