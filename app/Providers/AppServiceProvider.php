@@ -4,6 +4,13 @@ namespace App\Providers;
 
 use App\Models\Tenant;
 use App\Services\AgendamentoService;
+use App\Services\AgendouAgentService;
+use App\Services\AgendouService;
+use App\Services\AI\AiOrchestrator;
+use App\Services\AI\Providers\ClaudeProvider;
+use App\Services\AI\Providers\GeminiProvider;
+use App\Services\AI\Providers\GroqProvider;
+use App\Services\AI\Providers\OpenRouterProvider;
 use App\Services\ClaudeAgentService;
 use App\Services\EvolutionApiService;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -12,8 +19,8 @@ use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
@@ -24,7 +31,15 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(AiOrchestrator::class, fn ($app) => new AiOrchestrator([
+            $app->make(ClaudeProvider::class),
+            $app->make(GeminiProvider::class),
+            $app->make(GroqProvider::class),
+            $app->make(OpenRouterProvider::class),
+        ]));
+        $this->app->singleton(AgendouAgentService::class);
         $this->app->singleton(ClaudeAgentService::class);
+        $this->app->singleton(AgendouService::class);
         $this->app->singleton(EvolutionApiService::class);
         $this->app->singleton(AgendamentoService::class);
     }

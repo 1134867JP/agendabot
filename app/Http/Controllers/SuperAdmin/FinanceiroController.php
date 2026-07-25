@@ -17,8 +17,8 @@ class FinanceiroController extends Controller
     public function index(Request $request): Response
     {
         $mes = $request->input('mes', now()->format('Y-m'));
-        $inicio = Carbon::parse($mes . '-01')->startOfMonth();
-        $fim    = $inicio->copy()->endOfMonth();
+        $inicio = Carbon::parse($mes.'-01')->startOfMonth();
+        $fim = $inicio->copy()->endOfMonth();
 
         $tenants = Tenant::where('ativo', true)
             ->orderBy('nome')
@@ -48,16 +48,12 @@ class FinanceiroController extends Controller
                     SUM(input_tokens)                 as input,
                     SUM(output_tokens)                as output,
                     SUM(cache_creation_input_tokens)  as cache_write,
-                    SUM(cache_read_input_tokens)      as cache_read
+                    SUM(cache_read_input_tokens)      as cache_read,
+                    SUM(cost_usd)                     as cost_usd
                 ')
                 ->first();
 
-            $custoUsd = TokenUsage::calcularCusto(
-                (int) ($tokens->input      ?? 0),
-                (int) ($tokens->output     ?? 0),
-                (int) ($tokens->cache_write ?? 0),
-                (int) ($tokens->cache_read  ?? 0),
-            );
+            $custoUsd = (float) ($tokens->cost_usd ?? 0);
             $custoBrl = round($custoUsd * 5.70, 2); // cotação aproximada USD→BRL
 
             // Agendamentos via bot no período
@@ -67,41 +63,41 @@ class FinanceiroController extends Controller
                 ->whereBetween('created_at', [$inicio, $fim])
                 ->count();
 
-            $lucro  = round($receitaTotal - $custoBrl, 2);
+            $lucro = round($receitaTotal - $custoBrl, 2);
             $margem = $receitaTotal > 0
                 ? round(($lucro / $receitaTotal) * 100, 1)
                 : null;
 
             return [
-                'id'               => $tenant->id,
-                'nome'             => $tenant->nome,
-                'plano'            => $tenant->plano,
-                'isento'           => $tenant->isento_cobranca,
-                'mensalidade'      => $mensalidade,
-                'receita_bot'      => $receitaBot,
-                'receita_total'    => round($receitaTotal, 2),
-                'custo_ia_brl'     => $custoBrl,
-                'lucro'            => $lucro,
-                'margem'           => $margem,
+                'id' => $tenant->id,
+                'nome' => $tenant->nome,
+                'plano' => $tenant->plano,
+                'isento' => $tenant->isento_cobranca,
+                'mensalidade' => $mensalidade,
+                'receita_bot' => $receitaBot,
+                'receita_total' => round($receitaTotal, 2),
+                'custo_ia_brl' => $custoBrl,
+                'lucro' => $lucro,
+                'margem' => $margem,
                 'agendamentos_bot' => $agendamentosBot,
-                'tokens'           => [
-                    'input'       => (int) ($tokens->input       ?? 0),
-                    'output'      => (int) ($tokens->output      ?? 0),
-                    'cache_write' => (int) ($tokens->cache_write  ?? 0),
-                    'cache_read'  => (int) ($tokens->cache_read   ?? 0),
+                'tokens' => [
+                    'input' => (int) ($tokens->input ?? 0),
+                    'output' => (int) ($tokens->output ?? 0),
+                    'cache_write' => (int) ($tokens->cache_write ?? 0),
+                    'cache_read' => (int) ($tokens->cache_read ?? 0),
                 ],
             ];
         });
 
         $totais = [
             'receita_total' => round($rows->sum('receita_total'), 2),
-            'custo_ia_brl'  => round($rows->sum('custo_ia_brl'),  2),
-            'lucro'         => round($rows->sum('lucro'),          2),
+            'custo_ia_brl' => round($rows->sum('custo_ia_brl'), 2),
+            'lucro' => round($rows->sum('lucro'), 2),
         ];
 
         return Inertia::render('SuperAdmin/Financeiro', [
-            'mes'    => $mes,
-            'rows'   => $rows->values(),
+            'mes' => $mes,
+            'rows' => $rows->values(),
             'totais' => $totais,
         ]);
     }

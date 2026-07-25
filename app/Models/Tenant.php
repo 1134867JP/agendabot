@@ -6,7 +6,6 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Tenant extends Model
 {
@@ -31,13 +30,13 @@ class Tenant extends Model
     ];
 
     protected $casts = [
-        'configuracoes'        => 'array',
-        'horario_atendimento'  => 'array',
-        'whatsapp_conectado'   => 'boolean',
-        'ativo'                => 'boolean',
-        'bot_ativo'            => 'boolean',
-        'isento_cobranca'      => 'boolean',
-        'trial_ends_at'        => 'datetime',
+        'configuracoes' => 'array',
+        'horario_atendimento' => 'array',
+        'whatsapp_conectado' => 'boolean',
+        'ativo' => 'boolean',
+        'bot_ativo' => 'boolean',
+        'isento_cobranca' => 'boolean',
+        'trial_ends_at' => 'datetime',
         'subscription_ends_at' => 'datetime',
         'webhook_token_rotated_at' => 'datetime',
     ];
@@ -51,21 +50,57 @@ class Tenant extends Model
     /** Tons de voz aceitos para o bot. */
     public const TONS_VOZ = ['formal', 'semiformal', 'descontraido'];
 
-    public function recursos(): HasMany { return $this->hasMany(Recurso::class); }
-    public function agendamentos(): HasMany { return $this->hasMany(Agendamento::class); }
-    public function conversas(): HasMany { return $this->hasMany(Conversa::class); }
+    public function recursos(): HasMany
+    {
+        return $this->hasMany(Recurso::class);
+    }
+
+    public function agendamentos(): HasMany
+    {
+        return $this->hasMany(Agendamento::class);
+    }
+
+    public function conversas(): HasMany
+    {
+        return $this->hasMany(Conversa::class);
+    }
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'tenant_users')
             ->withPivot('papel')->withTimestamps();
     }
-    public function cobrancasBot(): HasMany { return $this->hasMany(CobrancaBot::class); }
+
+    public function cobrancasBot(): HasMany
+    {
+        return $this->hasMany(CobrancaBot::class);
+    }
+
     // v2
-    public function profissionais(): HasMany { return $this->hasMany(Profissional::class); }
-    public function servicos(): HasMany { return $this->hasMany(Servico::class); }
-    public function opcoes_extras(): HasMany { return $this->hasMany(OpcaoExtra::class); }
-    public function clientes(): HasMany { return $this->hasMany(Cliente::class); }
-    public function bloqueiosAgenda(): HasMany { return $this->hasMany(BloqueioAgenda::class); }
+    public function profissionais(): HasMany
+    {
+        return $this->hasMany(Profissional::class);
+    }
+
+    public function servicos(): HasMany
+    {
+        return $this->hasMany(Servico::class);
+    }
+
+    public function opcoes_extras(): HasMany
+    {
+        return $this->hasMany(OpcaoExtra::class);
+    }
+
+    public function clientes(): HasMany
+    {
+        return $this->hasMany(Cliente::class);
+    }
+
+    public function bloqueiosAgenda(): HasMany
+    {
+        return $this->hasMany(BloqueioAgenda::class);
+    }
 
     /**
      * Regras de handoff automático bot→humano, com defaults equivalentes ao comportamento
@@ -74,10 +109,10 @@ class Tenant extends Model
     public function triagemConfig(): array
     {
         return array_merge([
-            'palavras_chave_humano'        => [],
-            'max_tentativas_sem_entender'  => 2,
-            'transferir_fora_do_horario'   => false,
-            'mensagem_transferencia'       => null,
+            'palavras_chave_humano' => [],
+            'max_tentativas_sem_entender' => 2,
+            'transferir_fora_do_horario' => false,
+            'mensagem_transferencia' => null,
         ], $this->configuracoes['triagem'] ?? []);
     }
 
@@ -88,13 +123,40 @@ class Tenant extends Model
     public function regrasAgendamentoConfig(): array
     {
         return array_merge([
-            'antecedencia_minima_minutos'       => 30,
-            'antecedencia_maxima_dias'          => 60,
+            'antecedencia_minima_minutos' => 30,
+            'antecedencia_maxima_dias' => 60,
             'buffer_entre_agendamentos_minutos' => 0,
-            'permite_cliente_remarcar'          => true,
-            'permite_cliente_cancelar'          => true,
-            'politica_cancelamento'             => null,
+            'permite_cliente_remarcar' => true,
+            'permite_cliente_cancelar' => true,
+            'politica_cancelamento' => null,
         ], $this->configuracoes['regras_agendamento'] ?? []);
+    }
+
+    /**
+     * Preferências da camada de IA. Podem ser sobrescritas por tenant em
+     * configuracoes.ai sem armazenar nenhuma chave de API no banco.
+     */
+    public function aiConfig(): array
+    {
+        $tenantConfig = $this->configuracoes['ai'] ?? [];
+        $tenantConfig = is_array($tenantConfig) ? $tenantConfig : [];
+        $fallbackProviders = $tenantConfig['fallback_providers'] ?? config('ai.fallback_providers', []);
+        if (is_string($fallbackProviders)) {
+            $fallbackProviders = array_map('trim', explode(',', $fallbackProviders));
+        }
+        $fallbackProviders = is_array($fallbackProviders) ? $fallbackProviders : [];
+
+        return [
+            'provider' => $tenantConfig['provider'] ?? config('ai.default_provider'),
+            'fallback_providers' => array_values(array_filter($fallbackProviders)),
+            'models' => is_array($tenantConfig['models'] ?? null) ? $tenantConfig['models'] : [],
+            'monthly_token_limit' => array_key_exists('monthly_token_limit', $tenantConfig)
+                ? $tenantConfig['monthly_token_limit']
+                : config('ai.limits.monthly_tokens'),
+            'monthly_cost_limit_usd' => array_key_exists('monthly_cost_limit_usd', $tenantConfig)
+                ? $tenantConfig['monthly_cost_limit_usd']
+                : config('ai.limits.monthly_cost_usd'),
+        ];
     }
 
     /**
@@ -109,14 +171,14 @@ class Tenant extends Model
         }
 
         $agora = ($agora ?? Carbon::now())->copy()->setTimezone('America/Sao_Paulo');
-        $dia   = (int) $agora->format('w'); // 0=Dom .. 6=Sáb
+        $dia = (int) $agora->format('w'); // 0=Dom .. 6=Sáb
 
         $config = $horarios[$dia] ?? $horarios[(string) $dia] ?? null;
         if (! is_array($config) || empty($config['ativo'])) {
             return false;
         }
 
-        $abertura   = $config['abertura']   ?? null;
+        $abertura = $config['abertura'] ?? null;
         $fechamento = $config['fechamento'] ?? null;
         if (! $abertura || ! $fechamento) {
             return false;
@@ -158,7 +220,7 @@ class Tenant extends Model
         return collect($grupos)->map(function ($g) {
             $dias = $g['inicio'] === $g['fim']
                 ? self::DIAS_SEMANA[$g['inicio']]
-                : self::DIAS_SEMANA[$g['inicio']] . '–' . self::DIAS_SEMANA[$g['fim']];
+                : self::DIAS_SEMANA[$g['inicio']].'–'.self::DIAS_SEMANA[$g['fim']];
 
             return "{$dias} {$g['faixa']}";
         })->join(', ');

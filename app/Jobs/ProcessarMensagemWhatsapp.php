@@ -9,9 +9,8 @@ use App\Models\Conversa;
 use App\Models\Mensagem;
 use App\Models\OperationalEvent;
 use App\Models\Tenant;
-use App\Models\TokenUsage;
 use App\Services\AgendamentoService;
-use App\Services\ClaudeAgentService;
+use App\Services\AgendouService;
 use App\Services\EvolutionApiService;
 use App\Services\IntencaoService;
 use Illuminate\Bus\Queueable;
@@ -49,7 +48,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
     ) {}
 
     public function handle(
-        ClaudeAgentService $claude,
+        AgendouService $agendou,
         AgendamentoService $agendamentoService,
         EvolutionApiService $evolution,
         IntencaoService $intencao,
@@ -200,16 +199,9 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
                 $resposta = 'Entendido, agendamento cancelado.';
             }
         } else {
-            // 9. Chamar Claude com tool use
+            // 9. Chamar o serviço central do Agendou; o provider é escolhido pelo AiOrchestrator
             $clienteInfo = ['id' => $cliente->id, 'nome' => $cliente->nome, 'telefone' => $cliente->telefone];
-            $resultado = $claude->processar($this->tenant, $historico, $clienteInfo, $agendamentoPendente);
-
-            if (! empty($resultado['usage'])) {
-                TokenUsage::create(array_merge(
-                    ['tenant_id' => $this->tenant->id, 'model' => config('services.claude.model')],
-                    $resultado['usage'],
-                ));
-            }
+            $resultado = $agendou->processarMensagem($this->tenant, $historico, $clienteInfo, $agendamentoPendente);
 
             if ($resultado['transferir']) {
                 $conversa->update(['status_v2' => 'aguardando_humano']);

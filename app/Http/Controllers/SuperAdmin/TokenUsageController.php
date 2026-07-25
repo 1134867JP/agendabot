@@ -4,7 +4,6 @@ namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
 use App\Models\TokenUsage;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -12,10 +11,10 @@ class TokenUsageController extends Controller
 {
     public function index(): Response
     {
-        $agora        = now();
-        $inicioMes    = $agora->copy()->startOfMonth();
+        $agora = now();
+        $inicioMes = $agora->copy()->startOfMonth();
         $inicioMesAnt = $agora->copy()->subMonth()->startOfMonth();
-        $fimMesAnt    = $agora->copy()->subMonth()->endOfMonth();
+        $fimMesAnt = $agora->copy()->subMonth()->endOfMonth();
 
         // Totais do mês atual
         $mes = TokenUsage::where('created_at', '>=', $inicioMes)
@@ -24,7 +23,8 @@ class TokenUsageController extends Controller
                 COALESCE(SUM(input_tokens), 0)                AS input,
                 COALESCE(SUM(output_tokens), 0)               AS output,
                 COALESCE(SUM(cache_creation_input_tokens), 0) AS cache_write,
-                COALESCE(SUM(cache_read_input_tokens), 0)     AS cache_read
+                COALESCE(SUM(cache_read_input_tokens), 0)     AS cache_read,
+                COALESCE(SUM(cost_usd), 0)                    AS cost_usd
             ')
             ->first();
 
@@ -34,19 +34,29 @@ class TokenUsageController extends Controller
                 COALESCE(SUM(input_tokens), 0)                AS input,
                 COALESCE(SUM(output_tokens), 0)               AS output,
                 COALESCE(SUM(cache_creation_input_tokens), 0) AS cache_write,
-                COALESCE(SUM(cache_read_input_tokens), 0)     AS cache_read
+                COALESCE(SUM(cache_read_input_tokens), 0)     AS cache_read,
+                COALESCE(SUM(cost_usd), 0)                    AS cost_usd
             ')
             ->first();
 
-        $custoMes    = TokenUsage::calcularCusto($mes->input, $mes->output, $mes->cache_write, $mes->cache_read);
-        $custoMesAnt = TokenUsage::calcularCusto($mesAnt->input, $mesAnt->output, $mesAnt->cache_write, $mesAnt->cache_read);
+        $custoMes = (float) $mes->cost_usd;
+        $custoMesAnt = (float) $mesAnt->cost_usd;
 
         // Taxa de cache hit = cache_read / (input + cache_read) — evitar divisão por zero
         $totalInput = $mes->input + $mes->cache_read;
         $cacheHitRate = $totalInput > 0 ? round(($mes->cache_read / $totalInput) * 100, 1) : 0;
 
-        // Economia gerada pelo cache (diferença de custo se tudo fossem tokens normais)
-        $economiaCacheUsd = $mes->cache_read * (TokenUsage::PRECO_INPUT - TokenUsage::PRECO_CACHE_READ);
+        // Economia gerada pelo cache, respeitando o preço de cada provider/modelo.
+        $economiaCacheUsd = TokenUsage::where('created_at', '>=', $inicioMes)
+            ->selectRaw('provider, model, COALESCE(SUM(cache_read_input_tokens), 0) AS cache_read')
+            ->groupBy('provider', 'model')
+            ->get()
+            ->sum(function (TokenUsage $usage): float {
+                $pricing = TokenUsage::precosModelo($usage->provider, $usage->model);
+
+                return ((int) $usage->cache_read / 1_000_000)
+                    * max(0, $pricing['input'] - $pricing['cache_read']);
+            });
 
         // Por tenant — mês atual
         $porTenant = TokenUsage::where('token_usages.created_at', '>=', $inicioMes)
@@ -59,49 +69,53 @@ class TokenUsageController extends Controller
                 COALESCE(SUM(input_tokens), 0)                AS input,
                 COALESCE(SUM(output_tokens), 0)               AS output,
                 COALESCE(SUM(cache_creation_input_tokens), 0) AS cache_write,
-                COALESCE(SUM(cache_read_input_tokens), 0)     AS cache_read
+                COALESCE(SUM(cache_read_input_tokens), 0)     AS cache_read,
+                COALESCE(SUM(cost_usd), 0)                    AS cost_usd
             ')
             ->groupBy('tenants.id', 'tenants.nome', 'tenants.slug')
             ->orderByRaw('SUM(input_tokens + output_tokens) DESC')
             ->get()
             ->map(function ($row) {
-                $row->custo_usd = TokenUsage::calcularCusto($row->input, $row->output, $row->cache_write, $row->cache_read);
+                $row->custo_usd = (float) $row->cost_usd;
+
                 return $row;
             });
 
         // Por dia — últimos 30 dias
         $porDia = TokenUsage::where('token_usages.created_at', '>=', $agora->copy()->subDays(29)->startOfDay())
-            ->selectRaw("
+            ->selectRaw('
                 DATE(created_at)                      AS dia,
                 COUNT(*)                              AS calls,
                 COALESCE(SUM(input_tokens), 0)                AS input,
                 COALESCE(SUM(output_tokens), 0)               AS output,
-                COALESCE(SUM(cache_read_input_tokens), 0)     AS cache_read
-            ")
+                COALESCE(SUM(cache_read_input_tokens), 0)     AS cache_read,
+                COALESCE(SUM(cost_usd), 0)                    AS cost_usd
+            ')
             ->groupByRaw('DATE(created_at)')
             ->orderBy('dia')
             ->get()
             ->map(function ($row) {
-                $row->custo_usd = TokenUsage::calcularCusto($row->input, $row->output, 0, $row->cache_read);
+                $row->custo_usd = (float) $row->cost_usd;
+
                 return $row;
             });
 
         return Inertia::render('SuperAdmin/TokenUsage', [
             'mes' => [
-                'calls'       => (int) $mes->calls,
-                'input'       => (int) $mes->input,
-                'output'      => (int) $mes->output,
+                'calls' => (int) $mes->calls,
+                'input' => (int) $mes->input,
+                'output' => (int) $mes->output,
                 'cache_write' => (int) $mes->cache_write,
-                'cache_read'  => (int) $mes->cache_read,
-                'custo_usd'   => $custoMes,
+                'cache_read' => (int) $mes->cache_read,
+                'custo_usd' => $custoMes,
             ],
             'mesAnterior' => [
                 'custo_usd' => $custoMesAnt,
             ],
-            'cacheHitRate'     => $cacheHitRate,
+            'cacheHitRate' => $cacheHitRate,
             'economiaCacheUsd' => $economiaCacheUsd,
-            'porTenant'        => $porTenant,
-            'porDia'           => $porDia,
+            'porTenant' => $porTenant,
+            'porDia' => $porDia,
         ]);
     }
 }
