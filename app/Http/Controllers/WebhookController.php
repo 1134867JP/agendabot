@@ -7,13 +7,19 @@ use App\Jobs\ProcessarMensagemWhatsapp;
 use App\Jobs\SincronizarConversasWhatsappJob;
 use App\Models\Tenant;
 use App\Services\ConversaSyncService;
+use App\Services\WhatsAppSyncState;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 
 class WebhookController extends Controller
 {
-    public function handle(Request $request, string $tenantSlug, ConversaSyncService $sync): Response
+    public function handle(
+        Request $request,
+        string $tenantSlug,
+        ConversaSyncService $sync,
+        WhatsAppSyncState $syncState,
+    ): Response
     {
         $tenant = Tenant::where('slug', $tenantSlug)
             ->where('ativo', true)
@@ -45,7 +51,8 @@ class WebhookController extends Controller
 
                 if ($conectado) {
                     // Ao conectar: importar histórico em background
-                    SincronizarConversasWhatsappJob::dispatch($tenant)->onQueue('sync');
+                    $executionId = $syncState->iniciar($tenant);
+                    SincronizarConversasWhatsappJob::dispatch($tenant, $executionId)->onQueue('sync');
                 } else {
                     // Ao desconectar: fazer backup e limpar histórico do banco
                     BackupELimparHistoricoJob::dispatch($tenant)->onQueue('maintenance');
