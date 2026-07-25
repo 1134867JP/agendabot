@@ -33,9 +33,9 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
-        <env name="AI_PROVIDER" value="claude"/>
-        <env name="AI_FALLBACK_PROVIDERS" value=""/>
-        <env name="CLAUDE_API_KEY" value="testing-key"/>
+        <env name="AI_PROVIDER" value="claude" force="true"/>
+        <env name="AI_FALLBACK_PROVIDERS" value="" force="true"/>
+        <env name="CLAUDE_API_KEY" value="testing-key" force="true"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
