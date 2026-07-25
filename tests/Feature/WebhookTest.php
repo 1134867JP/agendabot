@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Jobs\ProcessarMensagemWhatsapp;
+use App\Jobs\SincronizarConversasWhatsappJob;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -75,6 +76,22 @@ class WebhookTest extends TestCase
         $response = $this->postJson('/webhook/tenant-que-nao-existe', []);
 
         $response->assertStatus(404);
+    }
+
+    public function test_reconexao_do_whatsapp_inicia_estado_e_dispara_sincronizacao(): void
+    {
+        Queue::fake();
+        $this->tenant->update(['whatsapp_conectado' => false]);
+
+        $response = $this->withHeader('X-Webhook-Token', 'token-teste-webhook')
+            ->postJson("/webhook/{$this->tenant->slug}", [
+                'event' => 'connection.update',
+                'data' => ['state' => 'open'],
+            ]);
+
+        $response->assertOk();
+        $this->assertTrue($this->tenant->fresh()->whatsapp_conectado);
+        Queue::assertPushed(SincronizarConversasWhatsappJob::class);
     }
 
     public function test_webhook_salva_mensagem_sem_disparar_resposta_quando_bot_inativo(): void

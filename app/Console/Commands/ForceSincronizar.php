@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Jobs\SincronizarConversasWhatsappJob;
 use App\Models\Tenant;
+use App\Services\WhatsAppSyncState;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 
@@ -13,7 +14,7 @@ class ForceSincronizar extends Command
 
     protected $description = 'Força sincronização de conversas WhatsApp, liberando lock se necessário';
 
-    public function handle(): void
+    public function handle(WhatsAppSyncState $syncState): void
     {
         $tenant = Tenant::where('slug', $this->argument('tenant_slug'))->firstOrFail();
         $lockKey = "sync_whatsapp_tenant_{$tenant->id}";
@@ -23,8 +24,8 @@ class ForceSincronizar extends Command
             $this->warn("Lock liberado para {$tenant->slug}");
         }
 
-        Cache::put($lockKey, true, now()->addMinutes(10));
-        SincronizarConversasWhatsappJob::dispatch($tenant)->onQueue('sync');
+        $executionId = $syncState->iniciar($tenant);
+        SincronizarConversasWhatsappJob::dispatch($tenant, $executionId)->onQueue('sync');
 
         $this->info("Sync iniciado para {$tenant->nome}. Acompanhe: tail -f storage/logs/laravel.log | grep SYNC");
     }
