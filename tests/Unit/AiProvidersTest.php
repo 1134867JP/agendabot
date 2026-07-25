@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Services\AI\DTO\AiRequest;
+use App\Services\AI\Exceptions\AiProviderException;
 use App\Services\AI\Providers\GeminiProvider;
 use App\Services\AI\Providers\GroqProvider;
 use Illuminate\Support\Facades\Http;
@@ -10,6 +11,34 @@ use Tests\TestCase;
 
 class AiProvidersTest extends TestCase
 {
+    public function test_gemini_permite_fallback_quando_modelo_nao_existe(): void
+    {
+        config([
+            'ai.providers.gemini.key' => 'gemini-test',
+            'ai.providers.gemini.base_url' => 'https://gemini.test/v1beta',
+            'ai.fallback_statuses' => [404],
+        ]);
+        Http::fake([
+            'gemini.test/*' => Http::response([
+                'error' => [
+                    'message' => 'Model not found.',
+                    'status' => 'NOT_FOUND',
+                ],
+            ], 404),
+        ]);
+
+        try {
+            (new GeminiProvider)->chat(new AiRequest([
+                'messages' => [['role' => 'user', 'content' => 'Olá']],
+            ], 'gemini-indisponivel'));
+            $this->fail('Era esperada uma falha do provider.');
+        } catch (AiProviderException $e) {
+            $this->assertSame(404, $e->status);
+            $this->assertSame('NOT_FOUND', $e->errorType);
+            $this->assertTrue($e->fallbackAllowed);
+        }
+    }
+
     public function test_groq_normaliza_tool_call_e_tokens_em_cache(): void
     {
         config([

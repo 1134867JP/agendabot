@@ -12,10 +12,10 @@ $nullableFloat = static fn (mixed $value): ?float => $value === null || trim((st
     : (float) $value;
 
 return [
-    'default_provider' => env('AI_PROVIDER', 'claude'),
-    'fallback_providers' => $csv(env('AI_FALLBACK_PROVIDERS', '')),
+    'default_provider' => env('AI_PROVIDER', 'gemini'),
+    'fallback_providers' => $csv(env('AI_FALLBACK_PROVIDERS', 'groq,openrouter,claude')),
     'timeout_seconds' => (int) env('AI_TIMEOUT_SECONDS', 30),
-    'fallback_statuses' => [408, 409, 425, 429, 500, 502, 503, 504, 529],
+    'fallback_statuses' => [404, 408, 409, 425, 429, 500, 502, 503, 504, 529],
 
     'limits' => [
         'monthly_tokens' => $nullableInt(env('AI_MONTHLY_TOKEN_LIMIT')),
@@ -40,7 +40,7 @@ return [
         ],
         'openrouter' => [
             'key' => env('OPENROUTER_API_KEY'),
-            'model' => env('OPENROUTER_MODEL', 'anthropic/claude-haiku-4.5'),
+            'model' => env('OPENROUTER_MODEL', 'openrouter/free'),
             'base_url' => env('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
         ],
     ],
