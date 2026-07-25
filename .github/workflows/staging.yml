@@ -11,7 +11,7 @@ jobs:
     environment: staging
     steps:
       - name: Deploy em homologação
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
