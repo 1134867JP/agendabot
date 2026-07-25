@@ -4,6 +4,12 @@ $csv = static fn (?string $value): array => array_values(array_filter(array_map(
     'trim',
     explode(',', (string) $value),
 )));
+$nullableInt = static fn (mixed $value): ?int => $value === null || trim((string) $value) === ''
+    ? null
+    : (int) $value;
+$nullableFloat = static fn (mixed $value): ?float => $value === null || trim((string) $value) === ''
+    ? null
+    : (float) $value;
 
 return [
     'default_provider' => env('AI_PROVIDER', 'claude'),
@@ -12,12 +18,8 @@ return [
     'fallback_statuses' => [408, 409, 425, 429, 500, 502, 503, 504, 529],
 
     'limits' => [
-        'monthly_tokens' => env('AI_MONTHLY_TOKEN_LIMIT') !== null
-            ? (int) env('AI_MONTHLY_TOKEN_LIMIT')
-            : null,
-        'monthly_cost_usd' => env('AI_MONTHLY_COST_LIMIT_USD') !== null
-            ? (float) env('AI_MONTHLY_COST_LIMIT_USD')
-            : null,
+        'monthly_tokens' => $nullableInt(env('AI_MONTHLY_TOKEN_LIMIT')),
+        'monthly_cost_usd' => $nullableFloat(env('AI_MONTHLY_COST_LIMIT_USD')),
     ],
 
     'providers' => [
