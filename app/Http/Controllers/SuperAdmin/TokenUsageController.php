@@ -4,6 +4,7 @@ namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
 use App\Models\TokenUsage;
+use App\Support\AiStatus;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -101,6 +102,7 @@ class TokenUsageController extends Controller
             });
 
         return Inertia::render('SuperAdmin/TokenUsage', [
+            'ia' => AiStatus::resumo(),
             'mes' => [
                 'calls' => (int) $mes->calls,
                 'input' => (int) $mes->input,
