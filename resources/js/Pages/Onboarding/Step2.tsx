@@ -38,7 +38,7 @@ export default function OnboardingStep2({ planos }: Props) {
 
             {/* Step indicator */}
             <div className="flex items-center justify-center gap-2 px-6 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-                {[{ n: 1, label: 'Conta' }, { n: 2, label: 'Plano' }, { n: 3, label: 'Bot' }].map((s, i) => (
+                {[{ n: 1, label: 'Conta' }, { n: 2, label: 'Plano' }, { n: 3, label: 'Agenda' }].map((s, i) => (
                     <div key={s.n} className="flex items-center gap-2">
                         {i > 0 && <div className="h-px w-8" style={{ background: s.n <= 2 ? 'var(--accent)' : 'var(--border)' }} />}
                         <div className="flex items-center gap-1.5">

@@ -1,4 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 import ConfiguracoesLayout from '@/Layouts/ConfiguracoesLayout';
 import { PageProps } from '@/types';
 import Toggle from '@/Components/Toggle';
@@ -16,153 +17,183 @@ interface Props extends PageProps {
     config: RegrasAgendamentoConfig;
 }
 
+const PRESETS = [
+    {
+        id: 'flexivel',
+        label: 'Mais flexível',
+        description: 'Aceita pedidos para agora e mantém 60 dias disponíveis.',
+        values: { antecedencia_minima_minutos: 0, antecedencia_maxima_dias: 60, buffer_entre_agendamentos_minutos: 0 },
+    },
+    {
+        id: 'equilibrado',
+        label: 'Recomendado',
+        description: '30 min de antecedência e agenda aberta por 30 dias.',
+        values: { antecedencia_minima_minutos: 30, antecedencia_maxima_dias: 30, buffer_entre_agendamentos_minutos: 0 },
+    },
+    {
+        id: 'protegido',
+        label: 'Mais protegido',
+        description: '2h de antecedência e 15 min de respiro entre clientes.',
+        values: { antecedencia_minima_minutos: 120, antecedencia_maxima_dias: 30, buffer_entre_agendamentos_minutos: 15 },
+    },
+] as const;
+
+const formatarAntecedencia = (minutos: number) => {
+    if (minutos === 0) return 'até na hora';
+    if (minutos < 60) return `${minutos} min antes`;
+    if (minutos % 60 === 0) return `${minutos / 60}h antes`;
+    return `${minutos} min antes`;
+};
+
 export default function RegrasAgendamento({ config }: Props) {
+    const [advancedOpen, setAdvancedOpen] = useState(false);
     const { data, setData, put, processing, errors, wasSuccessful } = useForm({
-        antecedencia_minima_minutos:       config.antecedencia_minima_minutos,
-        antecedencia_maxima_dias:          config.antecedencia_maxima_dias,
+        antecedencia_minima_minutos: config.antecedencia_minima_minutos,
+        antecedencia_maxima_dias: config.antecedencia_maxima_dias,
         buffer_entre_agendamentos_minutos: config.buffer_entre_agendamentos_minutos,
-        permite_cliente_remarcar:          config.permite_cliente_remarcar,
-        permite_cliente_cancelar:          config.permite_cliente_cancelar,
-        politica_cancelamento:             config.politica_cancelamento ?? '',
+        permite_cliente_remarcar: config.permite_cliente_remarcar,
+        permite_cliente_cancelar: config.permite_cliente_cancelar,
+        politica_cancelamento: config.politica_cancelamento ?? '',
     });
 
-    const submit = (e: React.FormEvent) => {
-        e.preventDefault();
+    const presetAtivo = PRESETS.find(preset =>
+        preset.values.antecedencia_minima_minutos === data.antecedencia_minima_minutos
+        && preset.values.antecedencia_maxima_dias === data.antecedencia_maxima_dias
+        && preset.values.buffer_entre_agendamentos_minutos === data.buffer_entre_agendamentos_minutos
+    )?.id;
+
+    const aplicarPreset = (preset: typeof PRESETS[number]) => {
+        setData(previous => ({ ...previous, ...preset.values }));
+    };
+
+    const submit = (event: React.FormEvent) => {
+        event.preventDefault();
         put(route('tenant.regras-agendamento.update'));
     };
 
     return (
-        <ConfiguracoesLayout title="Regras de agendamento" subtitle="Antecedência, intervalo entre horários e política de cancelamento">
-            <Head title="Regras de agendamento" />
+        <ConfiguracoesLayout title="Preferências da agenda" subtitle="Escolha um estilo simples ou personalize quando precisar">
+            <Head title="Preferências da agenda" />
 
-            <div className="mx-auto max-w-2xl space-y-6">
+            <form onSubmit={submit} className="mx-auto max-w-3xl space-y-5">
                 {wasSuccessful && (
                     <div className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm text-emerald-400" style={{ background: 'rgba(110,231,183,0.08)', border: '1px solid rgba(110,231,183,0.2)' }}>
                         <span>✓</span>
-                        Regras de agendamento salvas com sucesso.
+                        Preferências salvas.
                     </div>
                 )}
 
-                <div className="card p-4 sm:p-7">
-                    <div className="mb-6 flex items-center gap-3">
-                        <span className="h-4 w-0.5 rounded-full" style={{ background: 'var(--accent)' }} />
-                        <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-2)' }}>
-                            Janela de agendamento
-                        </h2>
+                <section className="card p-4 sm:p-6">
+                    <h2 className="text-base font-semibold text-primary">Como você prefere trabalhar?</h2>
+                    <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>Escolha uma opção. Você pode alterar os detalhes quando quiser.</p>
+
+                    <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                        {PRESETS.map(preset => {
+                            const active = presetAtivo === preset.id;
+                            return (
+                                <button
+                                    key={preset.id}
+                                    type="button"
+                                    onClick={() => aplicarPreset(preset)}
+                                    className="rounded-xl p-4 text-left transition-all hover:brightness-110"
+                                    style={{
+                                        background: active ? 'var(--accent-light)' : 'var(--bg-surface-2)',
+                                        border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+                                    }}
+                                >
+                                    <span className="flex items-center justify-between gap-2">
+                                        <span className="text-sm font-semibold text-primary">{preset.label}</span>
+                                        {active && <span style={{ color: 'var(--accent)' }}>✓</span>}
+                                    </span>
+                                    <span className="mt-2 block text-xs leading-5" style={{ color: 'var(--text-3)' }}>{preset.description}</span>
+                                </button>
+                            );
+                        })}
                     </div>
+                </section>
 
-                    <form onSubmit={submit} className="space-y-5">
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <section className="card p-4 sm:p-6">
+                    <h2 className="text-sm font-semibold text-primary">Seu cliente poderá</h2>
+                    <div className="mt-4 divide-y" style={{ borderColor: 'var(--border)' }}>
+                        <div className="flex items-center justify-between gap-4 py-3">
                             <div>
-                                <label className="label mb-1">Antecedência mínima (minutos)</label>
-                                <input
-                                    type="number"
-                                    min={0}
-                                    max={10080}
-                                    value={data.antecedencia_minima_minutos}
-                                    onChange={e => setData('antecedencia_minima_minutos', Number(e.target.value))}
-                                    className="input"
-                                />
-                                <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
-                                    Tempo mínimo entre agora e o horário do agendamento.
-                                </p>
-                                {errors.antecedencia_minima_minutos && (
-                                    <p className="mt-1 text-xs text-red-400">{errors.antecedencia_minima_minutos}</p>
-                                )}
+                                <p className="text-sm text-primary">Remarcar pelo WhatsApp</p>
+                                <p className="text-xs" style={{ color: 'var(--text-3)' }}>Sem precisar falar com a equipe.</p>
                             </div>
+                            <Toggle checked={data.permite_cliente_remarcar} onChange={value => setData('permite_cliente_remarcar', value)} />
+                        </div>
+                        <div className="flex items-center justify-between gap-4 py-3">
                             <div>
-                                <label className="label mb-1">Antecedência máxima (dias)</label>
-                                <input
-                                    type="number"
-                                    min={1}
-                                    max={365}
-                                    value={data.antecedencia_maxima_dias}
-                                    onChange={e => setData('antecedencia_maxima_dias', Number(e.target.value))}
-                                    className="input"
-                                />
-                                <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
-                                    Quantos dias no futuro o cliente pode agendar.
-                                </p>
-                                {errors.antecedencia_maxima_dias && (
-                                    <p className="mt-1 text-xs text-red-400">{errors.antecedencia_maxima_dias}</p>
-                                )}
+                                <p className="text-sm text-primary">Cancelar pelo WhatsApp</p>
+                                <p className="text-xs" style={{ color: 'var(--text-3)' }}>O horário volta automaticamente para a agenda.</p>
                             </div>
+                            <Toggle checked={data.permite_cliente_cancelar} onChange={value => setData('permite_cliente_cancelar', value)} />
                         </div>
+                    </div>
+                </section>
 
-                        <div>
-                            <label className="label mb-1">Intervalo entre agendamentos (minutos)</label>
-                            <input
-                                type="number"
-                                min={0}
-                                max={240}
-                                value={data.buffer_entre_agendamentos_minutos}
-                                onChange={e => setData('buffer_entre_agendamentos_minutos', Number(e.target.value))}
-                                className="input w-full sm:max-w-[180px]"
-                            />
-                            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
-                                Tempo de folga adicionado entre um agendamento e o próximo do mesmo profissional/recurso.
-                            </p>
-                            {errors.buffer_entre_agendamentos_minutos && (
-                                <p className="mt-1 text-xs text-red-400">{errors.buffer_entre_agendamentos_minutos}</p>
-                            )}
-                        </div>
+                <section className="card overflow-hidden">
+                    <button
+                        type="button"
+                        onClick={() => setAdvancedOpen(open => !open)}
+                        className="flex w-full items-center justify-between gap-4 p-4 text-left sm:p-6"
+                    >
+                        <span>
+                            <span className="block text-sm font-semibold text-primary">Personalizar detalhes</span>
+                            <span className="mt-1 block text-xs" style={{ color: 'var(--text-3)' }}>
+                                Hoje: pedidos {formatarAntecedencia(data.antecedencia_minima_minutos)}, até {data.antecedencia_maxima_dias} dias, {data.buffer_entre_agendamentos_minutos || 'sem'} intervalo.
+                            </span>
+                        </span>
+                        <span className="text-lg" style={{ color: 'var(--text-3)' }}>{advancedOpen ? '−' : '+'}</span>
+                    </button>
 
-                        <div className="rounded-xl p-4 space-y-4" style={{ border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
-                            <div className="flex items-start justify-between gap-3">
-                                <div>
-                                    <p className="text-sm font-medium text-primary">Cliente pode remarcar pelo WhatsApp</p>
-                                    <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
-                                        Permite que o próprio cliente altere data/horário sem falar com um atendente.
-                                    </p>
-                                </div>
-                                <Toggle
-                                    checked={data.permite_cliente_remarcar}
-                                    onChange={v => setData('permite_cliente_remarcar', v)}
-                                />
+                    {advancedOpen && (
+                        <div className="space-y-5 px-4 pb-5 sm:px-6 sm:pb-6" style={{ borderTop: '1px solid var(--border)' }}>
+                            <div className="grid gap-4 pt-5 sm:grid-cols-3">
+                                <label>
+                                    <span className="label mb-1">Aceitar a partir de</span>
+                                    <select className="input" value={data.antecedencia_minima_minutos} onChange={e => setData('antecedencia_minima_minutos', Number(e.target.value))}>
+                                        <option value={0}>Agora</option>
+                                        <option value={30}>30 minutos</option>
+                                        <option value={60}>1 hora</option>
+                                        <option value={120}>2 horas</option>
+                                        <option value={1440}>1 dia</option>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span className="label mb-1">Agenda aberta por</span>
+                                    <select className="input" value={data.antecedencia_maxima_dias} onChange={e => setData('antecedencia_maxima_dias', Number(e.target.value))}>
+                                        {[7, 15, 30, 60, 90].map(dias => <option key={dias} value={dias}>{dias} dias</option>)}
+                                    </select>
+                                </label>
+                                <label>
+                                    <span className="label mb-1">Respiro entre clientes</span>
+                                    <select className="input" value={data.buffer_entre_agendamentos_minutos} onChange={e => setData('buffer_entre_agendamentos_minutos', Number(e.target.value))}>
+                                        {[0, 5, 10, 15, 30].map(minutos => <option key={minutos} value={minutos}>{minutos === 0 ? 'Sem intervalo' : `${minutos} minutos`}</option>)}
+                                    </select>
+                                </label>
                             </div>
-                            <div className="flex items-start justify-between gap-3">
-                                <div>
-                                    <p className="text-sm font-medium text-primary">Cliente pode cancelar pelo WhatsApp</p>
-                                    <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
-                                        Permite que o próprio cliente cancele o agendamento pelo bot.
-                                    </p>
-                                </div>
-                                <Toggle
-                                    checked={data.permite_cliente_cancelar}
-                                    onChange={v => setData('permite_cliente_cancelar', v)}
-                                />
-                            </div>
-                        </div>
 
-                        <div>
-                            <label className="label mb-1">
-                                Política de cancelamento{' '}
-                                <span className="font-normal" style={{ color: 'var(--text-3)' }}>(opcional)</span>
+                            <label className="block">
+                                <span className="label mb-1">Mensagem sobre cancelamentos <span style={{ color: 'var(--text-3)' }}>(opcional)</span></span>
+                                <textarea
+                                    value={data.politica_cancelamento}
+                                    onChange={e => setData('politica_cancelamento', e.target.value)}
+                                    rows={3}
+                                    className="input resize-none"
+                                    placeholder="Ex: Se puder, avise com pelo menos 2 horas de antecedência."
+                                    maxLength={500}
+                                />
                             </label>
-                            <textarea
-                                value={data.politica_cancelamento}
-                                onChange={e => setData('politica_cancelamento', e.target.value)}
-                                rows={3}
-                                className="input resize-none"
-                                placeholder="Ex: Cancelamentos com menos de 2h de antecedência não são reembolsados."
-                                maxLength={500}
-                            />
-                            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
-                                {(data.politica_cancelamento || '').length}/500
-                            </p>
-                            {errors.politica_cancelamento && (
-                                <p className="mt-1 text-xs text-red-400">{errors.politica_cancelamento}</p>
-                            )}
+                            {Object.keys(errors).length > 0 && <p className="text-xs text-red-400">Revise os valores informados.</p>}
                         </div>
+                    )}
+                </section>
 
-                        <div className="pt-2">
-                            <button type="submit" disabled={processing} className="btn-primary w-full justify-center py-2.5">
-                                {processing ? 'Salvando…' : 'Salvar regras de agendamento'}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+                <button type="submit" disabled={processing} className="btn-primary w-full justify-center py-3">
+                    {processing ? 'Salvando…' : 'Salvar preferências'}
+                </button>
+            </form>
         </ConfiguracoesLayout>
     );
 }

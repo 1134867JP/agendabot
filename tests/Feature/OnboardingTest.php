@@ -42,18 +42,65 @@ class OnboardingTest extends TestCase
         $this->assertNull($tenant->fresh()->asaas_subscription_id);
 
         $response = $this->post(route('onboarding.step3.store'), [
-            'bot_nome' => 'Bia',
-            'bot_saudacao' => 'Olá! Bem-vindo à barbearia, como posso ajudar?',
-            'bot_tom' => 'semiformal',
+            'nome_item' => 'Dono Teste',
+            'nome_servico' => 'Corte',
+            'duracao_minutos' => 30,
+            'valor' => 45,
+            'dias_atendimento' => 'segunda_sabado',
+            'hora_abertura' => '09:00',
+            'hora_fechamento' => '18:00',
+            'perfil_regras' => 'equilibrado',
         ]);
         $response->assertRedirect(route('onboarding.sucesso'));
         $fresh = $tenant->fresh();
-        $this->assertSame('Bia', $fresh->nome_agente);
-        // A saudação é persistida no campo próprio e NÃO sequestra instrucoes_extras.
-        $this->assertSame('Olá! Bem-vindo à barbearia, como posso ajudar?', $fresh->bot_saudacao);
+        $this->assertSame('Assistente da Barbearia Onboarding', $fresh->nome_agente);
+        $this->assertSame('Olá! Bem-vindo à Barbearia Onboarding. Como posso ajudar?', $fresh->bot_saudacao);
         $this->assertNull($fresh->instrucoes_extras);
+        $this->assertTrue($fresh->bot_ativo);
+        $this->assertSame(30, $fresh->regrasAgendamentoConfig()['antecedencia_minima_minutos']);
+        $this->assertSame(30, $fresh->regrasAgendamentoConfig()['antecedencia_maxima_dias']);
+
+        $this->assertDatabaseHas('profissionais', [
+            'tenant_id' => $tenant->id,
+            'nome' => 'Dono Teste',
+        ]);
+        $this->assertDatabaseHas('servicos', [
+            'tenant_id' => $tenant->id,
+            'nome' => 'Corte',
+            'duracao_minutos' => 30,
+        ]);
+        $this->assertDatabaseCount('horarios_profissional', 6);
 
         $this->get(route('onboarding.sucesso'))->assertOk();
+    }
+
+    public function test_configuracao_expressa_cria_recurso_para_quadra(): void
+    {
+        Queue::fake();
+        $this->post('/cadastro', $this->dadosStep1([
+            'nome_estabelecimento' => 'Arena Express',
+            'tipo_servico' => 'quadra',
+        ]));
+
+        $this->post(route('onboarding.step3.store'), [
+            'nome_item' => 'Quadra de futsal',
+            'nome_servico' => 'Reserva',
+            'duracao_minutos' => 60,
+            'valor' => 120,
+            'dias_atendimento' => 'todos',
+            'hora_abertura' => '07:00',
+            'hora_fechamento' => '22:00',
+            'perfil_regras' => 'protegido',
+        ])->assertRedirect(route('onboarding.sucesso'));
+
+        $tenant = Tenant::where('slug', 'like', 'arena-express-%')->firstOrFail();
+        $this->assertDatabaseHas('recursos', [
+            'tenant_id' => $tenant->id,
+            'nome' => 'Quadra de futsal',
+            'duracao_padrao_minutos' => 60,
+        ]);
+        $this->assertDatabaseCount('horarios_funcionamento', 7);
+        $this->assertSame(15, $tenant->regrasAgendamentoConfig()['buffer_entre_agendamentos_minutos']);
     }
 
     public function test_step1_store_impede_email_duplicado(): void

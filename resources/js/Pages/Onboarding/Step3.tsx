@@ -1,179 +1,195 @@
-import { Head, router, useForm } from '@inertiajs/react';
-import { PageProps } from '@/types';
+import { Head, useForm } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
 import ForceDark from '@/Components/ForceDark';
-import { TONS_VOZ } from '@/constants/bot';
+import { PageProps, TipoServico } from '@/types';
+
+type DiasAtendimento = 'segunda_sexta' | 'segunda_sabado' | 'todos';
+type PerfilRegras = 'flexivel' | 'equilibrado' | 'protegido';
+
+interface ConfiguracaoExpressa {
+    nome_item: string;
+    nome_servico: string;
+    duracao_minutos: number;
+    valor: number;
+    dias_atendimento: DiasAtendimento;
+    hora_abertura: string;
+    hora_fechamento: string;
+    perfil_regras: PerfilRegras;
+}
 
 interface Props extends PageProps {
     tenant: {
         nome: string;
-        tipo_servico: string;
-        nome_agente: string | null;
-        tom_voz: string | null;
-        bot_saudacao: string | null;
+        tipo_servico: TipoServico;
     };
+    defaults: ConfiguracaoExpressa;
 }
 
-export default function OnboardingStep3({ tenant }: Props) {
-    const defaults = {
-        bot_nome:     `Assistente da ${tenant.nome}`,
-        bot_saudacao: `Olá! Bem-vindo à ${tenant.nome}. Como posso ajudar?`,
-        bot_tom:      'semiformal',
-    };
+const DIAS: { value: DiasAtendimento; label: string }[] = [
+    { value: 'segunda_sexta', label: 'Segunda a sexta' },
+    { value: 'segunda_sabado', label: 'Segunda a sábado' },
+    { value: 'todos', label: 'Todos os dias' },
+];
 
-    const { data, setData, post, processing, errors } = useForm({
-        bot_nome:     tenant.nome_agente  || defaults.bot_nome,
-        bot_saudacao: tenant.bot_saudacao || defaults.bot_saudacao,
-        bot_tom:      tenant.tom_voz      || defaults.bot_tom,
-    });
+const REGRAS: { value: PerfilRegras; label: string; desc: string }[] = [
+    { value: 'flexivel', label: 'Mais flexível', desc: 'Aceita horários de última hora e abre 60 dias.' },
+    { value: 'equilibrado', label: 'Recomendado', desc: '30 min de antecedência e agenda aberta por 30 dias.' },
+    { value: 'protegido', label: 'Mais protegido', desc: '2h de antecedência e 15 min entre atendimentos.' },
+];
 
-    const submit: FormEventHandler = (e) => {
-        e.preventDefault();
+export default function OnboardingStep3({ tenant, defaults }: Props) {
+    const { data, setData, post, processing, errors } = useForm<ConfiguracaoExpressa>(defaults);
+    const usaRecurso = tenant.tipo_servico === 'quadra';
+    const itemLabel = usaRecurso ? 'Nome do espaço principal' : 'Quem fará o primeiro atendimento?';
+    const itemHint = usaRecurso ? 'Ex: Quadra de futsal' : 'Você poderá adicionar toda a equipe depois.';
+
+    const submit: FormEventHandler = (event) => {
+        event.preventDefault();
         post(route('onboarding.step3.store'));
-    };
-
-    // "Pular" ignora edições parciais e grava os valores-padrão sugeridos.
-    const pular = () => {
-        router.post(route('onboarding.step3.store'), defaults);
     };
 
     return (
         <ForceDark>
-        <div className="flex min-h-screen flex-col" style={{ background: 'var(--bg-app)' }}>
-            <Head title="Personalize seu bot" />
+            <div className="min-h-screen" style={{ background: 'var(--bg-app)' }}>
+                <Head title="Configuração expressa" />
 
-            {/* Step indicator */}
-            <div className="flex items-center justify-center gap-2 px-6 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-                {[{ n: 1, label: 'Conta' }, { n: 2, label: 'Plano' }, { n: 3, label: 'Bot' }].map((s, i) => (
-                    <div key={s.n} className="flex items-center gap-2">
-                        {i > 0 && <div className="h-px w-8" style={{ background: 'var(--accent)' }} />}
-                        <div className="flex items-center gap-1.5">
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold text-white" style={{ background: 'var(--accent)' }}>
-                                {s.n < 3 ? '✓' : s.n}
-                            </div>
-                            <span className="hidden text-[11px] sm:block text-primary">{s.label}</span>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            <div className="flex flex-1 items-start justify-center px-4 py-6 sm:py-10">
-                <div className="w-full max-w-lg">
-                    <div className="mb-6 sm:mb-8">
-                        <h1 className="text-2xl text-primary sm:text-3xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
-                            Personalize seu bot
-                        </h1>
-                        <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>
-                            É a primeira coisa que seus clientes vão ver. Você pode mudar depois.
-                        </p>
+                <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 sm:px-6 sm:py-10">
+                    <div className="mb-8 flex items-center justify-between">
+                        <span className="text-lg text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                            Agendou
+                        </span>
+                        <span className="rounded-full px-3 py-1 text-xs" style={{ background: 'var(--jade-light)', color: 'var(--jade)' }}>
+                            Último passo · cerca de 2 minutos
+                        </span>
                     </div>
 
-                    <form onSubmit={submit} className="space-y-6">
-
-                        {/* Nome do bot */}
-                        <div className="card p-4 sm:p-6 space-y-4">
-                            <div>
-                                <label className="label mb-1" htmlFor="bot_nome">
-                                    Nome do assistente
-                                </label>
-                                <input
-                                    id="bot_nome"
-                                    type="text"
-                                    value={data.bot_nome}
-                                    onChange={e => setData('bot_nome', e.target.value)}
-                                    className="input"
-                                    placeholder={`Assistente da ${tenant.nome}`}
-                                    maxLength={80}
-                                    required
-                                />
-                                <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
-                                    Como o bot se apresenta para o cliente ("Olá, sou a Ana…")
+                    <div className="grid flex-1 gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+                        <main>
+                            <div className="mb-6">
+                                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--jade)' }}>
+                                    Vamos deixar tudo pronto
                                 </p>
-                                {errors.bot_nome && <p className="mt-1 text-xs text-red-400">{errors.bot_nome}</p>}
+                                <h1 className="text-3xl text-primary sm:text-4xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                                    Como funciona a agenda da {tenant.nome}?
+                                </h1>
+                                <p className="mt-2 max-w-2xl text-sm leading-6" style={{ color: 'var(--text-3)' }}>
+                                    Já sugerimos uma configuração para o seu tipo de negócio. Confirme o básico agora; os detalhes ficam para depois.
+                                </p>
                             </div>
 
-                            <div>
-                                <label className="label mb-1" htmlFor="bot_saudacao">
-                                    Mensagem de boas-vindas
-                                </label>
-                                <textarea
-                                    id="bot_saudacao"
-                                    value={data.bot_saudacao}
-                                    onChange={e => setData('bot_saudacao', e.target.value)}
-                                    className="input min-h-[80px] resize-none"
-                                    placeholder="Olá! Como posso ajudar?"
-                                    maxLength={500}
-                                    required
-                                />
-                                <p className="mt-1 flex justify-between text-xs" style={{ color: 'var(--text-3)' }}>
-                                    <span>Enviada quando o cliente manda a primeira mensagem</span>
-                                    <span>{data.bot_saudacao.length}/500</span>
-                                </p>
-                                {errors.bot_saudacao && <p className="mt-1 text-xs text-red-400">{errors.bot_saudacao}</p>}
-                            </div>
-                        </div>
+                            <form onSubmit={submit} className="space-y-4">
+                                <section className="card p-4 sm:p-6">
+                                    <div className="mb-4">
+                                        <p className="text-sm font-semibold text-primary">Primeiro item da agenda</p>
+                                        <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>O suficiente para você testar o primeiro agendamento.</p>
+                                    </div>
 
-                        {/* Tom */}
-                        <div className="card p-4 sm:p-6">
-                            <p className="label mb-3">Tom de conversa</p>
-                            <div className="space-y-2">
-                                {TONS_VOZ.map(opt => (
-                                    <label
-                                        key={opt.value}
-                                        className="flex cursor-pointer items-start gap-3 rounded-lg p-3 transition-colors"
-                                        style={{
-                                            background: data.bot_tom === opt.value ? 'var(--accent-light)' : 'var(--bg-surface-2)',
-                                            border: `1px solid ${data.bot_tom === opt.value ? 'var(--accent)' : 'var(--border)'}`,
-                                        }}
-                                    >
-                                        <input
-                                            type="radio"
-                                            name="bot_tom"
-                                            value={opt.value}
-                                            checked={data.bot_tom === opt.value}
-                                            onChange={() => setData('bot_tom', opt.value)}
-                                            className="mt-0.5 accent-[var(--accent)]"
-                                        />
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex flex-col items-start gap-0.5 sm:flex-row sm:items-center sm:gap-2">
-                                                <span className="text-sm font-medium text-primary">{opt.label}</span>
-                                                <span className="text-xs" style={{ color: 'var(--text-3)' }}>{opt.desc}</span>
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <label>
+                                            <span className="label mb-1">{itemLabel}</span>
+                                            <input className="input" value={data.nome_item} onChange={e => setData('nome_item', e.target.value)} />
+                                            <span className="mt-1 block text-xs" style={{ color: 'var(--text-3)' }}>{itemHint}</span>
+                                            {errors.nome_item && <span className="mt-1 block text-xs text-red-400">{errors.nome_item}</span>}
+                                        </label>
+                                        <label>
+                                            <span className="label mb-1">{usaRecurso ? 'Tipo de reserva' : 'Primeiro serviço'}</span>
+                                            <input className="input" value={data.nome_servico} onChange={e => setData('nome_servico', e.target.value)} />
+                                            {errors.nome_servico && <span className="mt-1 block text-xs text-red-400">{errors.nome_servico}</span>}
+                                        </label>
+                                        <label>
+                                            <span className="label mb-1">Duração</span>
+                                            <select className="input" value={data.duracao_minutos} onChange={e => setData('duracao_minutos', Number(e.target.value))}>
+                                                {[15, 30, 45, 50, 60, 90, 120].map(minutos => <option key={minutos} value={minutos}>{minutos} minutos</option>)}
+                                            </select>
+                                        </label>
+                                        <label>
+                                            <span className="label mb-1">Valor</span>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: 'var(--text-3)' }}>R$</span>
+                                                <input className="input pl-10" type="number" min={0} step="0.01" value={data.valor} onChange={e => setData('valor', Number(e.target.value))} />
                                             </div>
-                                            <p
-                                                className="mt-1 line-clamp-2 text-xs italic"
-                                                style={{ color: 'var(--text-3)' }}
-                                            >
-                                                {opt.exemplo}
-                                            </p>
-                                        </div>
-                                    </label>
-                                ))}
+                                            {errors.valor && <span className="mt-1 block text-xs text-red-400">{errors.valor}</span>}
+                                        </label>
+                                    </div>
+                                </section>
+
+                                <section className="card p-4 sm:p-6">
+                                    <p className="mb-4 text-sm font-semibold text-primary">Quando você atende?</p>
+                                    <div className="grid gap-4 sm:grid-cols-[1fr_140px_140px]">
+                                        <label>
+                                            <span className="label mb-1">Dias</span>
+                                            <select className="input" value={data.dias_atendimento} onChange={e => setData('dias_atendimento', e.target.value as DiasAtendimento)}>
+                                                {DIAS.map(opcao => <option key={opcao.value} value={opcao.value}>{opcao.label}</option>)}
+                                            </select>
+                                        </label>
+                                        <label>
+                                            <span className="label mb-1">Das</span>
+                                            <input className="input" type="time" value={data.hora_abertura} onChange={e => setData('hora_abertura', e.target.value)} />
+                                        </label>
+                                        <label>
+                                            <span className="label mb-1">Até</span>
+                                            <input className="input" type="time" value={data.hora_fechamento} onChange={e => setData('hora_fechamento', e.target.value)} />
+                                            {errors.hora_fechamento && <span className="mt-1 block text-xs text-red-400">{errors.hora_fechamento}</span>}
+                                        </label>
+                                    </div>
+                                </section>
+
+                                <section className="card p-4 sm:p-6">
+                                    <p className="text-sm font-semibold text-primary">Como prefere receber agendamentos?</p>
+                                    <p className="mb-4 mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>Sem números técnicos. Escolha o estilo e cuidamos das regras.</p>
+                                    <div className="grid gap-2 sm:grid-cols-3">
+                                        {REGRAS.map(opcao => {
+                                            const active = data.perfil_regras === opcao.value;
+                                            return (
+                                                <button
+                                                    key={opcao.value}
+                                                    type="button"
+                                                    onClick={() => setData('perfil_regras', opcao.value)}
+                                                    className="rounded-xl p-3 text-left transition-colors"
+                                                    style={{
+                                                        background: active ? 'var(--accent-light)' : 'var(--bg-surface-2)',
+                                                        border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+                                                    }}
+                                                >
+                                                    <span className="block text-sm font-medium text-primary">{opcao.label}</span>
+                                                    <span className="mt-1 block text-xs leading-5" style={{ color: 'var(--text-3)' }}>{opcao.desc}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </section>
+
+                                <button type="submit" disabled={processing} className="btn-primary w-full justify-center py-3 text-base">
+                                    {processing ? 'Preparando seu Agendou…' : 'Criar minha agenda →'}
+                                </button>
+                            </form>
+                        </main>
+
+                        <aside className="lg:pt-24">
+                            <div className="sticky top-6 rounded-2xl p-5" style={{ background: 'var(--jade-light)', border: '1px solid rgba(0,168,132,.2)' }}>
+                                <p className="text-sm font-semibold" style={{ color: 'var(--jade)' }}>O Agendou fará por você</p>
+                                <ul className="mt-4 space-y-3 text-sm" style={{ color: 'var(--text-2)' }}>
+                                    {[
+                                        'Criar o primeiro item agendável',
+                                        'Montar os horários da semana',
+                                        'Aplicar regras recomendadas',
+                                        'Escrever a saudação do assistente',
+                                        'Liberar o simulador para teste',
+                                    ].map(item => (
+                                        <li key={item} className="flex gap-2">
+                                            <span style={{ color: 'var(--jade)' }}>✓</span>
+                                            <span>{item}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                                <p className="mt-5 text-xs leading-5" style={{ color: 'var(--text-3)' }}>
+                                    Nada será enviado aos seus clientes até você conectar o WhatsApp.
+                                </p>
                             </div>
-                            {errors.bot_tom && <p className="mt-2 text-xs text-red-400">{errors.bot_tom}</p>}
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={processing}
-                            className="btn-primary w-full justify-center py-3 text-base"
-                        >
-                            {processing ? 'Salvando…' : 'Finalizar configuração →'}
-                        </button>
-                    </form>
-
-                    <button
-                        onClick={pular}
-                        disabled={processing}
-                        className="mt-4 w-full text-center text-sm transition-colors disabled:opacity-50"
-                        style={{ color: 'var(--text-3)' }}
-                        onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-2)')}
-                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
-                    >
-                        Pular e usar padrão →
-                    </button>
+                        </aside>
+                    </div>
                 </div>
             </div>
-        </div>
         </ForceDark>
     );
 }
