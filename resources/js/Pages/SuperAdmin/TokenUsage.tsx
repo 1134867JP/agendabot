@@ -31,7 +31,26 @@ interface DiaRow {
     custo_usd:  number;
 }
 
+interface AiProvider {
+    provider: string;
+    label: string;
+    model: string;
+    configurado: boolean;
+}
+
+interface AiStatus {
+    padrao: AiProvider;
+    fallbacks: AiProvider[];
+    ultima_chamada: {
+        provider: string;
+        label: string;
+        model: string;
+        em: string;
+    } | null;
+}
+
 interface Props {
+    ia:                AiStatus;
     mes:               MesStats;
     mesAnterior:       { custo_usd: number };
     cacheHitRate:      number;
@@ -98,12 +117,72 @@ function MiniBarChart({ data }: { data: DiaRow[] }) {
     );
 }
 
-export default function TokenUsage({ mes, mesAnterior, cacheHitRate, economiaCacheUsd, porTenant, porDia }: Props) {
+export default function TokenUsage({ ia, mes, mesAnterior, cacheHitRate, economiaCacheUsd, porTenant, porDia }: Props) {
     const totalTokensMes = mes.input + mes.output + mes.cache_read;
 
     return (
         <AppLayout title="Tokens IA">
             <Head title="Tokens IA" />
+
+            <div
+                className="mb-6 rounded-xl p-5"
+                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+            >
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>
+                            IA configurada
+                        </p>
+                        <div className="mt-2 flex items-center gap-2">
+                            <span className={`h-2.5 w-2.5 rounded-full ${ia.padrao.configurado ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                            <p className="text-xl font-semibold" style={{ color: 'var(--text-1)' }}>{ia.padrao.label}</p>
+                            <span className={`badge ${ia.padrao.configurado ? 'badge-green' : 'badge-red'}`}>
+                                {ia.padrao.configurado ? 'Disponível' : 'Não configurada'}
+                            </span>
+                        </div>
+                        <p className="mt-1 text-xs font-mono" style={{ color: 'var(--text-3)' }}>{ia.padrao.model}</p>
+                    </div>
+
+                    <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>
+                            Fallbacks
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                            {ia.fallbacks.length === 0 ? (
+                                <span className="text-sm" style={{ color: 'var(--text-3)' }}>Nenhum</span>
+                            ) : ia.fallbacks.map(provider => (
+                                <span key={provider.provider} className={`badge ${provider.configurado ? 'badge-green' : 'badge-amber'}`}>
+                                    {provider.label} · {provider.configurado ? 'disponível' : 'sem chave'}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="lg:text-right">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>
+                            Última chamada real
+                        </p>
+                        {ia.ultima_chamada ? (
+                            <>
+                                <p className="mt-2 text-sm font-semibold" style={{ color: 'var(--text-1)' }}>
+                                    {ia.ultima_chamada.label}
+                                </p>
+                                <p className="text-xs font-mono" style={{ color: 'var(--text-3)' }}>
+                                    {ia.ultima_chamada.model}
+                                </p>
+                                <p className="mt-1 text-[11px]" style={{ color: 'var(--text-3)' }}>
+                                    {new Intl.DateTimeFormat('pt-BR', {
+                                        dateStyle: 'short',
+                                        timeStyle: 'short',
+                                    }).format(new Date(ia.ultima_chamada.em))}
+                                </p>
+                            </>
+                        ) : (
+                            <p className="mt-2 text-sm" style={{ color: 'var(--text-3)' }}>Nenhuma chamada registrada</p>
+                        )}
+                    </div>
+                </div>
+            </div>
 
             {/* Stat cards */}
             <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">

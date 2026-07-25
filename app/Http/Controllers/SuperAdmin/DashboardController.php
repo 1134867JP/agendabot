@@ -5,6 +5,7 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\Agendamento;
 use App\Models\Tenant;
+use App\Support\AiStatus;
 use App\Support\ErroLogScanner;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -16,6 +17,7 @@ class DashboardController extends Controller
     {
         return Inertia::render('SuperAdmin/Dashboard', [
             'stats' => $this->stats(),
+            'ia' => AiStatus::resumo(),
             'tenants' => Tenant::withCount(['agendamentos', 'recursos'])
                 ->latest()
                 ->paginate(25),

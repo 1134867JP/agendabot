@@ -18,8 +18,27 @@ interface TenantWithCounts extends Tenant {
     recursos_count: number;
 }
 
+interface AiProvider {
+    provider: string;
+    label: string;
+    model: string;
+    configurado: boolean;
+}
+
+interface AiStatus {
+    padrao: AiProvider;
+    fallbacks: AiProvider[];
+    ultima_chamada: {
+        provider: string;
+        label: string;
+        model: string;
+        em: string;
+    } | null;
+}
+
 interface Props extends PageProps {
     stats: Stats;
+    ia: AiStatus;
     tenants: PaginatedData<TenantWithCounts>;
 }
 
@@ -58,7 +77,7 @@ function StatCard({
     return href ? <Link href={href}>{inner}</Link> : inner;
 }
 
-export default function SuperAdminDashboard({ stats, tenants }: Props) {
+export default function SuperAdminDashboard({ stats, ia, tenants }: Props) {
     const impersonar = (t: TenantWithCounts) => {
         if (confirm(`Entrar como "${t.nome}"?`)) {
             router.post(route('superadmin.tenants.impersonar', t.id));
@@ -113,6 +132,45 @@ export default function SuperAdminDashboard({ stats, tenants }: Props) {
                     <StatCard label="Tenants ativos"      value={stats.tenants_ativos} />
                     <StatCard label="WhatsApp conectados" value={stats.tenants_conectados} />
                 </div>
+
+                <Link
+                    href={route('superadmin.tokens')}
+                    className="block rounded-xl p-5 transition-all hover:brightness-110"
+                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+                >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className={`h-2 w-2 rounded-full ${ia.padrao.configurado ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                                <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
+                                    IA padrão
+                                </p>
+                            </div>
+                            <p className="mt-2 text-xl font-semibold text-primary">
+                                {ia.padrao.label}
+                                <span className="ml-2 text-sm font-normal" style={{ color: 'var(--text-3)' }}>
+                                    {ia.padrao.model}
+                                </span>
+                            </p>
+                            <p className="mt-1 text-xs" style={{ color: ia.padrao.configurado ? '#34d399' : '#f87171' }}>
+                                {ia.padrao.configurado ? 'Configurada e disponível' : 'Chave não configurada'}
+                            </p>
+                        </div>
+                        <div className="sm:text-right">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
+                                Última IA usada
+                            </p>
+                            <p className="mt-2 text-sm font-medium text-primary">
+                                {ia.ultima_chamada
+                                    ? `${ia.ultima_chamada.label} · ${ia.ultima_chamada.model}`
+                                    : 'Nenhuma chamada registrada'}
+                            </p>
+                            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
+                                Ver consumo e fallbacks →
+                            </p>
+                        </div>
+                    </div>
+                </Link>
 
                 {/* Tenants table */}
                 <div className="card overflow-hidden">
