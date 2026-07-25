@@ -73,6 +73,10 @@ jobs:
           php artisan key:generate
 
       - name: Executar testes PHP
+        env:
+          AI_PROVIDER: claude
+          AI_FALLBACK_PROVIDERS: ''
+          CLAUDE_API_KEY: testing-key
         run: php artisan test
 
   deploy:
