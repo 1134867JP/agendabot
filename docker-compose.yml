@@ -60,6 +60,7 @@ services:
     image: agendabot-app
     container_name: agendabot-worker
     restart: always
+    user: "www-data:www-data"
     command: php artisan queue:work --queue=messages,notifications,default --sleep=2 --tries=3 --timeout=90
     volumes:
       - storage_data:/var/www/html/storage
@@ -88,6 +89,7 @@ services:
     image: agendabot-app
     container_name: agendabot-worker-batch
     restart: always
+    user: "www-data:www-data"
     command: php artisan queue:work --queue=sync,financial,maintenance --sleep=5 --tries=3 --timeout=600
     volumes:
       - storage_data:/var/www/html/storage
@@ -116,6 +118,7 @@ services:
     image: agendabot-app
     container_name: agendabot-scheduler
     restart: always
+    user: "www-data:www-data"
     command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
     volumes:
       - storage_data:/var/www/html/storage
