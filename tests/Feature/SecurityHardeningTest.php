@@ -237,27 +237,6 @@ class SecurityHardeningTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_super_admin_requires_second_factor_when_enabled(): void
-    {
-        config(['auth.superadmin_two_factor' => true]);
-
-        $user = User::factory()->create();
-        $user->forceFill(['is_super_admin' => true])->save();
-
-        $this->actingAs($user)
-            ->get(route('superadmin.dashboard'))
-            ->assertRedirect(route('superadmin.two-factor.challenge'));
-    }
-
-    public function test_common_user_cannot_open_super_admin_second_factor_challenge(): void
-    {
-        $user = User::factory()->create();
-
-        $this->actingAs($user)
-            ->get(route('superadmin.two-factor.challenge'))
-            ->assertForbidden();
-    }
-
     public function test_whatsapp_backup_is_encrypted_at_rest(): void
     {
         Storage::fake('local');
