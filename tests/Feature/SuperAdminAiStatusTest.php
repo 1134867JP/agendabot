@@ -18,7 +18,6 @@ class SuperAdminAiStatusTest extends TestCase
         parent::setUp();
 
         config([
-            'auth.superadmin_two_factor' => false,
             'ai.default_provider' => 'claude',
             'ai.fallback_providers' => ['gemini'],
             'ai.providers.claude.key' => 'test-key',

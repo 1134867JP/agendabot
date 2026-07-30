@@ -114,8 +114,4 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 900),
 
-    'superadmin_two_factor' => env('SUPERADMIN_2FA_ENABLED', env('APP_ENV') === 'production'),
-
-    'superadmin_two_factor_hours' => env('SUPERADMIN_2FA_HOURS', 8),
-
 ];
