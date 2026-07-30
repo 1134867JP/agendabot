@@ -17,6 +17,7 @@ const ICONS = {
     recursos:        'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
     profissionais:   'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
     servicos:        'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
+    opcoes:          'M5 5h14M5 12h14M5 19h14M8 3v4m8 3v4m-4 3v4',
     regras:          'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
     triagem:         'M22 12h-4l-3 9L9 3l-3 9H2',
     whatsapp:        'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z',
@@ -36,6 +37,7 @@ export function buildConfigTabs(tipo: TipoServico, isAdmin: boolean): ConfigTab[
         tabs.push({ label: 'Serviços',      routeName: 'tenant.servicos.index',      path: '/painel/servicos',      icon: ICONS.servicos });
     }
 
+    tabs.push({ label: 'Opções extras', routeName: 'tenant.opcoes-extras.index', path: '/painel/opcoes-extras', icon: ICONS.opcoes });
     tabs.push({ label: 'Regras',   routeName: 'tenant.regras-agendamento.index', path: '/painel/regras-agendamento', icon: ICONS.regras });
     tabs.push({ label: 'Triagem',  routeName: 'tenant.triagem.index',            path: '/painel/triagem',            icon: ICONS.triagem });
     tabs.push({ label: 'WhatsApp', routeName: 'tenant.whatsapp',                 path: '/painel/whatsapp',           icon: ICONS.whatsapp });
@@ -54,6 +56,7 @@ export const CONFIG_PATHS = [
     '/painel/recursos',
     '/painel/profissionais',
     '/painel/servicos',
+    '/painel/opcoes-extras',
     '/painel/regras-agendamento',
     '/painel/triagem',
     '/painel/whatsapp',

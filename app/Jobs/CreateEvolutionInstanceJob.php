@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\EvolutionApiException;
 use App\Jobs\Concerns\RegistraFalha;
 use App\Models\Tenant;
 use App\Services\EvolutionApiService;
@@ -20,14 +21,22 @@ class CreateEvolutionInstanceJob implements ShouldQueue
 
     public function handle(EvolutionApiService $evolution): void
     {
+        if (! $evolution->configurado()) {
+            throw EvolutionApiException::configuracaoAusente();
+        }
+
         $evolution->criarInstancia($this->tenant->evolution_instance);
 
         $webhookUrl = route('webhook', $this->tenant->slug);
-        $evolution->configurarWebhook(
+        $webhookConfigurado = $evolution->configurarWebhook(
             $this->tenant->evolution_instance,
             $webhookUrl,
             $this->tenant->webhook_token,
         );
+
+        if (! $webhookConfigurado) {
+            throw EvolutionApiException::webhookNaoConfigurado();
+        }
 
         $this->tenant->update(['ativo' => true]);
     }

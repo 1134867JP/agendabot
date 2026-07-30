@@ -46,6 +46,16 @@ const MenuIcon = () => (
 
 export default function AppLayout({ children, title, subtitle, headerActions, fullHeight }: Props) {
     useAppHeight();
+    useEffect(() => {
+        const revalidarSessao = (event: PageTransitionEvent) => {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        };
+
+        window.addEventListener('pageshow', revalidarSessao);
+        return () => window.removeEventListener('pageshow', revalidarSessao);
+    }, []);
 
     const page = usePage<PageProps<{
         currentTenant?: { id: number; nome: string; slug: string; modo_bot?: 'agendamento' | 'triagem' | null } | null;
@@ -55,7 +65,13 @@ export default function AppLayout({ children, title, subtitle, headerActions, fu
 
     const { currentTenant, flash, subscription } = page.props;
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const { conversasNaoLidas, conversasPreview } = useNotificacoes(!!currentTenant);
+    const conversasGerenciamAtualizacao = page.url.startsWith('/painel/conversas');
+    const {
+        conversasNaoLidas,
+        conversasPreview,
+        novaMensagem,
+        resetarNovaMensagem,
+    } = useNotificacoes(!!currentTenant && !conversasGerenciamAtualizacao);
 
     return (
         <div
@@ -82,7 +98,13 @@ export default function AppLayout({ children, title, subtitle, headerActions, fu
                 Pular para o conteúdo
             </a>
 
-            <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+            <Sidebar
+                open={sidebarOpen}
+                onClose={() => setSidebarOpen(false)}
+                conversasNaoLidas={conversasNaoLidas}
+                novaMensagem={novaMensagem}
+                resetarNovaMensagem={resetarNovaMensagem}
+            />
 
             <div className={`flex min-w-0 flex-1 flex-col ${fullHeight ? 'overflow-hidden' : 'lg:overflow-hidden'}`}>
                 <header

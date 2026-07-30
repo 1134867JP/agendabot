@@ -267,14 +267,14 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
                             </button>
                         </div>
                         <div className="space-y-4">
-                            <FormField label="Nome" error={cadastro.errors.nome} required>
-                                <input autoFocus value={cadastro.data.nome} onChange={event => cadastro.setData('nome', event.target.value)} className="input" maxLength={120} />
+                            <FormField label="Nome" htmlFor="novo-cliente-nome" error={cadastro.errors.nome} required>
+                                <input id="novo-cliente-nome" autoFocus value={cadastro.data.nome} onChange={event => cadastro.setData('nome', event.target.value)} className="input" maxLength={120} />
                             </FormField>
-                            <FormField label="Telefone com DDD" error={cadastro.errors.telefone} required>
-                                <input value={cadastro.data.telefone} onChange={event => cadastro.setData('telefone', maskTelefone(event.target.value))} className="input" inputMode="tel" autoComplete="tel" placeholder="(54) 99999-1234" />
+                            <FormField label="Telefone com DDD" htmlFor="novo-cliente-telefone" error={cadastro.errors.telefone} required>
+                                <input id="novo-cliente-telefone" value={cadastro.data.telefone} onChange={event => cadastro.setData('telefone', maskTelefone(event.target.value))} className="input" inputMode="tel" autoComplete="tel" placeholder="(54) 99999-1234" />
                             </FormField>
-                            <FormField label="Observação" hint="Opcional. Use para preferências ou informações úteis no atendimento.">
-                                <textarea value={cadastro.data.observacoes} onChange={event => cadastro.setData('observacoes', event.target.value)} className="input min-h-20 resize-none" maxLength={2000} />
+                            <FormField label="Observação" htmlFor="novo-cliente-observacoes" hint="Opcional. Use para preferências ou informações úteis no atendimento.">
+                                <textarea id="novo-cliente-observacoes" value={cadastro.data.observacoes} onChange={event => cadastro.setData('observacoes', event.target.value)} className="input min-h-20 resize-none" maxLength={2000} />
                             </FormField>
                         </div>
                         <div className="mt-5 flex gap-2">

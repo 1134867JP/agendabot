@@ -29,14 +29,17 @@ class VerificarTrialExpiradoJob implements ShouldQueue
             ->where('trial_ends_at', '<', now())
             ->each(function (Tenant $tenant) {
                 $tenant->update([
-                    'subscription_status'  => 'past_due',
+                    'subscription_status' => 'past_due',
                     'subscription_ends_at' => now(),
                 ]);
 
                 $owner = $tenant->users()->wherePivot('papel', 'admin')->first();
                 if ($owner) {
                     Mail::to($owner->email)->queue(new TrialExpiradoMail($tenant));
-                    Log::info("Trial expirado: tenant #{$tenant->id} {$tenant->nome} — e-mail enviado para {$owner->email}");
+                    Log::info('TRIAL_EXPIRED_NOTIFICATION_QUEUED', [
+                        'tenant_id' => $tenant->id,
+                        'owner_id' => $owner->id,
+                    ]);
                 }
             });
     }

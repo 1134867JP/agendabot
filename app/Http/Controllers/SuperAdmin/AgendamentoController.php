@@ -13,7 +13,7 @@ class AgendamentoController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = Agendamento::with(['recurso', 'tenant'])
+        $query = Agendamento::with(['recurso', 'profissional', 'servico', 'tenant'])
             ->orderBy('inicio', 'desc');
 
         if ($request->filled('tenant_id')) {
@@ -28,8 +28,8 @@ class AgendamentoController extends Controller
 
         return Inertia::render('SuperAdmin/Agendamentos', [
             'agendamentos' => $query->paginate(30)->withQueryString(),
-            'tenants'      => Tenant::select('id', 'nome')->orderBy('nome')->get(),
-            'filtros'      => $request->only(['tenant_id', 'data', 'status']),
+            'tenants' => Tenant::select('id', 'nome')->orderBy('nome')->get(),
+            'filtros' => $request->only(['tenant_id', 'data', 'status']),
         ]);
     }
 }

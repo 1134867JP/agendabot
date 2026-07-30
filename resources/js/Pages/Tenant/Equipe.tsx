@@ -115,8 +115,9 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                     <form onSubmit={salvar} className="space-y-3">
                         <div className="grid gap-3 sm:grid-cols-2">
                             <div>
-                                <label className="label mb-1">Nome</label>
+                                <label htmlFor="equipe-name" className="label mb-1">Nome</label>
                                 <input
+                                    id="equipe-name"
                                     value={data.name}
                                     onChange={e => setData('name', e.target.value)}
                                     className="input"
@@ -126,8 +127,9 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                                 {errors.name && <p className="mt-1 text-xs text-red-400">{errors.name}</p>}
                             </div>
                             <div>
-                                <label className="label mb-1">E-mail</label>
+                                <label htmlFor="equipe-email" className="label mb-1">E-mail</label>
                                 <input
+                                    id="equipe-email"
                                     type="email"
                                     value={data.email}
                                     onChange={e => setData('email', e.target.value)}
@@ -137,8 +139,9 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                                 {errors.email && <p className="mt-1 text-xs text-red-400">{errors.email}</p>}
                             </div>
                             <div>
-                                <label className="label mb-1">Senha</label>
+                                <label htmlFor="equipe-password" className="label mb-1">Senha</label>
                                 <input
+                                    id="equipe-password"
                                     type="password"
                                     value={data.password}
                                     onChange={e => setData('password', e.target.value)}
@@ -148,8 +151,9 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                                 {errors.password && <p className="mt-1 text-xs text-red-400">{errors.password}</p>}
                             </div>
                             <div>
-                                <label className="label mb-1">Papel</label>
+                                <label htmlFor="equipe-papel" className="label mb-1">Papel</label>
                                 <select
+                                    id="equipe-papel"
                                     value={data.papel}
                                     onChange={e => setData('papel', e.target.value as 'admin' | 'operador')}
                                     className="input"

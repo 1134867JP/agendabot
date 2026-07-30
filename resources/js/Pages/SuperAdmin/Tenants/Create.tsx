@@ -26,8 +26,9 @@ export default function TenantCreate(_: PageProps) {
                     <form onSubmit={submit} className="space-y-5">
                         {/* Nome */}
                         <div>
-                            <label className="label mb-1">Nome do estabelecimento</label>
+                            <label className="label mb-1" htmlFor="tenant-nome">Nome do estabelecimento</label>
                             <input
+                                id="tenant-nome"
                                 value={data.nome}
                                 onChange={e => setData('nome', e.target.value)}
                                 className="input"
@@ -59,6 +60,7 @@ export default function TenantCreate(_: PageProps) {
                             </div>
                             {data.tipo_servico === 'personalizado' && (
                                 <input
+                                    aria-label="Tipo de serviço personalizado"
                                     value={data.tipo_servico_personalizado}
                                     onChange={e => setData('tipo_servico_personalizado', e.target.value)}
                                     className="input mt-2"
@@ -78,8 +80,9 @@ export default function TenantCreate(_: PageProps) {
 
                         {/* Email */}
                         <div>
-                            <label className="label mb-1">E-mail</label>
+                            <label className="label mb-1" htmlFor="tenant-email-dono">E-mail</label>
                             <input
+                                id="tenant-email-dono"
                                 type="email"
                                 value={data.email_dono}
                                 onChange={e => setData('email_dono', e.target.value)}
@@ -92,8 +95,9 @@ export default function TenantCreate(_: PageProps) {
 
                         {/* Senha */}
                         <div>
-                            <label className="label mb-1">Senha inicial</label>
+                            <label className="label mb-1" htmlFor="tenant-senha-dono">Senha inicial</label>
                             <input
+                                id="tenant-senha-dono"
                                 type="password"
                                 value={data.senha_dono}
                                 onChange={e => setData('senha_dono', e.target.value)}

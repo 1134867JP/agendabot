@@ -1,7 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { PageProps, SubscriptionInfo, TipoServico } from '@/types';
 import { useTheme } from '@/Components/ThemeProvider';
-import { useNotificacoes } from '@/hooks/useNotificacoes';
 import ToastNovaMensagem from '@/Components/ToastNovaMensagem';
 import { CONFIG_PATHS } from '@/lib/configTabs';
 
@@ -57,6 +56,7 @@ const SECTIONS_SUPER_ADMIN: { label: string; items: NavItem[] }[] = [
         items: [
             { label: 'Dashboard', routeName: 'superadmin.dashboard',     path: '/superadmin',         icon: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
             { label: 'Tenants',   routeName: 'superadmin.tenants.index', path: '/superadmin/tenants', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+            { label: 'Agendamentos', routeName: 'superadmin.agendamentos', path: '/superadmin/agendamentos', icon: 'M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z' },
             { label: 'Financeiro',   routeName: 'superadmin.financeiro',   path: '/superadmin/financeiro',   icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
             { label: 'Logs',         routeName: 'superadmin.logs',         path: '/superadmin/logs',         icon: 'M4 6h16M4 10h16M4 14h16M4 18h7' },
             { label: 'Jobs',         routeName: 'superadmin.jobs',         path: '/superadmin/jobs',         icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
@@ -74,9 +74,18 @@ const Icon = ({ d }: { d: string }) => (
 interface SidebarProps {
     open: boolean;
     onClose: () => void;
+    conversasNaoLidas: number;
+    novaMensagem: boolean;
+    resetarNovaMensagem: () => void;
 }
 
-export default function Sidebar({ open, onClose }: SidebarProps) {
+export default function Sidebar({
+    open,
+    onClose,
+    conversasNaoLidas,
+    novaMensagem,
+    resetarNovaMensagem,
+}: SidebarProps) {
     const { theme, toggle } = useTheme();
     const page = usePage<PageProps<{
         currentTenant?: { id: number; nome: string; slug: string; tipo_servico: TipoServico; modo_bot?: 'agendamento' | 'triagem' | null } | null;
@@ -88,8 +97,6 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     const isSuperAdmin = auth.user.is_super_admin;
     const isAdmin      = isSuperAdmin || tenantPapel === 'admin';
     const currentUrl   = page.url;
-
-    const { conversasNaoLidas, novaMensagem, resetarNovaMensagem } = useNotificacoes(!!currentTenant);
 
     const tipoAtual = currentTenant?.tipo_servico ?? 'personalizado';
     const emTriagem = currentTenant?.modo_bot === 'triagem';
