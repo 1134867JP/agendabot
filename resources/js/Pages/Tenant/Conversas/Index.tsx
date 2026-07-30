@@ -296,8 +296,9 @@ function NovaConversaModal({ onClose, initialTelefone = '' }: { onClose: () => v
                 </div>
 
                 <form onSubmit={submit} className="space-y-3">
-                    <FormField label="Telefone (com DDD e código do país)" error={errors.telefone} required>
+                    <FormField label="Telefone (com DDD e código do país)" htmlFor="nova-conversa-telefone" error={errors.telefone} required>
                         <input
+                            id="nova-conversa-telefone"
                             type="tel"
                             value={data.telefone}
                             onChange={e => setData('telefone', e.target.value)}
@@ -306,8 +307,9 @@ function NovaConversaModal({ onClose, initialTelefone = '' }: { onClose: () => v
                             autoFocus
                         />
                     </FormField>
-                    <FormField label="Mensagem" error={errors.mensagem} required>
+                    <FormField label="Mensagem" htmlFor="nova-conversa-mensagem" error={errors.mensagem} required>
                         <textarea
+                            id="nova-conversa-mensagem"
                             value={data.mensagem}
                             onChange={e => setData('mensagem', e.target.value)}
                             placeholder="Olá! Tudo bem?"

@@ -174,7 +174,9 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'superadmin'])->prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/', [SuperAdmin\DashboardController::class, 'index'])->name('dashboard');
 
-    Route::resource('tenants', SuperAdmin\TenantController::class)->only(['index', 'create', 'edit']);
+    Route::resource('tenants', SuperAdmin\TenantController::class)->only(['index']);
+    Route::resource('tenants', SuperAdmin\TenantController::class)->only(['create', 'edit'])
+        ->middleware('password.confirm');
     Route::resource('tenants', SuperAdmin\TenantController::class)->only(['store', 'update', 'destroy'])
         ->middleware(['password.confirm', 'throttle:10,1']);
     Route::patch('tenants/{tenant}/toggle-ativo', [SuperAdmin\TenantController::class, 'toggleAtivo'])->middleware(['password.confirm', 'throttle:10,1'])->name('tenants.toggle-ativo');

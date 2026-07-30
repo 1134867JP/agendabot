@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\EvolutionApiException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
@@ -25,6 +26,11 @@ class EvolutionApiService
             ->retry(3, 500, throw: false);
     }
 
+    public function configurado(): bool
+    {
+        return filter_var($this->baseUrl, FILTER_VALIDATE_URL) !== false;
+    }
+
     public function enviarMensagem(string $instance, string $telefone, string $mensagem): bool
     {
         $response = $this->http(10)
@@ -44,6 +50,10 @@ class EvolutionApiService
                 'integration' => 'WHATSAPP-BAILEYS',
                 'qrcode' => true,
             ]);
+
+        if (! $response->successful()) {
+            throw EvolutionApiException::requisicaoFalhou('criar instância', $response->status());
+        }
 
         return $response->json() ?? [];
     }

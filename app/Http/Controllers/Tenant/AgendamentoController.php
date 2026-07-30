@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Tenant;
 use App\Exceptions\HorarioIndisponivelException;
 use App\Http\Controllers\Controller;
 use App\Models\Agendamento;
+use App\Models\Cliente;
 use App\Models\Profissional;
 use App\Models\Recurso;
 use App\Models\Servico;
@@ -26,6 +27,13 @@ class AgendamentoController extends Controller
     public function index(Request $request): Response
     {
         $tenant = app('tenant');
+        $telefoneCliente = preg_replace('/\D+/', '', (string) $request->query('cliente'));
+        $clienteInicial = $telefoneCliente !== ''
+            ? Cliente::query()
+                ->where('tenant_id', $tenant->id)
+                ->where('telefone', $telefoneCliente)
+                ->first(['nome', 'telefone'])
+            : null;
 
         $query = Agendamento::where('tenant_id', $tenant->id)
             ->with(['recurso', 'profissional', 'servico'])
@@ -51,6 +59,24 @@ class AgendamentoController extends Controller
             'tenant' => $tenant,
             'agendamentos' => $query->paginate(20)->withQueryString(),
             'recursos' => $tenant->recursos()->where('ativo', true)->get(),
+            'profissionais' => $tenant->profissionais()
+                ->where('ativo', true)
+                ->orderBy('nome')
+                ->get(['id', 'nome']),
+            'servicos' => $tenant->servicos()
+                ->where('ativo', true)
+                ->with('profissionais:id')
+                ->orderBy('nome')
+                ->get(['id', 'tenant_id', 'nome', 'duracao_minutos'])
+                ->map(fn (Servico $servico) => [
+                    'id' => $servico->id,
+                    'nome' => $servico->nome,
+                    'duracao_minutos' => (int) ($servico->duracao_minutos ?? 30),
+                    'profissional_ids' => $servico->profissionais->pluck('id')->values(),
+                ]),
+            'clienteInicial' => $clienteInicial
+                ? ['nome' => $clienteInicial->nome, 'telefone' => $clienteInicial->telefone]
+                : null,
             'filtros' => $request->only(['data', 'recurso_id', 'status', 'busca']),
         ]);
     }

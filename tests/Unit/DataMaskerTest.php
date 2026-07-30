@@ -20,4 +20,19 @@ class DataMaskerTest extends TestCase
         $this->assertStringNotContainsString('cliente@', $masked['payload']['email']);
         $this->assertSame(500, $masked['payload']['status']);
     }
+
+    public function test_remove_segredos_sem_preservar_sufixo(): void
+    {
+        $masked = DataMasker::context([
+            'authorization' => 'Bearer segredo-total',
+            'payload' => [
+                'webhook_token' => 'token-muito-secreto',
+                'api_key' => 'chave-muito-secreta',
+            ],
+        ]);
+
+        $this->assertSame('[REDACTED]', $masked['authorization']);
+        $this->assertSame('[REDACTED]', $masked['payload']['webhook_token']);
+        $this->assertSame('[REDACTED]', $masked['payload']['api_key']);
+    }
 }

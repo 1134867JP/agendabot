@@ -85,8 +85,9 @@ function NovoServicoForm({ onClose }: { onClose: () => void }) {
                 </div>
 
                 <div>
-                    <label className="label mb-1">Descrição</label>
+                    <label className="label mb-1" htmlFor="novo-servico-descricao">Descrição</label>
                     <textarea
+                        id="novo-servico-descricao"
                         value={data.descricao}
                         onChange={e => setData('descricao', e.target.value)}
                         rows={2}
@@ -97,8 +98,9 @@ function NovoServicoForm({ onClose }: { onClose: () => void }) {
 
                 <div className="grid gap-3 sm:grid-cols-3">
                     <div>
-                        <label className="label mb-1">Valor mín</label>
+                        <label className="label mb-1" htmlFor="novo-servico-valor-min">Valor mín</label>
                         <input
+                            id="novo-servico-valor-min"
                             type="number" step="0.01" min="0"
                             value={data.valor_min}
                             onChange={e => setData('valor_min', e.target.value)}
@@ -106,8 +108,9 @@ function NovoServicoForm({ onClose }: { onClose: () => void }) {
                         />
                     </div>
                     <div>
-                        <label className="label mb-1">Valor máx</label>
+                        <label className="label mb-1" htmlFor="novo-servico-valor-max">Valor máx</label>
                         <input
+                            id="novo-servico-valor-max"
                             type="number" step="0.01" min="0"
                             value={data.valor_max}
                             onChange={e => setData('valor_max', e.target.value)}
@@ -115,8 +118,9 @@ function NovoServicoForm({ onClose }: { onClose: () => void }) {
                         />
                     </div>
                     <div>
-                        <label className="label mb-1">Duração *</label>
+                        <label className="label mb-1" htmlFor="novo-servico-duracao">Duração *</label>
                         <select
+                            id="novo-servico-duracao"
                             value={data.duracao_minutos}
                             onChange={e => setData('duracao_minutos', parseInt(e.target.value))}
                             className="input"
@@ -201,8 +205,9 @@ function EditarServicoForm({
                 </div>
 
                 <div>
-                    <label className="label mb-1">Descrição</label>
+                    <label className="label mb-1" htmlFor="editar-servico-descricao">Descrição</label>
                     <textarea
+                        id="editar-servico-descricao"
                         value={data.descricao}
                         onChange={e => setData('descricao', e.target.value)}
                         rows={2}
@@ -212,8 +217,9 @@ function EditarServicoForm({
 
                 <div className="grid gap-3 sm:grid-cols-3">
                     <div>
-                        <label className="label mb-1">Valor mín</label>
+                        <label className="label mb-1" htmlFor="editar-servico-valor-min">Valor mín</label>
                         <input
+                            id="editar-servico-valor-min"
                             type="number" step="0.01" min="0"
                             value={data.valor_min}
                             onChange={e => setData('valor_min', e.target.value)}
@@ -221,8 +227,9 @@ function EditarServicoForm({
                         />
                     </div>
                     <div>
-                        <label className="label mb-1">Valor máx</label>
+                        <label className="label mb-1" htmlFor="editar-servico-valor-max">Valor máx</label>
                         <input
+                            id="editar-servico-valor-max"
                             type="number" step="0.01" min="0"
                             value={data.valor_max}
                             onChange={e => setData('valor_max', e.target.value)}
@@ -230,8 +237,9 @@ function EditarServicoForm({
                         />
                     </div>
                     <div>
-                        <label className="label mb-1">Duração *</label>
+                        <label className="label mb-1" htmlFor="editar-servico-duracao">Duração *</label>
                         <select
+                            id="editar-servico-duracao"
                             value={data.duracao_minutos}
                             onChange={e => setData('duracao_minutos', parseInt(e.target.value))}
                             className="input"

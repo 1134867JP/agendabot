@@ -2,18 +2,19 @@
 
 namespace App\Http\Controllers\Tenant;
 
+use App\Exceptions\EvolutionApiException;
 use App\Http\Controllers\Controller;
+use App\Models\Tenant;
 use App\Services\EvolutionApiService;
 use App\Services\WhatsAppConversationBackupService;
 use App\Services\WhatsAppSyncState;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class WhatsAppController extends Controller
 {
@@ -23,7 +24,7 @@ class WhatsAppController extends Controller
         private WhatsAppSyncState $syncState,
     ) {}
 
-    private function webhookUrl(\App\Models\Tenant $tenant): string
+    private function webhookUrl(Tenant $tenant): string
     {
         if (! $tenant->webhook_token) {
             $tenant->update([
@@ -32,6 +33,7 @@ class WhatsAppController extends Controller
             ]);
             $tenant->refresh();
         }
+
         return route('webhook', $tenant->slug);
     }
 
@@ -47,41 +49,58 @@ class WhatsAppController extends Controller
 
     public function qrcode(): JsonResponse
     {
-        $tenant   = app('tenant');
-        $instance = $tenant->evolution_instance;
+        try {
+            $tenant = app('tenant');
+            $instance = $tenant->evolution_instance;
 
-        if (!$instance) {
-            // Mesmo nome usado no onboarding e no CreateEvolutionInstanceJob (slug puro),
-            // evitando criar uma instância divergente.
-            $instance = $tenant->slug;
-            $tenant->update(['evolution_instance' => $instance]);
-        }
-
-        $webhookUrl = $this->webhookUrl($tenant);
-        $status = $this->evolution->statusInstancia($instance);
-
-        // Já conectado — garantir webhook atualizado e avisar o frontend
-        if ($status === 'open') {
-            $tenant->update(['whatsapp_conectado' => true]);
-            $this->evolution->configurarWebhook($instance, $webhookUrl, $tenant->webhook_token);
-            return response()->json(['connected' => true]);
-        }
-
-        // Instância não existe — criar e configurar webhook
-        if ($status === 'desconhecido') {
-            $result = $this->evolution->criarInstancia($instance);
-            $this->evolution->configurarWebhook($instance, $webhookUrl, $tenant->webhook_token);
-
-            $qrcode = data_get($result, 'qrcode.base64') ?? data_get($result, 'base64');
-            if ($qrcode) {
-                return response()->json(['qrcode' => $qrcode]);
+            if (! $this->evolution->configurado()) {
+                throw EvolutionApiException::configuracaoAusente();
             }
-        }
 
-        // Instância existe mas não conectada — garantir webhook atualizado e buscar QR
-        $this->evolution->configurarWebhook($instance, $webhookUrl, $tenant->webhook_token);
-        $qrcode = $this->evolution->obterQrCode($instance);
-        return response()->json(['qrcode' => $qrcode]);
+            if (! $instance) {
+                // Mesmo nome usado no onboarding e no CreateEvolutionInstanceJob (slug puro),
+                // evitando criar uma instância divergente.
+                $instance = $tenant->slug;
+                $tenant->update(['evolution_instance' => $instance]);
+            }
+
+            $webhookUrl = $this->webhookUrl($tenant);
+            $status = $this->evolution->statusInstancia($instance);
+
+            // Já conectado — garantir webhook atualizado e avisar o frontend.
+            if ($status === 'open') {
+                $tenant->update(['whatsapp_conectado' => true]);
+                $this->evolution->configurarWebhook($instance, $webhookUrl, $tenant->webhook_token);
+
+                return response()->json(['connected' => true]);
+            }
+
+            // Instância não existe — criar e configurar webhook.
+            if ($status === 'desconhecido') {
+                $result = $this->evolution->criarInstancia($instance);
+                $this->evolution->configurarWebhook($instance, $webhookUrl, $tenant->webhook_token);
+
+                $qrcode = data_get($result, 'qrcode.base64') ?? data_get($result, 'base64');
+                if ($qrcode) {
+                    return response()->json(['qrcode' => $qrcode]);
+                }
+            }
+
+            // Instância existe mas não conectada — garantir webhook atualizado e buscar QR.
+            $this->evolution->configurarWebhook($instance, $webhookUrl, $tenant->webhook_token);
+            $qrcode = $this->evolution->obterQrCode($instance);
+
+            return response()->json(['qrcode' => $qrcode]);
+        } catch (EvolutionApiException|ConnectionException $e) {
+            Log::warning('WHATSAPP_QRCODE_INDISPONIVEL', [
+                'tenant' => app('tenant')->id,
+                'erro' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'erro' => 'Não foi possível conectar ao WhatsApp agora. Tente novamente em alguns minutos.',
+            ], 503);
+        }
     }
 
     public function desconectar(): JsonResponse

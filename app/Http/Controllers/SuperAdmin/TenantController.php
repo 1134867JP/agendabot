@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\CreateEvolutionInstanceJob;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Services\EvolutionApiService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,8 +16,6 @@ use Inertia\Response;
 
 class TenantController extends Controller
 {
-    public function __construct(private EvolutionApiService $evolution) {}
-
     public function index(): Response
     {
         return Inertia::render('SuperAdmin/Tenants/Index', [
@@ -36,42 +34,42 @@ class TenantController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'nome'                       => ['required', 'string', 'max:255'],
-            'tipo_servico'               => ['required', 'in:barbeiro,quadra,estetica,clinica,studio,personalizado'],
+            'nome' => ['required', 'string', 'max:255'],
+            'tipo_servico' => ['required', 'in:barbeiro,quadra,estetica,clinica,studio,personalizado'],
             'tipo_servico_personalizado' => ['nullable', 'required_if:tipo_servico,personalizado', 'string', 'max:100'],
-            'email_dono'                 => ['required', 'email', 'unique:users,email'],
-            'senha_dono'                 => ['required', 'min:8'],
+            'email_dono' => ['required', 'email', 'unique:users,email'],
+            'senha_dono' => ['required', 'min:8'],
         ]);
 
-        DB::transaction(function () use ($validated) {
-            $slug = Str::slug($validated['nome']) . '-' . Str::random(4);
+        $tenant = DB::transaction(function () use ($validated): Tenant {
+            $slug = Str::slug($validated['nome']).'-'.Str::random(4);
 
             $webhookToken = Str::random(64);
 
             $tenant = Tenant::create([
-                'nome'                       => $validated['nome'],
-                'slug'                       => $slug,
-                'tipo_servico'               => $validated['tipo_servico'],
+                'nome' => $validated['nome'],
+                'slug' => $slug,
+                'tipo_servico' => $validated['tipo_servico'],
                 'tipo_servico_personalizado' => $validated['tipo_servico_personalizado'] ?? null,
-                'evolution_instance'         => $slug,
-                'webhook_token'              => $webhookToken,
+                'evolution_instance' => $slug,
+                'webhook_token' => $webhookToken,
             ]);
 
             $dono = User::create([
-                'name'     => $validated['nome'],
-                'email'    => $validated['email_dono'],
+                'name' => $validated['nome'],
+                'email' => $validated['email_dono'],
                 'password' => Hash::make($validated['senha_dono']),
             ]);
 
             $tenant->users()->attach($dono->id, ['papel' => 'admin']);
 
-            $this->evolution->criarInstancia($slug);
-            $webhookUrl = route('webhook', $slug);
-            $this->evolution->configurarWebhook($slug, $webhookUrl, $webhookToken);
+            return $tenant;
         });
 
+        CreateEvolutionInstanceJob::dispatch($tenant)->onQueue('sync');
+
         return redirect()->route('superadmin.tenants.index')
-            ->with('success', 'Tenant criado com sucesso.');
+            ->with('success', 'Tenant criado. A conexão do WhatsApp será preparada em segundo plano.');
     }
 
     public function edit(Tenant $tenant): Response
@@ -84,8 +82,8 @@ class TenantController extends Controller
     public function update(Request $request, Tenant $tenant): RedirectResponse
     {
         $validated = $request->validate([
-            'nome'                       => ['required', 'string', 'max:255'],
-            'tipo_servico'               => ['required', 'in:barbeiro,quadra,estetica,clinica,studio,personalizado'],
+            'nome' => ['required', 'string', 'max:255'],
+            'tipo_servico' => ['required', 'in:barbeiro,quadra,estetica,clinica,studio,personalizado'],
             'tipo_servico_personalizado' => ['nullable', 'required_if:tipo_servico,personalizado', 'string', 'max:100'],
         ]);
 
@@ -98,6 +96,7 @@ class TenantController extends Controller
     public function destroy(Tenant $tenant): RedirectResponse
     {
         $tenant->delete();
+
         return redirect()->route('superadmin.tenants.index')
             ->with('success', 'Tenant removido.');
     }
@@ -105,12 +104,14 @@ class TenantController extends Controller
     public function toggleAtivo(Tenant $tenant): RedirectResponse
     {
         $tenant->update(['ativo' => ! $tenant->ativo]);
+
         return back()->with('success', $tenant->ativo ? 'Tenant ativado.' : 'Tenant desativado.');
     }
 
     public function toggleIsento(Tenant $tenant): RedirectResponse
     {
         $tenant->update(['isento_cobranca' => ! $tenant->isento_cobranca]);
+
         return back()->with('success', $tenant->isento_cobranca ? 'Tenant marcado como isento de cobrança.' : 'Isenção removida.');
     }
 
@@ -118,7 +119,7 @@ class TenantController extends Controller
     {
         session([
             'impersonando_tenant_id' => $tenant->id,
-            'tenant_id'              => $tenant->id,
+            'tenant_id' => $tenant->id,
         ]);
 
         return redirect()->route('tenant.dashboard');
@@ -127,6 +128,7 @@ class TenantController extends Controller
     public function pararImpersonar(): RedirectResponse
     {
         session()->forget(['impersonando_tenant_id', 'tenant_id']);
+
         return redirect()->route('superadmin.dashboard');
     }
 }

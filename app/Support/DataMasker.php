@@ -4,6 +4,12 @@ namespace App\Support;
 
 class DataMasker
 {
+    private const SECRET_KEYS = [
+        'token', 'access_token', 'webhook_token', 'api_key', 'apikey',
+        'authorization', 'password', 'senha', 'secret', 'client_secret',
+        'cookie', 'set-cookie',
+    ];
+
     private const SENSITIVE_KEYS = [
         'telefone', 'phone', 'email', 'mensagem', 'message', 'conteudo', 'content',
         'body', 'input', 'result', 'cliente', 'nome', 'push_name', 'resumo', 'preferencia',
@@ -17,7 +23,10 @@ class DataMasker
     private static function walk(array $data): array
     {
         foreach ($data as $key => $value) {
-            if (in_array(mb_strtolower((string) $key), self::SENSITIVE_KEYS, true)) {
+            $normalizedKey = mb_strtolower((string) $key);
+            if (in_array($normalizedKey, self::SECRET_KEYS, true)) {
+                $data[$key] = '[REDACTED]';
+            } elseif (in_array($normalizedKey, self::SENSITIVE_KEYS, true)) {
                 $data[$key] = self::mask($value);
             } elseif (is_array($value)) {
                 $data[$key] = self::walk($value);

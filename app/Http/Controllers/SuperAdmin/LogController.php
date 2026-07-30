@@ -5,6 +5,7 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\Mensagem;
 use App\Models\Tenant;
+use App\Support\DataMasker;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,6 +14,7 @@ use Inertia\Response;
 class LogController extends Controller
 {
     private const MAX_LINES = 2000;
+
     private const MAX_ENTRIES = 150;
 
     public function index(): Response
@@ -60,7 +62,7 @@ class LogController extends Controller
                 'at' => $m[1],
                 'level' => $m[2],
                 'message' => substr($message, 0, 800),
-                'context' => $context,
+                'context' => $context ? DataMasker::context($context) : null,
             ];
 
             if (count($entries) >= self::MAX_ENTRIES) {
@@ -106,6 +108,7 @@ class LogController extends Controller
     private function arquivoSistema(string $hoje): string
     {
         $daily = storage_path("logs/laravel-{$hoje}.log");
+
         return file_exists($daily) ? $daily : storage_path('logs/laravel.log');
     }
 
@@ -116,6 +119,7 @@ class LogController extends Controller
         }
 
         $digitos = preg_replace('/\D+/', '', $telefone);
+
         return str_repeat('*', max(0, strlen($digitos) - 4)).substr($digitos, -4);
     }
 
@@ -142,6 +146,7 @@ class LogController extends Controller
         }
 
         $line = strtolower($line);
+
         return str_contains($line, strtolower($tenant->slug))
             || str_contains($line, '"tenant_id":'.$tenant->id)
             || str_contains($line, 'tenant #'.$tenant->id);
