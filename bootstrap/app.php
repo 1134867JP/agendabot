@@ -1,12 +1,13 @@
 <?php
 
 use App\Http\Middleware\CheckSubscription;
+use App\Http\Middleware\ConfirmPassword;
 use App\Http\Middleware\EnsureHasTenant;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureTenantAdmin;
 use App\Http\Middleware\HandleInertiaRequests;
-use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\LimitRequestBody;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\ValidateMonitorToken;
 use App\Support\ErrorAlerter;
 use Illuminate\Auth\AuthenticationException;
@@ -54,6 +55,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'subscription' => CheckSubscription::class,
             'monitor.token' => ValidateMonitorToken::class,
             'body.limit' => LimitRequestBody::class,
+            'password.confirm' => ConfirmPassword::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

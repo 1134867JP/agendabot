@@ -162,9 +162,8 @@ class ConversaController extends Controller
         abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
 
         $conversa->update(['status_v2' => 'em_atendimento_humano']);
-        $conversa->registrarMensagem('bot', 'Atendimento assumido por uma pessoa da equipe.');
 
-        return back()->with('success', 'Atendimento assumido.');
+        return back()->with('success', 'Você assumiu o atendimento. O bot foi pausado para esta conversa.');
     }
 
     public function devolver(Conversa $conversa): RedirectResponse
@@ -172,9 +171,8 @@ class ConversaController extends Controller
         abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
 
         $conversa->update(['status_v2' => 'ativa']);
-        $conversa->registrarMensagem('bot', 'Atendimento automático reativado.');
 
-        return back()->with('success', 'Bot reativado.');
+        return back()->with('success', 'Bot reativado. Ele responderá as próximas mensagens do cliente.');
     }
 
     public function enviarMensagem(Request $request, Conversa $conversa, EvolutionApiService $evolution): RedirectResponse
@@ -187,17 +185,16 @@ class ConversaController extends Controller
 
         $tenant = app('tenant');
 
-        // Enviar enquanto o bot está ativo também assume o atendimento. Fazer isso
-        // no mesmo request evita que uma segunda navegação do Inertia cancele o envio.
+        // Responder enquanto o bot está ativo assume o atendimento no mesmo request.
+        // O evento é apenas operacional e não deve aparecer como se fosse mensagem do bot.
         if ($conversa->status_v2 !== 'em_atendimento_humano') {
             $conversa->update(['status_v2' => 'em_atendimento_humano']);
-            $conversa->registrarMensagem('bot', 'Atendimento assumido por uma pessoa da equipe.');
         }
 
         $conversa->registrarMensagem('humano', $data['conteudo']);
         $evolution->enviarMensagem($tenant->evolution_instance, $conversa->telefone_cliente, $data['conteudo']);
 
-        return back();
+        return back()->with('success', 'Mensagem enviada. Você está atendendo esta conversa.');
     }
 
     public function iniciar(Request $request, EvolutionApiService $evolution): RedirectResponse
@@ -228,7 +225,7 @@ class ConversaController extends Controller
         $conversa->registrarMensagem('humano', $validated['mensagem']);
         $evolution->enviarMensagem($tenant->evolution_instance, $telefone, $validated['mensagem']);
 
-        return back()->with('success', 'Mensagem enviada.');
+        return back()->with('success', 'Mensagem enviada. O atendimento ficou com a equipe.');
     }
 
     public function media(Conversa $conversa, Mensagem $mensagem, EvolutionApiService $evolution): HttpResponse
