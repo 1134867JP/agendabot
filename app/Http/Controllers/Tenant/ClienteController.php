@@ -202,13 +202,11 @@ class ClienteController extends Controller
 
     private function anonimizarCliente(Cliente $cliente): void
     {
-        $cliente->conversas()->get()->each(function ($conversa) use ($cliente): void {
-            $conversa->update([
-                'cliente_id' => null,
-                'telefone_cliente' => "anonimizado-{$cliente->id}-{$conversa->id}",
-                'status_v2' => 'encerrada',
-            ]);
-        });
+        $cliente->conversas()->update([
+            'cliente_id' => null,
+            'telefone_cliente' => DB::raw("CONCAT('anonimizado-{$cliente->id}-', id)"),
+            'status_v2' => 'encerrada',
+        ]);
         $cliente->agendamentos()->update([
             'cliente_nome' => 'Cliente anonimizado',
             'cliente_telefone' => 'anonimizado',
