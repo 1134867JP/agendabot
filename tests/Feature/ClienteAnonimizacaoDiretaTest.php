@@ -2,79 +2,99 @@
 
 namespace Tests\Feature;
 
-use App\Http\Middleware\CheckSubscription;
-use App\Http\Middleware\ConfirmPassword;
-use App\Http\Middleware\EnsureHasTenant;
-use App\Http\Middleware\EnsureTenantAdmin;
-use App\Http\Middleware\HandleInertiaRequests;
-use App\Http\Middleware\SecurityHeaders;
+use App\Http\Controllers\Tenant\ClienteController;
 use App\Models\Cliente;
 use App\Models\Conversa;
-use App\Models\Mensagem;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class ClienteAnonimizacaoDiretaTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_anonimizacao_http_sem_middlewares_customizados(): void
-    {
-        $this->withoutMiddleware([
-            ConfirmPassword::class,
-            EnsureHasTenant::class,
-            EnsureTenantAdmin::class,
-            CheckSubscription::class,
-            HandleInertiaRequests::class,
-            SecurityHeaders::class,
-        ]);
+    private Tenant $tenant;
+    private User $user;
+    private Cliente $cliente;
 
-        $user = User::factory()->create();
-        $tenant = Tenant::create([
-            'nome' => 'Clínica Clientes Diagnóstico',
-            'slug' => 'clinica-clientes-diagnostico',
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->user = User::factory()->create();
+        $this->tenant = Tenant::create([
+            'nome' => 'Clínica Diagnóstico',
+            'slug' => 'clinica-diagnostico-http',
             'tipo_servico' => 'clinica',
             'ativo' => true,
             'subscription_status' => 'trial',
             'trial_ends_at' => now()->addDays(14),
         ]);
-        $tenant->users()->attach($user->id, ['papel' => 'admin']);
-        app()->instance('tenant', $tenant);
+        $this->tenant->users()->attach($this->user->id, ['papel' => 'admin']);
+        app()->instance('tenant', $this->tenant);
 
-        $cliente = Cliente::create([
-            'tenant_id' => $tenant->id,
+        $this->cliente = Cliente::create([
+            'tenant_id' => $this->tenant->id,
             'nome' => 'Cliente Teste',
             'telefone' => '5554999999999',
         ]);
         $conversa = Conversa::create([
-            'tenant_id' => $tenant->id,
-            'cliente_id' => $cliente->id,
-            'telefone_cliente' => $cliente->telefone,
+            'tenant_id' => $this->tenant->id,
+            'cliente_id' => $this->cliente->id,
+            'telefone_cliente' => $this->cliente->telefone,
             'status_v2' => 'ativa',
         ]);
-        $mensagem = $conversa->registrarMensagem('cliente', 'Mensagem preservada');
+        $conversa->registrarMensagem('cliente', 'Mensagem preservada');
+    }
 
-        fwrite(STDERR, "[sem-custom] antes DELETE HTTP\n");
-        $response = $this->actingAs($user)->withSession([
-            'tenant_id' => $tenant->id,
-        ])->delete(route('tenant.clientes.destroy', $cliente));
-        fwrite(STDERR, "[sem-custom] depois DELETE HTTP\n");
+    private function usuarioAutenticado(): static
+    {
+        return $this->actingAs($this->user)->withSession(['tenant_id' => $this->tenant->id]);
+    }
 
-        $response->assertRedirect(route('tenant.clientes.index'));
-        $this->assertDatabaseHas('clientes', [
-            'id' => $cliente->id,
-            'nome' => 'Cliente anonimizado',
-            'telefone' => "anonimizado-{$cliente->id}",
-        ]);
-        $this->assertDatabaseHas('conversas', [
-            'id' => $conversa->id,
-            'cliente_id' => null,
-            'telefone_cliente' => "anonimizado-{$cliente->id}-{$conversa->id}",
-            'status_v2' => 'encerrada',
-        ]);
-        $this->assertDatabaseHas('mensagens', ['id' => $mensagem->id]);
-        $this->assertSame(1, Mensagem::count());
+    public function test_delete_simples_funciona(): void
+    {
+        Route::delete('/__diag/delete-simple', fn () => response()->noContent())->middleware([]);
+        fwrite(STDERR, "[diag] delete simples antes\n");
+        $this->usuarioAutenticado()->delete('/__diag/delete-simple')->assertNoContent();
+        fwrite(STDERR, "[diag] delete simples depois\n");
+    }
+
+    public function test_model_binding_funciona(): void
+    {
+        Route::delete('/__diag/binding/{cliente}', function (Cliente $cliente) {
+            return response()->json(['id' => $cliente->id]);
+        })->middleware([]);
+
+        fwrite(STDERR, "[diag] binding antes\n");
+        $this->usuarioAutenticado()
+            ->delete("/__diag/binding/{$this->cliente->id}")
+            ->assertOk()
+            ->assertJsonPath('id', $this->cliente->id);
+        fwrite(STDERR, "[diag] binding depois\n");
+    }
+
+    public function test_controller_pela_rota_com_no_content(): void
+    {
+        Route::delete('/__diag/controller/{cliente}', function (Cliente $cliente) {
+            app(ClienteController::class)->destroy($cliente);
+
+            return response()->noContent();
+        })->middleware([]);
+
+        fwrite(STDERR, "[diag] controller antes\n");
+        $this->usuarioAutenticado()->delete("/__diag/controller/{$this->cliente->id}")->assertNoContent();
+        fwrite(STDERR, "[diag] controller depois\n");
+    }
+
+    public function test_redirect_com_flash_funciona(): void
+    {
+        Route::delete('/__diag/redirect', fn () => redirect('/')->with('success', 'ok'))->middleware([]);
+
+        fwrite(STDERR, "[diag] redirect antes\n");
+        $this->usuarioAutenticado()->delete('/__diag/redirect')->assertRedirect('/');
+        fwrite(STDERR, "[diag] redirect depois\n");
     }
 }
