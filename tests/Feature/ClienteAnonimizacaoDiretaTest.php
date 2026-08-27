@@ -5,96 +5,76 @@ namespace Tests\Feature;
 use App\Http\Controllers\Tenant\ClienteController;
 use App\Models\Cliente;
 use App\Models\Conversa;
+use App\Models\Mensagem;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class ClienteAnonimizacaoDiretaTest extends TestCase
 {
     use RefreshDatabase;
 
-    private Tenant $tenant;
-    private User $user;
-    private Cliente $cliente;
-
-    protected function setUp(): void
+    public function test_controller_direto_anonimiza_duas_conversas(): void
     {
-        parent::setUp();
-
-        $this->user = User::factory()->create();
-        $this->tenant = Tenant::create([
+        $user = User::factory()->create();
+        $tenant = Tenant::create([
             'nome' => 'Clínica Diagnóstico',
-            'slug' => 'clinica-diagnostico-http',
+            'slug' => 'clinica-diagnostico-direto',
             'tipo_servico' => 'clinica',
             'ativo' => true,
             'subscription_status' => 'trial',
             'trial_ends_at' => now()->addDays(14),
         ]);
-        $this->tenant->users()->attach($this->user->id, ['papel' => 'admin']);
-        app()->instance('tenant', $this->tenant);
+        $tenant->users()->attach($user->id, ['papel' => 'admin']);
+        app()->instance('tenant', $tenant);
 
-        $this->cliente = Cliente::create([
-            'tenant_id' => $this->tenant->id,
+        $cliente = Cliente::create([
+            'tenant_id' => $tenant->id,
             'nome' => 'Cliente Teste',
             'telefone' => '5554999999999',
         ]);
+
         $conversa = Conversa::create([
-            'tenant_id' => $this->tenant->id,
-            'cliente_id' => $this->cliente->id,
-            'telefone_cliente' => $this->cliente->telefone,
+            'tenant_id' => $tenant->id,
+            'cliente_id' => $cliente->id,
+            'telefone_cliente' => $cliente->telefone,
             'status_v2' => 'ativa',
         ]);
-        $conversa->registrarMensagem('cliente', 'Mensagem preservada');
-    }
+        $mensagem = $conversa->registrarMensagem('cliente', 'Mensagem preservada');
 
-    private function usuarioAutenticado(): static
-    {
-        return $this->actingAs($this->user)->withSession(['tenant_id' => $this->tenant->id]);
-    }
+        $outraConversa = Conversa::create([
+            'tenant_id' => $tenant->id,
+            'cliente_id' => $cliente->id,
+            'telefone_cliente' => $cliente->telefone.'-alternativo',
+            'status_v2' => 'ativa',
+        ]);
+        $outraMensagem = $outraConversa->registrarMensagem('cliente', 'Outra mensagem preservada');
 
-    public function test_delete_simples_funciona(): void
-    {
-        Route::delete('/__diag/delete-simple', fn () => response()->noContent())->middleware([]);
-        fwrite(STDERR, "[diag] delete simples antes\n");
-        $this->usuarioAutenticado()->delete('/__diag/delete-simple')->assertNoContent();
-        fwrite(STDERR, "[diag] delete simples depois\n");
-    }
+        fwrite(STDERR, "[direto-2] antes controller\n");
+        $response = app(ClienteController::class)->destroy($cliente->id);
+        fwrite(STDERR, "[direto-2] depois controller\n");
 
-    public function test_model_binding_funciona(): void
-    {
-        Route::delete('/__diag/binding/{cliente}', function (Cliente $cliente) {
-            return response()->json(['id' => $cliente->id]);
-        })->middleware([]);
-
-        fwrite(STDERR, "[diag] binding antes\n");
-        $this->usuarioAutenticado()
-            ->delete("/__diag/binding/{$this->cliente->id}")
-            ->assertOk()
-            ->assertJsonPath('id', $this->cliente->id);
-        fwrite(STDERR, "[diag] binding depois\n");
-    }
-
-    public function test_controller_pela_rota_com_no_content(): void
-    {
-        Route::delete('/__diag/controller/{cliente}', function (Cliente $cliente) {
-            app(ClienteController::class)->destroy($cliente);
-
-            return response()->noContent();
-        })->middleware([]);
-
-        fwrite(STDERR, "[diag] controller antes\n");
-        $this->usuarioAutenticado()->delete("/__diag/controller/{$this->cliente->id}")->assertNoContent();
-        fwrite(STDERR, "[diag] controller depois\n");
-    }
-
-    public function test_redirect_com_flash_funciona(): void
-    {
-        Route::delete('/__diag/redirect', fn () => redirect('/')->with('success', 'ok'))->middleware([]);
-
-        fwrite(STDERR, "[diag] redirect antes\n");
-        $this->usuarioAutenticado()->delete('/__diag/redirect')->assertRedirect('/');
-        fwrite(STDERR, "[diag] redirect depois\n");
+        $this->assertSame(302, $response->getStatusCode());
+        $this->assertDatabaseHas('clientes', [
+            'id' => $cliente->id,
+            'nome' => 'Cliente anonimizado',
+            'telefone' => "anonimizado-{$cliente->id}",
+        ]);
+        $this->assertDatabaseHas('conversas', [
+            'id' => $conversa->id,
+            'cliente_id' => null,
+            'telefone_cliente' => "anonimizado-{$cliente->id}-{$conversa->id}",
+            'status_v2' => 'encerrada',
+        ]);
+        $this->assertDatabaseHas('conversas', [
+            'id' => $outraConversa->id,
+            'cliente_id' => null,
+            'telefone_cliente' => "anonimizado-{$cliente->id}-{$outraConversa->id}",
+            'status_v2' => 'encerrada',
+        ]);
+        $this->assertDatabaseHas('mensagens', ['id' => $mensagem->id]);
+        $this->assertDatabaseHas('mensagens', ['id' => $outraMensagem->id]);
+        $this->assertSame(2, Mensagem::count());
     }
 }
