@@ -57,7 +57,7 @@ class ClienteController extends Controller
             return response()->json(['clientes' => []]);
         }
 
-        $digitos = preg_replace('/\\D+/', '', $termo);
+        $digitos = preg_replace('/\D+/', '', $termo);
 
         $clientes = $tenant->clientes()
             ->where('nome', '!=', 'Cliente anonimizado')
@@ -142,7 +142,6 @@ class ClienteController extends Controller
         ]);
     }
 
-
     public function update(Request $request, Cliente $cliente): RedirectResponse
     {
         abort_if((int) $cliente->tenant_id !== (int) app('tenant')->id, 403);
@@ -202,16 +201,27 @@ class ClienteController extends Controller
 
     private function anonimizarCliente(Cliente $cliente): void
     {
-        $cliente->conversas()->update([
-            'cliente_id' => null,
-            'telefone_cliente' => DB::raw("CONCAT('anonimizado-{$cliente->id}-', id)"),
-            'status_v2' => 'encerrada',
-        ]);
+        // Atualiza cada conversa individualmente para manter um identificador
+        // anônimo e único sem depender de expressão SQL interpolada no UPDATE.
+        // As mensagens continuam ligadas à conversa e, portanto, são preservadas.
+        $cliente->conversas()
+            ->select(['id'])
+            ->orderBy('id')
+            ->get()
+            ->each(function ($conversa) use ($cliente): void {
+                $conversa->update([
+                    'cliente_id' => null,
+                    'telefone_cliente' => "anonimizado-{$cliente->id}-{$conversa->id}",
+                    'status_v2' => 'encerrada',
+                ]);
+            });
+
         $cliente->agendamentos()->update([
             'cliente_nome' => 'Cliente anonimizado',
             'cliente_telefone' => 'anonimizado',
             'observacoes' => null,
         ]);
+
         $cliente->update([
             'nome' => 'Cliente anonimizado',
             'telefone' => "anonimizado-{$cliente->id}",
