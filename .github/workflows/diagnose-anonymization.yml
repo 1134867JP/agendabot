@@ -44,9 +44,9 @@ jobs:
           cp .env.example .env
           php artisan key:generate
 
-      - name: Rodar somente anonimização
+      - name: Rodar controller sem pipeline HTTP
         env:
           AI_PROVIDER: claude
           AI_FALLBACK_PROVIDERS: ''
           CLAUDE_API_KEY: testing-key
-        run: php artisan test tests/Feature/ClienteOperacionalTest.php --filter=test_anonimizacao_preserva_conversa_e_mensagens --debug
+        run: php artisan test tests/Feature/ClienteAnonimizacaoDiretaTest.php --debug
