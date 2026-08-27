@@ -1,0 +1,52 @@
+name: Diagnose anonymization test
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - '.github/workflows/diagnose-anonymization.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: agendou_testing
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d agendou_testing"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+
+      - run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Preparar ambiente
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Rodar somente anonimização
+        env:
+          AI_PROVIDER: claude
+          AI_FALLBACK_PROVIDERS: ''
+          CLAUDE_API_KEY: testing-key
+        run: php artisan test tests/Feature/ClienteOperacionalTest.php --filter=test_anonimizacao_preserva_conversa_e_mensagens --debug
