@@ -156,9 +156,16 @@ class ClienteController extends Controller
         return back()->with('success', 'Dados do cliente atualizados.');
     }
 
-    public function destroy(Cliente $cliente): RedirectResponse
+    public function destroy($cliente): RedirectResponse
     {
-        abort_if((int) $cliente->tenant_id !== (int) app('tenant')->id, 403);
+        $tenant = app('tenant');
+
+        // Resolve o cliente explicitamente dentro do tenant. Além de evitar que a
+        // exclusão dependa do binding implícito, a consulta já nasce tenant-scoped.
+        $cliente = $tenant->clientes()
+            ->whereKey($cliente)
+            ->where('nome', '!=', 'Cliente anonimizado')
+            ->firstOrFail();
 
         DB::transaction(fn () => $this->anonimizarCliente($cliente));
 
@@ -201,9 +208,6 @@ class ClienteController extends Controller
 
     private function anonimizarCliente(Cliente $cliente): void
     {
-        // Atualiza cada conversa individualmente para manter um identificador
-        // anônimo e único sem depender de expressão SQL interpolada no UPDATE.
-        // As mensagens continuam ligadas à conversa e, portanto, são preservadas.
         $cliente->conversas()
             ->select(['id'])
             ->orderBy('id')
