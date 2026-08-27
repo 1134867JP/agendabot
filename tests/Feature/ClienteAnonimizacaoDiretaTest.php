@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Http\Controllers\Tenant\ClienteController;
 use App\Models\Cliente;
 use App\Models\Conversa;
 use App\Models\Mensagem;
@@ -15,12 +14,14 @@ class ClienteAnonimizacaoDiretaTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_controller_direto_anonimiza_duas_conversas(): void
+    public function test_rota_real_sem_middlewares_anonimiza_duas_conversas(): void
     {
+        $this->withoutMiddleware();
+
         $user = User::factory()->create();
         $tenant = Tenant::create([
             'nome' => 'Clínica Diagnóstico',
-            'slug' => 'clinica-diagnostico-direto',
+            'slug' => 'clinica-diagnostico-sem-middleware',
             'tipo_servico' => 'clinica',
             'ativo' => true,
             'subscription_status' => 'trial',
@@ -51,11 +52,11 @@ class ClienteAnonimizacaoDiretaTest extends TestCase
         ]);
         $outraMensagem = $outraConversa->registrarMensagem('cliente', 'Outra mensagem preservada');
 
-        fwrite(STDERR, "[direto-2] antes controller\n");
-        $response = app(ClienteController::class)->destroy($cliente->id);
-        fwrite(STDERR, "[direto-2] depois controller\n");
+        fwrite(STDERR, "[sem-middleware] antes DELETE\n");
+        $response = $this->actingAs($user)->delete(route('tenant.clientes.destroy', $cliente->id));
+        fwrite(STDERR, "[sem-middleware] depois DELETE\n");
 
-        $this->assertSame(302, $response->getStatusCode());
+        $response->assertRedirect(route('tenant.clientes.index'));
         $this->assertDatabaseHas('clientes', [
             'id' => $cliente->id,
             'nome' => 'Cliente anonimizado',
