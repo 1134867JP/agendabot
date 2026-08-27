@@ -16,7 +16,7 @@ class RecursoController extends Controller
         $tenant = app('tenant');
 
         return Inertia::render('Tenant/Recursos/Index', [
-            'tenant'   => $tenant,
+            'tenant' => $tenant,
             'recursos' => $tenant->recursos()->with('horariosFuncionamento')->get(),
         ]);
     }
@@ -26,9 +26,9 @@ class RecursoController extends Controller
         $tenant = app('tenant');
 
         $data = $request->validate([
-            'nome'                   => ['required', 'string', 'max:255'],
-            'descricao'              => ['nullable', 'string'],
-            'valor_hora'             => ['nullable', 'numeric', 'min:0'],
+            'nome' => ['required', 'string', 'max:255'],
+            'descricao' => ['nullable', 'string'],
+            'valor_hora' => ['nullable', 'numeric', 'min:0'],
             'duracao_padrao_minutos' => ['required', 'integer', 'min:15'],
         ]);
 
@@ -42,11 +42,11 @@ class RecursoController extends Controller
         abort_unless($recurso->tenant_id === app('tenant')->id, 403);
 
         $data = $request->validate([
-            'nome'                   => ['required', 'string', 'max:255'],
-            'descricao'              => ['nullable', 'string'],
-            'valor_hora'             => ['nullable', 'numeric', 'min:0'],
+            'nome' => ['required', 'string', 'max:255'],
+            'descricao' => ['nullable', 'string'],
+            'valor_hora' => ['nullable', 'numeric', 'min:0'],
             'duracao_padrao_minutos' => ['required', 'integer', 'min:15'],
-            'ativo'                  => ['boolean'],
+            'ativo' => ['boolean'],
         ]);
 
         $recurso->update($data);
@@ -60,6 +60,7 @@ class RecursoController extends Controller
         // Desativa em vez de apagar, mantendo o histórico de agendamentos e alinhando
         // ao comportamento de Profissional/Serviço/OpçãoExtra.
         $recurso->update(['ativo' => false]);
+
         return back()->with('success', 'Recurso desativado.');
     }
 

@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\DB;
 
 class LimparConversas extends Command
 {
-    protected $signature   = 'conversas:limpar {tenant : Slug ou ID do tenant}';
+    protected $signature = 'conversas:limpar {tenant : Slug ou ID do tenant}';
+
     protected $description = 'Apaga todas as conversas (e mensagens) de um tenant, mantendo os clientes cadastrados';
 
     public function handle(): int
@@ -20,8 +21,9 @@ class LimparConversas extends Command
             ? Tenant::find($identificador)
             : Tenant::where('slug', $identificador)->first();
 
-        if (!$tenant) {
+        if (! $tenant) {
             $this->error("Tenant não encontrado: {$identificador}");
+
             return self::FAILURE;
         }
 
@@ -29,6 +31,7 @@ class LimparConversas extends Command
 
         if ($totalConversas === 0) {
             $this->info("Nenhuma conversa para apagar em {$tenant->nome}.");
+
             return self::SUCCESS;
         }
 

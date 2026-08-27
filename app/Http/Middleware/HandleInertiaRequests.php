@@ -36,7 +36,7 @@ class HandleInertiaRequests extends Middleware
                     'id', 'name', 'email', 'telefone', 'is_super_admin',
                 ]),
             ],
-            'currentTenant'  => function () {
+            'currentTenant' => function () {
                 if (! app()->bound('tenant')) {
                     return null;
                 }
@@ -49,26 +49,30 @@ class HandleInertiaRequests extends Middleware
                     'horario_atendimento', 'mensagem_fora_horario', 'ativo',
                 ]);
             },
-            'impersonando'   => fn () => (bool) session('impersonando_tenant_id'),
-            'tenantPapel'    => function () use ($request) {
-                if (! app()->bound('tenant') || ! $request->user()) return null;
+            'impersonando' => fn () => (bool) session('impersonando_tenant_id'),
+            'tenantPapel' => function () use ($request) {
+                if (! app()->bound('tenant') || ! $request->user()) {
+                    return null;
+                }
+
                 return app('tenant')->users()->where('user_id', $request->user()->id)->value('papel');
             },
             'flash' => [
                 'success' => fn () => session('success'),
-                'erro'    => fn () => session('erro'),
+                'erro' => fn () => session('erro'),
             ],
             'subscription' => function () {
                 if (! app()->bound('tenant')) {
                     return null;
                 }
                 $tenant = app('tenant');
+
                 return [
-                    'status'            => $tenant->subscription_status,
-                    'trial_ends_at'     => $tenant->trial_ends_at?->toIso8601String(),
+                    'status' => $tenant->subscription_status,
+                    'trial_ends_at' => $tenant->trial_ends_at?->toIso8601String(),
                     'subscription_ends_at' => $tenant->subscription_ends_at?->toIso8601String(),
-                    'plano'             => $tenant->plano,
-                    'isento_cobranca'   => $tenant->isento_cobranca,
+                    'plano' => $tenant->plano,
+                    'isento_cobranca' => $tenant->isento_cobranca,
                 ];
             },
         ];

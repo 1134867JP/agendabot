@@ -86,6 +86,7 @@ class OnboardingController extends Controller
 
         return redirect()->route('onboarding.step3');
     }
+
     public function step3(OnboardingPresetService $presets): Response|RedirectResponse
     {
         $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->first();
@@ -126,7 +127,7 @@ class OnboardingController extends Controller
         $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->first();
 
         return Inertia::render('Onboarding/Sucesso', [
-            'user'   => auth()->user(),
+            'user' => auth()->user(),
             'tenant' => $tenant ? $tenant->only(['nome', 'tipo_servico']) : null,
         ]);
     }

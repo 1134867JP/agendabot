@@ -1,11 +1,13 @@
 <?php
 
+use App\Models\Tenant;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::table('tenants', function (Blueprint $table) {
@@ -13,7 +15,7 @@ return new class extends Migration {
         });
 
         // Gerar token para tenants existentes
-        \App\Models\Tenant::whereNull('webhook_token')->each(function ($tenant) {
+        Tenant::whereNull('webhook_token')->each(function ($tenant) {
             $tenant->update(['webhook_token' => Str::random(32)]);
         });
     }

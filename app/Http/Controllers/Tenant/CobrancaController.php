@@ -28,9 +28,9 @@ class CobrancaController extends Controller
 
         return response()->json([
             'agendamentos_mes' => $agendamentosMes,
-            'taxa'             => (float) $tenant->taxa_agendamento_bot,
-            'estimativa'       => $estimativa,
-            'historico'        => $historico,
+            'taxa' => (float) $tenant->taxa_agendamento_bot,
+            'estimativa' => $estimativa,
+            'historico' => $historico,
         ]);
     }
 }

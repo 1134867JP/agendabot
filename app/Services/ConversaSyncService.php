@@ -19,7 +19,8 @@ use Illuminate\Support\Facades\Log;
  */
 class ConversaSyncService
 {
-    private const JIDS_IGNORADOS  = ['status@broadcast', 'broadcast'];
+    private const JIDS_IGNORADOS = ['status@broadcast', 'broadcast'];
+
     private const NOMES_INVALIDOS = ['você', 'you', 'cliente whatsapp', ''];
 
     /**
@@ -192,11 +193,11 @@ class ConversaSyncService
 
             try {
                 $conversa->mensagens()->create([
-                    'remetente'            => $msg['from_me'] ? 'humano' : 'cliente',
-                    'tipo'                 => $msg['tipo'],
-                    'conteudo'             => $msg['conteudo'],
+                    'remetente' => $msg['from_me'] ? 'humano' : 'cliente',
+                    'tipo' => $msg['tipo'],
+                    'conteudo' => $msg['conteudo'],
                     'evolution_message_id' => $msg['evolution_id'],
-                    'enviada_em'           => $msg['timestamp']
+                    'enviada_em' => $msg['timestamp']
                         ? Carbon::createFromTimestamp($msg['timestamp'])
                         : now(),
                 ]);
@@ -656,6 +657,7 @@ class ConversaSyncService
             return true;
         }
         $tel = preg_replace('/@.*$/', '', $remoteJid);
+
         return str_contains($tel, '-');
     }
 

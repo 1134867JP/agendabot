@@ -27,6 +27,7 @@ class EnsureHasTenant
         // Tenant inexistente ou sessão obsoleta → limpar e redirecionar
         if (! $tenant) {
             session()->forget('tenant_id');
+
             return redirect()->route('dashboard')->with('erro', 'Estabelecimento não encontrado. Selecione novamente.');
         }
 
@@ -37,6 +38,7 @@ class EnsureHasTenant
 
         if (! $temAcesso) {
             session()->forget('tenant_id');
+
             return redirect()->route('dashboard')->with('erro', 'Você não tem acesso a este estabelecimento.');
         }
 

@@ -7,9 +7,9 @@ use App\Models\Agendamento;
 use App\Models\CobrancaBot;
 use App\Models\Conversa;
 use App\Models\OperationalEvent;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
@@ -25,11 +25,11 @@ class DashboardController extends Controller
 
         $setupCompleto = [
             'profissionais' => $tenant->profissionais()->where('ativo', true)->exists(),
-            'servicos'      => $tenant->servicos()->where('ativo', true)->exists(),
-            'recursos'      => $tenant->recursos()->where('ativo', true)->exists(),
-            'whatsapp'      => (bool) $tenant->whatsapp_conectado,
-            'bot_config'    => ! empty($tenant->ramo_negocio),
-            'horario'       => ($profissionalAtivo && $profissionalAtivo->horarios()->exists())
+            'servicos' => $tenant->servicos()->where('ativo', true)->exists(),
+            'recursos' => $tenant->recursos()->where('ativo', true)->exists(),
+            'whatsapp' => (bool) $tenant->whatsapp_conectado,
+            'bot_config' => ! empty($tenant->ramo_negocio),
+            'horario' => ($profissionalAtivo && $profissionalAtivo->horarios()->exists())
                 || $recursoComHorario,
         ];
 

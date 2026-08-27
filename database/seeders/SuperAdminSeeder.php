@@ -16,6 +16,7 @@ class SuperAdminSeeder extends Seeder
 
         if (! $email && ! $password) {
             $this->command?->warn('Super admin não criado: configure SUPERADMIN_EMAIL e SUPERADMIN_PASSWORD.');
+
             return;
         }
 

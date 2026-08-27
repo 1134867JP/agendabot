@@ -14,7 +14,7 @@ class ConfiguracaoController extends Controller
     public function index(): Response
     {
         $tenant = app('tenant');
-        $cfg    = $tenant->configuracoes ?? [];
+        $cfg = $tenant->configuracoes ?? [];
 
         return Inertia::render('Tenant/Configuracoes', [
             'tenant' => array_merge($tenant->only([

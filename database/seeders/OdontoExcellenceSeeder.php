@@ -27,7 +27,7 @@ class OdontoExcellenceSeeder extends Seeder
         $dono = User::firstOrCreate(
             ['email' => 'contato@odontoexcellence.com'],
             [
-                'name'     => 'Odonto Excellence',
+                'name' => 'Odonto Excellence',
                 'password' => Hash::make('password'),
             ]
         );
@@ -36,33 +36,33 @@ class OdontoExcellenceSeeder extends Seeder
         $clinica = Tenant::firstOrCreate(
             ['slug' => 'odonto-excellence'],
             [
-                'nome'         => 'Odonto Excellence',
+                'nome' => 'Odonto Excellence',
                 'tipo_servico' => 'personalizado',
                 'tipo_servico_personalizado' => 'Clínica odontológica',
                 'evolution_instance' => 'odonto-excellence',
                 'subscription_status' => 'trial',
-                'trial_ends_at'      => now()->addDays(14),
-                'ativo'              => true,
-                'bot_ativo'          => true,
+                'trial_ends_at' => now()->addDays(14),
+                'ativo' => true,
+                'bot_ativo' => true,
             ]
         );
 
         // Aplica/atualiza toda a configuração v2 (idempotente em re-seed).
         $clinica->update([
-            'ramo_negocio'      => 'Clínica odontológica',
+            'ramo_negocio' => 'Clínica odontológica',
             'descricao_negocio' => 'Clínica de odontologia avançada. Nossos dentistas são especialistas e '
-                . 'nosso compromisso é oferecer o melhor tratamento possível no menor tempo possível. '
-                . 'O paciente é sempre a prioridade.',
-            'cidade'    => 'Encantado - RS',
-            'endereco'  => 'R. Júlio de Castilhos, 1505 - Centro',
+                .'nosso compromisso é oferecer o melhor tratamento possível no menor tempo possível. '
+                .'O paciente é sempre a prioridade.',
+            'cidade' => 'Encantado - RS',
+            'endereco' => 'R. Júlio de Castilhos, 1505 - Centro',
             'telefone_whatsapp' => '555137513826',
             'nome_agente' => 'Milena',
-            'tom_voz'     => 'semiformal',
+            'tom_voz' => 'semiformal',
             // Seg-Sex turno partido (almoço 12:00-13:30), Sáb só manhã.
             'horarios_funcionamento' => [
                 'seg_sex' => '09:00-12:00 e 13:30-20:00',
-                'sab'     => '09:00-12:00',
-                'dom'     => 'Fechado',
+                'sab' => '09:00-12:00',
+                'dom' => 'Fechado',
             ],
             'instrucoes_extras' => $this->scriptsAtendimento(),
             'bot_ativo' => true,
@@ -111,12 +111,12 @@ class OdontoExcellenceSeeder extends Seeder
         $avaliacao = $clinica->servicos()->firstOrCreate(
             ['nome' => 'Avaliação (Cortesia)'],
             [
-                'descricao'       => 'Avaliação completa e gratuita com nossos especialistas. '
-                    . 'Porta de entrada para o plano de tratamento.',
-                'valor_min'       => 0,
+                'descricao' => 'Avaliação completa e gratuita com nossos especialistas. '
+                    .'Porta de entrada para o plano de tratamento.',
+                'valor_min' => 0,
                 'duracao_minutos' => 30,
                 'requer_avaliacao' => false,
-                'ativo'           => true,
+                'ativo' => true,
             ]
         );
 
@@ -132,11 +132,11 @@ class OdontoExcellenceSeeder extends Seeder
             $clinica->servicos()->firstOrCreate(
                 ['nome' => $t['nome']],
                 [
-                    'valor_min'        => $t['min'] ?? null,
-                    'valor_max'        => $t['max'] ?? null,
-                    'duracao_minutos'  => $t['dur'],
+                    'valor_min' => $t['min'] ?? null,
+                    'valor_max' => $t['max'] ?? null,
+                    'duracao_minutos' => $t['dur'],
                     'requer_avaliacao' => $t['avaliacao'] ?? false,
-                    'ativo'            => true,
+                    'ativo' => true,
                 ]
             );
         }

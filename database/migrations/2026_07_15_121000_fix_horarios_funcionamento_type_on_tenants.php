@@ -3,7 +3,8 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * A coluna foi criada como JSON (migration add_bot_config), mas o único ponto que a
      * escreve/lê (ConfiguracaoController + montador de prompt do bot) sempre a trata como

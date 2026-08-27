@@ -12,20 +12,21 @@ class TriagemControllerTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private User $user;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->user   = User::factory()->create();
+        $this->user = User::factory()->create();
         $this->tenant = Tenant::create([
-            'nome'                => 'Barbearia Triagem',
-            'slug'                => 'barbearia-triagem',
-            'tipo_servico'        => 'barbeiro',
-            'ativo'               => true,
+            'nome' => 'Barbearia Triagem',
+            'slug' => 'barbearia-triagem',
+            'tipo_servico' => 'barbeiro',
+            'ativo' => true,
             'subscription_status' => 'trial',
-            'trial_ends_at'       => now()->addDays(14),
+            'trial_ends_at' => now()->addDays(14),
             'horario_atendimento' => [
                 0 => ['ativo' => false, 'abertura' => '08:00', 'fechamento' => '18:00'],
                 1 => ['ativo' => true, 'abertura' => '08:00', 'fechamento' => '18:00'],
@@ -61,27 +62,27 @@ class TriagemControllerTest extends TestCase
     public function test_update_persiste_regras_de_triagem(): void
     {
         $response = $this->autenticarComTenant()->put(route('tenant.triagem.update'), [
-            'palavras_chave_humano'       => [' Atendente ', 'ATENDENTE', 'humano'],
+            'palavras_chave_humano' => [' Atendente ', 'ATENDENTE', 'humano'],
             'max_tentativas_sem_entender' => 3,
-            'transferir_fora_do_horario'  => true,
-            'mensagem_transferencia'      => 'Já te transfiro!',
+            'transferir_fora_do_horario' => true,
+            'mensagem_transferencia' => 'Já te transfiro!',
         ]);
 
         $response->assertRedirect();
 
         $this->tenant->refresh();
         $this->assertSame([
-            'palavras_chave_humano'       => ['atendente', 'humano'],
+            'palavras_chave_humano' => ['atendente', 'humano'],
             'max_tentativas_sem_entender' => 3,
-            'transferir_fora_do_horario'  => true,
-            'mensagem_transferencia'      => 'Já te transfiro!',
+            'transferir_fora_do_horario' => true,
+            'mensagem_transferencia' => 'Já te transfiro!',
         ], $this->tenant->triagemConfig());
     }
 
     public function test_update_rejeita_max_tentativas_fora_do_intervalo(): void
     {
         $response = $this->autenticarComTenant()->put(route('tenant.triagem.update'), [
-            'palavras_chave_humano'       => [],
+            'palavras_chave_humano' => [],
             'max_tentativas_sem_entender' => 0,
         ]);
 

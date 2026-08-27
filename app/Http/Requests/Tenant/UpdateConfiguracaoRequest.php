@@ -18,10 +18,10 @@ class UpdateConfiguracaoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nome'                       => ['required', 'string', 'max:255'],
-            'tipo_servico'               => ['required', Rule::in(Tenant::TIPOS_SERVICO)],
+            'nome' => ['required', 'string', 'max:255'],
+            'tipo_servico' => ['required', Rule::in(Tenant::TIPOS_SERVICO)],
             'tipo_servico_personalizado' => ['nullable', 'required_if:tipo_servico,personalizado', 'string', 'max:100'],
-            'horarios_funcionamento'     => ['nullable', 'string', 'max:255'],
+            'horarios_funcionamento' => ['nullable', 'string', 'max:255'],
             'horarios_funcionamento_semana' => ['required', 'array', 'size:7'],
             'horarios_funcionamento_semana.*.ativo' => ['required', 'boolean'],
             'horarios_funcionamento_semana.*.periodos' => ['present', 'array', 'max:2'],
@@ -44,6 +44,7 @@ class UpdateConfiguracaoRequest extends FormRequest
                         "horarios_funcionamento_semana.{$dia}.periodos",
                         'Adicione pelo menos um período para o dia aberto.'
                     );
+
                     continue;
                 }
 

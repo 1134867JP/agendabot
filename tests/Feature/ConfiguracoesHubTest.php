@@ -13,14 +13,14 @@ class ConfiguracoesHubTest extends TestCase
 
     private function tenantAdmin(string $tipo = 'barbeiro'): array
     {
-        $user   = User::factory()->create();
+        $user = User::factory()->create();
         $tenant = Tenant::create([
-            'nome'                => 'Config Hub',
-            'slug'                => 'config-hub-'.uniqid(),
-            'tipo_servico'        => $tipo,
-            'ativo'               => true,
+            'nome' => 'Config Hub',
+            'slug' => 'config-hub-'.uniqid(),
+            'tipo_servico' => $tipo,
+            'ativo' => true,
             'subscription_status' => 'trial',
-            'trial_ends_at'       => now()->addDays(14),
+            'trial_ends_at' => now()->addDays(14),
         ]);
         $tenant->users()->attach($user->id, ['papel' => 'admin']);
 
@@ -34,13 +34,13 @@ class ConfiguracoesHubTest extends TestCase
         $auth = $this->actingAs($user)->withSession(['tenant_id' => $tenant->id]);
 
         $rotas = [
-            'tenant.configuracoes.index'      => 'Tenant/Configuracoes',
-            'tenant.profissionais.index'      => 'Tenant/Profissionais/Index',
-            'tenant.servicos.index'           => 'Tenant/Servicos/Index',
+            'tenant.configuracoes.index' => 'Tenant/Configuracoes',
+            'tenant.profissionais.index' => 'Tenant/Profissionais/Index',
+            'tenant.servicos.index' => 'Tenant/Servicos/Index',
             'tenant.regras-agendamento.index' => 'Tenant/RegrasAgendamento',
-            'tenant.triagem.index'            => 'Tenant/Triagem',
-            'tenant.whatsapp'                 => 'Tenant/WhatsApp',
-            'tenant.equipe.index'             => 'Tenant/Equipe',
+            'tenant.triagem.index' => 'Tenant/Triagem',
+            'tenant.whatsapp' => 'Tenant/WhatsApp',
+            'tenant.equipe.index' => 'Tenant/Equipe',
         ];
 
         foreach ($rotas as $rota => $componente) {

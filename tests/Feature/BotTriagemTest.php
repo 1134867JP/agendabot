@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Agendamento;
-use App\Models\Conversa;
 use App\Models\Tenant;
 use App\Services\ClaudeAgentService;
 use Carbon\Carbon;
@@ -22,14 +21,14 @@ class BotTriagemTest extends TestCase
         parent::setUp();
 
         $this->tenant = Tenant::create([
-            'nome'                => 'Clínica Triagem',
-            'slug'                => 'clinica-triagem',
-            'tipo_servico'        => 'clinica',
-            'ativo'               => true,
-            'bot_ativo'           => true,
-            'nome_agente'         => 'Bia',
-            'tom_voz'             => 'semiformal',
-            'modo_bot'            => 'triagem',
+            'nome' => 'Clínica Triagem',
+            'slug' => 'clinica-triagem',
+            'tipo_servico' => 'clinica',
+            'ativo' => true,
+            'bot_ativo' => true,
+            'nome_agente' => 'Bia',
+            'tom_voz' => 'semiformal',
+            'modo_bot' => 'triagem',
             'horario_atendimento' => [
                 0 => ['ativo' => false, 'abertura' => '08:00', 'fechamento' => '18:00'],
                 1 => ['ativo' => true,  'abertura' => '08:00', 'fechamento' => '18:00'],
@@ -51,9 +50,9 @@ class BotTriagemTest extends TestCase
     {
         Http::fake([
             'api.anthropic.com/*' => Http::response([
-                'content'     => [['type' => 'text', 'text' => 'Olá! Qual serviço você deseja? 😊']],
+                'content' => [['type' => 'text', 'text' => 'Olá! Qual serviço você deseja? 😊']],
                 'stop_reason' => 'end_turn',
-                'usage'       => ['input_tokens' => 10, 'output_tokens' => 5],
+                'usage' => ['input_tokens' => 10, 'output_tokens' => 5],
             ]),
         ]);
 
@@ -78,19 +77,19 @@ class BotTriagemTest extends TestCase
         Http::fake([
             'api.anthropic.com/*' => Http::sequence()
                 ->push([
-                    'content'     => [[
-                        'type'  => 'tool_use',
-                        'id'    => 'tool_1',
-                        'name'  => 'transferir_para_humano',
+                    'content' => [[
+                        'type' => 'tool_use',
+                        'id' => 'tool_1',
+                        'name' => 'transferir_para_humano',
                         'input' => ['resumo' => 'Limpeza, quarta de manhã', 'nome_cliente' => 'Fulano', 'preferencia' => 'quarta de manhã'],
                     ]],
                     'stop_reason' => 'tool_use',
-                    'usage'       => ['input_tokens' => 20, 'output_tokens' => 8],
+                    'usage' => ['input_tokens' => 20, 'output_tokens' => 8],
                 ])
                 ->push([
-                    'content'     => [['type' => 'text', 'text' => 'Perfeito! Uma atendente vai te retornar. 🙂']],
+                    'content' => [['type' => 'text', 'text' => 'Perfeito! Uma atendente vai te retornar. 🙂']],
                     'stop_reason' => 'end_turn',
-                    'usage'       => ['input_tokens' => 5, 'output_tokens' => 5],
+                    'usage' => ['input_tokens' => 5, 'output_tokens' => 5],
                 ]),
         ]);
 
@@ -109,7 +108,7 @@ class BotTriagemTest extends TestCase
         // Quarta-feira (dia ativo)
         $quartaManha = Carbon::create(2026, 7, 1, 10, 0, 0, 'America/Sao_Paulo'); // 2026-07-01 é quarta
         $quartaNoite = Carbon::create(2026, 7, 1, 20, 0, 0, 'America/Sao_Paulo');
-        $domingo     = Carbon::create(2026, 7, 5, 10, 0, 0, 'America/Sao_Paulo'); // domingo (inativo)
+        $domingo = Carbon::create(2026, 7, 5, 10, 0, 0, 'America/Sao_Paulo'); // domingo (inativo)
 
         $this->assertTrue($this->tenant->emHorarioAtendimento($quartaManha));
         $this->assertFalse($this->tenant->emHorarioAtendimento($quartaNoite));

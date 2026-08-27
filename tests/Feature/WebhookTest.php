@@ -22,15 +22,15 @@ class WebhookTest extends TestCase
 
         $user = User::factory()->create();
         $this->tenant = Tenant::create([
-            'nome'                => 'Barbearia Webhook',
-            'slug'                => 'barbearia-webhook',
-            'tipo_servico'        => 'barbeiro',
-            'ativo'               => true,
-            'bot_ativo'           => true,
-            'whatsapp_conectado'  => true,
-            'webhook_token'       => 'token-teste-webhook',
+            'nome' => 'Barbearia Webhook',
+            'slug' => 'barbearia-webhook',
+            'tipo_servico' => 'barbeiro',
+            'ativo' => true,
+            'bot_ativo' => true,
+            'whatsapp_conectado' => true,
+            'webhook_token' => 'token-teste-webhook',
             'subscription_status' => 'trial',
-            'trial_ends_at'       => now()->addDays(14),
+            'trial_ends_at' => now()->addDays(14),
         ]);
         $this->tenant->users()->attach($user->id, ['papel' => 'admin']);
     }
@@ -124,14 +124,14 @@ class WebhookTest extends TestCase
     {
         return [
             'event' => 'messages.upsert',
-            'data'  => [
+            'data' => [
                 'key' => [
                     'remoteJid' => $remoteJid,
-                    'fromMe'    => $fromMe,
-                    'id'        => 'MSG_' . uniqid(),
+                    'fromMe' => $fromMe,
+                    'id' => 'MSG_'.uniqid(),
                 ],
                 'messageType' => 'conversation',
-                'message'     => [
+                'message' => [
                     'conversation' => $text,
                 ],
             ],

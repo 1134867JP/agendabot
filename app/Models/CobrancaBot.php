@@ -19,7 +19,7 @@ class CobrancaBot extends Model
     ];
 
     protected $casts = [
-        'valor_total'             => 'decimal:2',
+        'valor_total' => 'decimal:2',
         'quantidade_agendamentos' => 'integer',
     ];
 

@@ -22,13 +22,13 @@ class CorrigirNomesClientesCommandTest extends TestCase
 
         $user = User::factory()->create();
         $this->tenant = Tenant::create([
-            'nome'                => 'Barbearia Correcao',
-            'slug'                => 'barbearia-correcao',
-            'tipo_servico'        => 'barbeiro',
-            'ativo'               => true,
-            'evolution_instance'  => 'instancia-teste',
+            'nome' => 'Barbearia Correcao',
+            'slug' => 'barbearia-correcao',
+            'tipo_servico' => 'barbeiro',
+            'ativo' => true,
+            'evolution_instance' => 'instancia-teste',
             'subscription_status' => 'trial',
-            'trial_ends_at'       => now()->addDays(14),
+            'trial_ends_at' => now()->addDays(14),
         ]);
         $this->tenant->users()->attach($user->id, ['papel' => 'admin']);
     }
@@ -36,10 +36,10 @@ class CorrigirNomesClientesCommandTest extends TestCase
     public function test_corrige_cliente_com_nome_voce_via_findcontacts(): void
     {
         $telefone = '5551977777777';
-        $cliente  = Cliente::create([
+        $cliente = Cliente::create([
             'tenant_id' => $this->tenant->id,
-            'telefone'  => $telefone,
-            'nome'      => 'Você',
+            'telefone' => $telefone,
+            'nome' => 'Você',
         ]);
 
         $this->mock(EvolutionApiService::class, function ($mock) use ($telefone) {
@@ -57,10 +57,10 @@ class CorrigirNomesClientesCommandTest extends TestCase
     public function test_corrige_cliente_com_nome_igual_ao_telefone_via_mensagens(): void
     {
         $telefone = '5551966666666';
-        $cliente  = Cliente::create([
+        $cliente = Cliente::create([
             'tenant_id' => $this->tenant->id,
-            'telefone'  => $telefone,
-            'nome'      => $telefone,
+            'telefone' => $telefone,
+            'nome' => $telefone,
         ]);
 
         $this->mock(EvolutionApiService::class, function ($mock) {
@@ -79,10 +79,10 @@ class CorrigirNomesClientesCommandTest extends TestCase
     public function test_dry_run_nao_persiste_alteracoes(): void
     {
         $telefone = '5551955555555';
-        $cliente  = Cliente::create([
+        $cliente = Cliente::create([
             'tenant_id' => $this->tenant->id,
-            'telefone'  => $telefone,
-            'nome'      => 'Você',
+            'telefone' => $telefone,
+            'nome' => 'Você',
         ]);
 
         $this->mock(EvolutionApiService::class, function ($mock) use ($telefone) {
@@ -100,10 +100,10 @@ class CorrigirNomesClientesCommandTest extends TestCase
     public function test_mantem_telefone_quando_nao_encontra_nome_valido(): void
     {
         $telefone = '5551944444444';
-        $cliente  = Cliente::create([
+        $cliente = Cliente::create([
             'tenant_id' => $this->tenant->id,
-            'telefone'  => $telefone,
-            'nome'      => $telefone,
+            'telefone' => $telefone,
+            'nome' => $telefone,
         ]);
 
         $this->mock(EvolutionApiService::class, function ($mock) {

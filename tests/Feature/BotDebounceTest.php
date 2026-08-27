@@ -25,16 +25,16 @@ class BotDebounceTest extends TestCase
 
         $user = User::factory()->create();
         $this->tenant = Tenant::create([
-            'nome'                => 'Barbearia Debounce',
-            'slug'                => 'barbearia-debounce',
-            'tipo_servico'        => 'barbeiro',
-            'ativo'               => true,
-            'bot_ativo'           => true,
-            'whatsapp_conectado'  => true,
-            'webhook_token'       => 'token-teste-debounce',
-            'evolution_instance'  => 'instancia-teste',
+            'nome' => 'Barbearia Debounce',
+            'slug' => 'barbearia-debounce',
+            'tipo_servico' => 'barbeiro',
+            'ativo' => true,
+            'bot_ativo' => true,
+            'whatsapp_conectado' => true,
+            'webhook_token' => 'token-teste-debounce',
+            'evolution_instance' => 'instancia-teste',
             'subscription_status' => 'trial',
-            'trial_ends_at'       => now()->addDays(14),
+            'trial_ends_at' => now()->addDays(14),
         ]);
         $this->tenant->users()->attach($user->id, ['papel' => 'admin']);
     }
@@ -43,9 +43,9 @@ class BotDebounceTest extends TestCase
     {
         Http::fake([
             'api.anthropic.com/*' => Http::response([
-                'content'     => [['type' => 'text', 'text' => 'Claro! Para amanhã temos horários. 😊']],
+                'content' => [['type' => 'text', 'text' => 'Claro! Para amanhã temos horários. 😊']],
                 'stop_reason' => 'end_turn',
-                'usage'       => ['input_tokens' => 10, 'output_tokens' => 5],
+                'usage' => ['input_tokens' => 10, 'output_tokens' => 5],
             ]),
             '*' => Http::response(['status' => 'success'], 200),
         ]);
@@ -135,11 +135,11 @@ class BotDebounceTest extends TestCase
         // Nenhum job rodou (Queue fakeada), mas a mensagem já está no banco
         $this->assertDatabaseHas('mensagens', [
             'evolution_message_id' => 'WH_DEB_1',
-            'remetente'            => 'cliente',
-            'conteudo'             => 'Quero agendar',
+            'remetente' => 'cliente',
+            'conteudo' => 'Quero agendar',
         ]);
         $this->assertDatabaseHas('conversas', [
-            'tenant_id'        => $this->tenant->id,
+            'tenant_id' => $this->tenant->id,
             'telefone_cliente' => $telefone,
         ]);
 
@@ -151,7 +151,7 @@ class BotDebounceTest extends TestCase
         Queue::fake();
 
         $telefone = '5551966000005';
-        $payload  = $this->payloadEvolution($telefone, 'Mensagem repetida', 'WH_DEB_DUP');
+        $payload = $this->payloadEvolution($telefone, 'Mensagem repetida', 'WH_DEB_DUP');
 
         $this->withHeader('X-Webhook-Token', 'token-teste-debounce')
             ->postJson("/webhook/{$this->tenant->slug}", $payload)
@@ -193,15 +193,15 @@ class BotDebounceTest extends TestCase
     {
         return [
             'event' => 'messages.upsert',
-            'data'  => [
+            'data' => [
                 'key' => [
                     'remoteJid' => "{$telefone}@s.whatsapp.net",
-                    'fromMe'    => false,
-                    'id'        => $messageId,
+                    'fromMe' => false,
+                    'id' => $messageId,
                 ],
-                'pushName'    => 'Cliente Teste',
+                'pushName' => 'Cliente Teste',
                 'messageType' => 'conversation',
-                'message'     => [
+                'message' => [
                     'conversation' => $text,
                 ],
             ],

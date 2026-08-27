@@ -19,7 +19,7 @@ class CorrigirNomesClientesCommand extends Command
     public function handle(EvolutionApiService $evolution): int
     {
         $dryRun = (bool) $this->option('dry-run');
-        $limit  = (int) $this->option('limit');
+        $limit = (int) $this->option('limit');
 
         $query = Cliente::query()->with('tenant');
 
@@ -27,6 +27,7 @@ class CorrigirNomesClientesCommand extends Command
             $tenant = Tenant::where('slug', $slug)->first();
             if (! $tenant) {
                 $this->error("Tenant '{$slug}' não encontrado.");
+
                 return self::FAILURE;
             }
             $query->where('tenant_id', $tenant->id);
@@ -39,17 +40,18 @@ class CorrigirNomesClientesCommand extends Command
 
         $clientes = $query->limit($limit)->get();
 
-        $this->info("Encontrados {$clientes->count()} clientes com nome suspeito." . ($dryRun ? ' (modo dry-run)' : ''));
+        $this->info("Encontrados {$clientes->count()} clientes com nome suspeito.".($dryRun ? ' (modo dry-run)' : ''));
 
-        $corrigidos    = 0;
-        $semResultado  = 0;
-        $erros         = 0;
+        $corrigidos = 0;
+        $semResultado = 0;
+        $erros = 0;
 
         foreach ($clientes as $cliente) {
             $tenant = $cliente->tenant;
 
             if (! $tenant || ! $tenant->evolution_instance) {
                 $semResultado++;
+
                 continue;
             }
 
@@ -59,9 +61,10 @@ class CorrigirNomesClientesCommand extends Command
                 $erros++;
                 Log::channel('jobs')->error('CORRECAO_NOME_ERRO', [
                     'cliente_id' => $cliente->id,
-                    'tenant'     => $tenant->slug,
-                    'erro'       => $e->getMessage(),
+                    'tenant' => $tenant->slug,
+                    'erro' => $e->getMessage(),
                 ]);
+
                 continue;
             }
 
@@ -69,9 +72,10 @@ class CorrigirNomesClientesCommand extends Command
                 $semResultado++;
                 Log::channel('jobs')->info('CORRECAO_NOME_SEM_RESULTADO', [
                     'cliente_id' => $cliente->id,
-                    'tenant'     => $tenant->slug,
-                    'telefone'   => $cliente->telefone,
+                    'tenant' => $tenant->slug,
+                    'telefone' => $cliente->telefone,
                 ]);
+
                 continue;
             }
 
@@ -87,7 +91,7 @@ class CorrigirNomesClientesCommand extends Command
         $this->newLine();
         $this->info(
             "Total: {$clientes->count()} | Corrigidos: {$corrigidos} | Sem resultado: {$semResultado} | Erros: {$erros}"
-            . ($dryRun ? ' (dry-run, nada foi salvo)' : '')
+            .($dryRun ? ' (dry-run, nada foi salvo)' : '')
         );
 
         return self::SUCCESS;

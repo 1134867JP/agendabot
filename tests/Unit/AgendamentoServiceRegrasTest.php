@@ -5,7 +5,6 @@ namespace Tests\Unit;
 use App\Exceptions\HorarioIndisponivelException;
 use App\Models\Cliente;
 use App\Models\Profissional;
-use App\Models\Servico;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\AgendamentoService;
@@ -17,8 +16,11 @@ class AgendamentoServiceRegrasTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private Profissional $profissional;
+
     private Cliente $cliente;
+
     private AgendamentoService $service;
 
     protected function setUp(): void
@@ -27,35 +29,35 @@ class AgendamentoServiceRegrasTest extends TestCase
 
         $user = User::factory()->create();
         $this->tenant = Tenant::create([
-            'nome'                => 'Barbearia Regras Service',
-            'slug'                => 'barbearia-regras-service',
-            'tipo_servico'        => 'barbeiro',
-            'ativo'               => true,
+            'nome' => 'Barbearia Regras Service',
+            'slug' => 'barbearia-regras-service',
+            'tipo_servico' => 'barbeiro',
+            'ativo' => true,
             'subscription_status' => 'trial',
-            'trial_ends_at'       => now()->addDays(14),
+            'trial_ends_at' => now()->addDays(14),
         ]);
         $this->tenant->users()->attach($user->id, ['papel' => 'admin']);
 
         $this->profissional = Profissional::create([
             'tenant_id' => $this->tenant->id,
-            'nome'      => 'Profissional Teste',
-            'ativo'     => true,
+            'nome' => 'Profissional Teste',
+            'ativo' => true,
         ]);
 
         // Expediente todos os dias, 08:00–20:00, para não interferir nas regras testadas
         for ($dia = 0; $dia <= 6; $dia++) {
             $this->profissional->horarios()->create([
-                'dia_semana'    => $dia,
-                'hora_inicio'   => '08:00',
-                'hora_fim'      => '20:00',
-                'duracao_slot'  => 30,
+                'dia_semana' => $dia,
+                'hora_inicio' => '08:00',
+                'hora_fim' => '20:00',
+                'duracao_slot' => 30,
             ]);
         }
 
         $this->cliente = Cliente::create([
             'tenant_id' => $this->tenant->id,
-            'telefone'  => '5551900000010',
-            'nome'      => 'Cliente Regras',
+            'telefone' => '5551900000010',
+            'nome' => 'Cliente Regras',
         ]);
 
         $this->service = app(AgendamentoService::class);
@@ -66,12 +68,12 @@ class AgendamentoServiceRegrasTest extends TestCase
         $this->tenant->update([
             'configuracoes' => array_merge($this->tenant->configuracoes ?? [], [
                 'regras_agendamento' => array_merge([
-                    'antecedencia_minima_minutos'       => 30,
-                    'antecedencia_maxima_dias'          => 60,
+                    'antecedencia_minima_minutos' => 30,
+                    'antecedencia_maxima_dias' => 60,
                     'buffer_entre_agendamentos_minutos' => 0,
-                    'permite_cliente_remarcar'          => true,
-                    'permite_cliente_cancelar'          => true,
-                    'politica_cancelamento'             => null,
+                    'permite_cliente_remarcar' => true,
+                    'permite_cliente_cancelar' => true,
+                    'politica_cancelamento' => null,
                 ], $overrides),
             ]),
         ]);
@@ -87,11 +89,11 @@ class AgendamentoServiceRegrasTest extends TestCase
         $daqui30min = now()->addMinutes(30);
 
         $this->service->criarAgendamentoV2($this->tenant, [
-            'data'             => $daqui30min->format('Y-m-d'),
-            'horario'          => $daqui30min->format('H:i'),
-            'profissional_id'  => $this->profissional->id,
-            'cliente_id'       => $this->cliente->id,
-            'cliente_nome'     => $this->cliente->nome,
+            'data' => $daqui30min->format('Y-m-d'),
+            'horario' => $daqui30min->format('H:i'),
+            'profissional_id' => $this->profissional->id,
+            'cliente_id' => $this->cliente->id,
+            'cliente_nome' => $this->cliente->nome,
             'cliente_telefone' => $this->cliente->telefone,
         ]);
     }
@@ -105,11 +107,11 @@ class AgendamentoServiceRegrasTest extends TestCase
         $amanha10h = now()->addDay()->setTime(10, 0);
 
         $agendamento = $this->service->criarAgendamentoV2($this->tenant, [
-            'data'             => $amanha10h->format('Y-m-d'),
-            'horario'          => $amanha10h->format('H:i'),
-            'profissional_id'  => $this->profissional->id,
-            'cliente_id'       => $this->cliente->id,
-            'cliente_nome'     => $this->cliente->nome,
+            'data' => $amanha10h->format('Y-m-d'),
+            'horario' => $amanha10h->format('H:i'),
+            'profissional_id' => $this->profissional->id,
+            'cliente_id' => $this->cliente->id,
+            'cliente_nome' => $this->cliente->nome,
             'cliente_telefone' => $this->cliente->telefone,
         ]);
 
@@ -125,11 +127,11 @@ class AgendamentoServiceRegrasTest extends TestCase
         $daqui10dias = now()->addDays(10)->setTime(10, 0);
 
         $this->service->criarAgendamentoV2($this->tenant, [
-            'data'             => $daqui10dias->format('Y-m-d'),
-            'horario'          => $daqui10dias->format('H:i'),
-            'profissional_id'  => $this->profissional->id,
-            'cliente_id'       => $this->cliente->id,
-            'cliente_nome'     => $this->cliente->nome,
+            'data' => $daqui10dias->format('Y-m-d'),
+            'horario' => $daqui10dias->format('H:i'),
+            'profissional_id' => $this->profissional->id,
+            'cliente_id' => $this->cliente->id,
+            'cliente_nome' => $this->cliente->nome,
             'cliente_telefone' => $this->cliente->telefone,
         ]);
     }
@@ -141,12 +143,12 @@ class AgendamentoServiceRegrasTest extends TestCase
         $amanha = now()->addDay()->setTime(10, 0);
 
         $this->service->criarAgendamentoV2($this->tenant, [
-            'data'             => $amanha->format('Y-m-d'),
-            'horario'          => $amanha->format('H:i'),
-            'duracao_minutos'  => 30,
-            'profissional_id'  => $this->profissional->id,
-            'cliente_id'       => $this->cliente->id,
-            'cliente_nome'     => $this->cliente->nome,
+            'data' => $amanha->format('Y-m-d'),
+            'horario' => $amanha->format('H:i'),
+            'duracao_minutos' => 30,
+            'profissional_id' => $this->profissional->id,
+            'cliente_id' => $this->cliente->id,
+            'cliente_nome' => $this->cliente->nome,
             'cliente_telefone' => $this->cliente->telefone,
         ]);
 
@@ -155,12 +157,12 @@ class AgendamentoServiceRegrasTest extends TestCase
         $this->expectException(HorarioIndisponivelException::class);
 
         $this->service->criarAgendamentoV2($this->tenant, [
-            'data'             => $amanha->format('Y-m-d'),
-            'horario'          => $amanha->copy()->addMinutes(30)->format('H:i'),
-            'duracao_minutos'  => 30,
-            'profissional_id'  => $this->profissional->id,
-            'cliente_id'       => $this->cliente->id,
-            'cliente_nome'     => $this->cliente->nome,
+            'data' => $amanha->format('Y-m-d'),
+            'horario' => $amanha->copy()->addMinutes(30)->format('H:i'),
+            'duracao_minutos' => 30,
+            'profissional_id' => $this->profissional->id,
+            'cliente_id' => $this->cliente->id,
+            'cliente_nome' => $this->cliente->nome,
             'cliente_telefone' => $this->cliente->telefone,
         ]);
     }

@@ -19,10 +19,10 @@ class AgendaController extends Controller
         $tenant = app('tenant');
 
         return Inertia::render('Tenant/Agenda', [
-            'tenant'        => $tenant,
-            'recursos'      => $tenant->recursos()->where('ativo', true)->get(),
+            'tenant' => $tenant,
+            'recursos' => $tenant->recursos()->where('ativo', true)->get(),
             'profissionais' => $tenant->profissionais()->where('ativo', true)->get(['id', 'nome']),
-            'servicos'      => $tenant->servicos()
+            'servicos' => $tenant->servicos()
                 ->where('ativo', true)
                 ->with('profissionais:id')
                 ->orderBy('nome')
@@ -44,11 +44,11 @@ class AgendaController extends Controller
 
         $tenantId = $tenant->id;
         $request->validate([
-            'recurso_id'      => ['nullable', Rule::exists('recursos', 'id')->where('tenant_id', $tenantId)],
+            'recurso_id' => ['nullable', Rule::exists('recursos', 'id')->where('tenant_id', $tenantId)],
             'profissional_id' => ['nullable', Rule::exists('profissionais', 'id')->where('tenant_id', $tenantId)],
             'todos_profissionais' => ['nullable', 'boolean'],
-            'data_inicio'     => ['required', 'date'],
-            'data_fim'        => ['required', 'date'],
+            'data_inicio' => ['required', 'date'],
+            'data_fim' => ['required', 'date'],
         ]);
 
         $query = Agendamento::where('tenant_id', $tenant->id)
@@ -75,30 +75,30 @@ class AgendaController extends Controller
         $tz = new \DateTimeZone('America/Sao_Paulo');
 
         $agendamentos = $query->get()->map(function ($a) use ($tz) {
-                $inicio = $a->inicio ?? $a->data_hora;
-                $fimRaw = $a->fim ?? ($a->data_hora
-                    ? Carbon::parse($a->data_hora)->addMinutes($a->duracao_minutos ?? 30)
-                    : null);
+            $inicio = $a->inicio ?? $a->data_hora;
+            $fimRaw = $a->fim ?? ($a->data_hora
+                ? Carbon::parse($a->data_hora)->addMinutes($a->duracao_minutos ?? 30)
+                : null);
 
-                $fmtSP = fn ($dt) => $dt
-                    ? Carbon::parse($dt)->setTimezone($tz)->format('Y-m-d\TH:i:s')
-                    : null;
+            $fmtSP = fn ($dt) => $dt
+                ? Carbon::parse($dt)->setTimezone($tz)->format('Y-m-d\TH:i:s')
+                : null;
 
-                return [
-                    'tipo'        => 'agendamento',
-                    'id'          => $a->id,
-                    'title'       => $a->cliente_nome,
-                    'start'       => $fmtSP($inicio),
-                    'end'         => $fmtSP($fimRaw),
-                    'telefone'    => $a->cliente_telefone,
-                    'status'      => in_array($a->status, ['confirmado', 'agendado']) ? 'confirmado' : $a->status,
-                    'valor_total' => $a->valor_total,
-                    'origem'      => $a->origem ?? 'manual',
-                    'profissional_id' => $a->profissional_id,
-                    'profissional_nome' => $a->profissional?->nome,
-                    'servico_nome' => $a->servico?->nome,
-                ];
-            });
+            return [
+                'tipo' => 'agendamento',
+                'id' => $a->id,
+                'title' => $a->cliente_nome,
+                'start' => $fmtSP($inicio),
+                'end' => $fmtSP($fimRaw),
+                'telefone' => $a->cliente_telefone,
+                'status' => in_array($a->status, ['confirmado', 'agendado']) ? 'confirmado' : $a->status,
+                'valor_total' => $a->valor_total,
+                'origem' => $a->origem ?? 'manual',
+                'profissional_id' => $a->profissional_id,
+                'profissional_nome' => $a->profissional?->nome,
+                'servico_nome' => $a->servico?->nome,
+            ];
+        });
 
         $bloqueiosQuery = BloqueioAgenda::where('tenant_id', $tenant->id)
             ->where('inicio', '<', $dataFim)

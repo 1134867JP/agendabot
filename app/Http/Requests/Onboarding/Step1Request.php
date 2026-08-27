@@ -17,13 +17,13 @@ class Step1Request extends FormRequest
     public function rules(): array
     {
         return [
-            'nome_usuario'               => ['required', 'string', 'max:255'],
-            'email'                      => ['required', 'email', 'unique:users,email'],
-            'senha'                      => ['required', 'min:8', 'confirmed'],
-            'nome_estabelecimento'       => ['required', 'string', 'max:255'],
-            'tipo_servico'               => ['required', Rule::in(Tenant::TIPOS_SERVICO)],
+            'nome_usuario' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'unique:users,email'],
+            'senha' => ['required', 'min:8', 'confirmed'],
+            'nome_estabelecimento' => ['required', 'string', 'max:255'],
+            'tipo_servico' => ['required', Rule::in(Tenant::TIPOS_SERVICO)],
             'tipo_servico_personalizado' => ['nullable', 'required_if:tipo_servico,personalizado', 'string', 'max:100'],
-            'telefone'                   => ['required', 'string', 'min:10', 'max:25'],
+            'telefone' => ['required', 'string', 'min:10', 'max:25'],
         ];
     }
 }

@@ -11,8 +11,8 @@ use App\Services\ConversaSyncService;
 use App\Services\EvolutionApiService;
 use App\Services\WhatsAppSyncState;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class SincronizarConversasLimiteTest extends TestCase
@@ -27,14 +27,14 @@ class SincronizarConversasLimiteTest extends TestCase
 
         $user = User::factory()->create();
         $this->tenant = Tenant::create([
-            'nome'                => 'Barbearia Limite Sync',
-            'slug'                => 'barbearia-limite-sync',
-            'tipo_servico'        => 'barbeiro',
-            'ativo'               => true,
-            'evolution_instance'  => 'instancia-teste',
-            'whatsapp_conectado'  => true,
+            'nome' => 'Barbearia Limite Sync',
+            'slug' => 'barbearia-limite-sync',
+            'tipo_servico' => 'barbeiro',
+            'ativo' => true,
+            'evolution_instance' => 'instancia-teste',
+            'whatsapp_conectado' => true,
             'subscription_status' => 'trial',
-            'trial_ends_at'       => now()->addDays(14),
+            'trial_ends_at' => now()->addDays(14),
         ]);
         $this->tenant->users()->attach($user->id, ['papel' => 'admin']);
     }
@@ -99,7 +99,7 @@ class SincronizarConversasLimiteTest extends TestCase
         for ($i = 0; $i < 40; $i++) {
             $this->assertDatabaseHas('clientes', [
                 'tenant_id' => $this->tenant->id,
-                'telefone'  => "55519990000{$i}",
+                'telefone' => "55519990000{$i}",
             ]);
         }
 

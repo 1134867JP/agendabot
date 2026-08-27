@@ -50,7 +50,7 @@ class EnviarMensagemConversaTest extends TestCase
             'conteudo' => 'Quero confirmar o horário',
         ]);
 
-        (new ConversaController())->enviarMensagem($request, $conversa, $evolution);
+        (new ConversaController)->enviarMensagem($request, $conversa, $evolution);
 
         $this->assertSame('em_atendimento_humano', $conversa->fresh()->status_v2);
         $this->assertDatabaseHas('mensagens', [

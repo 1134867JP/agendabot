@@ -13,20 +13,21 @@ class RecursoControllerTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private User $user;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->user   = User::factory()->create();
+        $this->user = User::factory()->create();
         $this->tenant = Tenant::create([
-            'nome'                => 'Arena Sports',
-            'slug'                => 'arena-sports',
-            'tipo_servico'        => 'quadra',
-            'ativo'               => true,
+            'nome' => 'Arena Sports',
+            'slug' => 'arena-sports',
+            'tipo_servico' => 'quadra',
+            'ativo' => true,
             'subscription_status' => 'trial',
-            'trial_ends_at'       => now()->addDays(14),
+            'trial_ends_at' => now()->addDays(14),
         ]);
         $this->tenant->users()->attach($this->user->id, ['papel' => 'admin']);
     }
@@ -40,8 +41,8 @@ class RecursoControllerTest extends TestCase
     {
         $recurso = Recurso::create([
             'tenant_id' => $this->tenant->id,
-            'nome'      => 'Quadra de Futsal',
-            'ativo'     => true,
+            'nome' => 'Quadra de Futsal',
+            'ativo' => true,
         ]);
 
         $response = $this->autenticarComTenant()->delete(route('tenant.recursos.destroy', $recurso->id));
@@ -49,7 +50,7 @@ class RecursoControllerTest extends TestCase
         $response->assertRedirect();
         // O registro continua no banco (histórico preservado), apenas inativo.
         $this->assertDatabaseHas('recursos', [
-            'id'    => $recurso->id,
+            'id' => $recurso->id,
             'ativo' => false,
         ]);
     }

@@ -83,8 +83,7 @@ class SubscriptionPaymentTest extends TestCase
             ->assertStatus(409)
             ->assertHeader('X-Inertia-Location', 'https://asaas.test/card/123');
 
-        Http::assertSent(fn (Request $request) =>
-            str_ends_with($request->url(), '/subscriptions')
+        Http::assertSent(fn (Request $request) => str_ends_with($request->url(), '/subscriptions')
             && $request['cycle'] === 'YEARLY'
             && (float) $request['value'] === 499.0
         );

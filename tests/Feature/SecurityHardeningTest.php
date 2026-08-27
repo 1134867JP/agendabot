@@ -22,7 +22,7 @@ class SecurityHardeningTest extends TestCase
     {
         return Tenant::create(array_merge([
             'nome' => 'Tenant de Segurança',
-            'slug' => 'tenant-seguranca-' . uniqid(),
+            'slug' => 'tenant-seguranca-'.uniqid(),
             'tipo_servico' => 'barbeiro',
             'webhook_token' => 'token-secreto-de-teste',
             'ativo' => true,
@@ -34,7 +34,7 @@ class SecurityHardeningTest extends TestCase
     {
         $tenant = $this->tenant();
 
-        $response = $this->postJson(route('webhook', $tenant->slug) . '?token=' . $tenant->webhook_token, [
+        $response = $this->postJson(route('webhook', $tenant->slug).'?token='.$tenant->webhook_token, [
             'event' => 'MESSAGES_UPSERT',
             'data' => [],
         ]);
@@ -75,8 +75,7 @@ class SecurityHardeningTest extends TestCase
             ]);
 
         Log::shouldHaveReceived('info')
-            ->withArgs(fn (string $event, array $context) =>
-                $event === 'WEBHOOK_MESSAGE_ACCEPTED'
+            ->withArgs(fn (string $event, array $context) => $event === 'WEBHOOK_MESSAGE_ACCEPTED'
                 && ! array_key_exists('mensagem', $context)
                 && ! array_key_exists('telefone', $context)
                 && ! array_key_exists('push_name', $context)
@@ -87,7 +86,7 @@ class SecurityHardeningTest extends TestCase
     {
         $user = User::create([
             'name' => 'Usuário comum',
-            'email' => 'comum-' . uniqid() . '@example.com',
+            'email' => 'comum-'.uniqid().'@example.com',
             'password' => bcrypt('password'),
         ]);
         $tenant = $this->tenant();
@@ -129,14 +128,14 @@ class SecurityHardeningTest extends TestCase
 
     public function test_rate_limit_do_webhook_e_isolado_por_tenant(): void
     {
-        $tenantA = $this->tenant(['slug' => 'tenant-a-' . uniqid()]);
-        $tenantB = $this->tenant(['slug' => 'tenant-b-' . uniqid()]);
+        $tenantA = $this->tenant(['slug' => 'tenant-a-'.uniqid()]);
+        $tenantB = $this->tenant(['slug' => 'tenant-b-'.uniqid()]);
 
         $payload = ['event' => 'MESSAGES_UPSERT', 'data' => []];
 
         // Esgotar o bucket do tenant A preenchendo a mesma chave que o middleware
         // throttle usa para o limiter nomeado: md5({nome do limiter}.{chave do Limit::by})
-        $chaveTenantA = md5('evolution-webhook' . 'evolution-webhook:' . $tenantA->slug);
+        $chaveTenantA = md5('evolution-webhook'.'evolution-webhook:'.$tenantA->slug);
         for ($i = 0; $i < 240; $i++) {
             RateLimiter::hit($chaveTenantA, 60);
         }

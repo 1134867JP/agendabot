@@ -29,11 +29,11 @@ class TriagemController extends Controller
         $tenant = app('tenant');
 
         $data = $request->validate([
-            'palavras_chave_humano'       => ['array', 'max:20'],
-            'palavras_chave_humano.*'     => ['string', 'max:50'],
+            'palavras_chave_humano' => ['array', 'max:20'],
+            'palavras_chave_humano.*' => ['string', 'max:50'],
             'max_tentativas_sem_entender' => ['required', 'integer', 'min:1', 'max:10'],
-            'transferir_fora_do_horario'  => ['boolean'],
-            'mensagem_transferencia'      => ['nullable', 'string', 'max:300'],
+            'transferir_fora_do_horario' => ['boolean'],
+            'mensagem_transferencia' => ['nullable', 'string', 'max:300'],
         ]);
 
         $palavrasChave = collect($data['palavras_chave_humano'] ?? [])
@@ -46,10 +46,10 @@ class TriagemController extends Controller
 
         $configuracoes = array_merge($tenant->configuracoes ?? [], [
             'triagem' => [
-                'palavras_chave_humano'       => $palavrasChave,
+                'palavras_chave_humano' => $palavrasChave,
                 'max_tentativas_sem_entender' => $data['max_tentativas_sem_entender'],
-                'transferir_fora_do_horario'  => $data['transferir_fora_do_horario'] ?? false,
-                'mensagem_transferencia'      => filled($data['mensagem_transferencia'] ?? null)
+                'transferir_fora_do_horario' => $data['transferir_fora_do_horario'] ?? false,
+                'mensagem_transferencia' => filled($data['mensagem_transferencia'] ?? null)
                     ? trim($data['mensagem_transferencia'])
                     : null,
             ],

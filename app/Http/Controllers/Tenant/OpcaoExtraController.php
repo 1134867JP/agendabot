@@ -21,29 +21,32 @@ class OpcaoExtraController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'tipo'  => 'required|in:convenio,pagamento,outro',
-            'nome'  => 'required|string|max:255',
+            'tipo' => 'required|in:convenio,pagamento,outro',
+            'nome' => 'required|string|max:255',
             'ativo' => 'boolean',
         ]);
         app('tenant')->opcoes_extras()->create($data);
+
         return back()->with('success', 'Opção criada.');
     }
 
     public function update(Request $request, OpcaoExtra $opcaoExtra): RedirectResponse
     {
-        abort_if((int)$opcaoExtra->tenant_id !== (int)app('tenant')->id, 403);
+        abort_if((int) $opcaoExtra->tenant_id !== (int) app('tenant')->id, 403);
         $opcaoExtra->update($request->validate([
-            'tipo'  => 'required|in:convenio,pagamento,outro',
-            'nome'  => 'required|string|max:255',
+            'tipo' => 'required|in:convenio,pagamento,outro',
+            'nome' => 'required|string|max:255',
             'ativo' => 'boolean',
         ]));
+
         return back()->with('success', 'Opção atualizada.');
     }
 
     public function destroy(OpcaoExtra $opcaoExtra): RedirectResponse
     {
-        abort_if((int)$opcaoExtra->tenant_id !== (int)app('tenant')->id, 403);
+        abort_if((int) $opcaoExtra->tenant_id !== (int) app('tenant')->id, 403);
         $opcaoExtra->update(['ativo' => false]);
+
         return back()->with('success', 'Opção removida.');
     }
 }

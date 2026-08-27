@@ -25,14 +25,14 @@ class SincronizarConversasNomeTest extends TestCase
 
         $user = User::factory()->create();
         $this->tenant = Tenant::create([
-            'nome'                => 'Barbearia Sync',
-            'slug'                => 'barbearia-sync',
-            'tipo_servico'        => 'barbeiro',
-            'ativo'               => true,
-            'evolution_instance'  => 'instancia-teste',
-            'whatsapp_conectado'  => true,
+            'nome' => 'Barbearia Sync',
+            'slug' => 'barbearia-sync',
+            'tipo_servico' => 'barbeiro',
+            'ativo' => true,
+            'evolution_instance' => 'instancia-teste',
+            'whatsapp_conectado' => true,
             'subscription_status' => 'trial',
-            'trial_ends_at'       => now()->addDays(14),
+            'trial_ends_at' => now()->addDays(14),
         ]);
         $this->tenant->users()->attach($user->id, ['papel' => 'admin']);
     }
@@ -43,24 +43,24 @@ class SincronizarConversasNomeTest extends TestCase
 
         $this->mockEvolution([
             'contatos' => [],
-            'chats'    => [[
+            'chats' => [[
                 'remoteJid' => "{$telefone}@s.whatsapp.net",
             ]],
             'mensagens' => [
                 // mensagem mais recente: enviada pelo próprio atendente, pushName = "Você"
                 [
-                    'key'              => ['id' => 'MSG1', 'fromMe' => true],
-                    'pushName'         => 'Você',
-                    'messageType'      => 'conversation',
-                    'message'          => ['conversation' => 'Já te atendo!'],
+                    'key' => ['id' => 'MSG1', 'fromMe' => true],
+                    'pushName' => 'Você',
+                    'messageType' => 'conversation',
+                    'message' => ['conversation' => 'Já te atendo!'],
                     'messageTimestamp' => now()->subMinutes(1)->timestamp,
                 ],
                 // mensagem mais antiga: enviada pelo cliente, com o nome real
                 [
-                    'key'              => ['id' => 'MSG2', 'fromMe' => false],
-                    'pushName'         => 'João Cliente',
-                    'messageType'      => 'conversation',
-                    'message'          => ['conversation' => 'Quero agendar um corte'],
+                    'key' => ['id' => 'MSG2', 'fromMe' => false],
+                    'pushName' => 'João Cliente',
+                    'messageType' => 'conversation',
+                    'message' => ['conversation' => 'Quero agendar um corte'],
                     'messageTimestamp' => now()->subMinutes(5)->timestamp,
                 ],
             ],
@@ -80,18 +80,18 @@ class SincronizarConversasNomeTest extends TestCase
 
         Cliente::create([
             'tenant_id' => $this->tenant->id,
-            'telefone'  => $telefone,
-            'nome'      => 'Maria Real',
+            'telefone' => $telefone,
+            'nome' => 'Maria Real',
         ]);
 
         $this->mockEvolution([
-            'contatos'  => [],
-            'chats'     => [['remoteJid' => "{$telefone}@s.whatsapp.net"]],
+            'contatos' => [],
+            'chats' => [['remoteJid' => "{$telefone}@s.whatsapp.net"]],
             'mensagens' => [[
-                'key'              => ['id' => 'MSG3', 'fromMe' => true],
-                'pushName'         => 'Você',
-                'messageType'      => 'conversation',
-                'message'          => ['conversation' => 'Olá!'],
+                'key' => ['id' => 'MSG3', 'fromMe' => true],
+                'pushName' => 'Você',
+                'messageType' => 'conversation',
+                'message' => ['conversation' => 'Olá!'],
                 'messageTimestamp' => now()->timestamp,
             ]],
         ]);

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -13,22 +14,33 @@ class Conversa extends Model
     ];
 
     protected $casts = [
-        'tenant_id'          => 'integer',
+        'tenant_id' => 'integer',
         'ultima_mensagem_em' => 'datetime',
     ];
 
-    public function tenant(): BelongsTo { return $this->belongsTo(Tenant::class); }
-    public function cliente(): BelongsTo { return $this->belongsTo(Cliente::class); }
-    public function mensagens(): HasMany { return $this->hasMany(Mensagem::class); }
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
+    public function cliente(): BelongsTo
+    {
+        return $this->belongsTo(Cliente::class);
+    }
+
+    public function mensagens(): HasMany
+    {
+        return $this->hasMany(Mensagem::class);
+    }
 
     public function registrarMensagem(string $remetente, string $conteudo, ?string $evolutionId = null, string $tipo = 'texto'): Mensagem
     {
         $mensagem = $this->mensagens()->create([
-            'remetente'            => $remetente,
-            'tipo'                 => $tipo,
-            'conteudo'             => $conteudo,
+            'remetente' => $remetente,
+            'tipo' => $tipo,
+            'conteudo' => $conteudo,
             'evolution_message_id' => $evolutionId,
-            'enviada_em'           => now(),
+            'enviada_em' => now(),
         ]);
 
         $this->update(['ultima_mensagem_em' => now()]);

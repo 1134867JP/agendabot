@@ -34,7 +34,7 @@ class CheckSubscription
         }
 
         if ($tenant->subscription_status === 'past_due') {
-            $endsAt      = $tenant->subscription_ends_at;
+            $endsAt = $tenant->subscription_ends_at;
             $diasVencido = $endsAt
                 ? (int) max(0, now()->diffInDays($endsAt, false) * -1)
                 : 999;
@@ -50,6 +50,7 @@ class CheckSubscription
             if ($request->routeIs('tenant.renovar*')) {
                 return $next($request);
             }
+
             return redirect()->route('tenant.renovar');
         }
 

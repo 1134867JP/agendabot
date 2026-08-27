@@ -5,10 +5,12 @@ namespace App\Console\Commands;
 use App\Models\Tenant;
 use App\Services\EvolutionApiService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Str;
 
 class ReconfigureWebhooks extends Command
 {
-    protected $signature   = 'whatsapp:reconfigure-webhooks';
+    protected $signature = 'whatsapp:reconfigure-webhooks';
+
     protected $description = 'Reconfigura o webhook da Evolution API em todas as instâncias ativas para incluir CONNECTION_UPDATE';
 
     public function handle(EvolutionApiService $evolution): int
@@ -19,7 +21,7 @@ class ReconfigureWebhooks extends Command
 
         foreach ($tenants as $tenant) {
             if (! $tenant->webhook_token) {
-                $tenant->update(['webhook_token' => \Illuminate\Support\Str::random(32)]);
+                $tenant->update(['webhook_token' => Str::random(32)]);
             }
             $webhookUrl = route('webhook', $tenant->slug);
             $ok = $evolution->configurarWebhook($tenant->evolution_instance, $webhookUrl, $tenant->webhook_token);
@@ -29,6 +31,7 @@ class ReconfigureWebhooks extends Command
         }
 
         $this->info('Concluído.');
+
         return self::SUCCESS;
     }
 }

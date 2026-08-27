@@ -23,20 +23,20 @@ class ProcessarMensagemWhatsappTriagemTest extends TestCase
 
         $user = User::factory()->create();
         $this->tenant = Tenant::create([
-            'nome'                => 'Barbearia Triagem Job',
-            'slug'                => 'barbearia-triagem-job',
-            'tipo_servico'        => 'barbeiro',
-            'ativo'               => true,
-            'bot_ativo'           => true,
-            'evolution_instance'  => 'instancia-teste',
+            'nome' => 'Barbearia Triagem Job',
+            'slug' => 'barbearia-triagem-job',
+            'tipo_servico' => 'barbeiro',
+            'ativo' => true,
+            'bot_ativo' => true,
+            'evolution_instance' => 'instancia-teste',
             'subscription_status' => 'trial',
-            'trial_ends_at'       => now()->addDays(14),
-            'configuracoes'       => [
+            'trial_ends_at' => now()->addDays(14),
+            'configuracoes' => [
                 'triagem' => [
-                    'palavras_chave_humano'       => ['atendente', 'humano'],
+                    'palavras_chave_humano' => ['atendente', 'humano'],
                     'max_tentativas_sem_entender' => 2,
-                    'transferir_fora_do_horario'  => false,
-                    'mensagem_transferencia'      => 'Já vou te transferir!',
+                    'transferir_fora_do_horario' => false,
+                    'mensagem_transferencia' => 'Já vou te transferir!',
                 ],
             ],
         ]);
@@ -63,8 +63,8 @@ class ProcessarMensagemWhatsappTriagemTest extends TestCase
 
         $this->assertDatabaseHas('mensagens', [
             'conversa_id' => $conversa->id,
-            'remetente'   => 'bot',
-            'conteudo'    => 'Já vou te transferir!',
+            'remetente' => 'bot',
+            'conteudo' => 'Já vou te transferir!',
         ]);
     }
 
@@ -72,9 +72,9 @@ class ProcessarMensagemWhatsappTriagemTest extends TestCase
     {
         Http::fake([
             'api.anthropic.com/*' => Http::response([
-                'content'     => [['type' => 'text', 'text' => 'Olá! Como posso ajudar?']],
+                'content' => [['type' => 'text', 'text' => 'Olá! Como posso ajudar?']],
                 'stop_reason' => 'end_turn',
-                'usage'       => ['input_tokens' => 10, 'output_tokens' => 5],
+                'usage' => ['input_tokens' => 10, 'output_tokens' => 5],
             ]),
             '*' => Http::response(['status' => 'success'], 200),
         ]);

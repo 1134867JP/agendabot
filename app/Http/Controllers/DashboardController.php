@@ -21,6 +21,7 @@ class DashboardController extends Controller
 
         if ($tenants->count() === 1) {
             session(['tenant_id' => $tenants->first()->id]);
+
             return redirect()->route('tenant.dashboard');
         }
 

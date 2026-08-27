@@ -8,6 +8,7 @@ use App\Models\Tenant;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class AsaasWebhookController extends Controller
@@ -38,7 +39,7 @@ class AsaasWebhookController extends Controller
             $valorEsperado = (float) ($agendamento->deposit_amount ?? 0);
 
             if ($valorEsperado > 0 && abs($valorRecebido - $valorEsperado) > 0.01) {
-                \Illuminate\Support\Facades\Log::warning('ASAAS_DEPOSIT_AMOUNT_MISMATCH', [
+                Log::warning('ASAAS_DEPOSIT_AMOUNT_MISMATCH', [
                     'agendamento_id' => $agendamento->id,
                     'payment_id' => $paymentId,
                 ]);

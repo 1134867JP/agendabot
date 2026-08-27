@@ -14,9 +14,11 @@ class EquipeController extends Controller
 {
     private function apenasAdmin(): void
     {
-        if (auth()->user()->is_super_admin) return;
+        if (auth()->user()->is_super_admin) {
+            return;
+        }
         $tenant = app('tenant');
-        $papel  = $tenant->users()->where('user_id', auth()->id())->value('papel');
+        $papel = $tenant->users()->where('user_id', auth()->id())->value('papel');
         abort_if($papel !== 'admin', 403);
     }
 
@@ -24,15 +26,15 @@ class EquipeController extends Controller
     {
         $this->apenasAdmin();
 
-        $tenant  = app('tenant');
+        $tenant = app('tenant');
         $usuarios = $tenant->users()
             ->select('users.id', 'users.name', 'users.email', 'tenant_users.papel', 'tenant_users.created_at as membro_desde')
             ->orderBy('tenant_users.created_at')
             ->get();
 
         return Inertia::render('Tenant/Equipe', [
-            'usuarios'    => $usuarios,
-            'meu_id'      => auth()->id(),
+            'usuarios' => $usuarios,
+            'meu_id' => auth()->id(),
         ]);
     }
 
@@ -41,17 +43,17 @@ class EquipeController extends Controller
         $this->apenasAdmin();
 
         $validated = $request->validate([
-            'name'     => ['required', 'string', 'max:255'],
-            'email'    => ['required', 'email', 'unique:users,email'],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'unique:users,email'],
             'password' => ['required', 'min:8'],
-            'papel'    => ['required', 'in:admin,operador'],
+            'papel' => ['required', 'in:admin,operador'],
         ]);
 
         $tenant = app('tenant');
 
         $user = User::create([
-            'name'     => $validated['name'],
-            'email'    => $validated['email'],
+            'name' => $validated['name'],
+            'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
         ]);
 

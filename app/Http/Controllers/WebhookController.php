@@ -19,8 +19,7 @@ class WebhookController extends Controller
         string $tenantSlug,
         ConversaSyncService $sync,
         WhatsAppSyncState $syncState,
-    ): Response
-    {
+    ): Response {
         $tenant = Tenant::where('slug', $tenantSlug)
             ->where('ativo', true)
             ->firstOrFail();
@@ -32,6 +31,7 @@ class WebhookController extends Controller
 
         if (! $tenant->webhook_token || $providedToken === '' || ! hash_equals($tenant->webhook_token, $providedToken)) {
             Log::warning('WEBHOOK_UNAUTHORIZED', ['tenant_id' => $tenant->id]);
+
             return response('Unauthorized', 401);
         }
 

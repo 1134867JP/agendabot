@@ -17,7 +17,9 @@ class AgendaBloqueioTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private User $user;
+
     private Profissional $profissional;
 
     protected function setUp(): void

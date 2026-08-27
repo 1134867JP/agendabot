@@ -202,7 +202,7 @@ class ClienteController extends Controller
 
         return back()->with(
             'success',
-            "{$quantidade} cliente".($quantidade === 1 ? '' : 's')." anonimizado".($quantidade === 1 ? '' : 's').'. O histórico operacional foi preservado.'
+            "{$quantidade} cliente".($quantidade === 1 ? '' : 's').' anonimizado'.($quantidade === 1 ? '' : 's').'. O histórico operacional foi preservado.'
         );
     }
 

@@ -28,7 +28,7 @@ class EstabelecimentoTest extends TestCase
         $user = User::factory()->create();
 
         $response = $this->actingAs($user)->post(route('tenants.store'), [
-            'nome'         => 'Segunda Barbearia',
+            'nome' => 'Segunda Barbearia',
             'tipo_servico' => 'barbeiro',
         ]);
 

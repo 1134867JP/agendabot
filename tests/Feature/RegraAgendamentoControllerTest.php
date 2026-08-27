@@ -12,20 +12,21 @@ class RegraAgendamentoControllerTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private User $user;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->user   = User::factory()->create();
+        $this->user = User::factory()->create();
         $this->tenant = Tenant::create([
-            'nome'                => 'Barbearia Regras',
-            'slug'                => 'barbearia-regras',
-            'tipo_servico'        => 'barbeiro',
-            'ativo'               => true,
+            'nome' => 'Barbearia Regras',
+            'slug' => 'barbearia-regras',
+            'tipo_servico' => 'barbeiro',
+            'ativo' => true,
             'subscription_status' => 'trial',
-            'trial_ends_at'       => now()->addDays(14),
+            'trial_ends_at' => now()->addDays(14),
         ]);
         $this->tenant->users()->attach($this->user->id, ['papel' => 'admin']);
     }
@@ -50,24 +51,24 @@ class RegraAgendamentoControllerTest extends TestCase
     public function test_update_persiste_regras_de_agendamento(): void
     {
         $response = $this->autenticarComTenant()->put(route('tenant.regras-agendamento.update'), [
-            'antecedencia_minima_minutos'       => 120,
-            'antecedencia_maxima_dias'          => 30,
+            'antecedencia_minima_minutos' => 120,
+            'antecedencia_maxima_dias' => 30,
             'buffer_entre_agendamentos_minutos' => 15,
-            'permite_cliente_remarcar'          => false,
-            'permite_cliente_cancelar'          => true,
-            'politica_cancelamento'             => 'Sem reembolso com menos de 2h.',
+            'permite_cliente_remarcar' => false,
+            'permite_cliente_cancelar' => true,
+            'politica_cancelamento' => 'Sem reembolso com menos de 2h.',
         ]);
 
         $response->assertRedirect();
 
         $this->tenant->refresh();
         $this->assertSame([
-            'antecedencia_minima_minutos'       => 120,
-            'antecedencia_maxima_dias'          => 30,
+            'antecedencia_minima_minutos' => 120,
+            'antecedencia_maxima_dias' => 30,
             'buffer_entre_agendamentos_minutos' => 15,
-            'permite_cliente_remarcar'          => false,
-            'permite_cliente_cancelar'          => true,
-            'politica_cancelamento'             => 'Sem reembolso com menos de 2h.',
+            'permite_cliente_remarcar' => false,
+            'permite_cliente_cancelar' => true,
+            'politica_cancelamento' => 'Sem reembolso com menos de 2h.',
         ], $this->tenant->regrasAgendamentoConfig());
     }
 }

@@ -6,6 +6,7 @@ use App\Exceptions\HorarioIndisponivelException;
 use App\Jobs\SyncGoogleCalendarJob;
 use App\Models\Agendamento;
 use App\Models\BloqueioAgenda;
+use App\Models\Cliente;
 use App\Models\OperationalEvent;
 use App\Models\Profissional;
 use App\Models\Recurso;
@@ -14,6 +15,7 @@ use App\Models\Tenant;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class AgendamentoService
 {
@@ -226,7 +228,7 @@ class AgendamentoService
     {
         return DB::transaction(function () use ($agendamento, $dados) {
             if ((int) $agendamento->tenant_id !== (int) ($agendamento->tenant?->id)) {
-                throw new \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException('Agendamento fora do tenant atual.');
+                throw new AccessDeniedHttpException('Agendamento fora do tenant atual.');
             }
 
             $profissionalId = (int) ($dados['profissional_id'] ?? $agendamento->profissional_id);
@@ -347,7 +349,7 @@ class AgendamentoService
             }
 
             if (! empty($dados['cliente_id'])) {
-                \App\Models\Cliente::where('id', $dados['cliente_id'])
+                Cliente::where('id', $dados['cliente_id'])
                     ->where('tenant_id', $tenant->id)
                     ->firstOrFail();
             }

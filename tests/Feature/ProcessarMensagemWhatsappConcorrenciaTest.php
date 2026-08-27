@@ -25,14 +25,14 @@ class ProcessarMensagemWhatsappConcorrenciaTest extends TestCase
 
         $user = User::factory()->create();
         $this->tenant = Tenant::create([
-            'nome'                => 'Barbearia Concorrencia',
-            'slug'                => 'barbearia-concorrencia',
-            'tipo_servico'        => 'barbeiro',
-            'ativo'               => true,
-            'bot_ativo'           => true,
-            'evolution_instance'  => 'instancia-teste',
+            'nome' => 'Barbearia Concorrencia',
+            'slug' => 'barbearia-concorrencia',
+            'tipo_servico' => 'barbeiro',
+            'ativo' => true,
+            'bot_ativo' => true,
+            'evolution_instance' => 'instancia-teste',
             'subscription_status' => 'trial',
-            'trial_ends_at'       => now()->addDays(14),
+            'trial_ends_at' => now()->addDays(14),
         ]);
         $this->tenant->users()->attach($user->id, ['papel' => 'admin']);
     }
@@ -44,17 +44,17 @@ class ProcessarMensagemWhatsappConcorrenciaTest extends TestCase
      */
     public function test_persistencia_ignora_mensagem_ja_existente_sem_lancar_excecao(): void
     {
-        $telefone    = '5551900000001';
+        $telefone = '5551900000001';
         $evolutionId = 'JA_EXISTE_1';
 
-        $cliente  = Cliente::create(['tenant_id' => $this->tenant->id, 'telefone' => $telefone, 'nome' => 'Cliente Teste']);
+        $cliente = Cliente::create(['tenant_id' => $this->tenant->id, 'telefone' => $telefone, 'nome' => 'Cliente Teste']);
         $conversa = Conversa::create(['tenant_id' => $this->tenant->id, 'telefone_cliente' => $telefone, 'cliente_id' => $cliente->id, 'status_v2' => 'ativa']);
         $conversa->mensagens()->create([
-            'remetente'            => 'cliente',
-            'tipo'                 => 'texto',
-            'conteudo'             => 'Mensagem original',
+            'remetente' => 'cliente',
+            'tipo' => 'texto',
+            'conteudo' => 'Mensagem original',
             'evolution_message_id' => $evolutionId,
-            'enviada_em'           => now(),
+            'enviada_em' => now(),
         ]);
 
         $resultado = app(ConversaSyncService::class)->registrarMensagemRecebida(
@@ -84,28 +84,28 @@ class ProcessarMensagemWhatsappConcorrenciaTest extends TestCase
      */
     public function test_isuniqueviolation_reconhece_violacao_real_de_unique_constraint(): void
     {
-        $telefone    = '5551900000002';
+        $telefone = '5551900000002';
         $evolutionId = 'RACE_MSG_2';
 
-        $cliente  = Cliente::create(['tenant_id' => $this->tenant->id, 'telefone' => $telefone, 'nome' => 'Cliente Teste']);
+        $cliente = Cliente::create(['tenant_id' => $this->tenant->id, 'telefone' => $telefone, 'nome' => 'Cliente Teste']);
         $conversa = Conversa::create(['tenant_id' => $this->tenant->id, 'telefone_cliente' => $telefone, 'cliente_id' => $cliente->id, 'status_v2' => 'ativa']);
 
         $conversa->mensagens()->create([
-            'remetente'            => 'cliente',
-            'tipo'                 => 'texto',
-            'conteudo'             => 'Primeira inserção',
+            'remetente' => 'cliente',
+            'tipo' => 'texto',
+            'conteudo' => 'Primeira inserção',
             'evolution_message_id' => $evolutionId,
-            'enviada_em'           => now(),
+            'enviada_em' => now(),
         ]);
 
         $excecao = null;
         try {
             $conversa->mensagens()->create([
-                'remetente'            => 'cliente',
-                'tipo'                 => 'texto',
-                'conteudo'             => 'Segunda inserção concorrente',
+                'remetente' => 'cliente',
+                'tipo' => 'texto',
+                'conteudo' => 'Segunda inserção concorrente',
                 'evolution_message_id' => $evolutionId,
-                'enviada_em'           => now(),
+                'enviada_em' => now(),
             ]);
         } catch (QueryException $e) {
             $excecao = $e;

@@ -103,7 +103,10 @@ class AnalyticsController extends Controller
             ]);
 
         $variacao = function (float $valor, float $anterior): float {
-            if ($anterior == 0.0) return $valor > 0 ? 100 : 0;
+            if ($anterior == 0.0) {
+                return $valor > 0 ? 100 : 0;
+            }
+
             return round((($valor - $anterior) / abs($anterior)) * 100, 1);
         };
 
