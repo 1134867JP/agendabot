@@ -1,0 +1,43 @@
+name: Refresh vulnerable PHP dependencies
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - '.github/workflows/refresh-security-lock.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+
+      - name: Atualizar dependências vulneráveis
+        run: composer update guzzlehttp/guzzle league/commonmark --with-dependencies --no-interaction --no-progress
+
+      - name: Validar auditoria PHP
+        run: composer audit --locked --no-interaction
+
+      - name: Commit lock seguro
+        shell: bash
+        run: |
+          if git diff --quiet -- composer.lock; then
+            echo 'Nenhuma alteração no composer.lock foi necessária.'
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add composer.lock
+          git commit -m 'fix: update vulnerable PHP dependencies'
+          git push
