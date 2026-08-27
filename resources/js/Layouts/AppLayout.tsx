@@ -8,6 +8,7 @@ import NotificacoesBell from '@/Components/NotificacoesBell';
 import QuickActions from '@/Components/Layout/QuickActions';
 import BottomNavigation from '@/Components/Layout/BottomNavigation';
 import PageHeader from '@/Components/UI/PageHeader';
+import FlashMessage from '@/Components/UI/FlashMessage';
 
 function useAppHeight() {
     useEffect(() => {
@@ -134,32 +135,8 @@ export default function AppLayout({ children, title, subtitle, headerActions, fu
 
                 {subscription && <SubscriptionBanner subscription={subscription} />}
 
-                {flash?.success && (
-                    <div
-                        className="flash-msg mx-4 mt-3 flex items-start gap-2.5 rounded-lg px-3.5 py-3 text-sm sm:mx-5 sm:mt-4 sm:items-center sm:px-4"
-                        style={{ background: 'rgba(110,231,183,0.08)', border: '1px solid rgba(110,231,183,0.2)', color: '#6ee7b7' }}
-                        role="status"
-                    >
-                        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden>
-                            <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                        {flash.success}
-                    </div>
-                )}
-                {flash?.erro && (
-                    <div
-                        className="flash-msg mx-4 mt-3 flex items-start gap-2.5 rounded-lg px-3.5 py-3 text-sm sm:mx-5 sm:mt-4 sm:items-center sm:px-4"
-                        style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171' }}
-                        role="alert"
-                    >
-                        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden>
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="12" y1="8" x2="12" y2="12" />
-                            <line x1="12" y1="16" x2="12.01" y2="16" />
-                        </svg>
-                        {flash.erro}
-                    </div>
-                )}
+                {flash?.success && <FlashMessage key={`success-${flash.success}`} message={flash.success} tone="success" />}
+                {flash?.erro && <FlashMessage key={`error-${flash.erro}`} message={flash.erro} tone="error" duration={8000} />}
 
                 <main
                     id="main-content"
