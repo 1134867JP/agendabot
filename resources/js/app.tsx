@@ -6,6 +6,7 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider } from '@/Components/ThemeProvider';
+import AppErrorBoundary from '@/Components/UI/AppErrorBoundary';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Agendou';
 const protectedPaths = ['/painel', '/superadmin', '/profile'];
@@ -27,9 +28,11 @@ createInertiaApp({
         const root = createRoot(el);
 
         root.render(
-            <ThemeProvider>
-                <App {...props} />
-            </ThemeProvider>
+            <AppErrorBoundary>
+                <ThemeProvider>
+                    <App {...props} />
+                </ThemeProvider>
+            </AppErrorBoundary>
         );
     },
     progress: {
