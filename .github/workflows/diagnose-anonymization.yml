@@ -45,9 +45,10 @@ jobs:
           cp .env.example .env
           php artisan key:generate
 
-      - name: Rodar DELETE HTTP sem password.confirm
+      - name: Rodar DELETE HTTP com Pao desabilitado
         env:
+          PAO_DISABLE: '1'
           AI_PROVIDER: claude
           AI_FALLBACK_PROVIDERS: ''
           CLAUDE_API_KEY: testing-key
-        run: php artisan test tests/Feature/ClienteAnonimizacaoDiretaTest.php --debug
+        run: vendor/bin/phpunit tests/Feature/ClienteAnonimizacaoDiretaTest.php --debug
