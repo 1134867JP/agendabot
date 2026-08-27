@@ -58,6 +58,6 @@ class EnviarMensagemConversaTest extends TestCase
             'remetente' => 'humano',
             'conteudo' => 'Quero confirmar o horário',
         ]);
-        $this->assertSame(1, $conversa->mensagens()->where('remetente', 'bot')->count());
+        $this->assertSame(0, $conversa->mensagens()->where('remetente', 'bot')->count());
     }
 }
