@@ -151,10 +151,16 @@ class QaExploratoryRegressionTest extends TestCase
 
     public function test_superadmin_confirms_password_before_filling_tenant_form(): void
     {
-        $route = app('router')->getRoutes()->getByName('superadmin.tenants.create');
+        $superAdmin = $this->superAdmin();
 
-        $this->assertNotNull($route);
-        $this->assertContains('password.confirm', $route->gatherMiddleware());
+        $this->actingAs($superAdmin)
+            ->get(route('superadmin.tenants.create'))
+            ->assertRedirect(route('password.confirm'));
+
+        $this->actingAs($superAdmin)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get(route('superadmin.tenants.create'))
+            ->assertOk();
     }
 
     public function test_superadmin_tenant_creation_queues_whatsapp_setup(): void
