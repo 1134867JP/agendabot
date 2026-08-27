@@ -5,6 +5,7 @@ on:
     branches: [master]
     paths:
       - '.github/workflows/diagnose-anonymization.yml'
+      - 'tests/Feature/ClienteAnonimizacaoDiretaTest.php'
   workflow_dispatch:
 
 permissions:
@@ -44,7 +45,7 @@ jobs:
           cp .env.example .env
           php artisan key:generate
 
-      - name: Rodar controller sem pipeline HTTP
+      - name: Rodar DELETE HTTP sem password.confirm
         env:
           AI_PROVIDER: claude
           AI_FALLBACK_PROVIDERS: ''
