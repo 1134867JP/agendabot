@@ -14,9 +14,15 @@ on:
       - '.gitignore'
       - 'LICENSE'
 
+# Commits pequenos e frequentes não devem manter pipelines antigos consumindo runner.
+# PRs possuem seu próprio grupo; pushes na master compartilham outro grupo.
+concurrency:
+  group: ci-deploy-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  validar:
-    name: Validar código
+  backend:
+    name: Backend (Pint + testes)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     services:
@@ -30,7 +36,7 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd="pg_isready -U postgres -d agendou_testing"
-          --health-interval=10s
+          --health-interval=5s
           --health-timeout=5s
           --health-retries=5
 
@@ -42,33 +48,21 @@ jobs:
         with:
           php-version: '8.3'
           tools: composer:v2
+          coverage: none
 
       - name: Cache Composer
         uses: actions/cache@v6
         with:
-          path: vendor
-          key: composer-${{ hashFiles('composer.lock') }}
+          path: ~/.composer/cache/files
+          key: composer-${{ runner.os }}-php83-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-php83-
 
       - name: Instalar dependências PHP
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
-
-      - name: Validar sintaxe PHP
-        run: find app config routes -name "*.php" | xargs php -l | grep -v "^No syntax errors" | (grep . && exit 1 || exit 0)
+        run: composer install --no-interaction --prefer-dist --no-progress --optimize-autoloader
 
       - name: Validar estilo PHP
-        run: vendor/bin/pint --test -v
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-          cache: 'npm'
-
-      - name: Instalar dependências JS
-        run: npm ci
-
-      - name: Build frontend (TypeScript + Vite)
-        run: npm run build
+        run: vendor/bin/pint --test
 
       - name: Preparar ambiente de testes
         run: |
@@ -104,10 +98,30 @@ jobs:
 
           exit "$status"
 
+  frontend:
+    name: Frontend (TypeScript + Vite)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Instalar dependências JS
+        run: npm ci --no-audit --no-fund
+
+      - name: Build frontend
+        run: npm run build
+
   deploy:
     name: Deploy para VPS
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    needs: validar
+    needs: [backend, frontend]
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
