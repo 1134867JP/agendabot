@@ -32,7 +32,6 @@ class SecurityHardeningTest extends TestCase
 
     public function test_webhook_nao_aceita_token_na_query_string(): void
     {
-        $user->forceFill(['email_verified_at' => now()])->save();
         $tenant = $this->tenant();
 
         $response = $this->postJson(route('webhook', $tenant->slug).'?token='.$tenant->webhook_token, [
@@ -91,6 +90,7 @@ class SecurityHardeningTest extends TestCase
             'email_verified_at' => now(),
             'password' => bcrypt('password'),
         ]);
+        $user->forceFill(['email_verified_at' => now()])->save();
         $tenant = $this->tenant();
 
         $this->actingAs($user)->withSession([
