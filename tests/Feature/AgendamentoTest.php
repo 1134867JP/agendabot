@@ -68,8 +68,21 @@ class AgendamentoTest extends TestCase
             'origem' => 'manual',
         ];
 
+        if (function_exists('pcntl_async_signals') && function_exists('pcntl_alarm')) {
+            pcntl_async_signals(true);
+            pcntl_signal(SIGALRM, static function (): void {
+                fwrite(STDERR, "[AgendamentoTest] STACK TRACE APOS 5S\n");
+                debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+                exit(2);
+            });
+            pcntl_alarm(5);
+        }
+
         fwrite(STDERR, "[AgendamentoTest] antes service criar\n");
         $agendamento = $this->service->criar($this->tenant, $dados);
+        if (function_exists('pcntl_alarm')) {
+            pcntl_alarm(0);
+        }
         fwrite(STDERR, "[AgendamentoTest] depois service criar\n");
 
         $this->assertInstanceOf(Agendamento::class, $agendamento);
