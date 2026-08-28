@@ -3,8 +3,8 @@
 namespace App\Jobs;
 
 use App\Jobs\Concerns\RegistraFalha;
-use App\Models\OutboundMessage;
 use App\Models\OperationalEvent;
+use App\Models\OutboundMessage;
 use App\Services\EvolutionApiService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
