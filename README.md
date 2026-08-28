@@ -205,7 +205,7 @@ Integração com gateway de pagamentos Asaas para criar clientes, cobranças e a
 | `CreateEvolutionInstanceJob` | Cria instância na Evolution API após onboarding |
 | `ExpirarConversasInativasJob` | Reseta conversas sem atividade há mais de 30 min para evitar estados corrompidos |
 | `EnviarLembretesJob` | Envia lembrete de agendamento via WhatsApp (D-1) |
-| `BackupELimparHistoricoJob` | Limpa histórico antigo de mensagens para controlar espaço em disco |
+| `BackupELimparHistoricoJob` | Aplica a retenção de mensagens do plano: 30 dias no Starter, 90 no Pro e ilimitada no Business |
 | `SincronizarConversasWhatsappJob` | Sincroniza conversas e nomes via API do Evolution (com lock para evitar duplicatas) |
 | `VerificarTrialExpiradoJob` | Verifica trials vencidos e envia e-mail de aviso |
 | `GerarCobrancaBotJob` | Gera cobranças variáveis mensais por agendamento via bot |
@@ -220,6 +220,8 @@ escalar, altere `QUEUE_CONNECTION=redis`, configure o Redis e adicione Horizon s
 - Pushes na branch `develop` podem publicar em homologação usando os secrets `STAGING_HOST`, `STAGING_USER` e `STAGING_SSH_KEY`.
 - Contextos de log passam por mascaramento central de telefone, e-mail, nomes e conteúdo de mensagens.
 - Clientes podem ter seus dados exportados e anonimizados, preservando somente registros financeiros sem identificação pessoal.
+- O cadastro registra a versão e o horário de aceite dos Termos de Uso e da Política de Privacidade.
+- O provisionamento das integrações só começa depois da verificação do e-mail do titular.
 - Eventos operacionais medem tempo de resposta, falhas de Claude/Evolution/Google e receita originada pelo bot.
 - Lista de espera, cobrança de sinal PIX, confirmação antecipada, no-show e sincronização Google Calendar fazem parte do domínio comercial.
 
@@ -237,6 +239,8 @@ Configure `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` e cadastre a URL de callba
 ```
 GET  /          Landing page
 GET  /precos    Página de preços
+GET  /termos    Termos de Uso
+GET  /privacidade Política de Privacidade
 ```
 
 ### Onboarding
@@ -244,7 +248,8 @@ GET  /precos    Página de preços
 ```
 GET  /cadastro              Passo 1: criar conta
 POST /cadastro
-GET  /cadastro/plano        Passo 2: escolher plano
+GET  /email/verify          Solicitar/confirmar verificação do e-mail
+GET  /cadastro/plano        Passo 2: escolher plano (após verificação)
 POST /cadastro/checkout     Iniciar pagamento Asaas
 GET  /cadastro/personalizar Passo 3: configurar tenant
 POST /cadastro/personalizar
@@ -252,7 +257,7 @@ GET  /cadastro/sucesso      Tela de boas-vindas
 POST /cadastro/pular        Pular pagamento (trial)
 ```
 
-### Painel do estabelecimento (`/painel/*`, middleware: `auth`, `tenant`, `subscription`)
+### Painel do estabelecimento (`/painel/*`, middleware: `auth`, `verified`, `tenant`, `subscription`)
 
 ```
 GET    /painel                       Dashboard (agendamentos do dia)
@@ -497,7 +502,16 @@ ASAAS_SANDBOX=true
 MAIL_MAILER=smtp
 MAIL_HOST=
 MAIL_FROM_ADDRESS=noreply@agendou.com
+
+LEGAL_ENTITY_NAME="Razão social do controlador"
+LEGAL_ENTITY_DOCUMENT="CNPJ do controlador"
+LEGAL_CONTACT_EMAIL=privacidade@seu-dominio.com
+LEGAL_VERSION=2026-08-28
 ```
+
+O SMTP precisa entregar e-mails antes de abrir o cadastro ao público: usuários não
+verificados não acessam o onboarding nem o painel. Atualize `LEGAL_VERSION` sempre que
+os documentos legais mudarem; novos aceites ficam vinculados à versão publicada.
 
 ### Subir com Docker
 
