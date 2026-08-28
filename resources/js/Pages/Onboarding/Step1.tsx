@@ -31,6 +31,7 @@ export default function OnboardingStep1() {
         tipo_servico: 'barbeiro' as TipoServico,
         tipo_servico_personalizado: '',
         telefone: '',
+        aceite_legal: false,
     });
 
     const submit: FormEventHandler = (event) => {
@@ -209,6 +210,23 @@ export default function OnboardingStep1() {
                                     : <p className="mt-1 text-xs" style={{ color: data.senha.length >= 8 ? 'var(--jade)' : 'var(--text-3)' }}>Use pelo menos 8 caracteres.</p>}
                             </div>
                         </section>
+
+                        <div>
+                            <label className="flex cursor-pointer items-start gap-3 text-sm" style={{ color: 'var(--text-2)' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={data.aceite_legal}
+                                    onChange={event => setData('aceite_legal', event.target.checked)}
+                                    className="mt-0.5 rounded border-[var(--border-strong)] bg-transparent text-[var(--accent)] focus:ring-[var(--accent)]"
+                                    aria-invalid={Boolean(errors.aceite_legal)}
+                                    required
+                                />
+                                <span>
+                                    Li e aceito os <Link href={route('termos')} target="_blank" className="underline" style={{ color: 'var(--accent)' }}>Termos de Uso</Link> e a <Link href={route('privacidade')} target="_blank" className="underline" style={{ color: 'var(--accent)' }}>Política de Privacidade</Link>.
+                                </span>
+                            </label>
+                            {errors.aceite_legal && <p className="mt-1 text-xs text-red-400">{errors.aceite_legal}</p>}
+                        </div>
 
                         <button type="submit" disabled={processing} className="btn-primary min-h-12 w-full justify-center py-3 text-base">
                             {processing ? 'Salvando seus dados…' : 'Continuar para configurar a agenda'}

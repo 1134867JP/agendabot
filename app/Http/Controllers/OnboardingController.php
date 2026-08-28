@@ -36,6 +36,9 @@ class OnboardingController extends Controller
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['senha']),
                 'telefone' => $validated['telefone'],
+                'terms_accepted_at' => now(),
+                'privacy_accepted_at' => now(),
+                'legal_version' => config('legal.version'),
             ]);
 
             $tenant = Tenant::create([

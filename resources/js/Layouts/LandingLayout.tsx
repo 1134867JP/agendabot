@@ -115,6 +115,8 @@ function LandingFooter() {
                     <Link href={route('precos')}           className="hover:text-primary transition-colors">Preços</Link>
                     <Link href={route('login')}            className="hover:text-primary transition-colors">Entrar</Link>
                     <Link href={route('onboarding.step1')} className="hover:text-primary transition-colors">Criar conta</Link>
+                    <Link href={route('termos')}            className="hover:text-primary transition-colors">Termos</Link>
+                    <Link href={route('privacidade')}       className="hover:text-primary transition-colors">Privacidade</Link>
                 </div>
                 <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
                     © {new Date().getFullYear()} Agendou

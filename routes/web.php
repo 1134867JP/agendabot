@@ -22,6 +22,14 @@ use Inertia\Inertia;
 // Site público
 Route::get('/', [LandingController::class, 'index'])->name('home');
 Route::get('/precos', [LandingController::class, 'precos'])->name('precos');
+Route::get('/termos', fn () => Inertia::render('Legal', [
+    'kind' => 'terms',
+    'legal' => config('legal'),
+]))->name('termos');
+Route::get('/privacidade', fn () => Inertia::render('Legal', [
+    'kind' => 'privacy',
+    'legal' => config('legal'),
+]))->name('privacidade');
 Route::get('/health', HealthController::class)->name('health');
 Route::get('/health/ready', [HealthController::class, 'ready'])->name('health.ready');
 

@@ -36,6 +36,7 @@ class Step1Request extends FormRequest
             'tipo_servico' => ['required', Rule::in(Tenant::TIPOS_SERVICO)],
             'tipo_servico_personalizado' => ['nullable', 'required_if:tipo_servico,personalizado', 'string', 'max:100'],
             'telefone' => ['required', 'string', 'regex:/^(?:55)?[1-9][0-9]{9,10}$/'],
+            'aceite_legal' => ['accepted'],
         ];
     }
 
@@ -44,6 +45,7 @@ class Step1Request extends FormRequest
         return [
             'telefone.regex' => 'Informe um WhatsApp válido com DDD, por exemplo: (51) 99999-9999.',
             'senha.confirmed' => 'Revise a senha informada.',
+            'aceite_legal.accepted' => 'Você precisa aceitar os Termos de Uso e a Política de Privacidade para criar a conta.',
         ];
     }
 }

@@ -24,6 +24,7 @@ class OnboardingTest extends TestCase
             'nome_estabelecimento' => 'Barbearia Onboarding',
             'tipo_servico' => 'barbeiro',
             'telefone' => '51999999999',
+            'aceite_legal' => true,
         ], $overrides);
     }
 
