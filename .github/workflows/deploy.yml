@@ -136,9 +136,17 @@ jobs:
           command_timeout: 15m
           script: |
             cd /opt/apps/agendabot
+            git fetch origin master
             if ! git diff --quiet -- deploy.sh; then
-              echo "::error::A VPS possui alterações locais em deploy.sh; revise o diff antes de atualizar."
-              git diff --no-ext-diff -- deploy.sh
-              exit 1
+              local_change="$(git diff --summary -- deploy.sh | xargs)"
+              remote_mode="$(git ls-tree origin/master deploy.sh | awk '{print $1}')"
+              if [ "$local_change" = "mode change 100644 => 100755 deploy.sh" ] && [ "$remote_mode" = "100755" ]; then
+                echo "Normalizando permissão local antiga; a master reaplicará o modo 100755."
+                chmod 0644 deploy.sh
+              else
+                echo "::error::A VPS possui alterações locais em deploy.sh; revise o diff antes de atualizar."
+                git diff --no-ext-diff -- deploy.sh
+                exit 1
+              fi
             fi
             bash deploy.sh
