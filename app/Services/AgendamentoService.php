@@ -39,13 +39,12 @@ class AgendamentoService
             $this->validarAntecedencia($inicio, $regras, $tz);
 
             if (! empty($dados['recurso_id'])) {
-                Recurso::where('id', $dados['recurso_id'])->where('tenant_id', $tenant->id)->lockForUpdate()->firstOrFail();
+                Recurso::where('id', $dados['recurso_id'])->where('tenant_id', $tenant->id)->firstOrFail();
                 $this->validarConflitoRecurso((int) $dados['recurso_id'], $inicio, $fim, $buffer);
             } elseif (! empty($dados['profissional_id'])) {
                 $profissional = Profissional::where('id', $dados['profissional_id'])
                     ->where('tenant_id', $tenant->id)
                     ->where('ativo', true)
-                    ->lockForUpdate()
                     ->firstOrFail();
 
                 if (! empty($dados['servico_id'])) {
@@ -100,14 +99,14 @@ class AgendamentoService
             ];
 
             if ($recursoId) {
-                $recurso = Recurso::where('id', $recursoId)->where('tenant_id', $tenant->id)->lockForUpdate()->firstOrFail();
+                $recurso = Recurso::where('id', $recursoId)->where('tenant_id', $tenant->id)->firstOrFail();
                 $this->validarConflitoRecurso($recursoId, $inicio, $fim, $buffer, ignorarAgendamentoId: $agendamento->id);
                 $updateData['recurso_id'] = $recurso->id;
                 $updateData['valor_total'] = $recurso->valor_hora
                     ? $recurso->valor_hora * $inicio->diffInMinutes($fim) / 60
                     : null;
             } elseif ($profissionalId) {
-                $profissional = Profissional::where('id', $profissionalId)->where('tenant_id', $tenant->id)->lockForUpdate()->firstOrFail();
+                $profissional = Profissional::where('id', $profissionalId)->where('tenant_id', $tenant->id)->firstOrFail();
                 $this->validarExpediente($profissional, $inicio, $fim, $tz);
                 $this->validarConflitoProfissional($profissionalId, $inicio, $fim, $buffer, ignorarAgendamentoId: $agendamento->id);
             }
