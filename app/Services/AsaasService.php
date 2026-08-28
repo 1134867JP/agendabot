@@ -141,11 +141,13 @@ class AsaasService
         return $url;
     }
 
-    public function cancelarAssinatura(string $subscriptionId): bool
+    public function cancelarAssinatura(string $subscriptionId): void
     {
         $response = $this->http()->delete("/subscriptions/{$subscriptionId}");
 
-        return $response->successful();
+        if (! $response->successful()) {
+            throw new AsaasApiException('O Asaas não confirmou o cancelamento da assinatura: '.$response->body());
+        }
     }
 
     public function statusAssinatura(string $subscriptionId): string

@@ -145,4 +145,50 @@ class SubscriptionPaymentTest extends TestCase
         $paymentRequests = Http::recorded(fn (Request $request) => str_ends_with($request->url(), '/payments'));
         $this->assertCount(1, $paymentRequests);
     }
+
+    public function test_cancelamento_so_altera_estado_local_quando_asaas_confirma(): void
+    {
+        [$tenant, $user] = $this->tenantUser();
+        $tenant->update([
+            'subscription_status' => 'active',
+            'asaas_subscription_id' => 'sub_ativa',
+        ]);
+        Http::fake(['*/subscriptions/sub_ativa' => Http::response([], 200)]);
+
+        $this->actingAs($user)
+            ->withSession([
+                'tenant_id' => $tenant->id,
+                'auth.password_confirmed_at' => now()->timestamp,
+            ])
+            ->post(route('tenant.cancelar'))
+            ->assertRedirect(route('tenant.renovar'));
+
+        $tenant->refresh();
+        $this->assertSame('canceled', $tenant->subscription_status);
+        $this->assertNull($tenant->asaas_subscription_id);
+    }
+
+    public function test_falha_no_asaas_nao_marca_assinatura_como_cancelada(): void
+    {
+        [$tenant, $user] = $this->tenantUser();
+        $tenant->update([
+            'subscription_status' => 'active',
+            'asaas_subscription_id' => 'sub_ativa',
+        ]);
+        Http::fake(['*/subscriptions/sub_ativa' => Http::response(['errors' => [['description' => 'falha']]], 500)]);
+
+        $this->actingAs($user)
+            ->withSession([
+                'tenant_id' => $tenant->id,
+                'auth.password_confirmed_at' => now()->timestamp,
+            ])
+            ->from(route('tenant.renovar'))
+            ->post(route('tenant.cancelar'))
+            ->assertRedirect(route('tenant.renovar'))
+            ->assertSessionHas('erro');
+
+        $tenant->refresh();
+        $this->assertSame('active', $tenant->subscription_status);
+        $this->assertSame('sub_ativa', $tenant->asaas_subscription_id);
+    }
 }

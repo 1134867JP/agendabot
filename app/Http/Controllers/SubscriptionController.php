@@ -78,11 +78,24 @@ class SubscriptionController extends Controller
     {
         $tenant = app('tenant');
 
-        if ($tenant->asaas_subscription_id) {
-            app(AsaasService::class)->cancelarAssinatura($tenant->asaas_subscription_id);
+        try {
+            if ($tenant->asaas_subscription_id) {
+                app(AsaasService::class)->cancelarAssinatura($tenant->asaas_subscription_id);
+            }
+        } catch (AsaasApiException|ConnectionException $e) {
+            Log::channel('jobs')->error('Falha ao cancelar assinatura no Asaas', [
+                'tenant_id' => $tenant->id,
+                'subscription_id' => $tenant->asaas_subscription_id,
+                'erro' => $e->getMessage(),
+            ]);
+
+            return back()->with('erro', 'O cancelamento não foi confirmado pelo meio de pagamento. Nenhuma alteração foi feita; tente novamente ou fale com o suporte.');
         }
 
-        $tenant->update(['subscription_status' => 'canceled']);
+        $tenant->update([
+            'subscription_status' => 'canceled',
+            'asaas_subscription_id' => null,
+        ]);
 
         return redirect()->route('tenant.renovar')
             ->with('info', 'Assinatura cancelada. Seus dados ficam disponíveis por 30 dias.');
