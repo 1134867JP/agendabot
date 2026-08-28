@@ -13,11 +13,12 @@ class GoogleCalendarService
         $this->refreshIfNeeded($connection);
         $start = $agendamento->data_hora ?? $agendamento->inicio;
         $end = $agendamento->fim ?? $start?->copy()->addMinutes($agendamento->duracao_minutos ?? 30);
+        $timezone = $agendamento->tenant?->timezone() ?? config('app.timezone');
         $payload = [
             'summary' => ($agendamento->servico?->nome ?? $agendamento->recurso?->nome ?? 'Agendamento').' — '.$agendamento->cliente_nome,
             'description' => "Agendou #{$agendamento->id}",
-            'start' => ['dateTime' => $start->toRfc3339String(), 'timeZone' => config('app.timezone')],
-            'end' => ['dateTime' => $end->toRfc3339String(), 'timeZone' => config('app.timezone')],
+            'start' => ['dateTime' => $start->toRfc3339String(), 'timeZone' => $timezone],
+            'end' => ['dateTime' => $end->toRfc3339String(), 'timeZone' => $timezone],
         ];
         $base = 'https://www.googleapis.com/calendar/v3/calendars/'.urlencode($connection->calendar_id).'/events';
         $request = Http::withToken($connection->access_token)->acceptJson();

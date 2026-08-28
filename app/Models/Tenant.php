@@ -16,7 +16,7 @@ class Tenant extends Model
         'subscription_status', 'trial_ends_at', 'subscription_ends_at',
         'asaas_customer_id', 'asaas_subscription_id', 'plano', 'taxa_agendamento_bot', 'isento_cobranca',
         // v2
-        'ramo_negocio', 'descricao_negocio', 'cidade', 'endereco',
+        'ramo_negocio', 'descricao_negocio', 'cidade', 'timezone', 'endereco',
         'horarios_funcionamento', 'nome_agente', 'tom_voz', 'instrucoes_extras', 'bot_saudacao', 'bot_ativo',
         'webhook_token', 'webhook_token_rotated_at',
         // triagem / horário de atendimento
@@ -49,6 +49,21 @@ class Tenant extends Model
 
     /** Tons de voz aceitos para o bot. */
     public const TONS_VOZ = ['formal', 'semiformal', 'descontraido'];
+
+    public const TIMEZONES = [
+        'America/Noronha',
+        'America/Sao_Paulo',
+        'America/Cuiaba',
+        'America/Manaus',
+        'America/Rio_Branco',
+    ];
+
+    public function timezone(): string
+    {
+        return in_array($this->timezone, self::TIMEZONES, true)
+            ? $this->timezone
+            : 'America/Sao_Paulo';
+    }
 
     public function recursos(): HasMany
     {

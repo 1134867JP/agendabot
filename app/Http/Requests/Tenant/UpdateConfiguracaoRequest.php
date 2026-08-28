@@ -21,6 +21,7 @@ class UpdateConfiguracaoRequest extends FormRequest
             'nome' => ['required', 'string', 'max:255'],
             'tipo_servico' => ['required', Rule::in(Tenant::TIPOS_SERVICO)],
             'tipo_servico_personalizado' => ['nullable', 'required_if:tipo_servico,personalizado', 'string', 'max:100'],
+            'timezone' => ['required', Rule::in(Tenant::TIMEZONES)],
             'horarios_funcionamento' => ['nullable', 'string', 'max:255'],
             'horarios_funcionamento_semana' => ['required', 'array', 'size:7'],
             'horarios_funcionamento_semana.*.ativo' => ['required', 'boolean'],

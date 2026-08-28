@@ -56,7 +56,7 @@ class Profissional extends Model
             return [];
         }
 
-        $tz = config('app.timezone', 'America/Sao_Paulo');
+        $tz = $this->tenant?->timezone() ?? 'America/Sao_Paulo';
         $slots = [];
         $horaInicio = substr($horario->hora_inicio, 0, 5); // garante HH:MM
         $horaFim = substr($horario->hora_fim, 0, 5);

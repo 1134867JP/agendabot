@@ -30,7 +30,7 @@ class AgendamentoService
             // O tenant da sessão/serviço é a única fonte de verdade.
             $dados['tenant_id'] = $tenant->id;
             $regras = $tenant->regrasAgendamentoConfig();
-            $tz = config('app.timezone', 'America/Sao_Paulo');
+            $tz = $tenant->timezone();
             $buffer = (int) $regras['buffer_entre_agendamentos_minutos'];
 
             $lockId = $dados['recurso_id'] ?? $dados['profissional_id'] ?? 0;
@@ -79,7 +79,7 @@ class AgendamentoService
         return DB::transaction(function () use ($agendamento, $dados) {
             $tenant = $agendamento->tenant;
             $regras = $tenant->regrasAgendamentoConfig();
-            $tz = config('app.timezone', 'America/Sao_Paulo');
+            $tz = $tenant->timezone();
             $buffer = (int) $regras['buffer_entre_agendamentos_minutos'];
 
             $recursoId = $dados['recurso_id'] ?? $agendamento->recurso_id;
@@ -245,7 +245,7 @@ class AgendamentoService
 
             DB::select('SELECT pg_advisory_xact_lock(?)', [$profissionalId]);
 
-            $tz = config('app.timezone', 'America/Sao_Paulo');
+            $tz = $agendamento->tenant->timezone();
             $horario = substr($dados['hora'], 0, 5);
             $inicio = Carbon::createFromFormat('Y-m-d H:i', "{$dados['data']} {$horario}", $tz);
             $duracao = $agendamento->duracao_minutos ?? 30;
@@ -286,7 +286,7 @@ class AgendamentoService
         $profissionais = $tenant->profissionais()->where('ativo', true)->with('horarios')->get();
         $resultado = [];
 
-        $tz = config('app.timezone', 'America/Sao_Paulo');
+        $tz = $tenant->timezone();
         $antecedenciaMinima = Carbon::now($tz)->addMinutes($regras['antecedencia_minima_minutos']);
 
         foreach ($profissionais as $profissional) {
@@ -356,7 +356,7 @@ class AgendamentoService
             $duracao = $servico?->duracao_minutos ?? $dados['duracao_minutos'] ?? 30;
 
             // Timezone explícito para garantir que "10:00" seja interpretado como horário local
-            $tz = config('app.timezone', 'America/Sao_Paulo');
+            $tz = $tenant->timezone();
             $horario = substr($dados['horario'], 0, 5); // garante formato HH:MM (descarta segundos se vierem)
             $inicio = Carbon::createFromFormat('Y-m-d H:i', "{$dados['data']} {$horario}", $tz);
             $fim = $inicio->copy()->addMinutes($duracao);

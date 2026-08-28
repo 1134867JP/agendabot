@@ -57,6 +57,7 @@ class ConfiguracaoHorarioFuncionamentoTest extends TestCase
             'nome' => $this->tenant->nome,
             'tipo_servico' => 'barbeiro',
             'tipo_servico_personalizado' => null,
+            'timezone' => 'America/Manaus',
             'horarios_funcionamento_semana' => $horarios,
         ]);
 
@@ -68,6 +69,7 @@ class ConfiguracaoHorarioFuncionamentoTest extends TestCase
             $tenant->horarios_funcionamento
         );
         $this->assertSame($horarios, $tenant->configuracoes['horarios_funcionamento_semana']);
+        $this->assertSame('America/Manaus', $tenant->timezone);
     }
 
     public function test_rejeita_periodos_sobrepostos(): void
@@ -85,6 +87,7 @@ class ConfiguracaoHorarioFuncionamentoTest extends TestCase
             'nome' => $this->tenant->nome,
             'tipo_servico' => 'barbeiro',
             'tipo_servico_personalizado' => null,
+            'timezone' => 'America/Sao_Paulo',
             'horarios_funcionamento_semana' => $horarios,
         ]);
 

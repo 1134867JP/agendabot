@@ -43,6 +43,7 @@ class EnsureHasTenant
         }
 
         app()->instance('tenant', $tenant);
+        config(['app.timezone' => $tenant->timezone()]);
         View::share('currentTenant', $tenant);
 
         return $next($request);

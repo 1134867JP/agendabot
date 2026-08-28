@@ -420,6 +420,7 @@ export default function Configuracoes({ tenant }: Props) {
         nome:                       tenant.nome,
         tipo_servico:               tenant.tipo_servico,
         tipo_servico_personalizado: tenant.tipo_servico_personalizado ?? '',
+        timezone:                    tenant.timezone ?? 'America/Sao_Paulo',
         horarios_funcionamento_semana: buildFuncionamentoRows(
             tenant.horarios_funcionamento_semana,
             tenant.horarios_funcionamento,
@@ -513,6 +514,19 @@ export default function Configuracoes({ tenant }: Props) {
                                 onChangeCustom={v => setData('tipo_servico_personalizado', v)}
                                 error={errors.tipo_servico || errors.tipo_servico_personalizado}
                             />
+                        </div>
+
+                        <div>
+                            <label htmlFor="timezone" className="label mb-1">Fuso horário</label>
+                            <select id="timezone" value={data.timezone} onChange={e => setData('timezone', e.target.value)} className="input">
+                                <option value="America/Noronha">Fernando de Noronha (UTC−2)</option>
+                                <option value="America/Sao_Paulo">Brasília, Sul e Sudeste (UTC−3)</option>
+                                <option value="America/Cuiaba">Mato Grosso (UTC−4)</option>
+                                <option value="America/Manaus">Amazonas (UTC−4)</option>
+                                <option value="America/Rio_Branco">Acre (UTC−5)</option>
+                            </select>
+                            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>Usado na agenda, no bot e no Google Calendar.</p>
+                            {errors.timezone && <p className="mt-1 text-xs text-red-400">{errors.timezone}</p>}
                         </div>
 
                         <div className="overflow-hidden rounded-xl" style={{ border: '1px solid var(--border-strong)' }}>

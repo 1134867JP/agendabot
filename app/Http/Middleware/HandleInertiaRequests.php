@@ -45,6 +45,7 @@ class HandleInertiaRequests extends Middleware
                     'id', 'nome', 'slug', 'tipo_servico', 'tipo_servico_personalizado',
                     'telefone_whatsapp', 'whatsapp_conectado', 'ramo_negocio',
                     'descricao_negocio', 'cidade', 'endereco', 'horarios_funcionamento',
+                    'timezone',
                     'nome_agente', 'tom_voz', 'bot_saudacao', 'bot_ativo', 'modo_bot',
                     'horario_atendimento', 'mensagem_fora_horario', 'ativo',
                 ]);

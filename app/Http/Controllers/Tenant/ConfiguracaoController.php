@@ -33,6 +33,7 @@ class ConfiguracaoController extends Controller
                 'ramo_negocio',
                 'descricao_negocio',
                 'cidade',
+                'timezone',
                 'endereco',
                 'horarios_funcionamento',
             ]), [

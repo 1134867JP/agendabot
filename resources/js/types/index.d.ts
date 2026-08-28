@@ -34,6 +34,7 @@ export interface Tenant {
     ramo_negocio?: string | null;
     descricao_negocio?: string | null;
     cidade?: string | null;
+    timezone?: string | null;
     endereco?: string | null;
     horarios_funcionamento?: string | null;
     horarios_funcionamento_semana?: HorarioFuncionamentoDia[] | null;
