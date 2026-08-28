@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\BackupELimparHistoricoJob;
 use App\Jobs\EnviarLembretesJob;
 use App\Jobs\ExpirarConversasInativasJob;
 use App\Jobs\GerarCobrancaBotJob;
@@ -45,6 +46,13 @@ Schedule::job(new ExpirarConversasInativasJob, 'maintenance')
     ->name('conversations:expire-inactive')
     ->everyFifteenMinutes()
     ->withoutOverlapping(30);
+
+// Aplica diariamente a retenção contratada (Starter 30d, Pro 90d, Business completo).
+Schedule::call(function (): void {
+    Tenant::query()->where('ativo', true)->eachById(
+        fn (Tenant $tenant) => BackupELimparHistoricoJob::dispatch($tenant)->onQueue('maintenance')
+    );
+})->name('conversations:retention')->dailyAt('02:15')->withoutOverlapping(120);
 
 // Gerar cobrança variável de agendamentos via bot (todo dia 1 às 08:00)
 Schedule::job(new GerarCobrancaBotJob, 'financial')

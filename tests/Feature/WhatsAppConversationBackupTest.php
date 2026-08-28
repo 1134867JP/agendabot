@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\BackupELimparHistoricoJob;
 use App\Models\Cliente;
 use App\Models\Conversa;
 use App\Models\Mensagem;
@@ -82,5 +83,42 @@ class WhatsAppConversationBackupTest extends TestCase
             'id' => $cliente->id,
             'nome' => 'Cliente Teste',
         ]);
+    }
+
+    public function test_retencao_automatica_respeita_o_plano(): void
+    {
+        Storage::fake('local');
+        $starter = Tenant::create([
+            'nome' => 'Starter', 'slug' => 'starter-retencao', 'tipo_servico' => 'clinica',
+            'plano' => 'starter', 'ativo' => true,
+        ]);
+        $business = Tenant::create([
+            'nome' => 'Business', 'slug' => 'business-retencao', 'tipo_servico' => 'clinica',
+            'plano' => 'business', 'ativo' => true,
+        ]);
+
+        foreach ([$starter, $business] as $tenant) {
+            $conversa = Conversa::create([
+                'tenant_id' => $tenant->id,
+                'telefone_cliente' => '555199999'.str_pad((string) $tenant->id, 4, '0', STR_PAD_LEFT),
+                'status_v2' => 'ativa',
+                'ultima_mensagem_em' => now()->subDays(40),
+            ]);
+            Mensagem::create([
+                'conversa_id' => $conversa->id,
+                'remetente' => 'cliente',
+                'tipo' => 'texto',
+                'conteudo' => 'Mensagem antiga',
+                'evolution_message_id' => "RETENCAO-{$tenant->id}",
+                'enviada_em' => now()->subDays(40),
+            ]);
+        }
+
+        (new BackupELimparHistoricoJob($starter))->handle();
+        (new BackupELimparHistoricoJob($business))->handle();
+
+        $this->assertDatabaseMissing('mensagens', ['evolution_message_id' => "RETENCAO-{$starter->id}"]);
+        $this->assertDatabaseHas('mensagens', ['evolution_message_id' => "RETENCAO-{$business->id}"]);
+        $this->assertNotEmpty(Storage::disk('local')->files("backups/tenant-{$starter->id}"));
     }
 }

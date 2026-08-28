@@ -28,7 +28,12 @@ class BackupELimparHistoricoJob implements ShouldQueue
 
     public function handle(): void
     {
-        $threshold = now()->subDays(90);
+        $dias = $this->tenant->retencaoMensagensDias();
+        if ($dias === null) {
+            return;
+        }
+
+        $threshold = now()->subDays($dias);
         $conversaIds = Conversa::where('tenant_id', $this->tenant->id)->pluck('id');
 
         if ($conversaIds->isEmpty()) {
@@ -63,6 +68,7 @@ class BackupELimparHistoricoJob implements ShouldQueue
         Log::info('BACKUP_E_LIMPAR', [
             'tenant' => $this->tenant->slug,
             'mensagens' => $totalMensagens,
+            'retencao_dias' => $dias,
         ]);
     }
 
