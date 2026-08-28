@@ -58,7 +58,7 @@ class Tenant extends Model
         'America/Rio_Branco',
     ];
 
-    public function timezone(): string
+    public function resolvedTimezone(): string
     {
         $timezone = $this->attributes['timezone'] ?? null;
 
