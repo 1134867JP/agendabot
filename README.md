@@ -504,13 +504,14 @@ MAIL_FROM_ADDRESS=noreply@agendou.com
 ```bash
 docker compose up -d
 
-# Primeira vez: migrar banco e criar dados de exemplo
+# Primeira vez: migrar banco e criar o super admin configurado no .env
 docker exec -it agendou-app php artisan migrate --seed
 ```
 
-O seeder cria:
-- **Super admin:** `admin@agendou.com` / `password`
-- Dois tenants de exemplo (Barbearia do João e Arena Sports) com profissionais e horários
+O seeder padrão só cria o super admin quando `SUPERADMIN_EMAIL` e
+`SUPERADMIN_PASSWORD` (mínimo de 12 caracteres) estiverem configurados. O tenant de
+demonstração da Odonto Excellence deve ser criado apenas manualmente, com as variáveis
+`ODONTO_SEEDER_EMAIL`, `ODONTO_SEEDER_PASSWORD` e `ODONTO_SEEDER_WHATSAPP` preenchidas.
 
 ### Desenvolvimento local
 

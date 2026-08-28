@@ -9,8 +9,5 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(SuperAdminSeeder::class);
-
-        // Tenants reais
-        $this->call(OdontoExcellenceSeeder::class);
     }
 }

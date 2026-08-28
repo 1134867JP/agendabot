@@ -6,6 +6,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use RuntimeException;
 
 /**
  * Configuração da clínica "Odonto Excellence".
@@ -23,12 +24,24 @@ class OdontoExcellenceSeeder extends Seeder
 {
     public function run(): void
     {
+        $email = env('ODONTO_SEEDER_EMAIL');
+        $password = env('ODONTO_SEEDER_PASSWORD');
+        $telefone = preg_replace('/\D+/', '', (string) env('ODONTO_SEEDER_WHATSAPP'));
+
+        if (! filter_var($email, FILTER_VALIDATE_EMAIL)
+            || strlen((string) $password) < 12
+            || ! preg_match('/^55[1-9][0-9]{9,10}$/', $telefone)) {
+            throw new RuntimeException(
+                'Configure ODONTO_SEEDER_EMAIL, ODONTO_SEEDER_PASSWORD (12+ caracteres) e ODONTO_SEEDER_WHATSAPP antes de executar este seeder.'
+            );
+        }
+
         // ── 1. Dono / admin do tenant ─────────────────────────────────────────
         $dono = User::firstOrCreate(
-            ['email' => 'contato@odontoexcellence.com'],
+            ['email' => $email],
             [
                 'name' => 'Odonto Excellence',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($password),
             ]
         );
 
@@ -55,7 +68,7 @@ class OdontoExcellenceSeeder extends Seeder
                 .'O paciente é sempre a prioridade.',
             'cidade' => 'Encantado - RS',
             'endereco' => 'R. Júlio de Castilhos, 1505 - Centro',
-            'telefone_whatsapp' => '555137513826',
+            'telefone_whatsapp' => $telefone,
             'nome_agente' => 'Milena',
             'tom_voz' => 'semiformal',
             // Seg-Sex turno partido (almoço 12:00-13:30), Sáb só manhã.
