@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Agendamento;
+use App\Models\Profissional;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\RuntimeHealth;
@@ -89,5 +90,43 @@ class CommercialFeaturesTest extends TestCase
             ->assertStatus(503)
             ->assertJsonPath('status', 'not_ready')
             ->assertJsonPath('checks.runtime.workers.batch.status', 'missing');
+    }
+
+    public function test_starter_nao_pode_ultrapassar_limite_de_profissionais(): void
+    {
+        [$tenant, $user] = $this->tenantUser();
+        $tenant->update(['plano' => 'starter']);
+        foreach (range(1, 3) as $indice) {
+            Profissional::create([
+                'tenant_id' => $tenant->id,
+                'nome' => "Profissional {$indice}",
+                'ativo' => true,
+            ]);
+        }
+
+        $this->actingAs($user)
+            ->withSession(['tenant_id' => $tenant->id])
+            ->post(route('tenant.profissionais.store'), ['nome' => 'Quarto profissional'])
+            ->assertSessionHasErrors('nome');
+
+        $this->assertSame(3, $tenant->profissionais()->count());
+    }
+
+    public function test_relatorios_avancados_respeitam_o_plano(): void
+    {
+        [$tenant, $user] = $this->tenantUser();
+        $tenant->update(['plano' => 'starter']);
+
+        $this->actingAs($user)
+            ->withSession(['tenant_id' => $tenant->id])
+            ->get(route('tenant.analytics'))
+            ->assertRedirect(route('tenant.dashboard'))
+            ->assertSessionHas('erro');
+
+        $tenant->update(['plano' => 'pro']);
+        $this->actingAs($user)
+            ->withSession(['tenant_id' => $tenant->id])
+            ->get(route('tenant.analytics'))
+            ->assertOk();
     }
 }

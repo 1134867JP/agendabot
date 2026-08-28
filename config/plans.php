@@ -7,6 +7,8 @@ return [
         'taxa_agendamento_bot' => 0,
         'profissionais' => 3,
         'limite_bot_mes' => 100,  // bot pausa ao atingir
+        'retencao_mensagens_dias' => 30,
+        'relatorios_avancados' => false,
         'descricao' => 'Perfeito para começar',
         'destaque' => false,
         'features' => [
@@ -29,6 +31,8 @@ return [
         'taxa_agendamento_bot' => 0,
         'profissionais' => 10,
         'limite_bot_mes' => 350,
+        'retencao_mensagens_dias' => 90,
+        'relatorios_avancados' => true,
         'descricao' => 'Para negócios em crescimento',
         'destaque' => true,
         'features' => [
@@ -50,6 +54,8 @@ return [
         'taxa_agendamento_bot' => 0,
         'profissionais' => null,
         'limite_bot_mes' => null,  // ilimitado
+        'retencao_mensagens_dias' => null,
+        'relatorios_avancados' => true,
         'descricao' => 'Para operações de alto volume',
         'destaque' => false,
         'features' => [

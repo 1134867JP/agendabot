@@ -13,6 +13,7 @@ interface NavItem {
     adminOnly?: boolean; // só admin do tenant ou superadmin vê
     ocultoEmTriagem?: boolean; // some do menu quando o tenant está no modo triagem (bot não agenda)
     activePaths?: string[]; // caminhos extras que mantêm o item ativo (ex.: hub de config)
+    planos?: string[];
 }
 
 const SECTIONS_TENANT: { label: string; items: NavItem[] }[] = [
@@ -33,7 +34,7 @@ const SECTIONS_TENANT: { label: string; items: NavItem[] }[] = [
     {
         label: 'Gestão',
         items: [
-            { label: 'Desempenho', routeName: 'tenant.analytics', path: '/painel/analytics', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+            { label: 'Desempenho', routeName: 'tenant.analytics', path: '/painel/analytics', planos: ['pro', 'business'], icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
         ],
     },
     {
@@ -93,7 +94,7 @@ export default function Sidebar({
         subscription?: SubscriptionInfo | null;
     }>>();
 
-    const { auth, currentTenant, impersonando, tenantPapel } = page.props as typeof page.props & { tenantPapel?: string | null };
+    const { auth, currentTenant, impersonando, tenantPapel, subscription } = page.props as typeof page.props & { tenantPapel?: string | null };
     const isSuperAdmin = auth.user.is_super_admin;
     const isAdmin      = isSuperAdmin || tenantPapel === 'admin';
     const currentUrl   = page.url;
@@ -105,7 +106,8 @@ export default function Sidebar({
         items.filter(item =>
             (!item.tipos || item.tipos.includes(tipoAtual)) &&
             (!item.adminOnly || isAdmin) &&
-            (!item.ocultoEmTriagem || !emTriagem)
+            (!item.ocultoEmTriagem || !emTriagem) &&
+            (!item.planos || item.planos.includes(subscription?.plano ?? 'starter') || subscription?.isento_cobranca)
         );
 
     const rawSections = (isSuperAdmin && !currentTenant) ? SECTIONS_SUPER_ADMIN : SECTIONS_TENANT;

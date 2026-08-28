@@ -7,14 +7,20 @@ use App\Models\Agendamento;
 use App\Models\Conversa;
 use App\Models\OperationalEvent;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class AnalyticsController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request): Response|RedirectResponse
     {
         $tenant = app('tenant');
+        if (! $tenant->possuiRelatoriosAvancados()) {
+            return redirect()->route('tenant.dashboard')
+                ->with('erro', 'Os relatórios avançados estão disponíveis nos planos Pro e Business.');
+        }
+
         $dias = in_array((int) $request->integer('dias', 30), [7, 30, 90], true)
             ? (int) $request->integer('dias', 30)
             : 30;

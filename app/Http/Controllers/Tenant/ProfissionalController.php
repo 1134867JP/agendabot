@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,6 +28,13 @@ class ProfissionalController extends Controller
     {
         $tenant = app('tenant');
         $tenantId = $tenant->id;
+        $limite = $tenant->limiteProfissionais();
+        if ($limite !== null && $tenant->profissionais()->where('ativo', true)->count() >= $limite) {
+            throw ValidationException::withMessages([
+                'nome' => "Seu plano permite até {$limite} profissionais ativos. Faça upgrade para adicionar outro.",
+            ]);
+        }
+
         $data = $request->validate([
             'nome' => 'required|string|max:255',
             'especialidades' => 'nullable|array',

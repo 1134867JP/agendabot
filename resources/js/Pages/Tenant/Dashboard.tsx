@@ -99,9 +99,12 @@ export default function TenantDashboard({
     proximos_agendamentos,
     setup_completo,
     ultima_cobranca_bot,
+    subscription,
 }: Props) {
     const modoAgendamento = (tenant.modo_bot ?? 'agendamento') === 'agendamento';
     const comProfissionais = usaProfissionais(tenant.tipo_servico);
+    const possuiRelatorios = tenant.plano === 'pro' || tenant.plano === 'business' || Boolean(subscription?.isento_cobranca);
+    const hrefRelatorios = possuiRelatorios ? route('tenant.analytics') : route('tenant.renovar');
 
     const catalogoItems = modoAgendamento
         ? comProfissionais
@@ -128,14 +131,14 @@ export default function TenantDashboard({
         ? [
             { label: 'Hoje', value: stats.agendamentos_hoje, sub: 'agendamentos confirmados', href: route('tenant.agenda'), icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
             { label: 'Esta semana', value: stats.agendamentos_semana, sub: 'reservas programadas', href: route('tenant.agendamentos.index'), icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2' },
-            { label: 'Receita no mês', value: formatBrl(Number(stats.receita_mes)), sub: 'valor dos atendimentos', href: route('tenant.analytics'), icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8v1m0 8v1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+            { label: 'Receita no mês', value: formatBrl(Number(stats.receita_mes)), sub: 'valor dos atendimentos', href: hrefRelatorios, icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8v1m0 8v1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
             { label: 'Precisa de atenção', value: stats.conversas_aguardando + stats.falhas_recentes, sub: 'pendências operacionais', href: pendencias[0]?.href ?? route('tenant.conversas.index'), icon: 'M12 9v4m0 4h.01M10.3 3.7L2.2 18a2 2 0 001.7 3h16.2a2 2 0 001.7-3L13.7 3.7a2 2 0 00-3.4 0z' },
         ]
         : [
             { label: 'Aguardando equipe', value: stats.conversas_aguardando, sub: 'transferências do bot', href: route('tenant.conversas.index', { status_v2: 'aguardando_humano' }), icon: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z' },
             { label: 'Não lidas', value: stats.conversas_nao_lidas, sub: 'novas mensagens', href: route('tenant.conversas.index'), icon: 'M4 4h16v12H7l-3 3V4z' },
             { label: 'Clientes', value: stats.clientes_total, sub: 'contatos cadastrados', href: route('tenant.clientes.index'), icon: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8z' },
-            { label: 'Falhas recentes', value: stats.falhas_recentes, sub: 'últimas 24 horas', href: route('tenant.analytics'), icon: 'M12 9v4m0 4h.01M10.3 3.7L2.2 18a2 2 0 001.7 3h16.2a2 2 0 001.7-3L13.7 3.7a2 2 0 00-3.4 0z' },
+            { label: 'Falhas recentes', value: stats.falhas_recentes, sub: 'últimas 24 horas', href: hrefRelatorios, icon: 'M12 9v4m0 4h.01M10.3 3.7L2.2 18a2 2 0 001.7 3h16.2a2 2 0 001.7-3L13.7 3.7a2 2 0 00-3.4 0z' },
         ];
 
     return (
@@ -293,7 +296,7 @@ export default function TenantDashboard({
                                 <p className="mt-2 text-xl font-semibold text-primary">{stats.bot_agendamentos_mes} reserva{stats.bot_agendamentos_mes === 1 ? '' : 's'} pelo bot neste mês</p>
                                 <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>Estimativa de cobrança: <strong style={{ color: 'var(--text-2)' }}>{formatBrl(stats.bot_agendamentos_mes * stats.bot_taxa)}</strong></p>
                             </div>
-                            <Link href={route('tenant.analytics')} className="btn-secondary min-h-11">Ver desempenho</Link>
+                            <Link href={hrefRelatorios} className="btn-secondary min-h-11">{possuiRelatorios ? 'Ver desempenho' : 'Conhecer relatórios'}</Link>
                         </div>
                         {ultima_cobranca_bot && (
                             <p className="mt-3 rounded-lg px-3 py-2 text-xs" style={{ background: 'var(--bg-surface-2)', color: 'var(--text-3)' }}>

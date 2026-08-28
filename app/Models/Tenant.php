@@ -117,6 +117,25 @@ class Tenant extends Model
         return $this->tipo_servico === 'quadra';
     }
 
+    public function limiteProfissionais(): ?int
+    {
+        $limite = config("plans.{$this->plano}.profissionais");
+
+        return is_numeric($limite) ? (int) $limite : null;
+    }
+
+    public function possuiRelatoriosAvancados(): bool
+    {
+        return $this->isento_cobranca || (bool) config("plans.{$this->plano}.relatorios_avancados", false);
+    }
+
+    public function retencaoMensagensDias(): ?int
+    {
+        $dias = config("plans.{$this->plano}.retencao_mensagens_dias");
+
+        return is_numeric($dias) ? (int) $dias : null;
+    }
+
     /**
      * Regras de handoff automático bot→humano, com defaults equivalentes ao comportamento
      * atual (sem nenhuma palavra-chave configurada = nenhum handoff automático por triagem).

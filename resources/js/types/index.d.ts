@@ -24,7 +24,7 @@ export interface Tenant {
     subscription_status: SubscriptionStatus;
     trial_ends_at: string | null;
     subscription_ends_at: string | null;
-    plano: 'basico' | 'profissional' | 'ilimitado';
+    plano: 'starter' | 'pro' | 'business';
     // Bot & IA fields
     nome_agente?: string | null;
     tom_voz?: 'formal' | 'semiformal' | 'descontraido' | null;
