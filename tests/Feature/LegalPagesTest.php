@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -34,7 +35,7 @@ class LegalPagesTest extends TestCase
             'email' => 'legal@example.com',
             'legal_version' => config('legal.version'),
         ]);
-        $user = \App\Models\User::where('email', 'legal@example.com')->firstOrFail();
+        $user = User::where('email', 'legal@example.com')->firstOrFail();
         $this->assertNotNull($user->terms_accepted_at);
         $this->assertNotNull($user->privacy_accepted_at);
     }

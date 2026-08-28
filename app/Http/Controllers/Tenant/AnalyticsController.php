@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Agendamento;
 use App\Models\Conversa;
 use App\Models\OperationalEvent;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
