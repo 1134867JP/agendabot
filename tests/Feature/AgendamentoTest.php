@@ -8,14 +8,13 @@ use App\Models\Recurso;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\AgendamentoService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class AgendamentoTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseMigrations;
 
     private Tenant $tenant;
 
@@ -27,17 +26,9 @@ class AgendamentoTest extends TestCase
     {
         parent::setUp();
 
-        fwrite(STDERR, "[AgendamentoTest] banco preparado\n");
-        DB::statement("SET LOCAL lock_timeout = '2s'");
-        DB::listen(static function ($query): void {
-            fwrite(STDERR, "[AgendamentoTest][SQL] {$query->sql}\n");
-        });
-
         Queue::fake();
 
         $user = User::factory()->create();
-        fwrite(STDERR, "[AgendamentoTest] usuario criado\n");
-
         $this->tenant = Tenant::create([
             'nome' => 'Barbearia Teste',
             'slug' => 'barbearia-teste',
@@ -46,15 +37,12 @@ class AgendamentoTest extends TestCase
             'subscription_status' => 'trial',
             'trial_ends_at' => now()->addDays(14),
         ]);
-        fwrite(STDERR, "[AgendamentoTest] tenant criado\n");
-
         $this->tenant->users()->attach($user->id, ['papel' => 'admin']);
         $this->recurso = Recurso::create([
             'tenant_id' => $this->tenant->id,
             'nome' => 'Barbeiro Teste',
             'ativo' => true,
         ]);
-        fwrite(STDERR, "[AgendamentoTest] recurso criado\n");
 
         $this->service = app(AgendamentoService::class);
     }
@@ -72,9 +60,7 @@ class AgendamentoTest extends TestCase
             'origem' => 'manual',
         ];
 
-        fwrite(STDERR, "[AgendamentoTest] antes de criar agendamento\n");
         $agendamento = $this->service->criar($this->tenant, $dados);
-        fwrite(STDERR, "[AgendamentoTest] depois de criar agendamento\n");
 
         $this->assertInstanceOf(Agendamento::class, $agendamento);
         $this->assertDatabaseHas('agendamentos', [
@@ -90,7 +76,6 @@ class AgendamentoTest extends TestCase
         $inicio = now()->addDay()->setHour(10)->setMinute(0)->setSecond(0);
         $fim = now()->addDay()->setHour(10)->setMinute(30)->setSecond(0);
 
-        // Criar primeiro agendamento diretamente (sem passar pelo lock)
         Agendamento::create([
             'tenant_id' => $this->tenant->id,
             'recurso_id' => $this->recurso->id,
@@ -104,7 +89,6 @@ class AgendamentoTest extends TestCase
 
         $this->expectException(HorarioIndisponivelException::class);
 
-        // Tentar criar conflitante no mesmo horário e mesmo recurso
         $this->service->criar($this->tenant, [
             'tenant_id' => $this->tenant->id,
             'recurso_id' => $this->recurso->id,
