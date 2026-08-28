@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -58,6 +59,7 @@ class EquipeController extends Controller
         ]);
 
         $tenant->users()->attach($user->id, ['papel' => $validated['papel']]);
+        event(new Registered($user));
 
         return back()->with('success', 'Usuário adicionado à equipe.');
     }

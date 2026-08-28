@@ -63,6 +63,14 @@ class ProfissionalController extends Controller
             'servico_ids' => 'nullable|array',
             'servico_ids.*' => ['integer', Rule::exists('servicos', 'id')->where('tenant_id', $tenantId)],
         ]);
+        $limite = $tenant->limiteProfissionais();
+        $reativando = ! $profissional->ativo && ($data['ativo'] ?? false);
+        if ($reativando && $limite !== null && $tenant->profissionais()->where('ativo', true)->count() >= $limite) {
+            throw ValidationException::withMessages([
+                'nome' => "Seu plano permite até {$limite} profissionais ativos. Faça upgrade para reativar este profissional.",
+            ]);
+        }
+
         $servicoIds = $data['servico_ids'] ?? [];
         $profissional->update(Arr::except($data, ['servico_ids']));
         $profissional->servicos()->sync($servicoIds);

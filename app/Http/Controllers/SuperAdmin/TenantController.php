@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\CreateEvolutionInstanceJob;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -67,6 +68,7 @@ class TenantController extends Controller
         });
 
         CreateEvolutionInstanceJob::dispatch($tenant)->onQueue('sync');
+        event(new Registered($tenant->users()->firstOrFail()));
 
         return redirect()->route('superadmin.tenants.index')
             ->with('success', 'Tenant criado. A conexão do WhatsApp será preparada em segundo plano.');
