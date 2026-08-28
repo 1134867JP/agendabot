@@ -1,4 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
+import { useEffect, useRef } from 'react';
 import { PageProps, TipoServico } from '@/types';
 import { buildConfigTabs } from '@/lib/configTabs';
 
@@ -7,6 +8,7 @@ export default function ConfiguracoesTabs() {
         currentTenant?: { tipo_servico: TipoServico } | null;
         tenantPapel?: string | null;
     }>>();
+    const containerRef = useRef<HTMLDivElement>(null);
 
     const { auth, currentTenant, tenantPapel } = page.props as typeof page.props & { tenantPapel?: string | null };
     const isAdmin = auth.user.is_super_admin || tenantPapel === 'admin';
@@ -16,8 +18,17 @@ export default function ConfiguracoesTabs() {
     const tabs = buildConfigTabs(tipo, isAdmin);
     const isActive = (path: string) => url === path || url.startsWith(path + '/');
 
+    useEffect(() => {
+        const container = containerRef.current;
+        const activeTab = container?.querySelector<HTMLElement>('[aria-current="page"]');
+        if (!container || !activeTab) return;
+
+        const left = activeTab.offsetLeft - (container.clientWidth - activeTab.offsetWidth) / 2;
+        container.scrollTo({ left: Math.max(0, left), behavior: 'auto' });
+    }, [url]);
+
     return (
-        <div className="mb-6 -mt-2 overflow-x-auto scroll-hidden">
+        <div ref={containerRef} className="mb-6 -mt-2 overflow-x-auto scroll-hidden">
             <div className="flex min-w-max gap-0.5" style={{ borderBottom: '1px solid var(--border)' }}>
                 {tabs.map(tab => {
                     const active = isActive(tab.path);
@@ -25,6 +36,7 @@ export default function ConfiguracoesTabs() {
                         <Link
                             key={tab.routeName}
                             href={route(tab.routeName)}
+                            preserveScroll
                             aria-current={active ? 'page' : undefined}
                             className={`config-tab${active ? ' config-tab--active' : ''}`}
                         >
