@@ -84,11 +84,11 @@ function DiffBadge({ atual, anterior }: { atual: number; anterior: number }) {
 function StatCard({ label, value, sub }: { label: string; value: string; sub?: React.ReactNode }) {
     return (
         <div
-            className="rounded-xl p-5"
+            className="min-w-0 rounded-xl p-3 sm:p-5"
             style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
         >
             <p className="mb-1 text-[11px] uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>{label}</p>
-            <p className="text-2xl font-semibold tabular-nums" style={{ color: 'var(--text-1)' }}>{value}</p>
+            <p className="break-words text-xl font-semibold tabular-nums sm:text-2xl" style={{ color: 'var(--text-1)' }}>{value}</p>
             {sub && <p className="mt-0.5 text-[11px]" style={{ color: 'var(--text-3)' }}>{sub}</p>}
         </div>
     );
@@ -133,14 +133,14 @@ export default function TokenUsage({ ia, mes, mesAnterior, cacheHitRate, economi
                         <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>
                             IA configurada
                         </p>
-                        <div className="mt-2 flex items-center gap-2">
+                        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
                             <span className={`h-2.5 w-2.5 rounded-full ${ia.padrao.configurado ? 'bg-emerald-400' : 'bg-red-400'}`} />
                             <p className="text-xl font-semibold" style={{ color: 'var(--text-1)' }}>{ia.padrao.label}</p>
                             <span className={`badge ${ia.padrao.configurado ? 'badge-green' : 'badge-red'}`}>
                                 {ia.padrao.configurado ? 'Disponível' : 'Não configurada'}
                             </span>
                         </div>
-                        <p className="mt-1 text-xs font-mono" style={{ color: 'var(--text-3)' }}>{ia.padrao.model}</p>
+                        <p className="mt-1 break-all text-xs font-mono" style={{ color: 'var(--text-3)' }}>{ia.padrao.model}</p>
                     </div>
 
                     <div>
@@ -185,7 +185,7 @@ export default function TokenUsage({ ia, mes, mesAnterior, cacheHitRate, economi
             </div>
 
             {/* Stat cards */}
-            <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="mb-6 grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
                 <StatCard
                     label="Custo do mês"
                     value={usd(mes.custo_usd)}
@@ -268,7 +268,8 @@ export default function TokenUsage({ ia, mes, mesAnterior, cacheHitRate, economi
                         Nenhum registro ainda
                     </div>
                 ) : (
-                    <table className="w-full text-[13px]">
+                    <div className="max-w-full overflow-x-auto overscroll-x-contain">
+                    <table className="w-full min-w-[760px] text-[13px]">
                         <thead>
                             <tr style={{ borderBottom: '1px solid var(--border)' }}>
                                 {['Empresa', 'Calls', 'Input', 'Output', 'Cache read', 'Custo USD'].map(h => (
@@ -307,6 +308,7 @@ export default function TokenUsage({ ia, mes, mesAnterior, cacheHitRate, economi
                             </tr>
                         </tfoot>
                     </table>
+                    </div>
                 )}
             </div>
 

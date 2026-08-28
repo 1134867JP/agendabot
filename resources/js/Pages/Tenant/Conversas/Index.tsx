@@ -24,6 +24,7 @@ interface Mensagem {
     conteudo: string;
     evolution_message_id: string | null;
     enviada_em: string;
+    delivery_status?: 'pending' | 'processing' | 'sent' | 'failed' | null;
 }
 
 interface Conversa {
@@ -186,6 +187,13 @@ function Bubble({ msg, prevRemetente }: { msg: Mensagem; prevRemetente?: string 
     const mediaUrl = (msg.tipo !== 'texto' && msg.evolution_message_id)
         ? route('tenant.conversas.media', { conversa: msg.conversa_id, mensagem: msg.id })
         : null;
+    const deliveryLabel = msg.delivery_status === 'failed'
+        ? 'Falha no envio'
+        : msg.delivery_status === 'pending' || msg.delivery_status === 'processing'
+            ? 'Enviando'
+            : msg.delivery_status === 'sent'
+                ? 'Enviada'
+                : null;
 
     return (
         <div className={`flex ${isCliente ? 'justify-start' : 'justify-end'} ${showLabel ? 'mt-3' : 'mt-1'}`}>
@@ -247,7 +255,13 @@ function Bubble({ msg, prevRemetente }: { msg: Mensagem; prevRemetente?: string 
                     </p>
                 )}
 
-                <p className="px-3.5 pb-2 text-right text-[10px] opacity-40">{fmtHora(msg.enviada_em)}</p>
+                <p
+                    className="px-3.5 pb-2 text-right text-[10px]"
+                    style={{ color: msg.delivery_status === 'failed' ? 'var(--danger-text)' : 'var(--text-3)' }}
+                >
+                    {deliveryLabel && <span>{deliveryLabel} · </span>}
+                    {fmtHora(msg.enviada_em)}
+                </p>
             </div>
         </div>
     );

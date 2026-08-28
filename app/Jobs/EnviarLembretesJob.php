@@ -4,7 +4,7 @@ namespace App\Jobs;
 
 use App\Jobs\Concerns\RegistraFalha;
 use App\Models\Agendamento;
-use App\Services\EvolutionApiService;
+use App\Services\OutboundMessageService;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -17,7 +17,7 @@ class EnviarLembretesJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, RegistraFalha, SerializesModels;
 
-    public function handle(EvolutionApiService $evolution): void
+    public function handle(OutboundMessageService $outboundMessages): void
     {
         $amanha = now()->addDay();
 
@@ -50,17 +50,16 @@ class EnviarLembretesJob implements ShouldQueue
             try {
                 $mensagem = $this->montarMensagemLembrete($agendamento, $cfg['lembrete_texto'] ?? null);
 
-                // Mark before sending to prevent duplicate sends if the job is retried
-                $agendamento->update(['lembrete_enviado' => true]);
-
-                $evolution->enviarMensagem(
-                    $agendamento->tenant->evolution_instance,
-                    $telefone,
-                    $mensagem,
+                $outboundMessages->queue(
+                    tenant: $agendamento->tenant,
+                    telefone: $telefone,
+                    conteudo: $mensagem,
+                    purpose: 'appointment_reminder',
+                    idempotencyKey: "appointment-reminder:{$agendamento->id}",
+                    agendamento: $agendamento,
                 );
-
             } catch (\Throwable $e) {
-                Log::error("Falha ao enviar lembrete agendamento #{$agendamento->id}: {$e->getMessage()}");
+                Log::error("Falha ao enfileirar lembrete agendamento #{$agendamento->id}: {$e->getMessage()}");
             }
         }
     }

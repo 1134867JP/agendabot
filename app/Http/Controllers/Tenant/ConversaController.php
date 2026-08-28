@@ -8,6 +8,7 @@ use App\Models\Cliente;
 use App\Models\Conversa;
 use App\Models\Mensagem;
 use App\Services\EvolutionApiService;
+use App\Services\OutboundMessageService;
 use App\Services\WhatsAppSyncState;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -69,11 +70,18 @@ class ConversaController extends Controller
         $conversa->update(['ultima_leitura_em' => now()]);
 
         $mensagens = $conversa->mensagens()
+            ->with('outboundMessage:id,mensagem_id,status')
             ->orderByDesc('enviada_em')
             ->limit(50)
             ->get()
             ->sortBy('enviada_em')
-            ->values();
+            ->values()
+            ->map(function (Mensagem $mensagem): Mensagem {
+                $mensagem->setAttribute('delivery_status', $mensagem->outboundMessage?->status);
+                $mensagem->unsetRelation('outboundMessage');
+
+                return $mensagem;
+            });
 
         return response()->json($mensagens);
     }
@@ -175,7 +183,7 @@ class ConversaController extends Controller
         return back()->with('success', 'Bot reativado. Ele responderá as próximas mensagens do cliente.');
     }
 
-    public function enviarMensagem(Request $request, Conversa $conversa, EvolutionApiService $evolution): RedirectResponse
+    public function enviarMensagem(Request $request, Conversa $conversa, OutboundMessageService $outboundMessages): RedirectResponse
     {
         abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
 
@@ -191,13 +199,19 @@ class ConversaController extends Controller
             $conversa->update(['status_v2' => 'em_atendimento_humano']);
         }
 
-        $conversa->registrarMensagem('humano', $data['conteudo']);
-        $evolution->enviarMensagem($tenant->evolution_instance, $conversa->telefone_cliente, $data['conteudo']);
+        $outboundMessages->queueConversationMessage(
+            $tenant,
+            $conversa,
+            'humano',
+            $data['conteudo'],
+            $conversa->telefone_cliente,
+            'human_reply',
+        );
 
-        return back()->with('success', 'Mensagem enviada. Você está atendendo esta conversa.');
+        return back()->with('success', 'Mensagem adicionada à fila de envio. Você está atendendo esta conversa.');
     }
 
-    public function iniciar(Request $request, EvolutionApiService $evolution): RedirectResponse
+    public function iniciar(Request $request, OutboundMessageService $outboundMessages): RedirectResponse
     {
         $tenant = app('tenant');
 
@@ -222,10 +236,16 @@ class ConversaController extends Controller
             $conversa->update(['status_v2' => 'em_atendimento_humano']);
         }
 
-        $conversa->registrarMensagem('humano', $validated['mensagem']);
-        $evolution->enviarMensagem($tenant->evolution_instance, $telefone, $validated['mensagem']);
+        $outboundMessages->queueConversationMessage(
+            $tenant,
+            $conversa,
+            'humano',
+            $validated['mensagem'],
+            $telefone,
+            'human_first_contact',
+        );
 
-        return back()->with('success', 'Mensagem enviada. O atendimento ficou com a equipe.');
+        return back()->with('success', 'Mensagem adicionada à fila de envio. O atendimento ficou com a equipe.');
     }
 
     public function media(Conversa $conversa, Mensagem $mensagem, EvolutionApiService $evolution): HttpResponse

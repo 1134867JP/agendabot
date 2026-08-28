@@ -8,6 +8,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 class AsaasService
@@ -17,30 +18,35 @@ class AsaasService
         return Http::withHeaders([
             'access_token' => config('services.asaas.key'),
             'Content-Type' => 'application/json',
-        ])->baseUrl(config('services.asaas.base_url'));
+        ])->baseUrl(config('services.asaas.base_url'))
+            ->connectTimeout(5)
+            ->timeout(15);
     }
 
     public function criarOuBuscarCliente(User $user, Tenant $tenant): string
     {
-        if ($tenant->asaas_customer_id) {
-            return $tenant->asaas_customer_id;
-        }
+        return Cache::lock("asaas:customer:tenant:{$tenant->id}", 30)->block(5, function () use ($user, $tenant): string {
+            $tenant->refresh();
+            if ($tenant->asaas_customer_id) {
+                return $tenant->asaas_customer_id;
+            }
 
-        $response = $this->http()->post('/customers', [
-            'name' => $user->name,
-            'email' => $user->email,
-            'externalReference' => "tenant_{$tenant->id}",
-        ]);
+            $response = $this->http()->post('/customers', [
+                'name' => $user->name,
+                'email' => $user->email,
+                'externalReference' => "tenant_{$tenant->id}",
+            ]);
 
-        $customerId = $response->json('id');
+            $customerId = $response->json('id');
 
-        if (! $response->successful() || ! is_string($customerId) || $customerId === '') {
-            throw new AsaasApiException('Não foi possível criar o cliente no Asaas: '.$response->body());
-        }
+            if (! $response->successful() || ! is_string($customerId) || $customerId === '') {
+                throw new AsaasApiException('Não foi possível criar o cliente no Asaas: '.$response->body());
+            }
 
-        $tenant->update(['asaas_customer_id' => $customerId]);
+            $tenant->update(['asaas_customer_id' => $customerId]);
 
-        return $customerId;
+            return $customerId;
+        });
     }
 
     public function criarAssinatura(string $customerId, string $plano, string $paymentMethod = 'CREDIT_CARD'): ?array

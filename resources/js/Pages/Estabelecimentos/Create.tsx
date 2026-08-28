@@ -4,7 +4,7 @@ import EstabelecimentoForm from '@/Components/EstabelecimentoForm';
 
 export default function EstabelecimentoCreate(_: PageProps) {
     return (
-        <div className="flex min-h-screen flex-col items-center justify-center px-4" style={{ background: 'var(--bg-app)' }}>
+        <div className="flex min-h-screen w-full max-w-full flex-col items-center justify-center overflow-x-hidden px-4 py-6" style={{ background: 'var(--bg-app)' }}>
             <Head title="Novo estabelecimento" />
 
             <div className="w-full max-w-md">

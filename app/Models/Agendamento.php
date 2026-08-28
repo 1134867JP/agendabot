@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Agendamento extends Model
 {
@@ -51,5 +52,10 @@ class Agendamento extends Model
     public function servico(): BelongsTo
     {
         return $this->belongsTo(Servico::class);
+    }
+
+    public function outboundMessages(): HasMany
+    {
+        return $this->hasMany(OutboundMessage::class);
     }
 }

@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Mensagem extends Model
 {
@@ -18,5 +19,10 @@ class Mensagem extends Model
     public function conversa(): BelongsTo
     {
         return $this->belongsTo(Conversa::class);
+    }
+
+    public function outboundMessage(): HasOne
+    {
+        return $this->hasOne(OutboundMessage::class);
     }
 }

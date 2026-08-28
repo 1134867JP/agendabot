@@ -11,8 +11,8 @@ use App\Models\OperationalEvent;
 use App\Models\Tenant;
 use App\Services\AgendamentoService;
 use App\Services\AgendouService;
-use App\Services\EvolutionApiService;
 use App\Services\IntencaoService;
+use App\Services\OutboundMessageService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Builder;
@@ -50,8 +50,8 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
     public function handle(
         AgendouService $agendou,
         AgendamentoService $agendamentoService,
-        EvolutionApiService $evolution,
         IntencaoService $intencao,
+        OutboundMessageService $outboundMessages,
     ): void {
         $startedAt = hrtime(true);
 
@@ -114,18 +114,28 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
 
             $alertaKey = "alerta_limite_80_{$this->tenant->id}_".now()->format('Ym');
             if ($agendamentosMes >= (int) ($limiteBot * 0.8) && ! cache()->has($alertaKey)) {
-                cache()->put($alertaKey, true, now()->endOfMonth());
-                $evolution->enviarMensagem(
-                    $this->tenant->evolution_instance,
-                    $this->tenant->telefone_whatsapp,
-                    "⚠️ *Agendou — Aviso de limite*\n\nVocê atingiu 80% do limite de agendamentos via bot do seu plano ({$agendamentosMes}/{$limiteBot} este mês).\n\nFaça upgrade para continuar recebendo agendamentos automaticamente: ".url('/renovar'),
-                );
+                if ($this->tenant->telefone_whatsapp) {
+                    $outboundMessages->queue(
+                        tenant: $this->tenant,
+                        telefone: $this->tenant->telefone_whatsapp,
+                        conteudo: "⚠️ *Agendou — Aviso de limite*\n\nVocê atingiu 80% do limite de agendamentos via bot do seu plano ({$agendamentosMes}/{$limiteBot} este mês).\n\nFaça upgrade para continuar recebendo agendamentos automaticamente: ".url('/renovar'),
+                        purpose: 'plan_limit_warning',
+                        idempotencyKey: "plan-limit-warning:{$this->tenant->id}:".now()->format('Ym'),
+                    );
+                    cache()->put($alertaKey, true, now()->endOfMonth());
+                }
             }
 
             if ($agendamentosMes >= $limiteBot) {
                 $aviso = "Olá! 😕 Nosso sistema de agendamento automático está temporariamente pausado este mês.\nPor favor, entre em contato diretamente para agendar.";
-                $conversa->registrarMensagem('bot', $aviso);
-                $evolution->enviarMensagem($this->tenant->evolution_instance, $this->telefone, $aviso);
+                $outboundMessages->queueConversationMessage(
+                    $this->tenant,
+                    $conversa,
+                    'bot',
+                    $aviso,
+                    $this->telefone,
+                    'plan_limit_reached',
+                );
 
                 return;
             }
@@ -138,8 +148,14 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             $conversa->update(['status_v2' => 'aguardando_humano']);
             $mensagemTransferencia = $triagem['mensagem_transferencia']
                 ?: 'Já vou te transferir para um atendente, um momento! 🙋';
-            $conversa->registrarMensagem('bot', $mensagemTransferencia);
-            $evolution->enviarMensagem($this->tenant->evolution_instance, $this->telefone, $mensagemTransferencia);
+            $outboundMessages->queueConversationMessage(
+                $this->tenant,
+                $conversa,
+                'bot',
+                $mensagemTransferencia,
+                $this->telefone,
+                'triage_handoff',
+            );
 
             return;
         }
@@ -210,35 +226,24 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             $resposta = $resultado['resposta'];
         }
 
-        // 10. Salvar resposta do bot e enviar ao cliente
-        $conversa->registrarMensagem('bot', $resposta);
-
-        $enviado = false;
-        for ($tentativa = 1; $tentativa <= 3 && ! $enviado; $tentativa++) {
-            $enviado = $evolution->enviarMensagem($this->tenant->evolution_instance, $this->telefone, $resposta);
-            if (! $enviado && $tentativa < 3) {
-                sleep(2 ** ($tentativa - 1));
-            }
-        }
-
-        if (! $enviado) {
-            OperationalEvent::record($this->tenant->id, 'integration_failure', [
-                'provider' => 'evolution',
-                'metadata' => ['operation' => 'send_message'],
-            ]);
-            Log::channel('jobs')->error('EVOLUTION_SEND_FAILED', [
-                'tenant' => $this->tenant->id,
-                'response_length' => mb_strlen($resposta),
-            ]);
-        }
+        // 10. Persistir a resposta e a intenção de envio na mesma transação.
+        // O worker de saída confirma a entrega e aplica as tentativas com backoff.
+        $mensagemResposta = $outboundMessages->queueConversationMessage(
+            $this->tenant,
+            $conversa,
+            'bot',
+            $resposta,
+            $this->telefone,
+            'bot_response',
+        );
 
         OperationalEvent::record($this->tenant->id, 'bot_response', [
             'provider' => 'evolution',
             'duration_ms' => (int) ((hrtime(true) - $startedAt) / 1_000_000),
-            'metadata' => ['sent' => $enviado],
+            'metadata' => ['queued' => true, 'mensagem_id' => $mensagemResposta->id],
         ]);
 
-        Log::channel('jobs')->info('BOT_RESPONSE_SENT', ['tenant_id' => $this->tenant->id, 'response_length' => mb_strlen($resposta)]);
+        Log::channel('jobs')->info('BOT_RESPONSE_QUEUED', ['tenant_id' => $this->tenant->id, 'response_length' => mb_strlen($resposta)]);
     }
 
     /**

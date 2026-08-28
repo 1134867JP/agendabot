@@ -60,6 +60,15 @@
         -moz-osx-font-smoothing: grayscale;
     }
 
+    html,
+    body,
+    #app {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        overflow-x: clip;
+    }
+
     /* Visible keyboard focus ring for all interactive elements */
     :focus-visible {
         outline: 2px solid var(--accent);
@@ -75,6 +84,12 @@
         background-color: var(--bg-app);
         color: var(--text-1);
         overflow-x: hidden;
+    }
+
+    img,
+    video,
+    canvas {
+        max-width: 100%;
     }
 
     /* Scroll consistente com o tema no app inteiro (Firefox + Chromium/Safari). */
@@ -116,7 +131,7 @@
         background: var(--bg-surface);
         border: 1px solid var(--border);
         box-shadow: 0 1px 3px rgba(10, 22, 17, 0.18);
-        @apply rounded-xl;
+        @apply min-w-0 rounded-xl;
     }
 
     /* ── Botões ──────────────────────────────────────────────────────────── */

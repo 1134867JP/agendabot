@@ -112,4 +112,37 @@ class SubscriptionPaymentTest extends TestCase
         $this->assertSame('starter', $tenant->plano);
         $this->assertTrue($tenant->subscription_ends_at->greaterThan(now()->addMonths(11)));
     }
+
+    public function test_repetir_checkout_pix_reutiliza_link_sem_criar_outra_cobranca(): void
+    {
+        [$tenant, $user] = $this->tenantUser();
+        Http::fake([
+            '*/customers' => Http::response(['id' => 'cus_idempotente'], 200),
+            '*/payments' => Http::response([
+                'id' => 'pay_idempotente',
+                'invoiceUrl' => 'https://asaas.test/pix/idempotente',
+            ], 200),
+        ]);
+
+        $payload = [
+            'plano' => 'pro',
+            'ciclo' => 'mensal',
+            'metodo' => 'PIX',
+        ];
+
+        for ($attempt = 0; $attempt < 2; $attempt++) {
+            $this->actingAs($user)
+                ->withSession(['tenant_id' => $tenant->id])
+                ->withHeaders([
+                    'X-Inertia' => 'true',
+                    'X-Requested-With' => 'XMLHttpRequest',
+                ])
+                ->post(route('tenant.renovar.store'), $payload)
+                ->assertStatus(409)
+                ->assertHeader('X-Inertia-Location', 'https://asaas.test/pix/idempotente');
+        }
+
+        $paymentRequests = Http::recorded(fn (Request $request) => str_ends_with($request->url(), '/payments'));
+        $this->assertCount(1, $paymentRequests);
+    }
 }

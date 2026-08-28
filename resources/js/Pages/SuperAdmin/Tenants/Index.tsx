@@ -150,7 +150,7 @@ export default function TenantsIndex({ tenants }: Props) {
                     </table>
                 </div>
                 {tenants.last_page > 1 && (
-                    <div className="flex gap-1 px-4 py-3" style={{ borderTop: '1px solid var(--border)' }}>
+                    <div className="flex max-w-full gap-1 overflow-x-auto px-4 py-3" style={{ borderTop: '1px solid var(--border)' }}>
                         {tenants.links.map((link, i) => (
                             <button
                                 key={i}

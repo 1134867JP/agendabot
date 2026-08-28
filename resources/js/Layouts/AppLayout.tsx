@@ -76,7 +76,7 @@ export default function AppLayout({ children, title, subtitle, headerActions, fu
 
     return (
         <div
-            className={fullHeight ? 'flex overflow-hidden' : 'min-h-[100dvh] lg:flex lg:h-[100dvh] lg:overflow-hidden'}
+            className={fullHeight ? 'flex w-full max-w-full overflow-hidden' : 'min-h-[100dvh] w-full max-w-full lg:flex lg:h-[100dvh] lg:overflow-hidden'}
             style={fullHeight ? {
                 position: 'fixed',
                 top: 0,
@@ -141,8 +141,8 @@ export default function AppLayout({ children, title, subtitle, headerActions, fu
                 <main
                     id="main-content"
                     className={fullHeight
-                        ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
-                        : `p-4 sm:p-6 lg:min-h-0 lg:flex-1 lg:overflow-y-auto ${currentTenant ? 'app-content-with-bottom-nav' : ''}`}
+                        ? 'flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden'
+                        : `min-w-0 max-w-full p-4 sm:p-6 lg:min-h-0 lg:flex-1 lg:overflow-y-auto ${currentTenant ? 'app-content-with-bottom-nav' : ''}`}
                 >
                     {!fullHeight && title && (
                         <PageHeader title={title} subtitle={subtitle} actions={headerActions} />

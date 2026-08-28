@@ -26,7 +26,7 @@ export default function EstabelecimentoForm({ submitLabel = 'Criar estabelecimen
     return (
         <form
             onSubmit={submit}
-            className="space-y-5 rounded-2xl p-7"
+            className="space-y-5 rounded-2xl p-4 sm:p-7"
             style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
         >
             <div>

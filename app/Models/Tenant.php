@@ -65,6 +65,11 @@ class Tenant extends Model
         return $this->hasMany(Conversa::class);
     }
 
+    public function outboundMessages(): HasMany
+    {
+        return $this->hasMany(OutboundMessage::class);
+    }
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'tenant_users')

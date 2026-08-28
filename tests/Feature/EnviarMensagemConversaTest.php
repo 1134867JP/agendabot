@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Http\Controllers\Tenant\ConversaController;
 use App\Models\Cliente;
 use App\Models\Conversa;
+use App\Models\OutboundMessage;
 use App\Models\Tenant;
 use App\Services\EvolutionApiService;
+use App\Services\OutboundMessageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Tests\TestCase;
@@ -50,7 +52,7 @@ class EnviarMensagemConversaTest extends TestCase
             'conteudo' => 'Quero confirmar o horário',
         ]);
 
-        (new ConversaController)->enviarMensagem($request, $conversa, $evolution);
+        (new ConversaController)->enviarMensagem($request, $conversa, app(OutboundMessageService::class));
 
         $this->assertSame('em_atendimento_humano', $conversa->fresh()->status_v2);
         $this->assertDatabaseHas('mensagens', [
@@ -59,5 +61,11 @@ class EnviarMensagemConversaTest extends TestCase
             'conteudo' => 'Quero confirmar o horário',
         ]);
         $this->assertSame(0, $conversa->mensagens()->where('remetente', 'bot')->count());
+        $this->assertDatabaseHas('outbound_messages', [
+            'tenant_id' => $tenant->id,
+            'conversa_id' => $conversa->id,
+            'purpose' => 'human_reply',
+            'status' => OutboundMessage::STATUS_SENT,
+        ]);
     }
 }

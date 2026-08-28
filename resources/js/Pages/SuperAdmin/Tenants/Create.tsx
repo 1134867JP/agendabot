@@ -22,7 +22,7 @@ export default function TenantCreate(_: PageProps) {
             <Head title="Novo Tenant" />
 
             <div className="mx-auto max-w-lg">
-                <div className="card p-7">
+                <div className="card p-4 sm:p-7">
                     <form onSubmit={submit} className="space-y-5">
                         {/* Nome */}
                         <div>
@@ -47,14 +47,14 @@ export default function TenantCreate(_: PageProps) {
                                         key={t.value}
                                         type="button"
                                         onClick={() => setData('tipo_servico', t.value)}
-                                        className="flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 text-sm transition-all"
+                                        className="min-w-0 items-center gap-1.5 rounded-xl border-2 px-2 py-3 text-sm transition-all sm:flex sm:gap-2.5 sm:px-4"
                                         style={data.tipo_servico === t.value
                                             ? { borderColor: 'var(--accent)', background: 'var(--accent-light)', color: 'white' }
                                             : { borderColor: 'var(--border-strong)', background: 'var(--bg-surface-2)', color: 'var(--text-2)' }
                                         }
                                     >
                                         <span>{t.emoji}</span>
-                                        <span className="font-medium">{t.label}</span>
+                                        <span className="break-words font-medium">{t.label}</span>
                                     </button>
                                 ))}
                             </div>
@@ -109,11 +109,11 @@ export default function TenantCreate(_: PageProps) {
                             {errors.senha_dono && <p className="mt-1 text-xs text-red-400">{errors.senha_dono}</p>}
                         </div>
 
-                        <div className="flex gap-3 pt-2">
+                        <div className="flex flex-col gap-3 pt-2 sm:flex-row">
                             <button type="submit" disabled={processing} className="btn-primary flex-1 justify-center py-2.5">
                                 {processing ? 'Criando…' : 'Criar tenant'}
                             </button>
-                            <a href={route('superadmin.tenants.index')} className="btn-secondary px-6">
+                            <a href={route('superadmin.tenants.index')} className="btn-secondary px-6 sm:w-auto">
                                 Cancelar
                             </a>
                         </div>

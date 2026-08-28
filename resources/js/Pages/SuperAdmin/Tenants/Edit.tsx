@@ -29,7 +29,7 @@ export default function TenantEdit({ tenant }: Props) {
             <Head title="Editar Tenant" />
 
             <div className="mx-auto max-w-lg space-y-4">
-                <div className="card p-7">
+                <div className="card p-4 sm:p-7">
                     <form onSubmit={submit} className="space-y-5">
                         <div>
                             <label className="label mb-1">Nome do estabelecimento</label>
@@ -66,11 +66,11 @@ export default function TenantEdit({ tenant }: Props) {
                             <div className="rounded-xl px-4 py-3" style={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border)' }}>
                                 <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--text-3)' }}>Dono</p>
                                 <p className="text-sm font-medium text-primary">{dono.name}</p>
-                                <p className="text-xs" style={{ color: 'var(--text-3)' }}>{dono.email}</p>
+                                <p className="break-all text-xs" style={{ color: 'var(--text-3)' }}>{dono.email}</p>
                             </div>
                         )}
 
-                        <div className="flex gap-3 pt-2">
+                        <div className="flex flex-col gap-3 pt-2 sm:flex-row">
                             <button type="submit" disabled={processing} className="btn-primary flex-1 justify-center py-2.5">
                                 {processing ? 'Salvando…' : 'Salvar alterações'}
                             </button>

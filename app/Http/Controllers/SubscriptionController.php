@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\AsaasApiException;
 use App\Services\AsaasService;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -34,13 +37,22 @@ class SubscriptionController extends Controller
         $tenant = app('tenant');
 
         try {
-            $url = $asaas->criarCheckoutRenovacao(
-                $request->user(),
-                $tenant,
-                $validated['plano'],
-                $validated['ciclo'],
-                $validated['metodo'],
-            );
+            $checkoutKey = implode(':', [
+                'asaas', 'renewal', $tenant->id,
+                $validated['plano'], $validated['ciclo'], $validated['metodo'],
+            ]);
+
+            $url = Cache::lock("{$checkoutKey}:lock", 45)->block(5, fn (): string => Cache::remember(
+                "{$checkoutKey}:url",
+                now()->addMinutes(15),
+                fn (): string => $asaas->criarCheckoutRenovacao(
+                    $request->user(),
+                    $tenant,
+                    $validated['plano'],
+                    $validated['ciclo'],
+                    $validated['metodo'],
+                ),
+            ));
 
             $tenant->update([
                 'plano' => $validated['plano'],
@@ -51,7 +63,7 @@ class SubscriptionController extends Controller
             // faria o Axios seguir o checkout do Asaas dentro do XHR e falhar
             // por CORS. Inertia::location força uma navegação do navegador.
             return Inertia::location($url);
-        } catch (AsaasApiException $e) {
+        } catch (AsaasApiException|ConnectionException|LockTimeoutException $e) {
             Log::channel('jobs')->error('Falha ao gerar renovação no Asaas', [
                 'tenant_id' => $tenant->id,
                 'erro' => $e->getMessage(),

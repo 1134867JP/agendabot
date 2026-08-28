@@ -147,7 +147,7 @@ export default function Logs() {
             <div className="mb-5 flex flex-wrap items-center gap-3">
                 {/* Seletor de canal */}
                 <div
-                    className="flex items-center gap-1 rounded-lg p-1"
+                    className="max-w-full overflow-x-auto rounded-lg p-1"
                     style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
                 >
                     {canais.map(c => (
@@ -170,7 +170,7 @@ export default function Logs() {
                 <select
                     value={tenantId}
                     onChange={e => { setTenantId(e.target.value); setExpanded(null); }}
-                    className="rounded-lg px-3 py-2 text-xs font-medium outline-none"
+                    className="max-w-full rounded-lg px-3 py-2 text-xs font-medium outline-none"
                     style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
                 >
                     <option value="">Todos os tenants</option>
@@ -181,7 +181,7 @@ export default function Logs() {
 
                 {/* Filtro de nível */}
                 <div
-                    className="flex items-center gap-1 rounded-lg p-1"
+                    className="max-w-full overflow-x-auto rounded-lg p-1"
                     style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
                 >
                     {niveis.map(n => (
@@ -236,7 +236,7 @@ export default function Logs() {
                 </button>
 
                 {/* Busca por texto */}
-                <div className="relative flex-1 min-w-[200px] max-w-sm">
+                <div className="relative w-full min-w-0 sm:max-w-sm sm:flex-1">
                     <svg
                         width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
@@ -270,7 +270,7 @@ export default function Logs() {
 
                 {/* Info do arquivo */}
                 {arquivo && (
-                    <span className="ml-auto shrink-0 text-[11px]" style={{ color: 'var(--text-3)' }}>
+                    <span className="ml-auto max-w-full truncate text-[11px]" style={{ color: 'var(--text-3)' }}>
                         {arquivo} · {(tamanho / 1024).toFixed(0)} KB
                     </span>
                 )}

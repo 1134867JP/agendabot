@@ -18,12 +18,13 @@ class EvolutionApiService
         $this->globalApiKey = (string) config('services.evolution.key');
     }
 
-    private function http(int $timeout = 15): PendingRequest
+    private function http(int $timeout = 15, bool $retry = true): PendingRequest
     {
-        return Http::withHeaders(['apikey' => $this->globalApiKey])
+        $request = Http::withHeaders(['apikey' => $this->globalApiKey])
             ->timeout($timeout)
-            ->connectTimeout(5)
-            ->retry(3, 500, throw: false);
+            ->connectTimeout(5);
+
+        return $retry ? $request->retry(3, 500, throw: false) : $request;
     }
 
     public function configurado(): bool
@@ -33,7 +34,9 @@ class EvolutionApiService
 
     public function enviarMensagem(string $instance, string $telefone, string $mensagem): bool
     {
-        $response = $this->http(10)
+        // Não repetir POST automaticamente: em um timeout ambíguo a Evolution pode
+        // ter aceitado a mensagem. A caixa de saída controla as novas tentativas.
+        $response = $this->http(10, retry: false)
             ->post("{$this->baseUrl}/message/sendText/{$instance}", [
                 'number' => $telefone,
                 'text' => $mensagem,
@@ -68,16 +71,33 @@ class EvolutionApiService
 
     public function statusInstancia(string $instance): string
     {
+        return $this->listarStatusInstancias()[$instance] ?? 'desconhecido';
+        // open = conectado | close = desconectado | connecting = aguardando
+    }
+
+    /**
+     * Consulta todas as instâncias de uma vez para o watchdog não fazer uma
+     * requisição por tenant.
+     *
+     * @return array<string, string>
+     */
+    public function listarStatusInstancias(): array
+    {
         $response = $this->http()
             ->get("{$this->baseUrl}/instance/fetchInstances");
 
-        $instancias = collect($response->json() ?? []);
+        if (! $response->successful()) {
+            throw EvolutionApiException::requisicaoFalhou('consultar instâncias', $response->status());
+        }
 
-        // Evolution API v2: flat array with 'name' and 'connectionStatus'
-        $found = $instancias->firstWhere('name', $instance);
+        $instancias = $this->extrairRegistros($response->json(), ['instances']);
 
-        return $found['connectionStatus'] ?? 'desconhecido';
-        // open = conectado | close = desconectado | connecting = aguardando
+        return collect($instancias)
+            ->filter(fn ($item) => is_array($item)
+                && is_string($item['name'] ?? null)
+                && is_string($item['connectionStatus'] ?? null))
+            ->mapWithKeys(fn (array $item) => [$item['name'] => $item['connectionStatus']])
+            ->all();
     }
 
     public function fetchChats(string $instance): array

@@ -13,8 +13,10 @@ use App\Services\AgendamentoService;
 use App\Services\AsaasService;
 use App\Support\Csv;
 use Carbon\Carbon;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -225,15 +227,30 @@ class AgendamentoController extends Controller
     {
         abort_unless($agendamento->tenant_id === app('tenant')->id, 403);
         $data = $request->validate(['valor' => ['required', 'numeric', 'min:1', 'max:9999']]);
-        $payment = $asaas->criarSinalAgendamento($agendamento, (float) $data['valor']);
-        $agendamento->update([
-            'deposit_status' => 'pending',
-            'deposit_amount' => $data['valor'],
-            'deposit_payment_id' => $payment['id'],
-            'deposit_payment_url' => $payment['url'],
-        ]);
 
-        return back()->with('success', 'Cobrança de sinal gerada.');
+        try {
+            return Cache::lock("asaas:deposit:appointment:{$agendamento->id}", 45)->block(5, function () use ($agendamento, $asaas, $data): RedirectResponse {
+                $agendamento->refresh();
+
+                if (in_array($agendamento->deposit_status, ['pending', 'paid'], true)
+                    && $agendamento->deposit_payment_id
+                    && $agendamento->deposit_payment_url) {
+                    return back()->with('info', 'Este agendamento já possui uma cobrança de sinal.');
+                }
+
+                $payment = $asaas->criarSinalAgendamento($agendamento, (float) $data['valor']);
+                $agendamento->update([
+                    'deposit_status' => 'pending',
+                    'deposit_amount' => $data['valor'],
+                    'deposit_payment_id' => $payment['id'],
+                    'deposit_payment_url' => $payment['url'],
+                ]);
+
+                return back()->with('success', 'Cobrança de sinal gerada.');
+            });
+        } catch (LockTimeoutException) {
+            return back()->with('erro', 'A cobrança já está sendo gerada. Aguarde alguns instantes.');
+        }
     }
 
     public function destroy(Agendamento $agendamento): RedirectResponse

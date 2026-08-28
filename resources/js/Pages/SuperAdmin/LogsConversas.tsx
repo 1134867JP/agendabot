@@ -44,7 +44,7 @@ export default function LogsConversas() {
             <Head title="Conversas do bot" />
 
             {/* Tabs */}
-            <div className="mb-5 flex gap-1 border-b" style={{ borderColor: 'var(--border)' }}>
+            <div className="mb-5 flex max-w-full gap-1 overflow-x-auto border-b" style={{ borderColor: 'var(--border)' }}>
                 <a
                     href={route('superadmin.logs')}
                     className="px-4 py-2 text-sm font-medium border-b-2 border-transparent"
@@ -65,7 +65,7 @@ export default function LogsConversas() {
                 <select
                     value={tenantId}
                     onChange={e => setTenantId(e.target.value)}
-                    className="rounded-lg border px-3 py-1.5 text-sm"
+                    className="w-full max-w-full rounded-lg border px-3 py-1.5 text-sm sm:w-auto"
                     style={{ background: 'var(--bg-surface-2)', borderColor: 'var(--border)', color: 'var(--text-1)' }}
                 >
                     <option value="">Todos os tenants</option>
@@ -77,7 +77,7 @@ export default function LogsConversas() {
                     value={telefone}
                     onChange={e => setTelefone(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && buscar()}
-                    className="rounded-lg border px-3 py-1.5 text-sm"
+                    className="w-full rounded-lg border px-3 py-1.5 text-sm sm:w-auto"
                     style={{ background: 'var(--bg-surface-2)', borderColor: 'var(--border)', color: 'var(--text-1)' }}
                 />
                 <button
@@ -86,7 +86,7 @@ export default function LogsConversas() {
                 >
                     Filtrar
                 </button>
-                <span className="ml-auto text-xs self-center" style={{ color: 'var(--text-3)' }}>
+                <span className="w-full text-xs sm:ml-auto sm:w-auto sm:self-center" style={{ color: 'var(--text-3)' }}>
                     {mensagens.length} mensagens (mais recentes primeiro)
                 </span>
             </div>
@@ -100,8 +100,8 @@ export default function LogsConversas() {
                     <div className="px-4 py-8 text-center text-sm" style={{ color: 'var(--text-3)' }}>Nenhuma mensagem encontrada.</div>
                 )}
                 {mensagens.map(m => (
-                    <div key={m.id} className="flex gap-3 px-4 py-3">
-                        <div className="shrink-0 w-16 text-[10px] font-mono text-right pt-0.5" style={{ color: 'var(--text-3)' }}>
+                    <div key={m.id} className="flex min-w-0 flex-col gap-2 px-4 py-3 sm:flex-row sm:gap-3">
+                        <div className="text-[10px] font-mono sm:w-16 sm:shrink-0 sm:pt-0.5 sm:text-right" style={{ color: 'var(--text-3)' }}>
                             {m.enviada_em}
                         </div>
                         <div className="shrink-0">
@@ -115,11 +115,11 @@ export default function LogsConversas() {
                                 {m.remetente === 'cliente' ? 'CLIENTE' : 'BOT'}
                             </span>
                         </div>
-                        <div className="shrink-0 text-xs" style={{ color: 'var(--text-3)', minWidth: '110px' }}>
-                            <div>{m.tenant ?? '—'}</div>
-                            <div className="font-mono">{m.telefone}</div>
+                        <div className="min-w-0 text-xs sm:w-[110px] sm:shrink-0" style={{ color: 'var(--text-3)' }}>
+                            <div className="break-words">{m.tenant ?? '—'}</div>
+                            <div className="break-all font-mono">{m.telefone}</div>
                         </div>
-                        <div className="flex-1 text-sm whitespace-pre-wrap break-words" style={{ color: 'var(--text-1)' }}>
+                        <div className="min-w-0 flex-1 break-words whitespace-pre-wrap text-sm" style={{ color: 'var(--text-1)' }}>
                             {m.conteudo}
                         </div>
                     </div>
