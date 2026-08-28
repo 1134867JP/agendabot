@@ -143,9 +143,36 @@ jobs:
             exit 1
           fi
 
-          echo "Executando shard $((shard + 1))/$total_shards com ${#files[@]} arquivos:"
-          printf ' - %s\n' "${files[@]}"
-          vendor/bin/phpunit "${files[@]}"
+          echo "Executando shard $((shard + 1))/$total_shards com ${#files[@]} arquivos"
+
+          # Um único processo PHPUnit com muitos Feature tests ficava mais de ~1 min
+          # sem emitir saída e o runner hospedado era encerrado com SIGTERM/143.
+          # Rodar arquivo a arquivo mantém progresso visível, libera memória entre
+          # classes e aponta exatamente qual arquivo travou caso isso volte a ocorrer.
+          for file in "${files[@]}"; do
+            echo "::group::PHPUnit $file"
+            echo "Iniciando $file"
+
+            set +e
+            timeout --signal=TERM --kill-after=5s 45s \
+              stdbuf -oL -eL vendor/bin/phpunit --testdox "$file"
+            status=$?
+            set -e
+
+            echo "::endgroup::"
+
+            if [ "$status" -eq 124 ] || [ "$status" -eq 137 ]; then
+              echo "::error file=$file::Teste excedeu 45s e foi interrompido para não travar o runner."
+              exit 1
+            fi
+
+            if [ "$status" -ne 0 ]; then
+              echo "::error file=$file::PHPUnit falhou com código $status."
+              exit "$status"
+            fi
+
+            echo "Concluído $file"
+          done
 
   deploy:
     name: Deploy para VPS
