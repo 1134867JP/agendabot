@@ -60,8 +60,10 @@ class Tenant extends Model
 
     public function timezone(): string
     {
-        return in_array($this->timezone, self::TIMEZONES, true)
-            ? $this->timezone
+        $timezone = $this->getAttribute('timezone');
+
+        return in_array($timezone, self::TIMEZONES, true)
+            ? $timezone
             : 'America/Sao_Paulo';
     }
 

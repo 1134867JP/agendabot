@@ -87,6 +87,7 @@ class SecurityHardeningTest extends TestCase
         $user = User::create([
             'name' => 'Usuário comum',
             'email' => 'comum-'.uniqid().'@example.com',
+            'email_verified_at' => now(),
             'password' => bcrypt('password'),
         ]);
         $tenant = $this->tenant();

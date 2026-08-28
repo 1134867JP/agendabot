@@ -191,6 +191,7 @@ class OnboardingTest extends TestCase
     {
         Queue::fake();
         $this->post('/cadastro', $this->dadosStep1());
+        $this->verificarEmail();
 
         $this->post(route('onboarding.pular'))
             ->assertRedirect(route('onboarding.step3'));
