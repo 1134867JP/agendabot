@@ -33,24 +33,19 @@ class AgendamentoService
             $tz = $tenant->timezone();
             $buffer = (int) $regras['buffer_entre_agendamentos_minutos'];
 
-            $this->adquirirLockAgenda(
-                $tenant,
-                ! empty($dados['recurso_id']) ? (int) $dados['recurso_id'] : null,
-                ! empty($dados['profissional_id']) ? (int) $dados['profissional_id'] : null,
-            );
-
             $inicio = Carbon::parse($dados['inicio'], $tz);
             $fim = Carbon::parse($dados['fim'], $tz);
 
             $this->validarAntecedencia($inicio, $regras, $tz);
 
             if (! empty($dados['recurso_id'])) {
-                Recurso::where('id', $dados['recurso_id'])->where('tenant_id', $tenant->id)->firstOrFail();
+                Recurso::where('id', $dados['recurso_id'])->where('tenant_id', $tenant->id)->lockForUpdate()->firstOrFail();
                 $this->validarConflitoRecurso((int) $dados['recurso_id'], $inicio, $fim, $buffer);
             } elseif (! empty($dados['profissional_id'])) {
                 $profissional = Profissional::where('id', $dados['profissional_id'])
                     ->where('tenant_id', $tenant->id)
                     ->where('ativo', true)
+                    ->lockForUpdate()
                     ->firstOrFail();
 
                 if (! empty($dados['servico_id'])) {
@@ -88,12 +83,6 @@ class AgendamentoService
             $recursoId = $dados['recurso_id'] ?? $agendamento->recurso_id;
             $profissionalId = $recursoId ? null : $agendamento->profissional_id;
 
-            $this->adquirirLockAgenda(
-                $tenant,
-                $recursoId ? (int) $recursoId : null,
-                $profissionalId ? (int) $profissionalId : null,
-            );
-
             $inicio = Carbon::parse($dados['inicio'], $tz);
             $fim = Carbon::parse($dados['fim'], $tz);
 
@@ -111,14 +100,14 @@ class AgendamentoService
             ];
 
             if ($recursoId) {
-                $recurso = Recurso::where('id', $recursoId)->where('tenant_id', $tenant->id)->firstOrFail();
+                $recurso = Recurso::where('id', $recursoId)->where('tenant_id', $tenant->id)->lockForUpdate()->firstOrFail();
                 $this->validarConflitoRecurso($recursoId, $inicio, $fim, $buffer, ignorarAgendamentoId: $agendamento->id);
                 $updateData['recurso_id'] = $recurso->id;
                 $updateData['valor_total'] = $recurso->valor_hora
                     ? $recurso->valor_hora * $inicio->diffInMinutes($fim) / 60
                     : null;
             } elseif ($profissionalId) {
-                $profissional = Profissional::where('id', $profissionalId)->where('tenant_id', $tenant->id)->firstOrFail();
+                $profissional = Profissional::where('id', $profissionalId)->where('tenant_id', $tenant->id)->lockForUpdate()->firstOrFail();
                 $this->validarExpediente($profissional, $inicio, $fim, $tz);
                 $this->validarConflitoProfissional($profissionalId, $inicio, $fim, $buffer, ignorarAgendamentoId: $agendamento->id);
             }
@@ -132,28 +121,6 @@ class AgendamentoService
     public function cancelar(Agendamento $agendamento): void
     {
         $agendamento->update(['status' => 'cancelado']);
-    }
-
-    /**
-     * Serializa alterações da mesma agenda sem permitir espera indefinida.
-     * A chave é escopada por tenant e diferencia recurso (positivo) de profissional (negativo),
-     * evitando contenção entre tenants ou entidades com o mesmo id numérico.
-     */
-    private function adquirirLockAgenda(Tenant $tenant, ?int $recursoId = null, ?int $profissionalId = null): void
-    {
-        if (! $recursoId && ! $profissionalId) {
-            return;
-        }
-
-        $escopoId = $recursoId ?: -$profissionalId;
-        $resultado = DB::selectOne(
-            'SELECT CASE WHEN pg_try_advisory_xact_lock(CAST(? AS integer), CAST(? AS integer)) THEN 1 ELSE 0 END AS acquired',
-            [(int) $tenant->id, (int) $escopoId],
-        );
-
-        if ((int) ($resultado->acquired ?? 0) !== 1) {
-            throw new HorarioIndisponivelException('A agenda está sendo atualizada. Tente novamente em instantes.');
-        }
     }
 
     private function validarAntecedencia(Carbon $inicio, array $regras, string $tz): void
@@ -271,8 +238,6 @@ class AgendamentoService
                     ->firstOrFail();
             }
 
-            $this->adquirirLockAgenda($agendamento->tenant, profissionalId: $profissionalId);
-
             $tz = $agendamento->tenant->timezone();
             $horario = substr($dados['hora'], 0, 5);
             $inicio = Carbon::createFromFormat('Y-m-d H:i', "{$dados['data']} {$horario}", $tz);
@@ -365,8 +330,6 @@ class AgendamentoService
                 ->where('tenant_id', $tenant->id)
                 ->where('ativo', true)
                 ->firstOrFail();
-
-            $this->adquirirLockAgenda($tenant, profissionalId: $profissionalId);
 
             // Tenant isolation: garantir que o serviço pertence ao tenant
             $servico = null;
