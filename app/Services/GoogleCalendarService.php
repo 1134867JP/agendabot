@@ -13,7 +13,7 @@ class GoogleCalendarService
         $this->refreshIfNeeded($connection);
         $start = $agendamento->data_hora ?? $agendamento->inicio;
         $end = $agendamento->fim ?? $start?->copy()->addMinutes($agendamento->duracao_minutos ?? 30);
-        $timezone = $agendamento->tenant?->timezone() ?? config('app.timezone');
+        $timezone = $agendamento->tenant?->resolvedTimezone() ?? config('app.timezone');
         $payload = [
             'summary' => ($agendamento->servico?->nome ?? $agendamento->recurso?->nome ?? 'Agendamento').' — '.$agendamento->cliente_nome,
             'description' => "Agendou #{$agendamento->id}",
