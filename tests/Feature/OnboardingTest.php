@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Jobs\CreateEvolutionInstanceJob;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -100,6 +101,61 @@ class OnboardingTest extends TestCase
         ]);
         $this->assertDatabaseCount('horarios_funcionamento', 7);
         $this->assertSame(15, $tenant->regrasAgendamentoConfig()['buffer_entre_agendamentos_minutos']);
+    }
+
+    public function test_configuracao_expressa_usa_estabelecimento_selecionado_na_sessao(): void
+    {
+        $user = User::factory()->create(['name' => 'Carlos']);
+        $odonto = Tenant::create([
+            'nome' => 'Odonto Teste',
+            'slug' => 'odonto-teste',
+            'tipo_servico' => 'clinica',
+            'ativo' => true,
+        ]);
+        $society = Tenant::create([
+            'nome' => 'Society Teste',
+            'slug' => 'society-onboarding-teste',
+            'tipo_servico' => 'quadra',
+            'ativo' => true,
+        ]);
+        $odonto->users()->attach($user->id, ['papel' => 'admin']);
+        $society->users()->attach($user->id, ['papel' => 'admin']);
+
+        $this->actingAs($user)
+            ->withSession(['tenant_id' => $society->id])
+            ->get(route('onboarding.step3'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('tenant.nome', 'Society Teste')
+                ->where('tenant.tipo_servico', 'quadra')
+                ->where('defaults.nome_item', 'Quadra principal'));
+
+        $this->actingAs($user)
+            ->withSession(['tenant_id' => $society->id])
+            ->post(route('onboarding.step3.store'), [
+                'nome_item' => 'Quadra Society',
+                'nome_servico' => 'Reserva',
+                'duracao_minutos' => 60,
+                'valor' => 120,
+                'dias_atendimento' => 'todos',
+                'hora_abertura' => '08:00',
+                'hora_fechamento' => '23:00',
+                'perfil_regras' => 'equilibrado',
+            ])
+            ->assertRedirect(route('onboarding.sucesso'));
+
+        $this->assertDatabaseHas('recursos', [
+            'tenant_id' => $society->id,
+            'nome' => 'Quadra Society',
+        ]);
+        $this->assertDatabaseMissing('recursos', [
+            'tenant_id' => $odonto->id,
+            'nome' => 'Quadra Society',
+        ]);
+        $this->assertDatabaseMissing('profissionais', [
+            'tenant_id' => $society->id,
+            'nome' => 'Carlos',
+        ]);
     }
 
     public function test_step1_store_impede_email_duplicado(): void

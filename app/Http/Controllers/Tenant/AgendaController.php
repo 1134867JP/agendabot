@@ -17,38 +17,48 @@ class AgendaController extends Controller
     public function index(): Response
     {
         $tenant = app('tenant');
+        $agendaUsaRecursos = $tenant->agendaUsaRecursos();
 
         return Inertia::render('Tenant/Agenda', [
             'tenant' => $tenant,
             'recursos' => $tenant->recursos()->where('ativo', true)->get(),
-            'profissionais' => $tenant->profissionais()->where('ativo', true)->get(['id', 'nome']),
-            'servicos' => $tenant->servicos()
-                ->where('ativo', true)
-                ->with('profissionais:id')
-                ->orderBy('nome')
-                ->get(['id', 'tenant_id', 'nome', 'duracao_minutos', 'valor_min', 'valor_max'])
-                ->map(fn ($servico) => [
-                    'id' => $servico->id,
-                    'nome' => $servico->nome,
-                    'duracao_minutos' => (int) ($servico->duracao_minutos ?? 30),
-                    'valor_min' => $servico->valor_min,
-                    'valor_max' => $servico->valor_max,
-                    'profissional_ids' => $servico->profissionais->pluck('id')->values(),
-                ]),
+            'profissionais' => $agendaUsaRecursos
+                ? collect()
+                : $tenant->profissionais()->where('ativo', true)->get(['id', 'nome']),
+            'servicos' => $agendaUsaRecursos
+                ? collect()
+                : $tenant->servicos()
+                    ->where('ativo', true)
+                    ->with('profissionais:id')
+                    ->orderBy('nome')
+                    ->get(['id', 'tenant_id', 'nome', 'duracao_minutos', 'valor_min', 'valor_max'])
+                    ->map(fn ($servico) => [
+                        'id' => $servico->id,
+                        'nome' => $servico->nome,
+                        'duracao_minutos' => (int) ($servico->duracao_minutos ?? 30),
+                        'valor_min' => $servico->valor_min,
+                        'valor_max' => $servico->valor_max,
+                        'profissional_ids' => $servico->profissionais->pluck('id')->values(),
+                    ]),
         ]);
     }
 
     public function disponibilidade(Request $request): JsonResponse
     {
         $tenant = app('tenant');
+        $agendaUsaRecursos = $tenant->agendaUsaRecursos();
 
         $tenantId = $tenant->id;
         $request->validate([
-            'recurso_id' => ['nullable', Rule::exists('recursos', 'id')->where('tenant_id', $tenantId)],
-            'profissional_id' => ['nullable', Rule::exists('profissionais', 'id')->where('tenant_id', $tenantId)],
-            'todos_profissionais' => ['nullable', 'boolean'],
+            'recurso_id' => [Rule::requiredIf($agendaUsaRecursos), 'nullable', Rule::exists('recursos', 'id')->where('tenant_id', $tenantId)],
+            'profissional_id' => [Rule::prohibitedIf($agendaUsaRecursos), 'nullable', Rule::exists('profissionais', 'id')->where('tenant_id', $tenantId)],
+            'todos_profissionais' => [Rule::prohibitedIf($agendaUsaRecursos), 'nullable', 'boolean'],
             'data_inicio' => ['required', 'date'],
             'data_fim' => ['required', 'date'],
+        ], [
+            'recurso_id.required' => 'Selecione uma quadra para consultar a agenda.',
+            'profissional_id.prohibited' => 'A agenda deste estabelecimento é organizada por quadras.',
+            'todos_profissionais.prohibited' => 'A agenda deste estabelecimento é organizada por quadras.',
         ]);
 
         $query = Agendamento::where('tenant_id', $tenant->id)

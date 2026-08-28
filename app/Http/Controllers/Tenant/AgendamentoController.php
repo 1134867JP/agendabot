@@ -29,6 +29,7 @@ class AgendamentoController extends Controller
     public function index(Request $request): Response
     {
         $tenant = app('tenant');
+        $agendaUsaRecursos = $tenant->agendaUsaRecursos();
         $telefoneCliente = preg_replace('/\D+/', '', (string) $request->query('cliente'));
         $clienteInicial = $telefoneCliente !== ''
             ? Cliente::query()
@@ -61,21 +62,25 @@ class AgendamentoController extends Controller
             'tenant' => $tenant,
             'agendamentos' => $query->paginate(20)->withQueryString(),
             'recursos' => $tenant->recursos()->where('ativo', true)->get(),
-            'profissionais' => $tenant->profissionais()
-                ->where('ativo', true)
-                ->orderBy('nome')
-                ->get(['id', 'nome']),
-            'servicos' => $tenant->servicos()
-                ->where('ativo', true)
-                ->with('profissionais:id')
-                ->orderBy('nome')
-                ->get(['id', 'tenant_id', 'nome', 'duracao_minutos'])
-                ->map(fn (Servico $servico) => [
-                    'id' => $servico->id,
-                    'nome' => $servico->nome,
-                    'duracao_minutos' => (int) ($servico->duracao_minutos ?? 30),
-                    'profissional_ids' => $servico->profissionais->pluck('id')->values(),
-                ]),
+            'profissionais' => $agendaUsaRecursos
+                ? collect()
+                : $tenant->profissionais()
+                    ->where('ativo', true)
+                    ->orderBy('nome')
+                    ->get(['id', 'nome']),
+            'servicos' => $agendaUsaRecursos
+                ? collect()
+                : $tenant->servicos()
+                    ->where('ativo', true)
+                    ->with('profissionais:id')
+                    ->orderBy('nome')
+                    ->get(['id', 'tenant_id', 'nome', 'duracao_minutos'])
+                    ->map(fn (Servico $servico) => [
+                        'id' => $servico->id,
+                        'nome' => $servico->nome,
+                        'duracao_minutos' => (int) ($servico->duracao_minutos ?? 30),
+                        'profissional_ids' => $servico->profissionais->pluck('id')->values(),
+                    ]),
             'clienteInicial' => $clienteInicial
                 ? ['nome' => $clienteInicial->nome, 'telefone' => $clienteInicial->telefone]
                 : null,
@@ -86,6 +91,7 @@ class AgendamentoController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $tenant = app('tenant');
+        $agendaUsaRecursos = $tenant->agendaUsaRecursos();
 
         $request->merge([
             'cliente_telefone' => preg_replace('/\D+/', '', (string) $request->input('cliente_telefone')),
@@ -93,9 +99,9 @@ class AgendamentoController extends Controller
 
         $tenantId = $tenant->id;
         $validated = $request->validate([
-            'recurso_id' => ['nullable', 'integer', Rule::exists('recursos', 'id')->where('tenant_id', $tenantId)],
-            'profissional_id' => ['nullable', 'integer', Rule::exists('profissionais', 'id')->where('tenant_id', $tenantId)],
-            'servico_id' => ['nullable', 'integer', Rule::exists('servicos', 'id')->where('tenant_id', $tenantId)],
+            'recurso_id' => [Rule::requiredIf($agendaUsaRecursos), 'nullable', 'integer', Rule::exists('recursos', 'id')->where('tenant_id', $tenantId)],
+            'profissional_id' => [Rule::prohibitedIf($agendaUsaRecursos), 'nullable', 'integer', Rule::exists('profissionais', 'id')->where('tenant_id', $tenantId)],
+            'servico_id' => [Rule::prohibitedIf($agendaUsaRecursos), 'nullable', 'integer', Rule::exists('servicos', 'id')->where('tenant_id', $tenantId)],
             'cliente_nome' => ['required', 'string', 'max:255'],
             'cliente_telefone' => ['required', 'string', 'regex:/^(?:55)?[1-9][0-9]{9,10}$/'],
             'inicio' => ['required', 'date'],
@@ -104,9 +110,12 @@ class AgendamentoController extends Controller
             'notificar_cliente' => ['boolean'],
         ], [
             'cliente_telefone.regex' => 'Informe um telefone válido com DDD, por exemplo: 54999999999.',
+            'recurso_id.required' => 'Cadastre e selecione uma quadra antes de criar a reserva.',
+            'profissional_id.prohibited' => 'Reservas de quadras devem ser vinculadas a uma quadra, não a um profissional.',
+            'servico_id.prohibited' => 'Reservas de quadras usam diretamente a duração e o valor configurados na quadra.',
         ]);
 
-        if (empty($validated['recurso_id']) && empty($validated['profissional_id'])) {
+        if (! $agendaUsaRecursos && empty($validated['recurso_id']) && empty($validated['profissional_id'])) {
             return back()->withErrors(['profissional_id' => 'Selecione um profissional ou recurso.']);
         }
 

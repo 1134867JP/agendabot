@@ -79,7 +79,7 @@ class OnboardingController extends Controller
             'plano' => 'required|in:starter,pro,business',
         ]);
 
-        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->first();
+        $tenant = $this->tenantAtualDoUsuario($request);
 
         if (! $tenant) {
             return redirect()->route('dashboard')->with('erro', 'Complete o cadastro do seu estabelecimento antes de escolher um plano.');
@@ -95,9 +95,9 @@ class OnboardingController extends Controller
         return redirect()->route('onboarding.step3');
     }
 
-    public function step3(OnboardingPresetService $presets): Response|RedirectResponse
+    public function step3(Request $request, OnboardingPresetService $presets): Response|RedirectResponse
     {
-        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->first();
+        $tenant = $this->tenantAtualDoUsuario($request);
 
         if (! $tenant) {
             return redirect()->route('dashboard')->with('erro', 'Complete o cadastro do seu estabelecimento antes de continuar.');
@@ -119,7 +119,7 @@ class OnboardingController extends Controller
     {
         $validated = $request->validated();
 
-        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->first();
+        $tenant = $this->tenantAtualDoUsuario($request);
 
         if (! $tenant) {
             return redirect()->route('dashboard')->with('erro', 'Complete o cadastro do seu estabelecimento antes de continuar.');
@@ -130,9 +130,9 @@ class OnboardingController extends Controller
         return redirect()->route('onboarding.sucesso');
     }
 
-    public function sucesso(): Response
+    public function sucesso(Request $request): Response
     {
-        $tenant = Tenant::whereHas('users', fn ($q) => $q->where('user_id', auth()->id()))->first();
+        $tenant = $this->tenantAtualDoUsuario($request);
 
         return Inertia::render('Onboarding/Sucesso', [
             'user' => auth()->user(),
@@ -143,5 +143,19 @@ class OnboardingController extends Controller
     public function pularPagamento(): RedirectResponse
     {
         return redirect()->route('onboarding.step3');
+    }
+
+    private function tenantAtualDoUsuario(Request $request): ?Tenant
+    {
+        $tenantId = (int) $request->session()->get('tenant_id');
+
+        if (! $tenantId || ! $request->user()) {
+            return null;
+        }
+
+        return $request->user()
+            ->tenants()
+            ->where('tenants.id', $tenantId)
+            ->first();
     }
 }

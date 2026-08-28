@@ -7,7 +7,7 @@ interface SharedProps extends PageProps {
 }
 
 const PlusIcon = () => (
-    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <svg aria-hidden="true" focusable="false" width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <path d="M12 5v14M5 12h14" />
     </svg>
 );
@@ -17,15 +17,31 @@ export default function QuickActions() {
     const { currentTenant } = page.props;
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
     const modoAgendamento = (currentTenant?.modo_bot ?? 'agendamento') === 'agendamento';
 
     useEffect(() => {
-        const close = (event: MouseEvent) => {
+        if (!open) return;
+
+        const closeOnOutsideClick = (event: PointerEvent) => {
             if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
         };
-        document.addEventListener('mousedown', close);
-        return () => document.removeEventListener('mousedown', close);
-    }, []);
+
+        const closeOnEscape = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape') return;
+
+            setOpen(false);
+            buttonRef.current?.focus();
+        };
+
+        document.addEventListener('pointerdown', closeOnOutsideClick);
+        document.addEventListener('keydown', closeOnEscape);
+
+        return () => {
+            document.removeEventListener('pointerdown', closeOnOutsideClick);
+            document.removeEventListener('keydown', closeOnEscape);
+        };
+    }, [open]);
 
     if (!currentTenant || page.url.startsWith('/painel/agendamentos')) return null;
 
@@ -59,14 +75,16 @@ export default function QuickActions() {
     ];
 
     return (
-        <div ref={ref} className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-40 lg:bottom-6 lg:right-6">
+        <div ref={ref} className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-40 flex max-w-[calc(100vw-2rem)] flex-col items-end lg:bottom-6 lg:right-6">
             {open && (
-                <div
-                    className="mb-3 w-[min(21rem,calc(100vw-2rem))] overflow-hidden rounded-2xl shadow-2xl"
+                <nav
+                    id="quick-actions-menu"
+                    aria-labelledby="quick-actions-title"
+                    className="mb-3 max-h-[calc(100dvh-11rem)] w-[min(21rem,calc(100vw-2rem))] overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl shadow-2xl"
                     style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}
                 >
                     <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-                        <p className="text-sm font-semibold text-primary">Ação rápida</p>
+                        <p id="quick-actions-title" className="text-sm font-semibold text-primary">Ação rápida</p>
                         <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
                             {modoAgendamento ? 'Agende ou atenda sem procurar no menu.' : 'Atenda clientes sem sair do seu fluxo.'}
                         </p>
@@ -77,10 +95,10 @@ export default function QuickActions() {
                                 key={action.label}
                                 href={action.href}
                                 onClick={() => setOpen(false)}
-                                className="flex min-h-14 items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[var(--bg-surface-2)]"
+                                className="flex min-h-14 items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[var(--bg-surface-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] active:bg-[var(--bg-surface-2)] motion-reduce:transition-none"
                             >
                                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}>
-                                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                                    <svg aria-hidden="true" focusable="false" width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                                         <path d={action.icon} />
                                     </svg>
                                 </span>
@@ -91,19 +109,21 @@ export default function QuickActions() {
                             </Link>
                         ))}
                     </div>
-                </div>
+                </nav>
             )}
 
             <button
+                ref={buttonRef}
                 type="button"
                 onClick={() => setOpen(value => !value)}
+                aria-controls="quick-actions-menu"
                 aria-expanded={open}
                 aria-label={open ? 'Fechar ações rápidas' : 'Abrir ações rápidas'}
-                className="flex h-14 items-center gap-2 rounded-2xl px-4 text-sm font-semibold text-white shadow-lg transition-all hover:brightness-110"
+                className="flex h-14 min-w-14 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none motion-reduce:transition-none"
                 style={{ background: 'var(--jade)', boxShadow: '0 12px 30px rgba(0,168,132,.24)' }}
             >
-                <span className={'transition-transform ' + (open ? 'rotate-45' : '')}><PlusIcon /></span>
-                <span className="hidden sm:inline">Novo</span>
+                <span aria-hidden="true" className={'transition-transform motion-reduce:transition-none ' + (open ? 'rotate-45' : '')}><PlusIcon /></span>
+                <span>{open ? 'Fechar' : 'Novo'}</span>
             </button>
         </div>
     );

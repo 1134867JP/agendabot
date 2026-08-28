@@ -4,7 +4,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import AgendaViewTabs from '@/Components/AgendaViewTabs';
 import Modal from '@/Components/Modal';
 import StatusBadge from '@/Components/UI/StatusBadge';
-import { PageProps, Recurso } from '@/types';
+import { PageProps, Recurso, Tenant } from '@/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -31,6 +31,7 @@ interface EntidadeAgenda {
 }
 
 interface Props extends PageProps {
+    tenant: Tenant;
     recursos: Recurso[];
     profissionais: { id: number; nome: string }[];
     servicos: ServicoAgenda[];
@@ -799,14 +800,15 @@ function DetalheModal({
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function Agenda({ recursos, profissionais, servicos }: Props) {
+export default function Agenda({ tenant, recursos, profissionais, servicos }: Props) {
+    const usaRecursos = tenant.tipo_servico === 'quadra';
     const entidades = useMemo<EntidadeAgenda[]>(() =>
-        recursos.length > 0
+        usaRecursos
             ? recursos.map((r, index) => ({ id: r.id, nome: r.nome, tipo: 'recurso' as const, cor: PROFESSIONAL_COLORS[index % PROFESSIONAL_COLORS.length].accent }))
             : profissionais.map(p => ({ id: p.id, nome: p.nome, tipo: 'profissional' as const, cor: professionalColor(p.id).accent })),
-    [recursos, profissionais]);
+    [profissionais, recursos, usaRecursos]);
 
-    const temVisaoGeral = recursos.length === 0 && profissionais.length > 1;
+    const temVisaoGeral = !usaRecursos && profissionais.length > 1;
 
     const [semana, setSemana]         = useState(() => startOfWeek(new Date()));
     const [diaAtivo, setDiaAtivo]     = useState(() => new Date());
@@ -876,8 +878,8 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
     };
 
     const tipoEntidade = useMemo(
-        () => entidades.find(e => e.id === entidadeId)?.tipo ?? 'profissional',
-        [entidades, entidadeId],
+        () => entidades.find(e => e.id === entidadeId)?.tipo ?? (usaRecursos ? 'recurso' : 'profissional'),
+        [entidades, entidadeId, usaRecursos],
     );
 
     const servicosDisponiveis = useMemo(() => servicos.filter(servico =>
@@ -1108,17 +1110,19 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
                         </button>
                     </div>
 
-                    <div className="flex justify-end px-4 pb-3">
-                        <button
-                            onClick={() => abrirBloqueio(toISO(diaAtivo), '09:00')}
-                            className="btn-secondary min-h-10 text-xs"
-                        >
-                            <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <rect x="5" y="10" width="14" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" />
-                            </svg>
-                            Bloquear horário
-                        </button>
-                    </div>
+                    {entidades.length > 0 && (
+                        <div className="flex justify-end px-4 pb-3">
+                            <button
+                                onClick={() => abrirBloqueio(toISO(diaAtivo), '09:00')}
+                                className="btn-secondary min-h-10 text-xs"
+                            >
+                                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <rect x="5" y="10" width="14" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                                </svg>
+                                Bloquear horário
+                            </button>
+                        </div>
+                    )}
 
                     {/* Entity pills */}
                     {entidades.length > 1 && (
@@ -1155,11 +1159,15 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
 
                 {entidades.length === 0 ? (
                     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-                        <p className="font-medium text-primary">Prepare a agenda</p>
+                        <p className="font-medium text-primary">{usaRecursos ? 'Cadastre sua primeira quadra' : 'Prepare a agenda'}</p>
                         <p className="text-sm" style={{ color: 'var(--text-3)' }}>
-                            Cadastre profissionais ou recursos e defina os horários disponíveis.
+                            {usaRecursos
+                                ? 'Antes de reservar um horário, informe a quadra, o valor e os horários disponíveis.'
+                                : 'Cadastre quem atende e defina os horários disponíveis.'}
                         </p>
-                        <Link href={route('tenant.configuracoes.index')} className="btn-primary min-h-11">Configurar agenda</Link>
+                        <Link href={route(usaRecursos ? 'tenant.recursos.index' : 'tenant.profissionais.index')} className="btn-primary min-h-11">
+                            {usaRecursos ? 'Cadastrar quadra' : 'Configurar agenda'}
+                        </Link>
                     </div>
                 ) : (
                     <>
@@ -1314,36 +1322,44 @@ export default function Agenda({ recursos, profissionais, servicos }: Props) {
                             </svg>
                         )}
 
-                        <button
-                            onClick={() => abrirBloqueio(toISO(diaAtivo), '09:00')}
-                            className="btn-secondary text-sm"
-                        >
-                            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <rect x="5" y="10" width="14" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" />
-                            </svg>
-                            Bloquear
-                        </button>
+                        {entidades.length > 0 && (
+                            <>
+                                <button
+                                    onClick={() => abrirBloqueio(toISO(diaAtivo), '09:00')}
+                                    className="btn-secondary text-sm"
+                                >
+                                    <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <rect x="5" y="10" width="14" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                                    </svg>
+                                    Bloquear
+                                </button>
 
-                        <button
-                            onClick={() => setModalNova({ data: toISO(diaAtivo), hora: '09:00' })}
-                            className="btn-primary text-sm"
-                        >
-                            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M12 5v14M5 12h14" />
-                            </svg>
-                            Nova reserva
-                        </button>
+                                <button
+                                    onClick={() => setModalNova({ data: toISO(diaAtivo), hora: '09:00' })}
+                                    className="btn-primary text-sm"
+                                >
+                                    <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M12 5v14M5 12h14" />
+                                    </svg>
+                                    Nova reserva
+                                </button>
+                            </>
+                        )}
                     </div>
 
                     {/* Week grid or empty state */}
                     {entidades.length === 0 ? (
                         <div className="flex flex-1 flex-col items-center justify-center gap-2">
-                            <p className="font-medium text-primary">Nenhum profissional cadastrado</p>
-                            <p className="text-sm" style={{ color: 'var(--text-3)' }}>
-                                Cadastre quem atende e os horários disponíveis.
+                            <p className="font-medium text-primary">
+                                {usaRecursos ? 'Nenhuma quadra cadastrada' : 'Nenhum profissional cadastrado'}
                             </p>
-                            <Link href={route('tenant.profissionais.index')} className="btn-primary mt-2 min-h-11">
-                                Criar primeiro profissional
+                            <p className="text-sm" style={{ color: 'var(--text-3)' }}>
+                                {usaRecursos
+                                    ? 'Cadastre a primeira quadra e os horários disponíveis para começar.'
+                                    : 'Cadastre quem atende e os horários disponíveis.'}
+                            </p>
+                            <Link href={route(usaRecursos ? 'tenant.recursos.index' : 'tenant.profissionais.index')} className="btn-primary mt-2 min-h-11">
+                                {usaRecursos ? 'Cadastrar primeira quadra' : 'Criar primeiro profissional'}
                             </Link>
                         </div>
                     ) : (

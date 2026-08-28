@@ -19,12 +19,16 @@ class BloqueioAgendaController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $tenant = app('tenant');
+        $agendaUsaRecursos = $tenant->agendaUsaRecursos();
         $data = $request->validate([
-            'profissional_id' => ['nullable', Rule::exists('profissionais', 'id')->where('tenant_id', $tenant->id)],
-            'recurso_id' => ['nullable', Rule::exists('recursos', 'id')->where('tenant_id', $tenant->id)],
+            'profissional_id' => [Rule::prohibitedIf($agendaUsaRecursos), 'nullable', Rule::exists('profissionais', 'id')->where('tenant_id', $tenant->id)],
+            'recurso_id' => [Rule::requiredIf($agendaUsaRecursos), 'nullable', Rule::exists('recursos', 'id')->where('tenant_id', $tenant->id)],
             'inicio' => ['required', 'date'],
             'fim' => ['required', 'date', 'after:inicio'],
             'motivo' => ['nullable', 'string', 'max:120'],
+        ], [
+            'recurso_id.required' => 'Selecione uma quadra para bloquear o horário.',
+            'profissional_id.prohibited' => 'Bloqueios deste estabelecimento devem ser vinculados a uma quadra.',
         ]);
 
         if (empty($data['profissional_id']) === empty($data['recurso_id'])) {

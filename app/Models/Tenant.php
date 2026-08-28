@@ -108,6 +108,16 @@ class Tenant extends Model
     }
 
     /**
+     * Quadras, arenas e societies organizam a agenda por espaço físico, não por
+     * profissional. Manter essa decisão no domínio evita que uma tela sem
+     * recursos faça fallback silencioso para profissionais antigos.
+     */
+    public function agendaUsaRecursos(): bool
+    {
+        return $this->tipo_servico === 'quadra';
+    }
+
+    /**
      * Regras de handoff automático bot→humano, com defaults equivalentes ao comportamento
      * atual (sem nenhuma palavra-chave configurada = nenhum handoff automático por triagem).
      */

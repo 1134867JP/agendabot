@@ -1,12 +1,13 @@
-import { Head, router, useForm } from "@inertiajs/react";
+import { Head, Link, router, useForm } from "@inertiajs/react";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import AppLayout from "@/Layouts/AppLayout";
 import AgendaViewTabs from "@/Components/AgendaViewTabs";
-import { PageProps, Agendamento, Recurso, PaginatedData } from "@/types";
+import { PageProps, Agendamento, Recurso, PaginatedData, Tenant } from "@/types";
 import { useConfirm } from "@/hooks/useConfirm";
 
 interface Props extends PageProps {
+    tenant: Tenant;
     agendamentos: PaginatedData<Agendamento>;
     recursos: Recurso[];
     profissionais: { id: number; nome: string }[];
@@ -880,6 +881,7 @@ function NovaReservaModal({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function AgendamentosIndex({
+    tenant,
     agendamentos,
     recursos,
     profissionais,
@@ -888,12 +890,14 @@ export default function AgendamentosIndex({
     filtros,
 }: Props) {
     const [modalAberto, setModalAberto] = useState(false);
+    const podeCriarReserva = recursos.length > 0 || profissionais.length > 0;
+    const rotaConfiguracaoAgenda = route(tenant.tipo_servico === "quadra" ? "tenant.recursos.index" : "tenant.profissionais.index");
 
     useEffect(() => {
-        if (new URLSearchParams(window.location.search).get("novo") === "1") {
+        if (podeCriarReserva && new URLSearchParams(window.location.search).get("novo") === "1") {
             setModalAberto(true);
         }
-    }, []);
+    }, [podeCriarReserva]);
 
     const [agendamentoEditando, setAgendamentoEditando] =
         useState<Agendamento | null>(null);
@@ -1028,9 +1032,15 @@ export default function AgendamentosIndex({
                         <div className="flex flex-col items-center gap-2 px-5 py-12 text-center">
                             <p className="text-sm font-medium text-primary">Nenhum agendamento encontrado</p>
                             <p className="text-xs" style={{ color: "var(--text-3)" }}>Ajuste os filtros ou crie uma reserva manual.</p>
-                            <button type="button" onClick={() => setModalAberto(true)} className="btn-primary mt-2 min-h-11">
-                                Criar agendamento
-                            </button>
+                            {podeCriarReserva ? (
+                                <button type="button" onClick={() => setModalAberto(true)} className="btn-primary mt-2 min-h-11">
+                                    Criar agendamento
+                                </button>
+                            ) : (
+                                <Link href={rotaConfiguracaoAgenda} className="btn-primary mt-2 min-h-11">
+                                    {tenant.tipo_servico === "quadra" ? "Cadastrar primeira quadra" : "Configurar agenda"}
+                                </Link>
+                            )}
                         </div>
                     ) : agendamentos.data.map((a) => {
                         const inicio = (a as any).data_hora ?? a.inicio;
@@ -1177,13 +1187,19 @@ export default function AgendamentosIndex({
                                             >
                                                 Ajuste os filtros ou crie uma reserva manual.
                                             </p>
-                                            <button
-                                                type="button"
-                                                onClick={() => setModalAberto(true)}
-                                                className="btn-primary mt-2 min-h-11"
-                                            >
-                                                Criar agendamento
-                                            </button>
+                                            {podeCriarReserva ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setModalAberto(true)}
+                                                    className="btn-primary mt-2 min-h-11"
+                                                >
+                                                    Criar agendamento
+                                                </button>
+                                            ) : (
+                                                <Link href={rotaConfiguracaoAgenda} className="btn-primary mt-2 min-h-11">
+                                                    {tenant.tipo_servico === "quadra" ? "Cadastrar primeira quadra" : "Configurar agenda"}
+                                                </Link>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
@@ -1340,19 +1356,21 @@ export default function AgendamentosIndex({
             </div>
 
             {/* FAB */}
-            <button
-                onClick={() => setModalAberto(true)}
-                className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-20 flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold text-white shadow-lg transition-all hover:scale-105 hover:brightness-110 sm:bottom-7 sm:right-7 sm:h-auto sm:w-auto sm:gap-2 sm:px-5 sm:py-3"
-                style={{
-                    background: "var(--accent)",
-                    boxShadow: "0 4px 20px rgba(99,102,241,0.4)",
-                }}
-            >
-                <span className="text-xl leading-none sm:text-base">+</span>
-                <span className="hidden sm:inline">Nova reserva</span>
-            </button>
+            {podeCriarReserva && (
+                <button
+                    onClick={() => setModalAberto(true)}
+                    className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-20 flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold text-white shadow-lg transition-all hover:scale-105 hover:brightness-110 sm:bottom-7 sm:right-7 sm:h-auto sm:w-auto sm:gap-2 sm:px-5 sm:py-3"
+                    style={{
+                        background: "var(--accent)",
+                        boxShadow: "0 4px 20px rgba(99,102,241,0.4)",
+                    }}
+                >
+                    <span className="text-xl leading-none sm:text-base">+</span>
+                    <span className="hidden sm:inline">Nova reserva</span>
+                </button>
+            )}
 
-            {modalAberto && (
+            {modalAberto && podeCriarReserva && (
                 <NovaReservaModal
                     recursos={recursos}
                     profissionais={profissionais}
