@@ -163,7 +163,7 @@ class QaExploratoryRegressionTest extends TestCase
             ->assertOk();
     }
 
-    public function test_superadmin_tenant_creation_queues_whatsapp_setup(): void
+    public function test_superadmin_tenant_creation_waits_for_owner_email_verification(): void
     {
         Queue::fake();
         $superAdmin = $this->superAdmin();
@@ -181,7 +181,7 @@ class QaExploratoryRegressionTest extends TestCase
             ->assertSessionHasNoErrors();
         $this->assertDatabaseHas('tenants', ['nome' => 'Tenant criado em QA']);
         $this->assertDatabaseHas('users', ['email' => 'dono-regressao@example.test']);
-        Queue::assertPushed(CreateEvolutionInstanceJob::class);
+        Queue::assertNotPushed(CreateEvolutionInstanceJob::class);
     }
 
     public function test_qrcode_returns_operational_error_when_evolution_is_not_configured(): void

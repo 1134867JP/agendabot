@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\CreateEvolutionInstanceJob;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
@@ -67,11 +66,10 @@ class TenantController extends Controller
             return $tenant;
         });
 
-        CreateEvolutionInstanceJob::dispatch($tenant)->onQueue('sync');
         event(new Registered($tenant->users()->firstOrFail()));
 
         return redirect()->route('superadmin.tenants.index')
-            ->with('success', 'Tenant criado. A conexão do WhatsApp será preparada em segundo plano.');
+            ->with('success', 'Tenant criado. O proprietário deve verificar o e-mail antes de preparar o WhatsApp.');
     }
 
     public function edit(Tenant $tenant): Response
