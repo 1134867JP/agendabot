@@ -14,17 +14,26 @@ on:
       - '.gitignore'
       - 'LICENSE'
 
-# Commits pequenos e frequentes não devem manter pipelines antigos consumindo runner.
-# PRs possuem seu próprio grupo; pushes na master compartilham outro grupo.
+# Mantém apenas a validação mais recente da mesma branch/PR.
 concurrency:
   group: ci-deploy-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   backend:
-    name: Backend (Pint + testes)
+    name: Backend (${{ matrix.target }})
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 7
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - unit
+          - feature-0
+          - feature-1
+          - feature-2
+          - feature-3
+
     services:
       postgres:
         image: postgres:16
@@ -62,6 +71,7 @@ jobs:
         run: composer install --no-interaction --prefer-dist --no-progress --optimize-autoloader
 
       - name: Validar estilo PHP
+        if: matrix.target == 'unit'
         run: vendor/bin/pint --test
 
       - name: Preparar ambiente de testes
@@ -74,29 +84,32 @@ jobs:
           AI_PROVIDER: claude
           AI_FALLBACK_PROVIDERS: ''
           CLAUDE_API_KEY: testing-key
+          TEST_TARGET: ${{ matrix.target }}
         shell: bash
         run: |
-          set +e
-          php \
-            -d display_errors=1 \
-            -d display_startup_errors=1 \
-            -d log_errors=1 \
-            -d error_log=/tmp/agendou-php-tests.log \
-            -d error_reporting=E_ALL \
-            artisan test
-          status=$?
+          set -euo pipefail
 
-          if [ "$status" -ne 0 ]; then
-            echo ""
-            echo "=== PHP error log ==="
-            if [ -s /tmp/agendou-php-tests.log ]; then
-              cat /tmp/agendou-php-tests.log
-            else
-              echo "Nenhum erro adicional foi gravado pelo PHP."
-            fi
+          if [ "$TEST_TARGET" = "unit" ]; then
+            vendor/bin/phpunit --testsuite=Unit
+            exit 0
           fi
 
-          exit "$status"
+          shard="${TEST_TARGET#feature-}"
+          total_shards=4
+          mapfile -t files < <(
+            find tests/Feature -type f -name '*Test.php' \
+              | sort \
+              | awk -v shard="$shard" -v total="$total_shards" '((NR - 1) % total) == shard'
+          )
+
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "Nenhum teste encontrado para o shard $shard"
+            exit 1
+          fi
+
+          echo "Executando shard $((shard + 1))/$total_shards com ${#files[@]} arquivos:"
+          printf ' - %s\n' "${files[@]}"
+          vendor/bin/phpunit "${files[@]}"
 
   frontend:
     name: Frontend (TypeScript + Vite)
