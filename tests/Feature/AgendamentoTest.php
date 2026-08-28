@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\AgendamentoService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -26,9 +27,14 @@ class AgendamentoTest extends TestCase
     {
         parent::setUp();
 
+        fwrite(STDERR, "[AgendamentoTest] refresh pronto\n");
+        DB::listen(static function ($query): void {
+            fwrite(STDERR, "[AgendamentoTest][SQL] {$query->sql}\n");
+        });
         Queue::fake();
 
         $user = User::factory()->create();
+        fwrite(STDERR, "[AgendamentoTest] usuario criado\n");
         $this->tenant = Tenant::create([
             'nome' => 'Barbearia Teste',
             'slug' => 'barbearia-teste',
@@ -37,12 +43,14 @@ class AgendamentoTest extends TestCase
             'subscription_status' => 'trial',
             'trial_ends_at' => now()->addDays(14),
         ]);
+        fwrite(STDERR, "[AgendamentoTest] tenant criado\n");
         $this->tenant->users()->attach($user->id, ['papel' => 'admin']);
         $this->recurso = Recurso::create([
             'tenant_id' => $this->tenant->id,
             'nome' => 'Barbeiro Teste',
             'ativo' => true,
         ]);
+        fwrite(STDERR, "[AgendamentoTest] recurso criado\n");
 
         $this->service = app(AgendamentoService::class);
     }
@@ -60,7 +68,9 @@ class AgendamentoTest extends TestCase
             'origem' => 'manual',
         ];
 
+        fwrite(STDERR, "[AgendamentoTest] antes service criar\n");
         $agendamento = $this->service->criar($this->tenant, $dados);
+        fwrite(STDERR, "[AgendamentoTest] depois service criar\n");
 
         $this->assertInstanceOf(Agendamento::class, $agendamento);
         $this->assertDatabaseHas('agendamentos', [
