@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\OperationalEvent;
 use App\Support\ErroLogScanner;
 use App\Support\FailedJobsFormatter;
+use App\Support\RuntimeHealth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -45,6 +46,7 @@ class MonitorController extends Controller
             'failed_jobs_total' => DB::table('failed_jobs')->count(),
             'jobs_pendentes' => DB::table('jobs')->count(),
             'erros_php_24h' => ErroLogScanner::contarUltimas24h(),
+            'runtime' => RuntimeHealth::status(),
             'failed_jobs' => $failedJobs,
             'falhas_estruturadas' => $falhasEstruturadas,
         ]);

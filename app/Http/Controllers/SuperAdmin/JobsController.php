@@ -5,6 +5,7 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\OperationalEvent;
 use App\Support\FailedJobsFormatter;
+use App\Support\RuntimeHealth;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
@@ -30,6 +31,7 @@ class JobsController extends Controller
     {
         try {
             Artisan::call('queue:retry', ['id' => [$id]]);
+
             return back()->with('success', "Job #{$id} reenfileirado.");
         } catch (\Throwable $e) {
             return back()->with('erro', "Falha ao retentar: {$e->getMessage()}");
@@ -40,6 +42,7 @@ class JobsController extends Controller
     {
         try {
             Artisan::call('queue:retry', ['id' => ['all']]);
+
             return back()->with('success', 'Todos os jobs reenfileirados.');
         } catch (\Throwable $e) {
             return back()->with('erro', "Falha: {$e->getMessage()}");
@@ -50,6 +53,7 @@ class JobsController extends Controller
     {
         try {
             DB::table('failed_jobs')->where('id', $id)->delete();
+
             return back()->with('success', "Job #{$id} removido.");
         } catch (\Throwable $e) {
             return back()->with('erro', "Falha ao remover: {$e->getMessage()}");
@@ -60,6 +64,7 @@ class JobsController extends Controller
     {
         try {
             Artisan::call('queue:flush');
+
             return back()->with('success', 'Fila de falhas limpa.');
         } catch (\Throwable $e) {
             return back()->with('erro', "Falha: {$e->getMessage()}");
@@ -109,6 +114,7 @@ class JobsController extends Controller
         try {
             $workerLastSeen = Cache::get('queue_worker_last_seen_at');
             $workerHealthy = $workerLastSeen && now()->diffInSeconds($workerLastSeen) <= 120;
+            $runtime = RuntimeHealth::status();
 
             return [
                 'failed' => DB::table('failed_jobs')->count(),
@@ -119,9 +125,20 @@ class JobsController extends Controller
                 'oldest_wait_seconds' => collect($fila)->where('status', 'waiting')->max('waiting_seconds') ?? 0,
                 'worker_status' => $workerHealthy ? 'online' : 'offline',
                 'worker_last_seen_at' => $workerLastSeen,
+                'runtime' => $runtime,
             ];
         } catch (\Throwable) {
-            return ['failed' => 0, 'pending' => 0, 'processing' => 0, 'delayed' => 0, 'total' => 0, 'oldest_wait_seconds' => 0, 'worker_status' => 'unknown', 'worker_last_seen_at' => null];
+            return [
+                'failed' => 0,
+                'pending' => 0,
+                'processing' => 0,
+                'delayed' => 0,
+                'total' => 0,
+                'oldest_wait_seconds' => 0,
+                'worker_status' => 'unknown',
+                'worker_last_seen_at' => null,
+                'runtime' => RuntimeHealth::status(),
+            ];
         }
     }
 

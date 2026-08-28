@@ -55,6 +55,9 @@ jobs:
       - name: Validar sintaxe PHP
         run: find app config routes -name "*.php" | xargs php -l | grep -v "^No syntax errors" | (grep . && exit 1 || exit 0)
 
+      - name: Validar estilo PHP
+        run: vendor/bin/pint --test
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:

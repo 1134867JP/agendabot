@@ -22,7 +22,7 @@ services:
       DB_HOST: db
       DB_PORT: 5432
       SESSION_DRIVER: file
-      CACHE_DRIVER: file
+      CACHE_STORE: database
       QUEUE_CONNECTION: database
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/health || exit 1"]
@@ -61,7 +61,7 @@ services:
     container_name: agendabot-worker
     restart: always
     user: "www-data:www-data"
-    command: php artisan queue:work --queue=messages,notifications,default --sleep=2 --tries=3 --timeout=90
+    command: php artisan queue:work --name=interactive --queue=messages,notifications,default --sleep=2 --tries=3 --timeout=90
     volumes:
       - storage_data:/var/www/html/storage
     networks:
@@ -78,6 +78,7 @@ services:
       APP_DEBUG: "false"
       DB_HOST: db
       DB_PORT: 5432
+      CACHE_STORE: database
       QUEUE_CONNECTION: database
     logging:
       driver: json-file
@@ -90,7 +91,7 @@ services:
     container_name: agendabot-worker-batch
     restart: always
     user: "www-data:www-data"
-    command: php artisan queue:work --queue=sync,financial,maintenance --sleep=5 --tries=3 --timeout=600
+    command: php artisan queue:work --name=batch --queue=sync,financial,maintenance --sleep=5 --tries=3 --timeout=600
     volumes:
       - storage_data:/var/www/html/storage
     networks:
@@ -107,6 +108,7 @@ services:
       APP_DEBUG: "false"
       DB_HOST: db
       DB_PORT: 5432
+      CACHE_STORE: database
       QUEUE_CONNECTION: database
     logging:
       driver: json-file
@@ -135,6 +137,7 @@ services:
       APP_DEBUG: "false"
       DB_HOST: db
       DB_PORT: 5432
+      CACHE_STORE: database
     logging:
       driver: json-file
       options:

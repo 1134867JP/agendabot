@@ -90,7 +90,15 @@ for service in agendabot-worker agendabot-worker-batch agendabot-scheduler; do
 done
 
 echo "--- health check final ---"
-docker exec agendabot-app curl -fsS http://127.0.0.1/health >/dev/null
+for i in $(seq 1 12); do
+    if docker exec agendabot-app curl -fsS http://127.0.0.1/health/ready >/dev/null 2>&1; then
+        echo "    workers e scheduler prontos após ${i}x5s"
+        break
+    fi
+    echo "    aguardando workers e scheduler... (${i}/12)"
+    sleep 5
+done
+docker exec agendabot-app curl -fsS http://127.0.0.1/health/ready >/dev/null
 
 echo "--- removendo imagens antigas ---"
 docker image prune -f

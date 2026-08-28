@@ -18,7 +18,10 @@ class SincronizarConversasWhatsappLoteJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 2;
+    public int $tries = 3;
+
+    public array $backoff = [30, 120];
+
     public int $timeout = 180;
 
     public function __construct(
@@ -34,8 +37,7 @@ class SincronizarConversasWhatsappLoteJob implements ShouldQueue
         EvolutionApiService $evolution,
         ConversaSyncService $sync,
         WhatsAppSyncState $syncState,
-    ): void
-    {
+    ): void {
         if ($syncState->deveInterromper($this->tenant, $this->executionId)) {
             return;
         }
@@ -164,5 +166,4 @@ class SincronizarConversasWhatsappLoteJob implements ShouldQueue
             'erro' => $e->getMessage(),
         ]);
     }
-
 }

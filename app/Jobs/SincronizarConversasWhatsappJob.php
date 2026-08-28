@@ -16,12 +16,16 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
-class SincronizarConversasWhatsappJob implements ShouldQueue, ShouldBeUnique
+class SincronizarConversasWhatsappJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 2;
+    public int $tries = 3;
+
+    public array $backoff = [30, 120];
+
     public int $timeout = 120;
+
     public int $uniqueFor = 900;
 
     private const TAMANHO_LOTE = 10;
@@ -40,8 +44,7 @@ class SincronizarConversasWhatsappJob implements ShouldQueue, ShouldBeUnique
         EvolutionApiService $evolution,
         ConversaSyncService $sync,
         WhatsAppSyncState $syncState,
-    ): void
-    {
+    ): void {
         if ($syncState->deveInterromper($this->tenant, $this->executionId)) {
             return;
         }
@@ -136,5 +139,4 @@ class SincronizarConversasWhatsappJob implements ShouldQueue, ShouldBeUnique
             'erro' => $e->getMessage(),
         ]);
     }
-
 }

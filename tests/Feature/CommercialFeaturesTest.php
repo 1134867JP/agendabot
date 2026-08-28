@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\Agendamento;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\RuntimeHealth;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class CommercialFeaturesTest extends TestCase
@@ -57,5 +59,35 @@ class CommercialFeaturesTest extends TestCase
     public function test_health_check_valida_banco(): void
     {
         $this->getJson(route('health'))->assertOk()->assertJsonPath('checks.database', 'ok');
+    }
+
+    public function test_readiness_valida_workers_e_scheduler(): void
+    {
+        config(['queue.monitoring.workers' => ['interactive', 'batch']]);
+
+        RuntimeHealth::touchWorker('interactive');
+        RuntimeHealth::touchWorker('batch');
+        RuntimeHealth::touchScheduler();
+
+        $this->getJson(route('health.ready'))
+            ->assertOk()
+            ->assertJsonPath('status', 'ready')
+            ->assertJsonPath('checks.runtime.workers.interactive.status', 'ok')
+            ->assertJsonPath('checks.runtime.workers.batch.status', 'ok')
+            ->assertJsonPath('checks.runtime.scheduler.status', 'ok');
+    }
+
+    public function test_readiness_falha_quando_um_processo_nao_tem_heartbeat(): void
+    {
+        Cache::flush();
+        config(['queue.monitoring.workers' => ['interactive', 'batch']]);
+
+        RuntimeHealth::touchWorker('interactive');
+        RuntimeHealth::touchScheduler();
+
+        $this->getJson(route('health.ready'))
+            ->assertStatus(503)
+            ->assertJsonPath('status', 'not_ready')
+            ->assertJsonPath('checks.runtime.workers.batch.status', 'missing');
     }
 }

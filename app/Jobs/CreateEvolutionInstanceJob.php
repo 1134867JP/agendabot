@@ -15,6 +15,8 @@ class CreateEvolutionInstanceJob implements ShouldQueue
 
     public int $tries = 3;
 
+    public array $backoff = [30, 120, 300];
+
     public int $timeout = 30;
 
     public function __construct(private Tenant $tenant) {}

@@ -6,6 +6,7 @@ use App\Jobs\GerarCobrancaBotJob;
 use App\Jobs\SendAppointmentConfirmationsJob;
 use App\Jobs\VerificarTrialExpiradoJob;
 use App\Models\Tenant;
+use App\Support\RuntimeHealth;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -36,3 +37,8 @@ Schedule::job(new GerarCobrancaBotJob, 'financial')->monthlyOn(1, '08:00');
 
 // Alertar quando novos jobs caírem em failed_jobs
 Schedule::command('jobs:alertar-falhas')->everyFiveMinutes();
+
+// Confirma que o processo do scheduler está efetivamente executando a agenda.
+Schedule::call(fn () => RuntimeHealth::touchScheduler())
+    ->name('runtime:scheduler-heartbeat')
+    ->everyMinute();

@@ -15,6 +15,13 @@ return [
 
     'default' => env('QUEUE_CONNECTION', 'database'),
 
+    'monitoring' => [
+        'workers' => array_values(array_filter(explode(',', (string) env('QUEUE_HEARTBEAT_WORKERS', 'interactive,batch')))),
+        'heartbeat_interval_seconds' => (int) env('QUEUE_HEARTBEAT_INTERVAL_SECONDS', 15),
+        'worker_stale_after_seconds' => (int) env('QUEUE_WORKER_STALE_AFTER_SECONDS', 60),
+        'scheduler_stale_after_seconds' => (int) env('SCHEDULER_STALE_AFTER_SECONDS', 150),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Queue Connections

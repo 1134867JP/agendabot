@@ -23,6 +23,7 @@ use Inertia\Inertia;
 Route::get('/', [LandingController::class, 'index'])->name('home');
 Route::get('/precos', [LandingController::class, 'precos'])->name('precos');
 Route::get('/health', HealthController::class)->name('health');
+Route::get('/health/ready', [HealthController::class, 'ready'])->name('health.ready');
 
 // Onboarding
 Route::get('/cadastro', [OnboardingController::class, 'step1'])->name('onboarding.step1');

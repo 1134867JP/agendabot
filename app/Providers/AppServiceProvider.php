@@ -13,13 +13,14 @@ use App\Services\AI\Providers\GroqProvider;
 use App\Services\AI\Providers\OpenRouterProvider;
 use App\Services\ClaudeAgentService;
 use App\Services\EvolutionApiService;
+use App\Support\RuntimeHealth;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Queue\Events\Looping;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
@@ -58,9 +59,19 @@ class AppServiceProvider extends ServiceProvider
     private function registrarObservabilidadeDaFila(): void
     {
         $inicios = [];
+        $ultimosHeartbeats = [];
 
-        Queue::looping(function (): void {
-            Cache::put('queue_worker_last_seen_at', now()->toIso8601String(), now()->addMinutes(5));
+        Queue::looping(function (Looping $event) use (&$ultimosHeartbeats): void {
+            $worker = (string) ($event->workerOptions?->name ?: 'default');
+            $agora = now()->timestamp;
+            $intervalo = (int) config('queue.monitoring.heartbeat_interval_seconds', 15);
+
+            if ($agora - ($ultimosHeartbeats[$worker] ?? 0) < $intervalo) {
+                return;
+            }
+
+            RuntimeHealth::touchWorker($worker);
+            $ultimosHeartbeats[$worker] = $agora;
         });
 
         Queue::before(function (JobProcessing $event) use (&$inicios): void {

@@ -6,7 +6,9 @@ import { PageProps } from '@/types';
 type QueueStatus = 'waiting' | 'processing' | 'delayed';
 interface FailedJob { id: number; job: string; queue: string; exception: string; failed_at: string; }
 interface QueuedJob { id: number; job: string; queue: string; status: QueueStatus; attempts: number; created_at: string; available_at: string; reserved_at: string | null; }
-interface QueueStats { failed: number; pending: number; processing: number; delayed: number; total: number; oldest_wait_seconds: number; worker_status: string; worker_last_seen_at: string | null; }
+interface RuntimeComponent { status: 'ok' | 'stale' | 'missing' | 'unavailable'; last_seen_at: string | null; age_seconds: number | null; }
+interface RuntimeStatus { ready: boolean; workers: Record<string, RuntimeComponent>; scheduler: RuntimeComponent; }
+interface QueueStats { failed: number; pending: number; processing: number; delayed: number; total: number; oldest_wait_seconds: number; worker_status: string; worker_last_seen_at: string | null; runtime: RuntimeStatus; }
 interface FalhaRecente { id: number; tipo: string; tenant: string | null; mensagem: string | null; ocorrido_em: string; }
 interface Props extends PageProps { failed: FailedJob[]; queue: QueueStats; queuedJobs: QueuedJob[]; falhasRecententes?: FalhaRecente[]; falhasRecentes: FalhaRecente[]; }
 
@@ -23,10 +25,20 @@ export default function Jobs({ failed, queue, queuedJobs, falhasRecentes }: Prop
         return () => window.clearInterval(timer);
     }, [paused]);
     const cards = [['Aguardando', queue.pending, '#a5b4fc'], ['Em execução', queue.processing, '#34d399'], ['Atrasados', queue.delayed, '#fbbf24'], ['Falhos', queue.failed, '#f87171'], ['Total', queue.total, 'var(--text-1)']] as const;
+    const runtime = [
+        ...Object.entries(queue.runtime.workers).map(([name, component]) => [`Worker ${name}`, component] as const),
+        ['Scheduler', queue.runtime.scheduler] as const,
+    ];
     return <AppLayout title="Fila e processamento" subtitle="Acompanhe workers, jobs, integrações e falhas">
         <Head title="Jobs" />
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <span className="text-xs" style={{ color: 'var(--text-3)' }}><span className="mr-2 inline-block h-2 w-2 rounded-full" style={{ background: queue.worker_status === 'online' ? '#34d399' : '#f87171' }} />Worker {queue.worker_status === 'online' ? 'online' : 'sem heartbeat'}{queue.worker_last_seen_at ? ` · visto ${date(queue.worker_last_seen_at)}` : ''}</span>
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+                {runtime.map(([label, component]) => <span key={label} className="text-xs" style={{ color: 'var(--text-3)' }}>
+                    <span className="mr-2 inline-block h-2 w-2 rounded-full" style={{ background: component.status === 'ok' ? '#34d399' : component.status === 'stale' ? '#fbbf24' : '#f87171' }} />
+                    {label} {component.status === 'ok' ? 'online' : component.status === 'stale' ? 'atrasado' : component.status === 'unavailable' ? 'indisponível' : 'sem heartbeat'}
+                    {component.last_seen_at ? ` · visto ${date(component.last_seen_at)}` : ''}
+                </span>)}
+            </div>
             <button onClick={() => setPaused(value => !value)} className="rounded-lg px-3 py-2 text-xs" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', color: paused ? 'var(--text-3)' : 'var(--jade)' }}>{paused ? 'Retomar atualização' : 'Atualização automática'}</button>
         </div>
         <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">{cards.map(([label, value, color]) => <div key={label} className="rounded-xl p-4" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}><p className="text-[11px]" style={{ color: 'var(--text-3)' }}>{label}</p><p className="mt-1 text-2xl font-semibold" style={{ color }}>{value}</p></div>)}</div>
