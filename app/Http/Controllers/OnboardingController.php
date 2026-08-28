@@ -11,6 +11,7 @@ use App\Services\OnboardingPresetService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -27,35 +28,42 @@ class OnboardingController extends Controller
     {
         $validated = $request->validated();
 
-        $user = User::create([
-            'name' => $validated['nome_usuario'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['senha']),
-            'telefone' => $validated['telefone'],
-        ]);
-
         $slugInterno = Str::slug($validated['nome_estabelecimento']).'-'.Str::random(6);
 
-        $tenant = Tenant::create([
-            'nome' => $validated['nome_estabelecimento'],
-            'slug' => $slugInterno,
-            'tipo_servico' => $validated['tipo_servico'],
-            'tipo_servico_personalizado' => $validated['tipo_servico_personalizado'] ?? null,
-            'evolution_instance' => $slugInterno,
-            'webhook_token' => Str::random(64),
-            'subscription_status' => 'trial',
-            'trial_ends_at' => now()->addDays((int) env('TRIAL_DAYS', 14)),
-            'ativo' => true,
-        ]);
+        [$user, $tenant] = DB::transaction(function () use ($validated, $slugInterno): array {
+            $user = User::create([
+                'name' => $validated['nome_usuario'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['senha']),
+                'telefone' => $validated['telefone'],
+            ]);
 
-        $tenant->users()->attach($user->id, ['papel' => 'admin']);
+            $tenant = Tenant::create([
+                'nome' => $validated['nome_estabelecimento'],
+                'slug' => $slugInterno,
+                'tipo_servico' => $validated['tipo_servico'],
+                'tipo_servico_personalizado' => $validated['tipo_servico_personalizado'] ?? null,
+                'telefone_whatsapp' => $validated['telefone'],
+                'evolution_instance' => $slugInterno,
+                'webhook_token' => Str::random(64),
+                'plano' => 'starter',
+                'subscription_status' => 'trial',
+                'trial_ends_at' => now()->addDays((int) env('TRIAL_DAYS', 14)),
+                'ativo' => true,
+            ]);
+
+            $tenant->users()->attach($user->id, ['papel' => 'admin']);
+
+            return [$user, $tenant];
+        });
 
         CreateEvolutionInstanceJob::dispatch($tenant)->onQueue('sync');
 
         Auth::login($user);
+        $request->session()->regenerate();
         session(['tenant_id' => $tenant->id]);
 
-        return redirect()->route('onboarding.step2');
+        return redirect()->route('onboarding.step3');
     }
 
     public function step2(): Response

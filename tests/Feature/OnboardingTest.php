@@ -30,15 +30,14 @@ class OnboardingTest extends TestCase
         Queue::fake();
 
         $response = $this->post('/cadastro', $this->dadosStep1());
-        $response->assertRedirect(route('onboarding.step2'));
+        $response->assertRedirect(route('onboarding.step3'));
         Queue::assertPushed(CreateEvolutionInstanceJob::class);
 
         $tenant = Tenant::where('slug', 'like', 'barbearia-onboarding-%')->firstOrFail();
         $this->assertDatabaseHas('tenant_users', ['tenant_id' => $tenant->id]);
 
-        $response = $this->post(route('onboarding.checkout'), ['plano' => 'starter']);
-        $response->assertRedirect(route('onboarding.step3'));
         $this->assertSame('starter', $tenant->fresh()->plano);
+        $this->assertSame('51999999999', $tenant->fresh()->telefone_whatsapp);
         $this->assertNull($tenant->fresh()->asaas_subscription_id);
 
         $response = $this->post(route('onboarding.step3.store'), [
@@ -119,5 +118,22 @@ class OnboardingTest extends TestCase
 
         $this->post(route('onboarding.pular'))
             ->assertRedirect(route('onboarding.step3'));
+    }
+
+    public function test_step1_normaliza_email_e_whatsapp_formatado(): void
+    {
+        Queue::fake();
+
+        $this->post('/cadastro', $this->dadosStep1([
+            'email' => ' DONO.NORMALIZADO@EXAMPLE.COM ',
+            'telefone' => '(51) 99999-9999',
+        ]))->assertRedirect(route('onboarding.step3'));
+
+        $tenant = Tenant::where('slug', 'like', 'barbearia-onboarding-%')->firstOrFail();
+        $this->assertSame('51999999999', $tenant->telefone_whatsapp);
+        $this->assertDatabaseHas('users', [
+            'email' => 'dono.normalizado@example.com',
+            'telefone' => '51999999999',
+        ]);
     }
 }

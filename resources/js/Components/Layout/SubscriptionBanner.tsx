@@ -16,15 +16,15 @@ export default function SubscriptionBanner({ subscription }: Props) {
         ));
         return (
             <div
-                className="flex items-center justify-between px-5 py-2.5 text-sm"
+                className="flex flex-col items-start gap-2 px-4 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-5"
                 style={{ background: 'rgba(245,158,11,0.08)', borderBottom: '1px solid rgba(245,158,11,0.2)' }}
             >
                 <span style={{ color: 'var(--amber-text)' }}>
                     ⏳ Seu trial termina em <strong>{dias} dia{dias !== 1 ? 's' : ''}</strong>.
                 </span>
                 <Link
-                    href={route('onboarding.step2')}
-                    className="ml-4 shrink-0 rounded-md px-3 py-1 text-xs font-semibold transition-all hover:brightness-110"
+                    href={route('tenant.renovar')}
+                    className="shrink-0 rounded-md px-3 py-1.5 text-xs font-semibold transition-all hover:brightness-110 sm:ml-4"
                     style={{ background: 'var(--amber-btn-bg)', color: 'var(--amber-text)', border: '1px solid var(--amber-btn-bdr)' }}
                 >
                     Escolher plano →
@@ -39,7 +39,7 @@ export default function SubscriptionBanner({ subscription }: Props) {
         ));
         return (
             <div
-                className="flex items-center justify-between px-5 py-2.5 text-sm"
+                className="flex flex-col items-start gap-2 px-4 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-5"
                 style={{ background: 'rgba(239,68,68,0.08)', borderBottom: '1px solid rgba(239,68,68,0.2)' }}
             >
                 <span style={{ color: 'var(--danger-text)' }}>
@@ -47,7 +47,7 @@ export default function SubscriptionBanner({ subscription }: Props) {
                 </span>
                 <Link
                     href={route('tenant.renovar')}
-                    className="ml-4 shrink-0 rounded-md px-3 py-1 text-xs font-semibold transition-all hover:brightness-110"
+                    className="shrink-0 rounded-md px-3 py-1.5 text-xs font-semibold transition-all hover:brightness-110 sm:ml-4"
                     style={{ background: 'var(--danger-btn-bg)', color: 'var(--danger-text)', border: '1px solid var(--danger-btn-bdr)' }}
                 >
                     Renovar →

@@ -9,11 +9,11 @@ class RegistrationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_registration_screen_can_be_rendered(): void
+    public function test_registration_screen_uses_complete_onboarding(): void
     {
         $response = $this->get('/register');
 
-        $response->assertStatus(200);
+        $response->assertRedirect(route('onboarding.step1'));
     }
 
     public function test_new_users_can_register(): void

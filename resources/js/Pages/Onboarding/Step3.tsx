@@ -54,17 +54,17 @@ export default function OnboardingStep3({ tenant, defaults }: Props) {
                 <Head title="Configuração expressa" />
 
                 <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 sm:px-6 sm:py-10">
-                    <div className="mb-8 flex items-center justify-between">
+                    <div className="mb-8 flex items-center justify-between gap-3">
                         <span className="text-lg text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
                             Agendou
                         </span>
-                        <span className="rounded-full px-3 py-1 text-xs" style={{ background: 'var(--jade-light)', color: 'var(--jade)' }}>
-                            Último passo · cerca de 2 minutos
+                        <span className="shrink-0 rounded-full px-3 py-1 text-xs" style={{ background: 'var(--jade-light)', color: 'var(--jade)' }}>
+                            Etapa 2 de 2 · cerca de 2 minutos
                         </span>
                     </div>
 
                     <div className="grid flex-1 gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
-                        <main>
+                        <main className="min-w-0">
                             <div className="mb-6">
                                 <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--jade)' }}>
                                     Vamos deixar tudo pronto
@@ -78,6 +78,14 @@ export default function OnboardingStep3({ tenant, defaults }: Props) {
                             </div>
 
                             <form onSubmit={submit} className="space-y-4">
+                                <div className="card p-4 lg:hidden">
+                                    <p className="text-sm font-medium text-primary">As sugestões abaixo já estão prontas para uso.</p>
+                                    <p className="mt-1 text-xs leading-5" style={{ color: 'var(--text-3)' }}>Você pode aceitar agora e alterar qualquer detalhe depois no painel.</p>
+                                    <button type="submit" disabled={processing} className="btn-primary mt-3 w-full justify-center py-3">
+                                        {processing ? 'Preparando sua agenda…' : 'Usar configuração sugerida'}
+                                    </button>
+                                </div>
+
                                 <section className="card p-4 sm:p-6">
                                     <div className="mb-4">
                                         <p className="text-sm font-semibold text-primary">Primeiro item da agenda</p>
@@ -165,7 +173,7 @@ export default function OnboardingStep3({ tenant, defaults }: Props) {
                             </form>
                         </main>
 
-                        <aside className="lg:pt-24">
+                        <aside className="hidden lg:block lg:pt-24">
                             <div className="sticky top-6 rounded-2xl p-5" style={{ background: 'var(--jade-light)', border: '1px solid rgba(0,168,132,.2)' }}>
                                 <p className="text-sm font-semibold" style={{ color: 'var(--jade)' }}>O Agendou fará por você</p>
                                 <ul className="mt-4 space-y-3 text-sm" style={{ color: 'var(--text-2)' }}>

@@ -11,21 +11,22 @@ interface Props {
 export default function TipoServicoSelector({ value, onChange, customValue, onChangeCustom, error }: Props) {
     return (
         <div>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-3" role="group" aria-label="Tipo de atendimento">
                 {TIPOS_SERVICO.map(t => (
                     <button
                         key={t.value}
                         type="button"
                         onClick={() => onChange(t.value)}
-                        className="flex flex-col items-start gap-0.5 rounded-xl border-2 px-3 py-2.5 text-left text-sm transition-all"
+                        aria-pressed={value === t.value}
+                        className="min-w-0 rounded-xl border-2 px-2.5 py-3 text-left text-sm transition-all sm:flex sm:flex-col sm:items-start sm:gap-0.5 sm:px-3 sm:py-2.5"
                         style={value === t.value
                             ? { borderColor: 'var(--accent)', background: 'var(--accent-light)', color: 'var(--accent)' }
                             : { borderColor: 'var(--border-strong)', background: 'var(--bg-surface-2)', color: 'var(--text-2)' }
                         }
                     >
-                        <span className="text-base">{t.emoji}</span>
-                        <span className="font-medium leading-tight">{t.label}</span>
-                        <span className="text-[11px] opacity-60 leading-tight">{t.desc}</span>
+                        <span className="mr-1 text-base sm:mr-0">{t.emoji}</span>
+                        <span className="break-words font-medium leading-tight">{t.label}</span>
+                        <span className="hidden text-[11px] leading-tight opacity-60 sm:block">{t.desc}</span>
                     </button>
                 ))}
             </div>

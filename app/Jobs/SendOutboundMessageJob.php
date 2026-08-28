@@ -47,8 +47,10 @@ class SendOutboundMessageJob implements ShouldBeUnique, ShouldQueue
                 return null;
             }
 
-            if ($message->status === OutboundMessage::STATUS_PROCESSING
-                && $message->locked_at?->isAfter(now()->subMinutes(2))) {
+            if (
+                $message->status === OutboundMessage::STATUS_PROCESSING
+                && $message->locked_at?->isAfter(now()->subMinutes(2))
+            ) {
                 return null;
             }
 
