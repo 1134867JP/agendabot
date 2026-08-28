@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { PageProps } from '@/types';
 import LandingLayout from '@/Layouts/LandingLayout';
 
-const INDIGO = '#2d9d82';
-const JADE   = '#6ed7bd';
+const INDIGO = '#14b8a6';
+const JADE   = '#5eead4';
 
 interface Plano {
     nome: string;

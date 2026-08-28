@@ -14,8 +14,8 @@
             --bg-app:      #0e0e1a;
             --bg-surface:  #16162a;
             --border:      rgba(255,255,255,0.07);
-            --accent:      #6366f1;
-            --jade:        #00a884;
+            --accent:      #2dd4bf;
+            --jade:        #14b8a6;
             --text-1:      #e8e6e1;
             --text-2:      rgba(232,230,225,0.65);
             --text-3:      rgba(232,230,225,0.35);

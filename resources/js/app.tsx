@@ -36,6 +36,6 @@ createInertiaApp({
         );
     },
     progress: {
-        color: '#2d9d82',
+        color: '#14b8a6',
     },
 });

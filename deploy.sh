@@ -5,10 +5,23 @@ APP_DIR="${APP_DIR:-/opt/apps/agendabot}"
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-master}"
 cd "$APP_DIR"
 
+remove_compose_service_containers() {
+    service="$1"
+    container_ids="$(docker ps -aq \
+        --filter "label=com.docker.compose.project=agendabot" \
+        --filter "label=com.docker.compose.service=$service")"
+
+    if [ -n "$container_ids" ]; then
+        echo "    removendo containers antigos do serviço $service"
+        docker rm -f $container_ids
+    fi
+}
+
 rollback() {
     echo "!!! deploy falhou — restaurando imagem anterior"
     if docker image inspect agendabot-app:rollback >/dev/null 2>&1; then
         docker tag agendabot-app:rollback agendabot-app:latest
+        remove_compose_service_containers app
         docker compose up -d --no-deps --force-recreate app worker worker-batch scheduler
     fi
 }
@@ -40,6 +53,7 @@ docker compose stop worker worker-batch scheduler 2>/dev/null || true
 docker compose rm -f worker worker-batch scheduler 2>/dev/null || true
 
 echo "--- recriando container app ---"
+remove_compose_service_containers app
 docker compose up -d --no-deps --force-recreate app
 
 echo "--- ajustando permissões do storage ---"

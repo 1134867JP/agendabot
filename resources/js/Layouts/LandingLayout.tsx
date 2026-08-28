@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import ForceDark from '@/Components/ForceDark';
 
 const DARK  = '#0d1012';
-const INDIGO = '#2d9d82';
+const INDIGO = '#14b8a6';
 
 interface Props {
     children: React.ReactNode;

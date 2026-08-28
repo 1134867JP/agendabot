@@ -9,12 +9,12 @@ export default function Guest({ children }: PropsWithChildren) {
                 className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden px-4 py-8"
                 style={{
                     background:
-                        'radial-gradient(circle at 50% -20%, rgba(225,106,75,0.10), transparent 34%), var(--bg-app)',
+                        'radial-gradient(circle at 50% -20%, rgba(45,212,191,0.10), transparent 34%), var(--bg-app)',
                 }}
             >
                 <div
                     className="pointer-events-none absolute inset-x-0 top-0 h-px"
-                    style={{ background: 'linear-gradient(90deg, transparent, rgba(225,106,75,0.55), transparent)' }}
+                    style={{ background: 'linear-gradient(90deg, transparent, rgba(45,212,191,0.55), transparent)' }}
                 />
 
                 <div className="relative w-full max-w-md">

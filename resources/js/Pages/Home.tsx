@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import LandingLayout from '@/Layouts/LandingLayout';
 
 // ── Paleta ────────────────────────────────────────────────────────────────────
-const INDIGO = '#2d9d82';
-const JADE   = '#6ed7bd';
+const INDIGO = '#14b8a6';
+const JADE   = '#5eead4';
 const DARK   = '#0d1012';
 
 // ── Planos ────────────────────────────────────────────────────────────────────
@@ -597,4 +597,3 @@ export default function Home() {
         </LandingLayout>
     );
 }
-
