@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Onboarding\Step1Request;
 use App\Http\Requests\Onboarding\Step3Request;
-use App\Jobs\CreateEvolutionInstanceJob;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\OnboardingPresetService;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -57,13 +57,13 @@ class OnboardingController extends Controller
             return [$user, $tenant];
         });
 
-        CreateEvolutionInstanceJob::dispatch($tenant)->onQueue('sync');
-
         Auth::login($user);
         $request->session()->regenerate();
         session(['tenant_id' => $tenant->id]);
+        event(new Registered($user));
+        $request->session()->put('url.intended', route('onboarding.step3'));
 
-        return redirect()->route('onboarding.step3');
+        return redirect()->route('verification.notice');
     }
 
     public function step2(): Response

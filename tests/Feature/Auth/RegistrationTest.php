@@ -16,7 +16,7 @@ class RegistrationTest extends TestCase
         $response->assertRedirect(route('onboarding.step1'));
     }
 
-    public function test_new_users_can_register(): void
+    public function test_legacy_registration_post_redirects_to_complete_onboarding(): void
     {
         $response = $this->post('/register', [
             'name' => 'Test User',
@@ -25,7 +25,8 @@ class RegistrationTest extends TestCase
             'password_confirmation' => 'password',
         ]);
 
-        $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $this->assertGuest();
+        $response->assertRedirect(route('onboarding.step1'));
+        $this->assertDatabaseMissing('users', ['email' => 'test@example.com']);
     }
 }

@@ -7,6 +7,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class OnboardingTest extends TestCase
@@ -26,12 +27,28 @@ class OnboardingTest extends TestCase
         ], $overrides);
     }
 
+    private function verificarEmail(): User
+    {
+        $user = User::where('email', 'dono@example.com')->firstOrFail();
+        $verificationUrl = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes(60),
+            ['id' => $user->id, 'hash' => sha1($user->email)]
+        );
+
+        $this->get($verificationUrl)->assertRedirect();
+
+        return $user->fresh();
+    }
+
     public function test_fluxo_feliz_completo(): void
     {
         Queue::fake();
 
         $response = $this->post('/cadastro', $this->dadosStep1());
-        $response->assertRedirect(route('onboarding.step3'));
+        $response->assertRedirect(route('verification.notice'));
+        Queue::assertNotPushed(CreateEvolutionInstanceJob::class);
+        $this->verificarEmail();
         Queue::assertPushed(CreateEvolutionInstanceJob::class);
 
         $tenant = Tenant::where('slug', 'like', 'barbearia-onboarding-%')->firstOrFail();
@@ -81,6 +98,7 @@ class OnboardingTest extends TestCase
             'nome_estabelecimento' => 'Arena Express',
             'tipo_servico' => 'quadra',
         ]));
+        $this->verificarEmail();
 
         $this->post(route('onboarding.step3.store'), [
             'nome_item' => 'Quadra de futsal',
@@ -162,6 +180,7 @@ class OnboardingTest extends TestCase
     {
         Queue::fake();
         $this->post('/cadastro', $this->dadosStep1());
+        $this->verificarEmail();
 
         $this->post('/cadastro', $this->dadosStep1(['nome_estabelecimento' => 'Outra Barbearia']))
             ->assertSessionHasErrors('email');
@@ -183,7 +202,7 @@ class OnboardingTest extends TestCase
         $this->post('/cadastro', $this->dadosStep1([
             'email' => ' DONO.NORMALIZADO@EXAMPLE.COM ',
             'telefone' => '(51) 99999-9999',
-        ]))->assertRedirect(route('onboarding.step3'));
+        ]))->assertRedirect(route('verification.notice'));
 
         $tenant = Tenant::where('slug', 'like', 'barbearia-onboarding-%')->firstOrFail();
         $this->assertSame('51999999999', $tenant->telefone_whatsapp);

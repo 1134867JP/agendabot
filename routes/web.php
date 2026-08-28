@@ -28,7 +28,7 @@ Route::get('/health/ready', [HealthController::class, 'ready'])->name('health.re
 // Onboarding
 Route::get('/cadastro', [OnboardingController::class, 'step1'])->name('onboarding.step1');
 Route::post('/cadastro', [OnboardingController::class, 'step1Store'])->middleware('throttle:6,1');
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/cadastro/plano', [OnboardingController::class, 'step2'])->name('onboarding.step2');
     Route::post('/cadastro/checkout', [OnboardingController::class, 'checkout'])->name('onboarding.checkout');
     Route::get('/cadastro/personalizar', [OnboardingController::class, 'step3'])->name('onboarding.step3');
@@ -37,12 +37,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/cadastro/pular', [OnboardingController::class, 'pularPagamento'])->name('onboarding.pular');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     // Seleção de tenant (tela inicial para donos)
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/tenants/{tenant}/selecionar', [TenantController::class, 'selecionar'])->name('tenants.selecionar');
     Route::get('/tenants/novo', [TenantController::class, 'create'])->name('tenants.create');
-    Route::post('/tenants', [TenantController::class, 'store'])->name('tenants.store');
+    Route::post('/tenants', [TenantController::class, 'store'])->middleware('throttle:3,10')->name('tenants.store');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

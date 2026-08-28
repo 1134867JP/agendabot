@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -28,6 +29,12 @@ class TenantController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        if ($request->user()->tenants()->exists()) {
+            throw ValidationException::withMessages([
+                'nome' => 'O cadastro público permite um estabelecimento por conta. Fale com o suporte para adicionar outra unidade.',
+            ]);
+        }
+
         $data = $request->validate([
             'nome' => ['required', 'string', 'max:255'],
             'tipo_servico' => ['required', Rule::in(Tenant::TIPOS_SERVICO)],
