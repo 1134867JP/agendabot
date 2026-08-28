@@ -20,8 +20,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  frontend:
+    name: Frontend (TypeScript + Vite)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Instalar dependências JS
+        run: npm ci --no-audit --no-fund
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Compartilhar build Vite
+        uses: actions/upload-artifact@v4
+        with:
+          name: vite-build-${{ github.sha }}
+          path: public/build
+          if-no-files-found: error
+          retention-days: 1
+
   backend:
     name: Backend (${{ matrix.target }})
+    needs: frontend
     runs-on: ubuntu-latest
     timeout-minutes: 7
     strategy:
@@ -70,6 +99,13 @@ jobs:
       - name: Instalar dependências PHP
         run: composer install --no-interaction --prefer-dist --no-progress --optimize-autoloader
 
+      - name: Restaurar build Vite para testes Feature
+        if: matrix.target != 'unit'
+        uses: actions/download-artifact@v4
+        with:
+          name: vite-build-${{ github.sha }}
+          path: public/build
+
       - name: Validar estilo PHP
         if: matrix.target == 'unit'
         run: vendor/bin/pint --test
@@ -110,26 +146,6 @@ jobs:
           echo "Executando shard $((shard + 1))/$total_shards com ${#files[@]} arquivos:"
           printf ' - %s\n' "${files[@]}"
           vendor/bin/phpunit "${files[@]}"
-
-  frontend:
-    name: Frontend (TypeScript + Vite)
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-          cache: npm
-
-      - name: Instalar dependências JS
-        run: npm ci --no-audit --no-fund
-
-      - name: Build frontend
-        run: npm run build
 
   deploy:
     name: Deploy para VPS
