@@ -8,13 +8,12 @@ use App\Models\Recurso;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\AgendamentoService;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
-use Illuminate\Support\Facades\Queue;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class AgendamentoTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabase;
 
     private Tenant $tenant;
 
@@ -25,8 +24,6 @@ class AgendamentoTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        Queue::fake();
 
         $user = User::factory()->create();
         $this->tenant = Tenant::create([
