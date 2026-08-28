@@ -29,18 +29,24 @@ class AgendamentoService
         return DB::transaction(function () use ($tenant, $dados) {
             // O tenant da sessão/serviço é a única fonte de verdade.
             $dados['tenant_id'] = $tenant->id;
+            fwrite(STDERR, "[criar] dados\n");
             $regras = $tenant->regrasAgendamentoConfig();
             $tz = $tenant->timezone();
             $buffer = (int) $regras['buffer_entre_agendamentos_minutos'];
+            fwrite(STDERR, "[criar] config\n");
 
             $inicio = Carbon::parse($dados['inicio'], $tz);
             $fim = Carbon::parse($dados['fim'], $tz);
 
+            fwrite(STDERR, "[criar] datas\n");
             $this->validarAntecedencia($inicio, $regras, $tz);
+            fwrite(STDERR, "[criar] antecedencia\n");
 
             if (! empty($dados['recurso_id'])) {
                 Recurso::where('id', $dados['recurso_id'])->where('tenant_id', $tenant->id)->firstOrFail();
+                fwrite(STDERR, "[criar] recurso\n");
                 $this->validarConflitoRecurso((int) $dados['recurso_id'], $inicio, $fim, $buffer);
+                fwrite(STDERR, "[criar] conflito\n");
             } elseif (! empty($dados['profissional_id'])) {
                 $profissional = Profissional::where('id', $dados['profissional_id'])
                     ->where('tenant_id', $tenant->id)
@@ -56,7 +62,9 @@ class AgendamentoService
                 $this->validarConflitoProfissional((int) $dados['profissional_id'], $inicio, $fim, $buffer);
             }
 
+            fwrite(STDERR, "[criar] antes create\n");
             $agendamento = Agendamento::create($dados);
+            fwrite(STDERR, "[criar] criado\n");
             OperationalEvent::record($tenant->id, 'appointment_created', [
                 'value' => $agendamento->valor_total,
                 'metadata' => ['origin' => $agendamento->origem ?? 'manual'],
