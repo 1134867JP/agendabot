@@ -30,8 +30,12 @@ class AgendamentoService
             // O tenant da sessão/serviço é a única fonte de verdade.
             $dados['tenant_id'] = $tenant->id;
             fwrite(STDERR, "[criar] dados\n");
+            fwrite(STDERR, "[criar] antes regras\n");
             $regras = $tenant->regrasAgendamentoConfig();
+            fwrite(STDERR, "[criar] regras\n");
+            fwrite(STDERR, "[criar] antes timezone\n");
             $tz = $tenant->timezone();
+            fwrite(STDERR, "[criar] timezone\n");
             $buffer = (int) $regras['buffer_entre_agendamentos_minutos'];
             fwrite(STDERR, "[criar] config\n");
 
