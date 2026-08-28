@@ -48,6 +48,7 @@ class AgendamentoTest extends TestCase
     {
         $dados = [
             'tenant_id' => $this->tenant->id,
+            'recurso_id' => $this->recurso->id,
             'cliente_nome' => 'João Silva',
             'cliente_telefone' => '51999999999',
             'inicio' => now()->addDay()->setHour(9)->setMinute(0)->setSecond(0),
@@ -61,6 +62,7 @@ class AgendamentoTest extends TestCase
         $this->assertInstanceOf(Agendamento::class, $agendamento);
         $this->assertDatabaseHas('agendamentos', [
             'tenant_id' => $this->tenant->id,
+            'recurso_id' => $this->recurso->id,
             'cliente_nome' => 'João Silva',
             'status' => 'confirmado',
         ]);
