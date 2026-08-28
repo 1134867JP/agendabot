@@ -151,7 +151,7 @@ export default function AppLayout({ children, title, subtitle, headerActions, fu
                 </main>
             </div>
 
-            {!fullHeight && currentTenant && (
+            {!fullHeight && currentTenant && !sidebarOpen && (
                 <>
                     <QuickActions />
                     <BottomNavigation />
