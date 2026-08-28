@@ -136,4 +136,9 @@ jobs:
           command_timeout: 15m
           script: |
             cd /opt/apps/agendabot
+            if ! git diff --quiet -- deploy.sh; then
+              echo "::error::A VPS possui alterações locais em deploy.sh; revise o diff antes de atualizar."
+              git diff --no-ext-diff -- deploy.sh
+              exit 1
+            fi
             bash deploy.sh
