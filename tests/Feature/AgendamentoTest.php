@@ -8,13 +8,13 @@ use App\Models\Recurso;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\AgendamentoService;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class AgendamentoTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabase;
 
     private Tenant $tenant;
 
