@@ -264,7 +264,7 @@ function ExcluirContaForm() {
             <div className="mb-5">
                 <h2 className="text-base font-semibold text-red-400">Excluir conta</h2>
                 <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
-                    Após a exclusão todos os dados serão permanentemente removidos.
+                    Contas que administram estabelecimentos precisam transferir a administração ou encerrar a operação antes da exclusão.
                 </p>
             </div>
 

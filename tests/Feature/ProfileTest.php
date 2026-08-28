@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -95,5 +96,30 @@ class ProfileTest extends TestCase
             ->assertRedirect('/profile');
 
         $this->assertNotNull($user->fresh());
+    }
+
+    public function test_admin_nao_pode_deixar_estabelecimento_orfao_ao_excluir_conta(): void
+    {
+        $user = User::factory()->create();
+        $tenant = Tenant::create([
+            'nome' => 'Estabelecimento ativo',
+            'slug' => 'estabelecimento-ativo',
+            'tipo_servico' => 'barbeiro',
+            'ativo' => true,
+        ]);
+        $tenant->users()->attach($user->id, ['papel' => 'admin']);
+
+        $this->actingAs($user)
+            ->from('/profile')
+            ->delete('/profile', ['password' => 'password'])
+            ->assertRedirect('/profile')
+            ->assertSessionHasErrors('password');
+
+        $this->assertNotNull($user->fresh());
+        $this->assertDatabaseHas('tenant_users', [
+            'tenant_id' => $tenant->id,
+            'user_id' => $user->id,
+            'papel' => 'admin',
+        ]);
     }
 }
