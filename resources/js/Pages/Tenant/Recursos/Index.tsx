@@ -38,6 +38,12 @@ function HorariosEditor({ recurso, onClose }: { recurso: Recurso; onClose: () =>
         setRows(r => r.map((row, idx) => idx === i ? { ...row, ativo: !row.ativo } : row));
     const setHora = (i: number, field: 'abertura' | 'fechamento', val: string) =>
         setRows(r => r.map((row, idx) => idx === i ? { ...row, [field]: val } : row));
+    const aplicarHorarioComercial = () => setRows(r => r.map((row, i) => ({
+        ...row,
+        ativo: i >= 1 && i <= 5,
+        abertura: '09:00',
+        fechamento: '18:00',
+    })));
 
     const salvar = () => {
         setSaving(true);
@@ -50,18 +56,33 @@ function HorariosEditor({ recurso, onClose }: { recurso: Recurso; onClose: () =>
 
     return (
         <div className="px-4 pb-5 pt-4 sm:px-6" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface-2)' }}>
-            <h4 className="mb-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
-                Horários de funcionamento
-            </h4>
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h4 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
+                        Horários de funcionamento
+                    </h4>
+                    <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
+                        Ative os dias em que o recurso pode receber reservas.
+                    </p>
+                </div>
+                <button type="button" onClick={aplicarHorarioComercial} className="btn-secondary min-h-10 justify-center text-xs">
+                    Usar seg–sex, 9h–18h
+                </button>
+            </div>
             <div className="space-y-2.5">
                 {rows.map((row, i) => (
-                    <div key={i} className="grid grid-cols-2 items-center gap-2 rounded-lg p-2 sm:flex sm:gap-4">
-                        <div className="col-span-2 sm:col-span-1 sm:w-28">
+                    <div key={i} className="grid grid-cols-2 items-end gap-2 rounded-lg p-3 sm:grid-cols-[112px_1fr_1fr] sm:gap-3">
+                        <div className="col-span-2 self-center sm:col-span-1">
                             <Toggle checked={row.ativo} onChange={() => toggle(i)} label={DIAS[i].slice(0, 3)} />
                         </div>
-                        <input type="time" value={row.abertura} onChange={e => setHora(i, 'abertura', e.target.value)} disabled={!row.ativo} className="input w-full min-w-0 disabled:opacity-40 sm:w-28" />
-                        <span className="hidden text-xs sm:inline" style={{ color: 'var(--text-3)' }}>até</span>
-                        <input type="time" value={row.fechamento} onChange={e => setHora(i, 'fechamento', e.target.value)} disabled={!row.ativo} className="input w-full min-w-0 disabled:opacity-40 sm:w-28" />
+                        <label>
+                            <span className="label mb-1">Abertura</span>
+                            <input type="time" value={row.abertura} onChange={e => setHora(i, 'abertura', e.target.value)} disabled={!row.ativo} className="input w-full min-w-0 disabled:opacity-40" />
+                        </label>
+                        <label>
+                            <span className="label mb-1">Fechamento</span>
+                            <input type="time" value={row.fechamento} onChange={e => setHora(i, 'fechamento', e.target.value)} disabled={!row.ativo} className="input w-full min-w-0 disabled:opacity-40" />
+                        </label>
                     </div>
                 ))}
             </div>

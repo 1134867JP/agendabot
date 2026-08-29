@@ -812,6 +812,7 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
 
     const [semana, setSemana]         = useState(() => startOfWeek(new Date()));
     const [diaAtivo, setDiaAtivo]     = useState(() => new Date());
+    const [calendarioMobileAberto, setCalendarioMobileAberto] = useState(false);
     const [entidadeId, setEntidadeId] = useState<number>(() => temVisaoGeral ? ALL_PROFESSIONALS_ID : (entidades[0]?.id ?? 0));
     const [agendamentos, setAgs]      = useState<AgendamentoCalendario[]>([]);
     const [loading, setLoading]       = useState(false);
@@ -965,6 +966,17 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
     const navegarDia = (d: Date) => {
         setDiaAtivo(d);
         setSemana(startOfWeek(d));
+        setCalendarioMobileAberto(false);
+    };
+
+    const horaInicialReserva = () => {
+        if (toISO(diaAtivo) !== getDateSP(new Date().toISOString())) return '09:00';
+
+        const agora = getMinutosSP(new Date().toISOString());
+        const proximoIntervalo = Math.ceil(agora / 30) * 30;
+        const minutos = Math.min(Math.max(proximoIntervalo, HOUR_START * 60), (HOUR_END - 1) * 60);
+
+        return `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}`;
     };
 
     const prevWeek = () => { const s = addDays(semana, -7); setSemana(s); setDiaAtivo(s); };
@@ -1085,12 +1097,11 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                     className="flex-shrink-0"
                     style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-sidebar)' }}
                 >
-                    <MiniCalendar selected={diaAtivo} onSelect={navegarDia} dotDates={dotDates} />
-
                     {/* Day navigation row */}
-                    <div className="flex items-center gap-2 px-4 pb-2">
+                    <div className="flex items-center gap-2 px-4 py-3">
                         <button
                             onClick={() => navegarDia(addDays(diaAtivo, -1))}
+                            aria-label="Dia anterior"
                             className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
                             style={{ color: 'var(--text-3)' }}
                         >
@@ -1098,9 +1109,20 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                                 <path d="M15 18l-6-6 6-6" />
                             </svg>
                         </button>
-                        <p className="flex-1 text-center text-[13px] font-semibold text-primary">{fmtDiaLongo(diaAtivo)}</p>
+                        <button
+                            type="button"
+                            onClick={() => setCalendarioMobileAberto(aberto => !aberto)}
+                            aria-expanded={calendarioMobileAberto}
+                            className="flex min-h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-2 text-center text-[13px] font-semibold text-primary hover:bg-[var(--bg-surface-2)]"
+                        >
+                            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                <rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/>
+                            </svg>
+                            <span className="truncate">{fmtDiaLongo(diaAtivo)}</span>
+                        </button>
                         <button
                             onClick={() => navegarDia(addDays(diaAtivo, 1))}
+                            aria-label="Próximo dia"
                             className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
                             style={{ color: 'var(--text-3)' }}
                         >
@@ -1110,17 +1132,49 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                         </button>
                     </div>
 
+                    {calendarioMobileAberto && (
+                        <div style={{ borderTop: '1px solid var(--border)' }}>
+                            <MiniCalendar selected={diaAtivo} onSelect={navegarDia} dotDates={dotDates} />
+                        </div>
+                    )}
+
                     {entidades.length > 0 && (
-                        <div className="flex justify-end px-4 pb-3">
+                        <div className="grid grid-cols-2 gap-2 px-4 pb-2">
                             <button
-                                onClick={() => abrirBloqueio(toISO(diaAtivo), '09:00')}
-                                className="btn-secondary min-h-10 text-xs"
+                                type="button"
+                                onClick={() => setModalNova({ data: toISO(diaAtivo), hora: horaInicialReserva() })}
+                                className="btn-primary min-h-11 justify-center text-xs"
+                            >
+                                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+                                    <path d="M12 5v14M5 12h14" />
+                                </svg>
+                                {usaRecursos ? 'Nova reserva' : 'Novo agendamento'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => abrirBloqueio(toISO(diaAtivo), horaInicialReserva())}
+                                className="btn-secondary min-h-11 justify-center text-xs"
                             >
                                 <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <rect x="5" y="10" width="14" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" />
                                 </svg>
                                 Bloquear horário
                             </button>
+                        </div>
+                    )}
+
+                    {entidades.length > 0 && (
+                        <div className="flex items-center justify-between gap-3 px-4 pb-3">
+                            <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>
+                                Toque em um horário livre para agendar.
+                            </p>
+                            <Link
+                                href={route(usaRecursos ? 'tenant.recursos.index' : 'tenant.profissionais.index')}
+                                className="shrink-0 text-[11px] font-medium"
+                                style={{ color: 'var(--accent)' }}
+                            >
+                                Configurar horários
+                            </Link>
                         </div>
                     )}
 
@@ -1170,25 +1224,13 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                         </Link>
                     </div>
                 ) : (
-                    <>
-                        <DayTimeline
-                            dia={diaAtivo}
-                            agendamentos={agendamentos}
-                            onDetalhe={abrirDetalhe}
-                            onNovo={hora => setModalNova({ data: toISO(diaAtivo), hora })}
-                            loading={loading}
-                        />
-                        <button
-                            onClick={() => setModalNova({ data: toISO(diaAtivo), hora: '09:00' })}
-                            aria-label="Nova reserva"
-                            className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-5 z-20 flex items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95"
-                            style={{ width: 52, height: 52, background: 'var(--jade)', color: 'white' }}
-                        >
-                            <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M12 5v14M5 12h14" />
-                            </svg>
-                        </button>
-                    </>
+                    <DayTimeline
+                        dia={diaAtivo}
+                        agendamentos={agendamentos}
+                        onDetalhe={abrirDetalhe}
+                        onNovo={hora => setModalNova({ data: toISO(diaAtivo), hora })}
+                        loading={loading}
+                    />
                 )}
             </div>
 
@@ -1324,8 +1366,14 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
 
                         {entidades.length > 0 && (
                             <>
+                                <Link
+                                    href={route(usaRecursos ? 'tenant.recursos.index' : 'tenant.profissionais.index')}
+                                    className="btn-secondary text-sm"
+                                >
+                                    Configurar horários
+                                </Link>
                                 <button
-                                    onClick={() => abrirBloqueio(toISO(diaAtivo), '09:00')}
+                                    onClick={() => abrirBloqueio(toISO(diaAtivo), horaInicialReserva())}
                                     className="btn-secondary text-sm"
                                 >
                                     <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1335,13 +1383,13 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                                 </button>
 
                                 <button
-                                    onClick={() => setModalNova({ data: toISO(diaAtivo), hora: '09:00' })}
+                                    onClick={() => setModalNova({ data: toISO(diaAtivo), hora: horaInicialReserva() })}
                                     className="btn-primary text-sm"
                                 >
                                     <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                         <path d="M12 5v14M5 12h14" />
                                     </svg>
-                                    Nova reserva
+                                    {usaRecursos ? 'Nova reserva' : 'Novo agendamento'}
                                 </button>
                             </>
                         )}

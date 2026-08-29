@@ -100,6 +100,13 @@ function HorariosEditor({ profissional, onClose }: { profissional: Profissional;
         setRows(r => r.map((row, i) => i === idx ? { ...row, ativo: !row.ativo } : row));
     const setField = (idx: number, field: 'hora_inicio' | 'hora_fim' | 'duracao_slot', value: string | number) =>
         setRows(r => r.map((row, i) => i === idx ? { ...row, [field]: value } : row));
+    const aplicarHorarioComercial = () => setRows(r => r.map((row, i) => ({
+        ...row,
+        ativo: i >= 1 && i <= 5,
+        hora_inicio: '09:00',
+        hora_fim: '18:00',
+        duracao_slot: 30,
+    })));
 
     const salvar = () => {
         setSaving(true);
@@ -113,21 +120,39 @@ function HorariosEditor({ profissional, onClose }: { profissional: Profissional;
 
     return (
         <div className="px-4 pb-5 pt-4 sm:px-6" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface-2)' }}>
-            <h4 className="mb-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
-                Horários de atendimento
-            </h4>
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h4 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
+                        Horários de atendimento
+                    </h4>
+                    <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
+                        Ative os dias e defina o período disponível para novos agendamentos.
+                    </p>
+                </div>
+                <button type="button" onClick={aplicarHorarioComercial} className="btn-secondary min-h-10 justify-center text-xs">
+                    Usar seg–sex, 9h–18h
+                </button>
+            </div>
             <div className="space-y-2.5">
                 {rows.map((row, i) => (
-                    <div key={i} className="grid grid-cols-2 items-center gap-2 rounded-lg p-2 sm:flex sm:flex-wrap sm:gap-4">
-                        <div className="col-span-2 sm:col-span-1 sm:w-28">
+                    <div key={i} className="grid grid-cols-2 items-end gap-2 rounded-lg p-3 sm:grid-cols-[112px_1fr_1fr_1fr] sm:gap-3">
+                        <div className="col-span-2 self-center sm:col-span-1">
                             <Toggle checked={row.ativo} onChange={() => toggle(i)} label={DIAS[i]} />
                         </div>
-                        <input type="time" value={row.hora_inicio} onChange={e => setField(i, 'hora_inicio', e.target.value)} disabled={!row.ativo} className="input w-full min-w-0 disabled:opacity-40 sm:w-28" />
-                        <span className="hidden text-xs sm:inline" style={{ color: 'var(--text-3)' }}>até</span>
-                        <input type="time" value={row.hora_fim} onChange={e => setField(i, 'hora_fim', e.target.value)} disabled={!row.ativo} className="input w-full min-w-0 disabled:opacity-40 sm:w-28" />
-                        <select value={row.duracao_slot} onChange={e => setField(i, 'duracao_slot', parseInt(e.target.value))} disabled={!row.ativo} className="input w-full min-w-0 disabled:opacity-40 sm:w-28">
-                            {DURACOES.map(m => <option key={m} value={m}>{m} min</option>)}
-                        </select>
+                        <label>
+                            <span className="label mb-1">Início</span>
+                            <input type="time" value={row.hora_inicio} onChange={e => setField(i, 'hora_inicio', e.target.value)} disabled={!row.ativo} className="input w-full min-w-0 disabled:opacity-40" />
+                        </label>
+                        <label>
+                            <span className="label mb-1">Fim</span>
+                            <input type="time" value={row.hora_fim} onChange={e => setField(i, 'hora_fim', e.target.value)} disabled={!row.ativo} className="input w-full min-w-0 disabled:opacity-40" />
+                        </label>
+                        <label className="col-span-2 sm:col-span-1">
+                            <span className="label mb-1">Intervalos</span>
+                            <select value={row.duracao_slot} onChange={e => setField(i, 'duracao_slot', parseInt(e.target.value))} disabled={!row.ativo} className="input w-full min-w-0 disabled:opacity-40">
+                                {DURACOES.map(m => <option key={m} value={m}>{m} min</option>)}
+                            </select>
+                        </label>
                     </div>
                 ))}
             </div>
