@@ -111,6 +111,14 @@ class SecurityHardeningTest extends TestCase
         $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
         $response->assertHeader('Content-Security-Policy');
+        $this->assertStringNotContainsString(
+            'localhost',
+            (string) $response->headers->get('Content-Security-Policy'),
+        );
+        $this->assertStringNotContainsString(
+            '127.0.0.1',
+            (string) $response->headers->get('Content-Security-Policy'),
+        );
     }
 
     public function test_hsts_ausente_em_requisicao_http_simples(): void

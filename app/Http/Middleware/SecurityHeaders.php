@@ -28,6 +28,9 @@ class SecurityHeaders
         $scriptSrc = app()->environment('local')
             ? "'self' 'nonce-{$nonce}' 'unsafe-eval' http://localhost:* http://127.0.0.1:*"
             : "'self' 'nonce-{$nonce}'";
+        $connectSrc = app()->environment('local')
+            ? "'self' https: wss: http://localhost:* ws://localhost:* http://127.0.0.1:* ws://127.0.0.1:*"
+            : "'self' https: wss:";
         $csp = implode('; ', [
             "default-src 'self'",
             "base-uri 'self'",
@@ -38,7 +41,7 @@ class SecurityHeaders
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "img-src 'self' data: blob: https:",
             "font-src 'self' data: https://fonts.gstatic.com",
-            "connect-src 'self' https: wss: http://localhost:* ws://localhost:* http://127.0.0.1:* ws://127.0.0.1:*",
+            "connect-src {$connectSrc}",
             "media-src 'self' data: blob: https:",
             "worker-src 'self' blob:",
         ]);
