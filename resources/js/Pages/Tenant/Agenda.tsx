@@ -1181,7 +1181,7 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                         <button
                             onClick={() => setModalNova({ data: toISO(diaAtivo), hora: '09:00' })}
                             aria-label="Nova reserva"
-                            className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-5 z-20 flex items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95"
+                            className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-5 z-20 flex items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95"
                             style={{ width: 52, height: 52, background: 'var(--jade)', color: 'white' }}
                         >
                             <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

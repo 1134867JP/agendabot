@@ -1359,7 +1359,7 @@ export default function AgendamentosIndex({
             {podeCriarReserva && (
                 <button
                     onClick={() => setModalAberto(true)}
-                    className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-20 flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold text-white shadow-lg transition-all hover:scale-105 hover:brightness-110 sm:bottom-7 sm:right-7 sm:h-auto sm:w-auto sm:gap-2 sm:px-5 sm:py-3"
+                    className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-20 flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold text-white shadow-lg transition-all hover:scale-105 hover:brightness-110 sm:right-7 sm:h-auto sm:w-auto sm:gap-2 sm:px-5 sm:py-3 lg:bottom-7"
                     style={{
                         background: "var(--accent)",
                         boxShadow: "0 4px 20px rgba(99,102,241,0.4)",
