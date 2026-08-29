@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class SecurityHardeningTest extends TestCase
@@ -258,7 +259,11 @@ class SecurityHardeningTest extends TestCase
         $this->actingAs($user)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('Tenant de Segurança');
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->has('tenants', 1)
+                ->where('tenants.0.id', $tenant->id)
+                ->where('tenants.0.ativo', false));
     }
 
     public function test_whatsapp_backup_is_encrypted_at_rest(): void
