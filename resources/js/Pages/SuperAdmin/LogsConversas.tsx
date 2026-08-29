@@ -63,6 +63,7 @@ export default function LogsConversas() {
             {/* Filtros */}
             <div className="mb-4 flex flex-wrap gap-3">
                 <select
+                    aria-label="Filtrar conversas por tenant"
                     value={tenantId}
                     onChange={e => setTenantId(e.target.value)}
                     className="w-full max-w-full rounded-lg border px-3 py-1.5 text-sm sm:w-auto"
@@ -72,6 +73,7 @@ export default function LogsConversas() {
                     {tenants.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
                 </select>
                 <input
+                    aria-label="Filtrar conversas por telefone"
                     type="text"
                     placeholder="Filtrar por telefone..."
                     value={telefone}

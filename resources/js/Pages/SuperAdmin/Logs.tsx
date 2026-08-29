@@ -168,6 +168,7 @@ export default function Logs() {
 
                 {/* Filtro por tenant */}
                 <select
+                    aria-label="Filtrar logs por tenant"
                     value={tenantId}
                     onChange={e => { setTenantId(e.target.value); setExpanded(null); }}
                     className="max-w-full rounded-lg px-3 py-2 text-xs font-medium outline-none"

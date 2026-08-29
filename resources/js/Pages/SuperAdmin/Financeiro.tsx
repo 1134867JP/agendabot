@@ -68,6 +68,7 @@ export default function Financeiro({ mes, rows, totais }: Props) {
                     </p>
                 </div>
                 <select
+                    aria-label="Mês de referência"
                     value={mes}
                     onChange={e => router.get(route('superadmin.financeiro'), { mes: e.target.value })}
                     className="rounded-lg border px-3 py-1.5 text-sm"
