@@ -9,13 +9,6 @@ import { ThemeProvider } from '@/Components/ThemeProvider';
 import AppErrorBoundary from '@/Components/UI/AppErrorBoundary';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Agendou';
-const protectedPaths = ['/painel', '/superadmin', '/profile'];
-
-window.addEventListener('popstate', () => {
-    if (protectedPaths.some((path) => window.location.pathname === path || window.location.pathname.startsWith(`${path}/`))) {
-        window.location.reload();
-    }
-});
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,

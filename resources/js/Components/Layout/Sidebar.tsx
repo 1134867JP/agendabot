@@ -1,4 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
+import { useEffect, useRef } from 'react';
 import { PageProps, SubscriptionInfo, TipoServico } from '@/types';
 import { useTheme } from '@/Components/ThemeProvider';
 import ToastNovaMensagem from '@/Components/ToastNovaMensagem';
@@ -87,6 +88,7 @@ export default function Sidebar({
     novaMensagem,
     resetarNovaMensagem,
 }: SidebarProps) {
+    const navRef = useRef<HTMLElement>(null);
     const { theme, toggle } = useTheme();
     const page = usePage<PageProps<{
         currentTenant?: { id: number; nome: string; slug: string; tipo_servico: TipoServico; modo_bot?: 'agendamento' | 'triagem' | null } | null;
@@ -132,6 +134,31 @@ export default function Sidebar({
 
     const pararImpersonar = () => router.delete(route('superadmin.impersonar.parar'));
 
+    useEffect(() => {
+        const nav = navRef.current;
+        if (! nav) return;
+
+        const savedPosition = Number(sessionStorage.getItem('agendou:sidebar-scroll') ?? 0);
+        nav.scrollTop = Number.isFinite(savedPosition) ? savedPosition : 0;
+    }, []);
+
+    useEffect(() => {
+        if (! open) return;
+
+        const previousOverflow = document.body.style.overflow;
+        const closeOnEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') onClose();
+        };
+
+        document.body.style.overflow = 'hidden';
+        window.addEventListener('keydown', closeOnEscape);
+
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            window.removeEventListener('keydown', closeOnEscape);
+        };
+    }, [open, onClose]);
+
     return (
         <>
             {/* Mobile overlay */}
@@ -144,7 +171,7 @@ export default function Sidebar({
 
             <aside
                 className={`
-                    fixed inset-y-0 left-0 z-30 flex w-52 flex-col
+                    fixed inset-y-0 left-0 z-30 flex w-64 max-w-[calc(100vw-2rem)] flex-col lg:w-52
                     transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:z-auto
                     ${open ? 'translate-x-0' : '-translate-x-full'}
                 `}
@@ -188,7 +215,11 @@ export default function Sidebar({
                 )}
 
                 {/* Nav */}
-                <nav className="scroll-hidden flex-1 overflow-y-auto py-2">
+                <nav
+                    ref={navRef}
+                    className="scroll-hidden flex-1 overflow-y-auto py-2"
+                    onScroll={(event) => sessionStorage.setItem('agendou:sidebar-scroll', String(event.currentTarget.scrollTop))}
+                >
                     {sections.map(section => (
                         <div key={section.label} className="mb-3">
                             <span

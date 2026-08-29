@@ -17,13 +17,14 @@ export default function ToastNovaMensagem({ visivel, onFechar }: Props) {
 
     return (
         <div
-            className="fixed bottom-5 right-5 z-50 flex items-center gap-3 rounded-2xl px-4 py-3 shadow-xl"
+            className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-50 flex items-center gap-3 rounded-xl px-4 py-3 shadow-xl sm:left-auto sm:min-w-60 lg:bottom-5 lg:right-5"
             style={{
-                background: 'var(--bg-card)',
+                background: 'var(--bg-surface)',
                 border: '1px solid var(--border)',
-                minWidth: 240,
                 animation: 'slideUp 0.25s ease',
             }}
+            role="status"
+            aria-live="polite"
         >
             {/* Ícone */}
             <div
@@ -50,9 +51,11 @@ export default function ToastNovaMensagem({ visivel, onFechar }: Props) {
 
             {/* Fechar */}
             <button
+                type="button"
                 onClick={onFechar}
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-white/10"
                 style={{ color: 'var(--text-3)' }}
+                aria-label="Fechar notificação"
             >
                 <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                     <path d="M18 6L6 18M6 6l12 12" />
