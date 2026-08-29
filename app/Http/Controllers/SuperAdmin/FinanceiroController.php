@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Agendamento;
 use App\Models\CobrancaBot;
 use App\Models\Tenant;
 use App\Models\TokenUsage;
@@ -56,13 +55,6 @@ class FinanceiroController extends Controller
             $custoUsd = (float) ($tokens->cost_usd ?? 0);
             $custoBrl = round($custoUsd * 5.70, 2); // cotação aproximada USD→BRL
 
-            // Agendamentos via bot no período
-            $agendamentosBot = Agendamento::where('tenant_id', $tenant->id)
-                ->where('origem', 'bot')
-                ->where('status', '!=', 'cancelado')
-                ->whereBetween('created_at', [$inicio, $fim])
-                ->count();
-
             $lucro = round($receitaTotal - $custoBrl, 2);
             $margem = $receitaTotal > 0
                 ? round(($lucro / $receitaTotal) * 100, 1)
@@ -79,7 +71,6 @@ class FinanceiroController extends Controller
                 'custo_ia_brl' => $custoBrl,
                 'lucro' => $lucro,
                 'margem' => $margem,
-                'agendamentos_bot' => $agendamentosBot,
                 'tokens' => [
                     'input' => (int) ($tokens->input ?? 0),
                     'output' => (int) ($tokens->output ?? 0),

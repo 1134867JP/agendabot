@@ -268,7 +268,32 @@ export default function TokenUsage({ ia, mes, mesAnterior, cacheHitRate, economi
                         Nenhum registro ainda
                     </div>
                 ) : (
-                    <div className="max-w-full overflow-x-auto overscroll-x-contain">
+                    <>
+                    <div className="divide-y lg:hidden" style={{ borderColor: 'var(--border)' }}>
+                        {porTenant.map(t => (
+                            <article key={t.id} className="px-4 py-4">
+                                <div className="flex min-w-0 items-start justify-between gap-3">
+                                    <h2 className="min-w-0 truncate font-medium" style={{ color: 'var(--text-1)' }}>{t.nome}</h2>
+                                    <span className="shrink-0 font-semibold tabular-nums" style={{ color: 'var(--jade)' }}>{usd(t.custo_usd)}</span>
+                                </div>
+                                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                    <div>
+                                        <dt className="text-xs" style={{ color: 'var(--text-3)' }}>Chamadas</dt>
+                                        <dd className="tabular-nums" style={{ color: 'var(--text-2)' }}>{num(t.calls)}</dd>
+                                    </div>
+                                    <div>
+                                        <dt className="text-xs" style={{ color: 'var(--text-3)' }}>Input / output</dt>
+                                        <dd className="tabular-nums" style={{ color: 'var(--text-2)' }}>{num(t.input)} / {num(t.output)}</dd>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <dt className="text-xs" style={{ color: 'var(--text-3)' }}>Tokens lidos do cache</dt>
+                                        <dd className="tabular-nums" style={{ color: 'var(--text-2)' }}>{num(t.cache_read)}</dd>
+                                    </div>
+                                </dl>
+                            </article>
+                        ))}
+                    </div>
+                    <div className="hidden max-w-full overflow-x-auto overscroll-x-contain lg:block">
                     <table className="w-full min-w-[760px] text-[13px]">
                         <thead>
                             <tr style={{ borderBottom: '1px solid var(--border)' }}>
@@ -309,6 +334,7 @@ export default function TokenUsage({ ia, mes, mesAnterior, cacheHitRate, economi
                         </tfoot>
                     </table>
                     </div>
+                    </>
                 )}
             </div>
 

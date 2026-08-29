@@ -13,7 +13,6 @@ interface Row {
     custo_ia_brl: number;
     lucro: number;
     margem: number | null;
-    agendamentos_bot: number;
     tokens: { input: number; output: number; cache_write: number; cache_read: number };
 }
 
@@ -94,20 +93,61 @@ export default function Financeiro({ mes, rows, totais }: Props) {
                 ))}
             </div>
 
-            {/* Tabela */}
-            <div className="card overflow-hidden">
+            {/* Resumo por tenant no mobile */}
+            <div className="space-y-3 lg:hidden">
+                {rows.length === 0 ? (
+                    <div className="card px-4 py-10 text-center text-sm" style={{ color: 'var(--text-3)' }}>
+                        Nenhum tenant ativo neste período.
+                    </div>
+                ) : rows.map(r => (
+                    <article key={r.id} className="card p-4">
+                        <div className="flex min-w-0 items-start justify-between gap-3">
+                            <div className="min-w-0">
+                                <h2 className="truncate font-semibold" style={{ color: 'var(--text-1)' }}>{r.nome}</h2>
+                                <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
+                                    {r.plano ? PLANO_LABEL[r.plano] ?? r.plano : 'Sem plano'}
+                                </p>
+                            </div>
+                            {r.isento && <span className="badge badge-yellow shrink-0 text-[10px]">Isento</span>}
+                        </div>
+                        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                            <div>
+                                <dt className="text-xs" style={{ color: 'var(--text-3)' }}>Receita</dt>
+                                <dd className="mt-0.5 font-semibold" style={{ color: '#34d399' }}>{R(r.receita_total)}</dd>
+                            </div>
+                            <div>
+                                <dt className="text-xs" style={{ color: 'var(--text-3)' }}>Custo IA</dt>
+                                <dd className="mt-0.5" style={{ color: r.custo_ia_brl > 0 ? '#f87171' : 'var(--text-3)' }}>
+                                    {r.custo_ia_brl > 0 ? R(r.custo_ia_brl) : '—'}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-xs" style={{ color: 'var(--text-3)' }}>Lucro estimado</dt>
+                                <dd className="mt-0.5 font-semibold" style={{ color: r.lucro >= 0 ? '#34d399' : '#f87171' }}>{R(r.lucro)}</dd>
+                            </div>
+                            <div>
+                                <dt className="text-xs" style={{ color: 'var(--text-3)' }}>Margem</dt>
+                                <dd className="mt-0.5"><MargemBadge margem={r.margem} /></dd>
+                            </div>
+                        </dl>
+                    </article>
+                ))}
+            </div>
+
+            {/* Tabela para telas amplas */}
+            <div className="card hidden overflow-hidden lg:block">
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
                         <thead>
                             <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface-2)' }}>
-                                {['Tenant', 'Plano', 'Mensalidade', 'Taxa bot', 'Receita', 'Custo IA', 'Lucro', 'Margem', 'Agend. bot'].map(h => (
+                                {['Tenant', 'Plano', 'Mensalidade', 'Taxa bot', 'Receita', 'Custo IA', 'Lucro', 'Margem'].map(h => (
                                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>{h}</th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody>
                             {rows.length === 0 && (
-                                <tr><td colSpan={9} className="px-4 py-10 text-center" style={{ color: 'var(--text-3)' }}>Nenhum tenant ativo.</td></tr>
+                                <tr><td colSpan={8} className="px-4 py-10 text-center" style={{ color: 'var(--text-3)' }}>Nenhum tenant ativo.</td></tr>
                             )}
                             {rows.map(r => (
                                 <tr key={r.id} className="table-row-hover" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -138,9 +178,6 @@ export default function Financeiro({ mes, rows, totais }: Props) {
                                     <td className="px-4 py-3">
                                         <MargemBadge margem={r.margem} />
                                     </td>
-                                    <td className="px-4 py-3" style={{ color: 'var(--text-2)' }}>
-                                        {r.agendamentos_bot}
-                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -151,7 +188,7 @@ export default function Financeiro({ mes, rows, totais }: Props) {
                                     <td className="px-4 py-3 font-bold" style={{ color: '#34d399' }}>{R(totais.receita_total)}</td>
                                     <td className="px-4 py-3 font-bold" style={{ color: '#f87171' }}>{R(totais.custo_ia_brl)}</td>
                                     <td className="px-4 py-3 font-bold" style={{ color: totais.lucro >= 0 ? '#34d399' : '#f87171' }}>{R(totais.lucro)}</td>
-                                    <td colSpan={2} />
+                                    <td />
                                 </tr>
                             </tfoot>
                         )}
