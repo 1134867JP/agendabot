@@ -48,6 +48,11 @@ if ! docker compose build app; then
     docker compose build --no-cache app
 fi
 
+echo "--- aplicando migrações com a nova imagem antes da troca do app ---"
+# Evita iniciar a nova aplicação contra um schema antigo. As migrações do projeto
+# devem permanecer retrocompatíveis com a versão anterior para permitir rollback.
+docker compose run --rm --no-deps app php artisan migrate --force
+
 echo "--- parando containers dependentes (worker/worker-batch/scheduler) ---"
 docker compose stop worker worker-batch scheduler 2>/dev/null || true
 docker compose rm -f worker worker-batch scheduler 2>/dev/null || true
@@ -83,8 +88,6 @@ docker exec agendabot-app php artisan config:cache
 docker exec agendabot-app php artisan route:cache
 docker exec agendabot-app php artisan view:cache
 
-echo "--- migrações pendentes ---"
-docker exec agendabot-app php artisan migrate --force
 echo "--- criptografando backups legados ---"
 docker exec agendabot-app php artisan whatsapp:encrypt-backups
 echo "--- rotacionando tokens de webhook expostos ---"
