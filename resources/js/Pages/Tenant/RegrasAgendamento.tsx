@@ -120,14 +120,14 @@ export default function RegrasAgendamento({ config }: Props) {
                                 <p className="text-sm text-primary">Remarcar pelo WhatsApp</p>
                                 <p className="text-xs" style={{ color: 'var(--text-3)' }}>Sem precisar falar com a equipe.</p>
                             </div>
-                            <Toggle checked={data.permite_cliente_remarcar} onChange={value => setData('permite_cliente_remarcar', value)} />
+                            <Toggle checked={data.permite_cliente_remarcar} onChange={value => setData('permite_cliente_remarcar', value)} ariaLabel="Permitir que o cliente remarque pelo WhatsApp" />
                         </div>
                         <div className="flex items-center justify-between gap-4 py-3">
                             <div>
                                 <p className="text-sm text-primary">Cancelar pelo WhatsApp</p>
                                 <p className="text-xs" style={{ color: 'var(--text-3)' }}>O horário volta automaticamente para a agenda.</p>
                             </div>
-                            <Toggle checked={data.permite_cliente_cancelar} onChange={value => setData('permite_cliente_cancelar', value)} />
+                            <Toggle checked={data.permite_cliente_cancelar} onChange={value => setData('permite_cliente_cancelar', value)} ariaLabel="Permitir que o cliente cancele pelo WhatsApp" />
                         </div>
                     </div>
                 </section>

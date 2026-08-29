@@ -11,10 +11,10 @@ interface Props extends PageProps {
 }
 
 /* ─── Sub-componentes inline ─────────────────────────────────────────── */
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
     return (
         <div>
-            <label className="label mb-1.5 block">{label}</label>
+            <label className="label mb-1.5 block" htmlFor={htmlFor}>{label}</label>
             {children}
         </div>
     );
@@ -57,8 +57,9 @@ function DadosPessoaisForm({ mustVerifyEmail, status }: { mustVerifyEmail: boole
             </div>
 
             <form onSubmit={submit} className="space-y-4">
-                <Field label="Nome">
+                <Field label="Nome" htmlFor="perfil-nome">
                     <input
+                        id="perfil-nome"
                         type="text"
                         value={data.name}
                         onChange={e => setData('name', e.target.value)}
@@ -70,8 +71,9 @@ function DadosPessoaisForm({ mustVerifyEmail, status }: { mustVerifyEmail: boole
                     {errors.name && <p className="mt-1 text-xs text-red-400">{errors.name}</p>}
                 </Field>
 
-                <Field label="E-mail">
+                <Field label="E-mail" htmlFor="perfil-email">
                     <input
+                        id="perfil-email"
                         type="email"
                         value={data.email}
                         onChange={e => setData('email', e.target.value)}
@@ -83,8 +85,9 @@ function DadosPessoaisForm({ mustVerifyEmail, status }: { mustVerifyEmail: boole
                     {errors.email && <p className="mt-1 text-xs text-red-400">{errors.email}</p>}
                 </Field>
 
-                <Field label="Telefone (opcional)">
+                <Field label="Telefone (opcional)" htmlFor="perfil-telefone">
                     <input
+                        id="perfil-telefone"
                         type="tel"
                         value={data.telefone}
                         onChange={e => setData('telefone', e.target.value)}
@@ -155,8 +158,9 @@ function AlterarSenhaForm() {
         });
     };
 
-    const Eye = ({ show, toggle }: { show: boolean; toggle: () => void }) => (
+    const Eye = ({ show, toggle, field }: { show: boolean; toggle: () => void; field: string }) => (
         <button type="button" onClick={toggle} tabIndex={-1}
+            aria-label={`${show ? 'Ocultar' : 'Mostrar'} ${field}`}
             className="absolute inset-y-0 right-0 flex items-center px-3 transition-colors"
             style={{ color: 'var(--text-3)' }}>
             {show ? (
@@ -181,9 +185,10 @@ function AlterarSenhaForm() {
             </div>
 
             <form onSubmit={submit} className="space-y-4">
-                <Field label="Senha atual">
+                <Field label="Senha atual" htmlFor="perfil-senha-atual">
                     <div className="relative">
                         <input
+                            id="perfil-senha-atual"
                             ref={currentRef}
                             type={showCurrent ? 'text' : 'password'}
                             value={data.current_password}
@@ -192,14 +197,15 @@ function AlterarSenhaForm() {
                             placeholder="••••••••"
                             autoComplete="current-password"
                         />
-                        <Eye show={showCurrent} toggle={() => setShowCurrent(s => !s)} />
+                        <Eye show={showCurrent} toggle={() => setShowCurrent(s => !s)} field="senha atual" />
                     </div>
                     {errors.current_password && <p className="mt-1 text-xs text-red-400">{errors.current_password}</p>}
                 </Field>
 
-                <Field label="Nova senha">
+                <Field label="Nova senha" htmlFor="perfil-nova-senha">
                     <div className="relative">
                         <input
+                            id="perfil-nova-senha"
                             ref={passwordRef}
                             type={showNew ? 'text' : 'password'}
                             value={data.password}
@@ -208,14 +214,15 @@ function AlterarSenhaForm() {
                             placeholder="••••••••"
                             autoComplete="new-password"
                         />
-                        <Eye show={showNew} toggle={() => setShowNew(s => !s)} />
+                        <Eye show={showNew} toggle={() => setShowNew(s => !s)} field="nova senha" />
                     </div>
                     {errors.password && <p className="mt-1 text-xs text-red-400">{errors.password}</p>}
                 </Field>
 
-                <Field label="Confirmar nova senha">
+                <Field label="Confirmar nova senha" htmlFor="perfil-confirmar-senha">
                     <div className="relative">
                         <input
+                            id="perfil-confirmar-senha"
                             type={showNew ? 'text' : 'password'}
                             value={data.password_confirmation}
                             onChange={e => setData('password_confirmation', e.target.value)}
@@ -223,7 +230,7 @@ function AlterarSenhaForm() {
                             placeholder="••••••••"
                             autoComplete="new-password"
                         />
-                        <Eye show={showNew} toggle={() => setShowNew(s => !s)} />
+                        <Eye show={showNew} toggle={() => setShowNew(s => !s)} field="confirmação da nova senha" />
                     </div>
                     {errors.password_confirmation && <p className="mt-1 text-xs text-red-400">{errors.password_confirmation}</p>}
                 </Field>
@@ -282,8 +289,9 @@ function ExcluirContaForm() {
                     <p className="text-sm" style={{ color: 'var(--text-2)' }}>
                         Confirme sua senha para excluir permanentemente a conta.
                     </p>
-                    <Field label="Sua senha">
+                    <Field label="Sua senha" htmlFor="perfil-excluir-senha">
                         <input
+                            id="perfil-excluir-senha"
                             type="password"
                             value={data.password}
                             onChange={e => setData('password', e.target.value)}

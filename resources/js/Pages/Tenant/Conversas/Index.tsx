@@ -833,6 +833,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                 type="text"
                                 value={busca}
                                 onChange={e => setBusca(e.target.value)}
+                                aria-label="Pesquisar conversas"
                                 placeholder="Pesquisar conversa…"
                                 className="w-full rounded-full py-2 pl-8 pr-8 text-[12px] outline-none transition-colors"
                                 style={{

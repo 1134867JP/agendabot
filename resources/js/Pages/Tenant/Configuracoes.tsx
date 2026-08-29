@@ -379,7 +379,7 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                                 Envia uma mensagem WhatsApp 24h antes do agendamento
                             </p>
                         </div>
-                        <Toggle checked={data.lembrete_ativo} onChange={v => setData('lembrete_ativo', v)} />
+                        <Toggle checked={data.lembrete_ativo} onChange={v => setData('lembrete_ativo', v)} ariaLabel="Ativar lembrete automático pelo WhatsApp" />
                     </div>
 
                     {data.lembrete_ativo && (

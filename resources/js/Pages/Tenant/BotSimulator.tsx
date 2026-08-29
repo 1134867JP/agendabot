@@ -65,6 +65,7 @@ export default function BotSimulator() {
                         <input
                             value={input}
                             onChange={event => setInput(event.target.value)}
+                            aria-label="Mensagem para o simulador"
                             placeholder="Ex.: quero agendar um corte"
                             className="min-w-0 flex-1 rounded-lg px-3 py-2 text-sm"
                             style={{ background: 'var(--bg-surface-2)', color: 'var(--text-1)', border: '1px solid var(--border-strong)' }}

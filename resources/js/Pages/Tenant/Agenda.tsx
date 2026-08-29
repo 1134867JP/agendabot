@@ -204,7 +204,9 @@ function MiniCalendar({
             {/* Month header */}
             <div className="mb-3 flex items-center justify-between">
                 <button
+                    type="button"
                     onClick={prev}
+                    aria-label="Mês anterior"
                     className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
                     style={{ color: 'var(--text-3)' }}
                 >
@@ -216,7 +218,9 @@ function MiniCalendar({
                     {MONTHS[month]} {year}
                 </span>
                 <button
+                    type="button"
                     onClick={next}
+                    aria-label="Próximo mês"
                     className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
                     style={{ color: 'var(--text-3)' }}
                 >
@@ -668,7 +672,9 @@ function DetalheModal({
                             )}
                         </div>
                         <button
+                            type="button"
                             onClick={onClose}
+                            aria-label="Fechar detalhes do agendamento"
                             className="flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-[var(--bg-surface-2)]"
                             style={{ color: 'var(--text-3)' }}
                         >
@@ -1324,7 +1330,9 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                         style={{ borderBottom: '1px solid var(--border)' }}
                     >
                         <button
+                            type="button"
                             onClick={prevWeek}
+                            aria-label="Semana anterior"
                             className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
                             style={{ color: 'var(--text-3)' }}
                         >
@@ -1342,7 +1350,9 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                         </button>
 
                         <button
+                            type="button"
                             onClick={nextWeek}
+                            aria-label="Próxima semana"
                             className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
                             style={{ color: 'var(--text-3)' }}
                         >
@@ -1443,7 +1453,7 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                                     {detalheBloqueio.title}
                                 </h3>
                             </div>
-                            <button onClick={() => setDetalheBloqueio(null)} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[var(--bg-surface-2)]" style={{ color: 'var(--text-3)' }}>
+                            <button type="button" onClick={() => setDetalheBloqueio(null)} aria-label="Fechar detalhes do bloqueio" className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[var(--bg-surface-2)]" style={{ color: 'var(--text-3)' }}>
                                 <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
                             </button>
                         </div>
@@ -1471,7 +1481,7 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                                     <p className="label mb-1">Indisponibilidade</p>
                                     <h3 className="text-xl font-semibold text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>Bloquear horário</h3>
                                 </div>
-                                <button onClick={() => setModalBloqueio(null)} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[var(--bg-surface-2)]" style={{ color: 'var(--text-3)' }}>
+                                <button type="button" onClick={() => setModalBloqueio(null)} aria-label="Fechar bloqueio de horário" className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[var(--bg-surface-2)]" style={{ color: 'var(--text-3)' }}>
                                     <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
                                 </button>
                             </div>
@@ -1480,15 +1490,16 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                                     {new Date(modalBloqueio.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
                                 </p>
                                 <div>
-                                    <label className="label mb-1">{tipoEntidade === 'recurso' ? 'Recurso' : 'Profissional'}</label>
-                                    <select value={bloqueioEntidadeId} onChange={e => setBloqueioEntidadeId(Number(e.target.value))} className="input">
+                                    <label className="label mb-1" htmlFor="bloqueio-entidade">{tipoEntidade === 'recurso' ? 'Recurso' : 'Profissional'}</label>
+                                    <select id="bloqueio-entidade" value={bloqueioEntidadeId} onChange={e => setBloqueioEntidadeId(Number(e.target.value))} className="input">
                                         {entidades.map(entidade => <option key={`${entidade.tipo}-${entidade.id}`} value={entidade.id}>{entidade.nome}</option>)}
                                     </select>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="label mb-1">Início</label>
+                                        <label className="label mb-1" htmlFor="bloqueio-inicio">Início</label>
                                         <input
+                                            id="bloqueio-inicio"
                                             type="time"
                                             value={modalBloqueio.hora}
                                             onChange={e => setModalBloqueio(current => current ? { ...current, hora: e.target.value } : current)}
@@ -1496,13 +1507,13 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                                         />
                                     </div>
                                     <div>
-                                        <label className="label mb-1">Término</label>
-                                        <input type="time" value={bloqueioForm.fim} onChange={e => setBloqueioForm(form => ({ ...form, fim: e.target.value }))} className="input" />
+                                        <label className="label mb-1" htmlFor="bloqueio-fim">Término</label>
+                                        <input id="bloqueio-fim" type="time" value={bloqueioForm.fim} onChange={e => setBloqueioForm(form => ({ ...form, fim: e.target.value }))} className="input" />
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="label mb-1">Motivo</label>
-                                    <input value={bloqueioForm.motivo} onChange={e => setBloqueioForm(form => ({ ...form, motivo: e.target.value }))} maxLength={120} className="input" placeholder="Ex.: almoço, reunião ou folga" />
+                                    <label className="label mb-1" htmlFor="bloqueio-motivo">Motivo</label>
+                                    <input id="bloqueio-motivo" value={bloqueioForm.motivo} onChange={e => setBloqueioForm(form => ({ ...form, motivo: e.target.value }))} maxLength={120} className="input" placeholder="Ex.: almoço, reunião ou folga" />
                                 </div>
                             </div>
                             {erroBloqueio && <p className="mt-3 rounded-lg px-3 py-2 text-sm" style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171' }}>{erroBloqueio}</p>}
@@ -1525,10 +1536,12 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                                     className="text-xl font-semibold text-primary"
                                     style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
                                 >
-                                    Nova reserva
+                                    {usaRecursos ? 'Nova reserva' : 'Novo agendamento'}
                                 </h3>
                                 <button
+                                    type="button"
                                     onClick={() => setModalNova(null)}
+                                    aria-label="Fechar novo agendamento"
                                     className="flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-[var(--bg-surface-2)]"
                                     style={{ color: 'var(--text-3)' }}
                                 >
@@ -1546,8 +1559,9 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                             <div className="space-y-3">
                                 {tipoEntidade === 'profissional' && (
                                     <div>
-                                        <label className="label mb-1">Profissional</label>
+                                        <label className="label mb-1" htmlFor="novo-agendamento-profissional">Profissional</label>
                                         <select
+                                            id="novo-agendamento-profissional"
                                             value={novoProfissionalId}
                                             onChange={e => atualizarProfissional(Number(e.target.value))}
                                             className="input"
@@ -1562,8 +1576,9 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                                 )}
                                 {servicosDisponiveis.length > 0 ? (
                                     <div>
-                                        <label className="label mb-1">Serviço</label>
+                                        <label className="label mb-1" htmlFor="novo-agendamento-servico">Serviço</label>
                                         <select
+                                            id="novo-agendamento-servico"
                                             value={novaForm.servicoId}
                                             onChange={e => atualizarServico(Number(e.target.value))}
                                             className="input"
@@ -1584,9 +1599,10 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                                     </div>
                                 )}
                                 <div className="relative">
-                                    <label className="label mb-1">Cliente</label>
+                                    <label className="label mb-1" htmlFor="novo-agendamento-cliente">Cliente</label>
                                     <div className="relative">
                                         <input
+                                            id="novo-agendamento-cliente"
                                             autoFocus
                                             value={novaForm.nome}
                                             onChange={event => {
@@ -1632,8 +1648,9 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                                     )}
                                 </div>
                                 <div>
-                                    <label className="label mb-1">Telefone</label>
+                                    <label className="label mb-1" htmlFor="novo-agendamento-telefone">Telefone</label>
                                     <input
+                                        id="novo-agendamento-telefone"
                                         value={novaForm.tel}
                                         onChange={event => {
                                             const tel = normalizePhone(event.target.value);
@@ -1654,8 +1671,9 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                                     )}
                                 </div>
                                 <div>
-                                    <label className="label mb-1">Horário de término</label>
+                                    <label className="label mb-1" htmlFor="novo-agendamento-fim">Horário de término</label>
                                     <input
+                                        id="novo-agendamento-fim"
                                         type="time"
                                         value={novaForm.fim}
                                         onChange={e => setNovaForm(f => ({ ...f, fim: e.target.value }))}
@@ -1663,8 +1681,9 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                                     />
                                 </div>
                                 <div>
-                                    <label className="label mb-1">Observações</label>
+                                    <label className="label mb-1" htmlFor="novo-agendamento-observacoes">Observações</label>
                                     <textarea
+                                        id="novo-agendamento-observacoes"
                                         value={novaForm.obs}
                                         onChange={e => setNovaForm(f => ({ ...f, obs: e.target.value }))}
                                         rows={2}

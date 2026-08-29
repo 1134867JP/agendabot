@@ -115,9 +115,10 @@ export default function Triagem({ config, horarioFuncionamento }: Props) {
 
                     <div className="space-y-6">
                         <div>
-                            <label className="label mb-1">Palavras que chamam um atendente</label>
+                            <label className="label mb-1" htmlFor="triagem-nova-palavra">Palavras que chamam um atendente</label>
                             <div className="flex gap-2">
                                 <input
+                                    id="triagem-nova-palavra"
                                     value={novaPalavra}
                                     onChange={event => setNovaPalavra(event.target.value)}
                                     onKeyDown={event => {
@@ -169,16 +170,18 @@ export default function Triagem({ config, horarioFuncionamento }: Props) {
                                 <Toggle
                                     checked={data.transferir_fora_do_horario}
                                     onChange={value => setData('transferir_fora_do_horario', value)}
+                                    ariaLabel="Transferir para a equipe quando o estabelecimento estiver fechado"
                                 />
                             </div>
                         </div>
 
                         <div>
-                            <label className="label mb-1">
+                            <label className="label mb-1" htmlFor="triagem-mensagem">
                                 Mensagem de transferência
                                 <span className="ml-1 font-normal" style={{ color: 'var(--text-3)' }}>(opcional)</span>
                             </label>
                             <textarea
+                                id="triagem-mensagem"
                                 value={data.mensagem_transferencia}
                                 onChange={event => setData('mensagem_transferencia', event.target.value)}
                                 rows={3}
@@ -203,8 +206,9 @@ export default function Triagem({ config, horarioFuncionamento }: Props) {
                                 Regra avançada
                             </summary>
                             <div className="px-4 pb-4" style={{ borderTop: '1px solid var(--border)' }}>
-                                <label className="label mb-1 mt-4">Tentativas sem entender antes de transferir</label>
+                                <label className="label mb-1 mt-4" htmlFor="triagem-tentativas">Tentativas sem entender antes de transferir</label>
                                 <input
+                                    id="triagem-tentativas"
                                     type="number"
                                     min={1}
                                     max={10}

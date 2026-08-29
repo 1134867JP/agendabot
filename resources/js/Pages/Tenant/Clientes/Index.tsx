@@ -167,7 +167,7 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
                         <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
                             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                         </svg>
-                        <input type="search" value={busca} onChange={event => pesquisar(event.target.value)} placeholder="Buscar por nome ou telefone…" className="input pl-9" />
+                        <input type="search" value={busca} onChange={event => pesquisar(event.target.value)} aria-label="Buscar clientes por nome ou telefone" placeholder="Buscar por nome ou telefone…" className="input pl-9" />
                     </div>
                 </div>
                 <button type="button" onClick={abrirCadastro} className="btn-primary min-h-11 justify-center">

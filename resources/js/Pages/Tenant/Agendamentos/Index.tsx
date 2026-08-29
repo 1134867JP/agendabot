@@ -963,8 +963,9 @@ export default function AgendamentosIndex({
                 className="card mb-5 grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end"
             >
                 <div>
-                    <label className="label mb-1">Data</label>
+                    <label className="label mb-1" htmlFor="filtro-agenda-data">Data</label>
                     <input
+                        id="filtro-agenda-data"
                         type="date"
                         name="data"
                         defaultValue={filtros.data ?? ""}
@@ -972,8 +973,9 @@ export default function AgendamentosIndex({
                     />
                 </div>
                 <div>
-                    <label className="label mb-1">Recurso</label>
+                    <label className="label mb-1" htmlFor="filtro-agenda-recurso">Recurso</label>
                     <select
+                        id="filtro-agenda-recurso"
                         name="recurso_id"
                         defaultValue={filtros.recurso_id ?? ""}
                         className="input"
@@ -987,8 +989,9 @@ export default function AgendamentosIndex({
                     </select>
                 </div>
                 <div>
-                    <label className="label mb-1">Status</label>
+                    <label className="label mb-1" htmlFor="filtro-agenda-status">Status</label>
                     <select
+                        id="filtro-agenda-status"
                         name="status"
                         defaultValue={filtros.status ?? ""}
                         className="input"
@@ -1000,8 +1003,9 @@ export default function AgendamentosIndex({
                     </select>
                 </div>
                 <div className="min-w-0 sm:col-span-2 lg:min-w-[160px] lg:flex-1">
-                    <label className="label mb-1">Busca</label>
+                    <label className="label mb-1" htmlFor="filtro-agenda-busca">Busca</label>
                     <input
+                        id="filtro-agenda-busca"
                         type="text"
                         name="busca"
                         defaultValue={filtros.busca ?? ""}
