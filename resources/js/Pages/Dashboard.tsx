@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { PageProps, Tenant } from '@/types';
 import EstabelecimentoForm from '@/Components/EstabelecimentoForm';
 
@@ -62,8 +62,9 @@ export default function Dashboard({ auth, tenants }: Props) {
                             <button
                                 key={tenant.id}
                                 onClick={() => selecionar(tenant)}
-                                className="card group flex w-full items-center gap-4 p-4 text-left transition-all"
-                                style={{ cursor: 'pointer' }}
+                                disabled={!tenant.ativo}
+                                className="card group flex min-h-20 w-full items-center gap-4 p-4 text-left transition-all disabled:cursor-not-allowed disabled:opacity-65"
+                                style={{ cursor: tenant.ativo ? 'pointer' : 'not-allowed' }}
                                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface-2)'; }}
                                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface)'; }}
                             >
@@ -80,8 +81,10 @@ export default function Dashboard({ auth, tenants }: Props) {
                                             className="h-1.5 w-1.5 rounded-full"
                                             style={{ background: tenant.whatsapp_conectado ? 'var(--emerald)' : 'var(--text-3)' }}
                                         />
-                                        <span className="text-xs" style={{ color: 'var(--text-3)' }}>
-                                            WhatsApp {tenant.whatsapp_conectado ? 'conectado' : 'desconectado'}
+                                        <span className="text-xs" style={{ color: tenant.ativo ? 'var(--text-3)' : 'var(--danger-text)' }}>
+                                            {tenant.ativo
+                                                ? `WhatsApp ${tenant.whatsapp_conectado ? 'conectado' : 'desconectado'}`
+                                                : 'Desativado — fale com o suporte'}
                                         </span>
                                     </div>
                                 </div>
@@ -90,14 +93,9 @@ export default function Dashboard({ auth, tenants }: Props) {
                         ))}
                     </div>
 
-                    <Link
-                        href={route('tenants.create')}
-                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm transition-colors"
-                        style={{ borderColor: 'var(--border-strong)', color: 'var(--text-3)' }}
-                    >
-                        <span className="text-base leading-none">+</span>
-                        Novo estabelecimento
-                    </Link>
+                    <p className="mt-4 text-center text-xs" style={{ color: 'var(--text-3)' }}>
+                        Para adicionar outra unidade, fale com o suporte.
+                    </p>
                 </div>
             )}
         </div>

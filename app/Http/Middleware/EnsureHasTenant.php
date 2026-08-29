@@ -31,6 +31,14 @@ class EnsureHasTenant
             return redirect()->route('dashboard')->with('erro', 'Estabelecimento não encontrado. Selecione novamente.');
         }
 
+        // A desativação precisa bloquear o painel, não apenas os webhooks. O super
+        // admin continua podendo entrar para diagnóstico e reativação do tenant.
+        if (! $tenant->ativo && ! $user?->is_super_admin) {
+            session()->forget('tenant_id');
+
+            return redirect()->route('dashboard')->with('erro', 'Este estabelecimento está desativado. Fale com o suporte para reativá-lo.');
+        }
+
         // Verificar acesso via query explícita (mais confiável que Collection::contains)
         $temAcesso = $isImpersonating
             || $user->is_super_admin

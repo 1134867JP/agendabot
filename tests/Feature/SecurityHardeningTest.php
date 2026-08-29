@@ -238,6 +238,29 @@ class SecurityHardeningTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_usuario_comum_nao_acessa_tenant_desativado(): void
+    {
+        $user = User::factory()->create();
+        $tenant = $this->tenant([
+            'ativo' => false,
+            'subscription_status' => 'active',
+        ]);
+        $tenant->users()->attach($user->id, ['papel' => 'admin']);
+
+        $this->actingAs($user)
+            ->withSession(['tenant_id' => $tenant->id])
+            ->get(route('tenant.dashboard'))
+            ->assertRedirect(route('dashboard'))
+            ->assertSessionHas('erro');
+
+        $this->assertNull(session('tenant_id'));
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Tenant de Segurança');
+    }
+
     public function test_whatsapp_backup_is_encrypted_at_rest(): void
     {
         Storage::fake('local');
