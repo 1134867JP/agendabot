@@ -197,8 +197,9 @@ export default function OnboardingStep1() {
                                     <button
                                         type="button"
                                         onClick={() => setMostrarSenha(value => !value)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium"
+                                        className="absolute inset-y-0 right-0 flex min-w-16 items-center justify-center text-xs font-medium"
                                         style={{ color: 'var(--accent)' }}
+                                        aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
                                         aria-controls="senha"
                                         aria-pressed={mostrarSenha}
                                     >

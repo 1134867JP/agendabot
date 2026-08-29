@@ -23,7 +23,7 @@ function LandingNavbar({ currentPage, scrolled }: { currentPage?: string; scroll
             <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4">
                 <Link
                     href={route('home')}
-                    className="shrink-0 text-xl italic"
+                    className="inline-flex min-h-11 shrink-0 items-center text-xl italic"
                     style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'rgba(232,230,225,0.95)' }}
                 >
                     Agendou
@@ -32,7 +32,7 @@ function LandingNavbar({ currentPage, scrolled }: { currentPage?: string; scroll
                 <nav className="hidden items-center gap-6 md:flex">
                     <a
                         href={route('home') + '#como-funciona'}
-                        className="text-[14px] transition-colors"
+                        className="inline-flex min-h-11 items-center text-[14px] transition-colors"
                         style={{ color: currentPage === 'home' ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.5)' }}
                         onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.9)')}
                         onMouseLeave={e => (e.currentTarget.style.color = currentPage === 'home' ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.5)')}
@@ -41,7 +41,7 @@ function LandingNavbar({ currentPage, scrolled }: { currentPage?: string; scroll
                     </a>
                     <Link
                         href={route('precos')}
-                        className="text-[14px] transition-colors"
+                        className="inline-flex min-h-11 items-center text-[14px] transition-colors"
                         style={{ color: currentPage === 'precos' ? 'white' : 'rgba(255,255,255,0.5)' }}
                         onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.9)')}
                         onMouseLeave={e => (e.currentTarget.style.color = currentPage === 'precos' ? 'white' : 'rgba(255,255,255,0.5)')}
@@ -53,7 +53,7 @@ function LandingNavbar({ currentPage, scrolled }: { currentPage?: string; scroll
 
                     <Link
                         href={route('login')}
-                        className="text-[14px] font-medium transition-colors"
+                        className="inline-flex min-h-11 items-center text-[14px] font-medium transition-colors"
                         style={{ color: 'rgba(255,255,255,0.6)' }}
                         onMouseEnter={e => (e.currentTarget.style.color = 'white')}
                         onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.6)')}
@@ -65,14 +65,14 @@ function LandingNavbar({ currentPage, scrolled }: { currentPage?: string; scroll
                 <div className="flex items-center gap-3 md:hidden">
                     <Link
                         href={route('precos')}
-                        className="text-[12px] font-medium transition-colors"
+                        className="inline-flex min-h-11 items-center text-[12px] font-medium transition-colors"
                         style={{ color: 'rgba(255,255,255,0.65)' }}
                     >
                         Preços
                     </Link>
                     <Link
                         href={route('login')}
-                        className="text-[12px] font-medium transition-colors"
+                        className="inline-flex min-h-11 items-center text-[12px] font-medium transition-colors"
                         style={{ color: 'rgba(255,255,255,0.65)' }}
                     >
                         Entrar
@@ -81,7 +81,7 @@ function LandingNavbar({ currentPage, scrolled }: { currentPage?: string; scroll
 
                 <Link
                     href={route('onboarding.step1')}
-                    className="hidden md:inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-[13px] font-semibold text-white transition-all hover:brightness-110 hover:-translate-y-px"
+                    className="hidden min-h-11 md:inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-[13px] font-semibold text-white transition-all hover:brightness-110 hover:-translate-y-px"
                     style={{ background: INDIGO, boxShadow: '0 4px 14px rgba(45,157,130,0.22)' }}
                 >
                     Começar grátis
@@ -91,7 +91,7 @@ function LandingNavbar({ currentPage, scrolled }: { currentPage?: string; scroll
                 </Link>
                 <Link
                     href={route('onboarding.step1')}
-                    className="shrink-0 md:hidden rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white transition-all"
+                    className="inline-flex min-h-11 shrink-0 items-center rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white transition-all md:hidden"
                     style={{ background: INDIGO }}
                 >
                     Começar
@@ -112,11 +112,11 @@ function LandingFooter() {
                     Agendou
                 </span>
                 <div className="flex gap-5 text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                    <Link href={route('precos')}           className="hover:text-primary transition-colors">Preços</Link>
-                    <Link href={route('login')}            className="hover:text-primary transition-colors">Entrar</Link>
-                    <Link href={route('onboarding.step1')} className="hover:text-primary transition-colors">Criar conta</Link>
-                    <Link href={route('termos')}            className="hover:text-primary transition-colors">Termos</Link>
-                    <Link href={route('privacidade')}       className="hover:text-primary transition-colors">Privacidade</Link>
+                    <Link href={route('precos')}           className="inline-flex min-h-11 items-center transition-colors hover:text-primary">Preços</Link>
+                    <Link href={route('login')}            className="inline-flex min-h-11 items-center transition-colors hover:text-primary">Entrar</Link>
+                    <Link href={route('onboarding.step1')} className="inline-flex min-h-11 items-center transition-colors hover:text-primary">Criar conta</Link>
+                    <Link href={route('termos')}            className="inline-flex min-h-11 items-center transition-colors hover:text-primary">Termos</Link>
+                    <Link href={route('privacidade')}       className="inline-flex min-h-11 items-center transition-colors hover:text-primary">Privacidade</Link>
                 </div>
                 <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
                     © {new Date().getFullYear()} Agendou

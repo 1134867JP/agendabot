@@ -203,7 +203,7 @@ export default function Login({
                                 {canResetPassword && (
                                     <Link
                                         href={route('password.request')}
-                                        className="text-[11px] transition-colors hover:brightness-125"
+                                        className="inline-flex min-h-11 items-center text-[11px] transition-colors hover:brightness-125"
                                         style={{ color: 'var(--accent)' }}
                                     >
                                         Esqueci a senha
@@ -224,9 +224,11 @@ export default function Login({
                                 <button
                                     type="button"
                                     onClick={() => setShowPass(s => !s)}
-                                    className="absolute inset-y-0 right-0 flex items-center px-3 transition-colors"
+                                    className="absolute inset-y-0 right-0 flex min-w-11 items-center justify-center transition-colors"
                                     style={{ color: 'var(--text-3)' }}
-                                    tabIndex={-1}
+                                    aria-label={showPass ? 'Ocultar senha' : 'Mostrar senha'}
+                                    aria-controls="password"
+                                    aria-pressed={showPass}
                                 >
                                     {showPass ? (
                                         <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -287,7 +289,7 @@ export default function Login({
                         Ainda não tem conta?{' '}
                         <Link
                             href={route('onboarding.step1')}
-                            className="font-medium transition-colors hover:brightness-125"
+                            className="inline-flex min-h-11 items-center font-medium transition-colors hover:brightness-125"
                             style={{ color: 'var(--accent)' }}
                         >
                             Começar grátis →

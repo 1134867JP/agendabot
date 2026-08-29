@@ -100,7 +100,7 @@ export default function Precos({ planos }: Props) {
                 >
                     <button
                         onClick={() => setAnual(false)}
-                        className="rounded-full px-5 py-2 text-[13px] font-medium transition-all"
+                        className="min-h-11 rounded-full px-5 py-2 text-[13px] font-medium transition-all"
                         style={{
                             background: !anual ? 'rgba(255,255,255,0.12)' : 'transparent',
                             color: !anual ? 'white' : 'rgba(255,255,255,0.45)',
@@ -110,7 +110,7 @@ export default function Precos({ planos }: Props) {
                     </button>
                     <button
                         onClick={() => setAnual(true)}
-                        className="flex items-center gap-2 rounded-full px-5 py-2 text-[13px] font-medium transition-all"
+                        className="flex min-h-11 items-center gap-2 rounded-full px-5 py-2 text-[13px] font-medium transition-all"
                         style={{
                             background: anual ? INDIGO : 'transparent',
                             color: anual ? 'white' : 'rgba(255,255,255,0.45)',
