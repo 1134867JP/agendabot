@@ -1,20 +1,18 @@
 import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
+import { useConfirm } from '@/hooks/useConfirm';
 import { PageProps, Tenant, PaginatedData } from '@/types';
 
 interface Stats {
     total_tenants: number;
     tenants_ativos: number;
     tenants_conectados: number;
-    agendamentos_hoje: number;
-    agendamentos_mes: number;
     failed_jobs: number;
     erros_24h: number;
     tenants_sem_config: number;
 }
 
 interface TenantWithCounts extends Tenant {
-    agendamentos_count: number;
     recursos_count: number;
 }
 
@@ -78,14 +76,27 @@ function StatCard({
 }
 
 export default function SuperAdminDashboard({ stats, ia, tenants }: Props) {
-    const impersonar = (t: TenantWithCounts) => {
-        if (confirm(`Entrar como "${t.nome}"?`)) {
+    const { confirm, modal: confirmModal } = useConfirm();
+
+    const impersonar = async (t: TenantWithCounts) => {
+        if (await confirm({
+            title: 'Entrar no tenant',
+            message: `Você passará a visualizar o sistema como "${t.nome}".`,
+            confirmLabel: 'Entrar no tenant',
+        })) {
             router.post(route('superadmin.tenants.impersonar', t.id));
         }
     };
 
-    const toggleAtivo = (t: TenantWithCounts) => {
-        router.patch(route('superadmin.tenants.toggle-ativo', t.id));
+    const toggleAtivo = async (t: TenantWithCounts) => {
+        if (await confirm({
+            title: t.ativo ? 'Desativar tenant' : 'Ativar tenant',
+            message: t.ativo
+                ? `"${t.nome}" perderá o acesso até ser ativado novamente.`
+                : `"${t.nome}" voltará a ter acesso ao sistema.`,
+            confirmLabel: t.ativo ? 'Desativar' : 'Ativar',
+            variant: t.ativo ? 'warning' : 'default',
+        })) router.patch(route('superadmin.tenants.toggle-ativo', t.id), {}, { preserveScroll: true });
     };
 
     const temProblemas = stats.failed_jobs > 0 || stats.erros_24h > 0;
@@ -93,6 +104,7 @@ export default function SuperAdminDashboard({ stats, ia, tenants }: Props) {
     return (
         <AppLayout title="Visão Geral" subtitle="Monitoramento de todos os tenants e da plataforma">
             <Head title="Super Admin" />
+            {confirmModal}
 
             <div className="space-y-7">
                 {/* Alerta de problemas */}
@@ -120,11 +132,10 @@ export default function SuperAdminDashboard({ stats, ia, tenants }: Props) {
                 )}
 
                 {/* Stats */}
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4">
+                <div className="grid gap-3 sm:grid-cols-3">
                     <StatCard label="Jobs falhados"  value={stats.failed_jobs} danger={stats.failed_jobs > 0}   href={route('superadmin.jobs')} sub={stats.failed_jobs > 0 ? 'Clique para ver' : 'Tudo ok'} />
                     <StatCard label="Erros (24h)"    value={stats.erros_24h}   danger={stats.erros_24h > 5}     warning={stats.erros_24h > 0 && stats.erros_24h <= 5} href={route('superadmin.logs')} sub="No log de erros" />
                     <StatCard label="Sem WhatsApp"   value={stats.tenants_sem_config} warning={stats.tenants_sem_config > 0} sub="Tenants ativos desconectados" />
-                    <StatCard label="Agendamentos hoje" value={stats.agendamentos_hoje} accent sub="em todos os tenants" />
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-3">
@@ -174,18 +185,18 @@ export default function SuperAdminDashboard({ stats, ia, tenants }: Props) {
 
                 {/* Tenants table */}
                 <div className="card overflow-hidden">
-                    <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6" style={{ borderBottom: '1px solid var(--border)' }}>
                         <h2 className="text-sm font-semibold text-primary">Tenants</h2>
-                        <a href={route('superadmin.tenants.create')} className="btn-primary py-1.5 text-xs">
+                        <Link href={route('superadmin.tenants.create')} className="btn-primary w-full justify-center py-2 text-xs sm:w-auto">
                             + Novo tenant
-                        </a>
+                        </Link>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    <div className="hidden overflow-x-auto lg:block">
                         <table className="min-w-full text-sm">
                             <thead>
                                 <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface-2)' }}>
-                                    {['Tenant', 'Tipo', 'WhatsApp', 'Recursos', 'Agendamentos', 'Status', 'Ações'].map(h => (
+                                    {['Tenant', 'Tipo', 'WhatsApp', 'Recursos', 'Status', 'Ações'].map(h => (
                                         <th key={h} className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
                                             {h}
                                         </th>
@@ -228,9 +239,6 @@ export default function SuperAdminDashboard({ stats, ia, tenants }: Props) {
                                             <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-2)' }}>
                                                 {t.recursos_count}
                                             </td>
-                                            <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-2)' }}>
-                                                {t.agendamentos_count}
-                                            </td>
                                             <td className="px-4 py-3">
                                                 <span className={`badge ${t.ativo ? 'badge-green' : 'badge-red'}`}>
                                                     {t.ativo ? 'Ativo' : 'Inativo'}
@@ -252,13 +260,13 @@ export default function SuperAdminDashboard({ stats, ia, tenants }: Props) {
                                                     >
                                                         {t.ativo ? 'Desativar' : 'Ativar'}
                                                     </button>
-                                                    <a
+                                                    <Link
                                                         href={route('superadmin.tenants.edit', t.id)}
                                                         className="rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all hover:brightness-125"
                                                         style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
                                                     >
                                                         Editar
-                                                    </a>
+                                                    </Link>
                                                 </div>
                                             </td>
                                         </tr>
@@ -266,6 +274,65 @@ export default function SuperAdminDashboard({ stats, ia, tenants }: Props) {
                                 })}
                             </tbody>
                         </table>
+                    </div>
+
+                    <div className="divide-y lg:hidden" style={{ borderColor: 'var(--border)' }}>
+                        {tenants.data.map(t => (
+                            <article key={t.id} className="space-y-4 p-4 sm:p-5">
+                                <div className="flex min-w-0 items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <h3 className="truncate font-semibold text-primary">{t.nome}</h3>
+                                        <p className="break-all text-xs" style={{ color: 'var(--text-3)' }}>{t.slug}</p>
+                                    </div>
+                                    <span className={`badge shrink-0 ${t.ativo ? 'badge-green' : 'badge-red'}`}>
+                                        {t.ativo ? 'Ativo' : 'Inativo'}
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div>
+                                        <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>Tipo</p>
+                                        <p className="mt-1" style={{ color: 'var(--text-2)' }}>{TIPO_LABEL[t.tipo_servico] ?? t.tipo_servico}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>Recursos</p>
+                                        <p className="mt-1" style={{ color: 'var(--text-2)' }}>{t.recursos_count}</p>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>WhatsApp</p>
+                                        <span className={`badge mt-1 ${t.whatsapp_conectado ? 'badge-green' : 'badge-amber'}`}>
+                                            {t.whatsapp_conectado ? 'Conectado' : 'Desconectado'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => impersonar(t)}
+                                        className="min-h-11 rounded-lg px-3 py-2 text-xs font-medium"
+                                        style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}
+                                    >
+                                        Entrar
+                                    </button>
+                                    <Link
+                                        href={route('superadmin.tenants.edit', t.id)}
+                                        className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 py-2 text-xs font-medium"
+                                        style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
+                                    >
+                                        Editar
+                                    </Link>
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleAtivo(t)}
+                                        className="col-span-2 min-h-11 rounded-lg px-3 py-2 text-xs font-medium"
+                                        style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
+                                    >
+                                        {t.ativo ? 'Desativar tenant' : 'Ativar tenant'}
+                                    </button>
+                                </div>
+                            </article>
+                        ))}
                     </div>
 
                     {tenants.last_page > 1 && (

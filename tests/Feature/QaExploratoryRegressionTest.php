@@ -83,15 +83,12 @@ class QaExploratoryRegressionTest extends TestCase
                 ->where('opcoes.0.nome', 'Pix'));
     }
 
-    public function test_superadmin_agendamentos_page_exists(): void
+    public function test_superadmin_global_appointments_page_is_not_exposed(): void
     {
         $response = $this->actingAs($this->superAdmin())
-            ->get(route('superadmin.agendamentos'));
+            ->get('/superadmin/agendamentos');
 
-        $response->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('SuperAdmin/Agendamentos')
-                ->has('agendamentos.data', 0));
+        $response->assertNotFound();
     }
 
     public function test_agendamento_manual_exposes_profissionais_servicos_and_prefills_scoped_client(): void

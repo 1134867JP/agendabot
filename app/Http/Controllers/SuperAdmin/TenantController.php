@@ -19,7 +19,7 @@ class TenantController extends Controller
     public function index(): Response
     {
         return Inertia::render('SuperAdmin/Tenants/Index', [
-            'tenants' => Tenant::withCount(['agendamentos', 'recursos'])
+            'tenants' => Tenant::withCount('recursos')
                 ->with('users')
                 ->latest()
                 ->paginate(20),

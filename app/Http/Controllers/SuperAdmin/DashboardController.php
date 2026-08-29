@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Agendamento;
 use App\Models\Tenant;
 use App\Support\AiStatus;
 use App\Support\ErroLogScanner;
@@ -18,7 +17,7 @@ class DashboardController extends Controller
         return Inertia::render('SuperAdmin/Dashboard', [
             'stats' => $this->stats(),
             'ia' => AiStatus::resumo(),
-            'tenants' => Tenant::withCount(['agendamentos', 'recursos'])
+            'tenants' => Tenant::withCount('recursos')
                 ->latest()
                 ->paginate(25),
         ]);
@@ -33,34 +32,12 @@ class DashboardController extends Controller
             'total_tenants' => Tenant::count(),
             'tenants_ativos' => Tenant::where('ativo', true)->count(),
             'tenants_conectados' => Tenant::where('whatsapp_conectado', true)->count(),
-            'agendamentos_hoje' => $this->contarAgendamentosHoje(),
-            'agendamentos_mes' => $this->contarAgendamentosMes(),
             'failed_jobs' => $failedJobs,
             'erros_24h' => $erros24h,
             'tenants_sem_config' => Tenant::where('ativo', true)
                 ->where('whatsapp_conectado', false)
                 ->count(),
         ];
-    }
-
-    private function contarAgendamentosHoje(): int
-    {
-        try {
-            return Agendamento::whereDate('inicio', today())->count();
-        } catch (\Throwable) {
-            return 0;
-        }
-    }
-
-    private function contarAgendamentosMes(): int
-    {
-        try {
-            return Agendamento::whereMonth('inicio', now()->month)
-                ->whereYear('inicio', now()->year)
-                ->count();
-        } catch (\Throwable) {
-            return 0;
-        }
     }
 
     private function contarFailedJobs(): int
