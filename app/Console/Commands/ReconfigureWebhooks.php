@@ -18,8 +18,17 @@ class ReconfigureWebhooks extends Command
         $tenants = Tenant::whereNotNull('evolution_instance')->where('ativo', true)->get();
 
         $this->info("Reconfigurando {$tenants->count()} instâncias...");
+        $instanciasExistentes = $evolution->listarStatusInstancias();
+        $falhas = 0;
 
         foreach ($tenants as $tenant) {
+            if (! array_key_exists($tenant->evolution_instance, $instanciasExistentes)) {
+                $tenant->update(['whatsapp_conectado' => false]);
+                $this->warn("  {$tenant->slug} ({$tenant->evolution_instance}): instância ausente; reconexão necessária");
+
+                continue;
+            }
+
             if (! $tenant->webhook_token) {
                 $tenant->update(['webhook_token' => Str::random(32)]);
             }
@@ -28,6 +37,13 @@ class ReconfigureWebhooks extends Command
 
             $status = $ok ? '<info>OK</info>' : '<error>FALHOU</error>';
             $this->line("  {$tenant->slug} ({$tenant->evolution_instance}): {$status}");
+            $falhas += $ok ? 0 : 1;
+        }
+
+        if ($falhas > 0) {
+            $this->error("Concluído com {$falhas} falha(s).");
+
+            return self::FAILURE;
         }
 
         $this->info('Concluído.');

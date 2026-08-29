@@ -46,12 +46,36 @@ class RotateWebhookTokens extends Command
             return self::SUCCESS;
         }
 
+        $instanciasExistentes = $evolution->listarStatusInstancias();
         $falhas = 0;
 
         foreach ($tenants as $tenant) {
             $tokenAnterior = $tenant->webhook_token;
             $novoToken = Str::random(64);
             $url = route('webhook', $tenant->slug);
+
+            // Uma referência antiga no banco não deve bloquear todos os deploys.
+            // Como não existe webhook remoto nesse caso, o token pode ser trocado
+            // localmente e será aplicado quando o usuário reconectar o WhatsApp.
+            if (! array_key_exists($tenant->evolution_instance, $instanciasExistentes)) {
+                try {
+                    $tenant->forceFill([
+                        'webhook_token' => $novoToken,
+                        'webhook_token_rotated_at' => now(),
+                        'whatsapp_conectado' => false,
+                    ])->save();
+                } catch (\Throwable $e) {
+                    report($e);
+                    $this->error("#{$tenant->id} falhou ao persistir o novo token.");
+                    $falhas++;
+
+                    continue;
+                }
+
+                $this->warn("#{$tenant->id} não possui instância na Evolution; token rotacionado localmente e reconexão necessária.");
+
+                continue;
+            }
 
             if (! $evolution->configurarWebhook($tenant->evolution_instance, $url, $novoToken)) {
                 $this->error("#{$tenant->id} falhou; token anterior preservado.");
