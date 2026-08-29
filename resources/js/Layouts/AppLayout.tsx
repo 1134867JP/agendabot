@@ -47,16 +47,6 @@ const MenuIcon = () => (
 
 export default function AppLayout({ children, title, subtitle, headerActions, fullHeight }: Props) {
     useAppHeight();
-    useEffect(() => {
-        const revalidarSessao = (event: PageTransitionEvent) => {
-            if (event.persisted) {
-                window.location.reload();
-            }
-        };
-
-        window.addEventListener('pageshow', revalidarSessao);
-        return () => window.removeEventListener('pageshow', revalidarSessao);
-    }, []);
 
     const page = usePage<PageProps<{
         currentTenant?: { id: number; nome: string; slug: string; modo_bot?: 'agendamento' | 'triagem' | null } | null;
@@ -91,72 +81,24 @@ export default function AppLayout({ children, title, subtitle, headerActions, fu
                 color: 'var(--text-1)',
             }}
         >
-            <a
-                href="#main-content"
-                className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
-                style={{ background: 'var(--accent)' }}
-            >
-                Pular para o conteúdo
-            </a>
-
-            <Sidebar
-                open={sidebarOpen}
-                onClose={() => setSidebarOpen(false)}
-                conversasNaoLidas={conversasNaoLidas}
-                novaMensagem={novaMensagem}
-                resetarNovaMensagem={resetarNovaMensagem}
-            />
-
+            <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white" style={{ background: 'var(--accent)' }}>Pular para o conteúdo</a>
+            <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} conversasNaoLidas={conversasNaoLidas} novaMensagem={novaMensagem} resetarNovaMensagem={resetarNovaMensagem} />
             <div className={`flex min-w-0 flex-1 flex-col ${fullHeight ? 'overflow-hidden' : 'lg:overflow-hidden'}`}>
-                <header
-                    className="sticky top-0 z-10 flex min-h-14 items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3 lg:hidden"
-                    style={{ background: 'var(--bg-sidebar)', borderBottom: '1px solid var(--border)' }}
-                >
-                    <button
-                        onClick={() => setSidebarOpen(true)}
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
-                        style={{ color: 'var(--text-2)' }}
-                        aria-label="Abrir menu"
-                    >
-                        <MenuIcon />
-                    </button>
-                    <span className="text-base text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
-                        Agendou
-                    </span>
-                    {currentTenant && (
-                        <span className="min-w-0 flex-1 truncate text-sm text-muted">{currentTenant.nome}</span>
-                    )}
-                    {currentTenant && (
-                        <div className="ml-auto">
-                            <NotificacoesBell count={conversasNaoLidas} preview={conversasPreview} size="md" align="right" />
-                        </div>
-                    )}
+                <header className="sticky top-0 z-10 flex min-h-14 items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3 lg:hidden" style={{ background: 'var(--bg-sidebar)', borderBottom: '1px solid var(--border)' }}>
+                    <button onClick={() => setSidebarOpen(true)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]" style={{ color: 'var(--text-2)' }} aria-label="Abrir menu"><MenuIcon /></button>
+                    <span className="text-base text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>Agendou</span>
+                    {currentTenant && <span className="min-w-0 flex-1 truncate text-sm text-muted">{currentTenant.nome}</span>}
+                    {currentTenant && <div className="ml-auto"><NotificacoesBell count={conversasNaoLidas} preview={conversasPreview} size="md" align="right" /></div>}
                 </header>
-
                 {subscription && <SubscriptionBanner subscription={subscription} />}
-
                 {flash?.success && <FlashMessage key={`success-${flash.success}`} message={flash.success} tone="success" />}
                 {flash?.erro && <FlashMessage key={`error-${flash.erro}`} message={flash.erro} tone="error" duration={8000} />}
-
-                <main
-                    id="main-content"
-                    className={fullHeight
-                        ? 'flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden'
-                        : `min-w-0 max-w-full p-4 sm:p-6 lg:min-h-0 lg:flex-1 lg:overflow-y-auto ${currentTenant ? 'app-content-with-bottom-nav' : ''}`}
-                >
-                    {!fullHeight && title && (
-                        <PageHeader title={title} subtitle={subtitle} actions={headerActions} />
-                    )}
+                <main id="main-content" className={fullHeight ? 'flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden' : `min-w-0 max-w-full p-4 sm:p-6 lg:min-h-0 lg:flex-1 lg:overflow-y-auto ${currentTenant ? 'app-content-with-bottom-nav' : ''}`}>
+                    {!fullHeight && title && <PageHeader title={title} subtitle={subtitle} actions={headerActions} />}
                     {children}
                 </main>
             </div>
-
-            {!fullHeight && currentTenant && !sidebarOpen && (
-                <>
-                    <QuickActions />
-                    <BottomNavigation />
-                </>
-            )}
+            {!fullHeight && currentTenant && !sidebarOpen && <><QuickActions /><BottomNavigation /></>}
         </div>
     );
 }
