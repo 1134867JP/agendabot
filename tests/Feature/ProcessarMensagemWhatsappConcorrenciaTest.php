@@ -76,6 +76,45 @@ class ProcessarMensagemWhatsappConcorrenciaTest extends TestCase
         $this->assertSame(0, Mensagem::count());
     }
 
+    public function test_job_nao_processa_mensagem_de_outro_tenant(): void
+    {
+        $outroTenant = Tenant::create([
+            'nome' => 'Outro tenant',
+            'slug' => 'outro-tenant-concorrencia',
+            'tipo_servico' => 'clinica',
+            'ativo' => true,
+            'bot_ativo' => true,
+            'evolution_instance' => 'outra-instancia',
+            'subscription_status' => 'trial',
+            'trial_ends_at' => now()->addDays(14),
+        ]);
+        $cliente = Cliente::create([
+            'tenant_id' => $outroTenant->id,
+            'telefone' => '5551900000099',
+            'nome' => 'Cliente externo',
+        ]);
+        $conversa = Conversa::create([
+            'tenant_id' => $outroTenant->id,
+            'telefone_cliente' => $cliente->telefone,
+            'cliente_id' => $cliente->id,
+            'status_v2' => 'ativa',
+        ]);
+        $mensagem = $conversa->mensagens()->create([
+            'remetente' => 'cliente',
+            'tipo' => 'texto',
+            'conteudo' => 'Não deve ser processada pelo tenant errado',
+            'evolution_message_id' => 'MSG_OUTRO_TENANT',
+            'enviada_em' => now(),
+        ]);
+
+        ProcessarMensagemWhatsapp::dispatchSync($this->tenant, $cliente->telefone, $mensagem->id);
+
+        $this->assertSame(1, $conversa->mensagens()->count());
+        $this->assertDatabaseMissing('outbound_messages', [
+            'tenant_id' => $this->tenant->id,
+        ]);
+    }
+
     /**
      * Verifica que a violação de unique constraint do Postgres (evolution_message_id) é
      * corretamente reconhecida pelo helper usado no catch da persistência — é essa

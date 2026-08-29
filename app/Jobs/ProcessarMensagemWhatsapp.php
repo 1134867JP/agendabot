@@ -61,7 +61,10 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             return;
         }
 
-        $conversa = Conversa::find($mensagem->conversa_id);
+        // O ID do job nunca pode atravessar a fronteira do tenant, mesmo em caso de
+        // payload antigo, corrupção de fila ou reprocessamento manual incorreto.
+        $conversa = Conversa::where('tenant_id', $this->tenant->id)
+            ->find($mensagem->conversa_id);
         if (! $conversa) {
             return;
         }
@@ -86,7 +89,9 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         }
 
         // 4. Cliente (o webhook garante cliente_id; fallback defensivo para conversas antigas)
-        $cliente = $conversa->cliente_id ? Cliente::find($conversa->cliente_id) : null;
+        $cliente = $conversa->cliente_id
+            ? Cliente::where('tenant_id', $this->tenant->id)->find($conversa->cliente_id)
+            : null;
         if (! $cliente) {
             $cliente = Cliente::firstOrCreate(
                 ['tenant_id' => $this->tenant->id, 'telefone' => $this->telefone],
