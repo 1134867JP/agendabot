@@ -207,7 +207,7 @@
     }
 
     @supports (-webkit-touch-callout: none) {
-        .input, input, select, textarea { font-size: 16px; }
+        .input, input, select, textarea { font-size: 16px !important; }
     }
 
     .label {
