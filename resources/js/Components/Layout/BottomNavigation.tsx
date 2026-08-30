@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { PageProps, Tenant } from '@/types';
+import QuickActions from '@/Components/Layout/QuickActions';
 
 interface SharedProps extends PageProps {
     currentTenant?: Tenant | null;
@@ -43,6 +44,7 @@ export default function BottomNavigation() {
 
     const schedulingEnabled = (tenant.modo_bot ?? 'agendamento') === 'agendamento';
     const visibleItems = items.filter(item => !item.schedulingOnly || schedulingEnabled);
+    const quickActionIndex = schedulingEnabled ? 2 : 1;
 
     const isActive = (item: typeof items[number]) => {
         if (item.activePaths) return item.activePaths.some(path => currentUrl === path || currentUrl.startsWith(`${path}/`));
@@ -54,7 +56,7 @@ export default function BottomNavigation() {
         <nav
             className="fixed inset-x-0 bottom-0 z-30 grid min-h-[4.5rem] lg:hidden"
             style={{
-                gridTemplateColumns: `repeat(${visibleItems.length}, minmax(0, 1fr))`,
+                gridTemplateColumns: `repeat(${visibleItems.length + 1}, minmax(0, 1fr))`,
                 paddingBottom: 'env(safe-area-inset-bottom)',
                 background: 'color-mix(in srgb, var(--bg-sidebar) 94%, transparent)',
                 borderTop: '1px solid var(--border-strong)',
@@ -62,7 +64,7 @@ export default function BottomNavigation() {
             }}
             aria-label="Navegação principal"
         >
-            {visibleItems.map(item => {
+            {visibleItems.slice(0, quickActionIndex).map(item => {
                 const active = isActive(item);
                 return (
                     <Link
@@ -78,6 +80,27 @@ export default function BottomNavigation() {
                                 style={{ background: 'var(--accent)' }}
                                 aria-hidden
                             />
+                        )}
+                        <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                            <path d={item.icon} />
+                        </svg>
+                        <span>{item.label}</span>
+                    </Link>
+                );
+            })}
+            <QuickActions />
+            {visibleItems.slice(quickActionIndex).map(item => {
+                const active = isActive(item);
+                return (
+                    <Link
+                        key={item.routeName}
+                        href={route(item.routeName)}
+                        className="relative flex min-h-[4.5rem] flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium transition-colors"
+                        style={{ color: active ? 'var(--accent)' : 'var(--text-3)' }}
+                        aria-current={active ? 'page' : undefined}
+                    >
+                        {active && (
+                            <span className="absolute top-0 h-0.5 w-8 rounded-b-full" style={{ background: 'var(--accent)' }} aria-hidden />
                         )}
                         <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                             <path d={item.icon} />

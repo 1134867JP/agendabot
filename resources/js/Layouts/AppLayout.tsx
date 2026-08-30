@@ -5,7 +5,6 @@ import Sidebar from '@/Components/Layout/Sidebar';
 import SubscriptionBanner from '@/Components/Layout/SubscriptionBanner';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
 import NotificacoesBell from '@/Components/NotificacoesBell';
-import QuickActions from '@/Components/Layout/QuickActions';
 import BottomNavigation from '@/Components/Layout/BottomNavigation';
 import PageHeader from '@/Components/UI/PageHeader';
 import FlashMessage from '@/Components/UI/FlashMessage';
@@ -98,7 +97,7 @@ export default function AppLayout({ children, title, subtitle, headerActions, fu
                     {children}
                 </main>
             </div>
-            {!fullHeight && currentTenant && !sidebarOpen && <><QuickActions /><BottomNavigation /></>}
+            {!fullHeight && currentTenant && !sidebarOpen && <BottomNavigation />}
         </div>
     );
 }

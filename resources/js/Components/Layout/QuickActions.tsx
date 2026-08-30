@@ -19,7 +19,6 @@ export default function QuickActions() {
     const ref = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
     const modoAgendamento = (currentTenant?.modo_bot ?? 'agendamento') === 'agendamento';
-    const pathname = page.url.split('?')[0];
 
     useEffect(() => {
         if (!open) return;
@@ -44,10 +43,7 @@ export default function QuickActions() {
         };
     }, [open]);
 
-    // As páginas operacionais já exibem sua ação principal no próprio contexto
-    // (novo cliente, profissional, serviço, conversa etc.). Manter um segundo
-    // botão flutuante nelas duplicava ações e cobria cards no mobile.
-    if (!currentTenant || pathname !== '/painel') return null;
+    if (!currentTenant) return null;
 
     const actions = [
         ...(modoAgendamento ? [
@@ -79,12 +75,12 @@ export default function QuickActions() {
     ];
 
     return (
-        <div ref={ref} className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-40 flex max-w-[calc(100vw-2rem)] flex-col items-end lg:bottom-6 lg:right-6">
+        <div ref={ref} className="relative flex min-h-[4.5rem] min-w-0 items-center justify-center">
             {open && (
                 <nav
                     id="quick-actions-menu"
                     aria-labelledby="quick-actions-title"
-                    className="mb-3 max-h-[calc(100dvh-11rem)] w-[min(21rem,calc(100vw-2rem))] overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl shadow-2xl"
+                    className="fixed inset-x-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 max-h-[calc(100dvh-7rem)] overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl shadow-2xl"
                     style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}
                 >
                     <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -123,10 +119,16 @@ export default function QuickActions() {
                 aria-controls="quick-actions-menu"
                 aria-expanded={open}
                 aria-label={open ? 'Fechar ações rápidas' : 'Abrir ações rápidas'}
-                className="flex h-14 min-w-14 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none motion-reduce:transition-none"
-                style={{ background: 'var(--jade)', boxShadow: '0 12px 30px rgba(0,168,132,.24)' }}
+                className="flex min-h-[4.5rem] w-full min-w-0 flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)]"
+                style={{ color: open ? 'var(--accent)' : 'var(--text-3)' }}
             >
-                <span aria-hidden="true" className={'transition-transform motion-reduce:transition-none ' + (open ? 'rotate-45' : '')}><PlusIcon /></span>
+                <span
+                    aria-hidden="true"
+                    className={'flex h-8 w-8 items-center justify-center rounded-full transition-transform motion-reduce:transition-none ' + (open ? 'rotate-45' : '')}
+                    style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}
+                >
+                    <PlusIcon />
+                </span>
                 <span>{open ? 'Fechar' : 'Novo'}</span>
             </button>
         </div>
