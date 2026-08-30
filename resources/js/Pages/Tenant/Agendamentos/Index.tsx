@@ -272,9 +272,10 @@ function EditarReservaModal({
                         Editar agendamento
                     </h3>
                     <button
+                        type="button"
                         onClick={onClose}
                         style={{ color: "var(--text-3)" }}
-                        className="hover:text-primary transition-colors"
+                        className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)] hover:text-primary"
                         aria-label="Fechar"
                     >
                         ✕
@@ -602,9 +603,10 @@ function NovaReservaModal({
                         Nova reserva manual
                     </h3>
                     <button
+                        type="button"
                         onClick={onClose}
                         style={{ color: "var(--text-3)" }}
-                        className="hover:text-primary transition-colors"
+                        className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)] hover:text-primary"
                         aria-label="Fechar"
                     >
                         ✕
@@ -1371,7 +1373,7 @@ export default function AgendamentosIndex({
             {podeCriarReserva && (
                 <button
                     onClick={() => setModalAberto(true)}
-                    className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-20 flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold text-white shadow-lg transition-all hover:scale-105 hover:brightness-110 sm:right-7 sm:h-auto sm:w-auto sm:gap-2 sm:px-5 sm:py-3 lg:bottom-7"
+                    className="fixed bottom-7 right-7 z-20 hidden items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:scale-105 hover:brightness-110 lg:flex"
                     style={{
                         background: "var(--accent)",
                         boxShadow: "0 4px 20px rgba(99,102,241,0.4)",

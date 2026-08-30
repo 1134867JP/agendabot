@@ -108,7 +108,9 @@ export default function ResetPassword({ token, email }: { token: string; email: 
                                     autoFocus
                                     required
                                 />
-                                <button type="button" onClick={() => setShowPass(s => !s)} tabIndex={-1}
+                                <button type="button" onClick={() => setShowPass(s => !s)}
+                                    aria-label={showPass ? 'Ocultar senha' : 'Mostrar senha'}
+                                    aria-pressed={showPass}
                                     className="absolute inset-y-0 right-0 flex items-center px-3 transition-colors"
                                     style={{ color: 'var(--text-3)' }}>
                                     <EyeIcon visible={showPass} />
@@ -131,7 +133,9 @@ export default function ResetPassword({ token, email }: { token: string; email: 
                                     autoComplete="new-password"
                                     required
                                 />
-                                <button type="button" onClick={() => setShowConfirm(s => !s)} tabIndex={-1}
+                                <button type="button" onClick={() => setShowConfirm(s => !s)}
+                                    aria-label={showConfirm ? 'Ocultar confirmação de senha' : 'Mostrar confirmação de senha'}
+                                    aria-pressed={showConfirm}
                                     className="absolute inset-y-0 right-0 flex items-center px-3 transition-colors"
                                     style={{ color: 'var(--text-3)' }}>
                                     <EyeIcon visible={showConfirm} />
