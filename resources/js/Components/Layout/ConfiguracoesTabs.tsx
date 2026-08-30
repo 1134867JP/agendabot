@@ -1,4 +1,4 @@
-import { Link, router, usePage } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { PageProps, TipoServico } from '@/types';
 import { buildConfigTabs } from '@/lib/configTabs';
 
@@ -15,41 +15,46 @@ export default function ConfiguracoesTabs() {
     const tabs = buildConfigTabs(tipo, isAdmin);
     const isActive = (path: string) => url === path || url.startsWith(path + '/');
 
-    const activeTab = tabs.find(tab => isActive(tab.path)) ?? tabs[0];
+    const mobileLabel = (routeName: string, label: string) => ({
+        'tenant.configuracoes.index': 'Empresa',
+        'tenant.profissionais.index': 'Atendentes',
+        'tenant.opcoes-extras.index': 'Extras',
+        'tenant.regras-agendamento.index': 'Regras',
+        'tenant.equipe.index': 'Acessos',
+    }[routeName] ?? label);
 
     return (
         <div className="mb-6 -mt-2">
-            <div className="sm:hidden">
-                <label htmlFor="config-section" className="mb-1.5 block text-xs font-medium text-muted">
-                    Seção de configurações
-                </label>
-                <div className="relative">
-                    <select
-                        id="config-section"
-                        value={activeTab.routeName}
-                        onChange={(event) => router.visit(route(event.target.value))}
-                        className="input w-full appearance-none pr-10 font-medium"
-                    >
-                        {tabs.map(tab => (
-                            <option key={tab.routeName} value={tab.routeName}>{tab.label}</option>
-                        ))}
-                    </select>
-                    <svg
-                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted"
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                    >
-                        <path d="m6 9 6 6 6-6" />
-                    </svg>
+            <nav className="sm:hidden" aria-label="Configurações">
+                <div
+                    className="grid grid-cols-4 gap-px overflow-hidden rounded-xl border"
+                    style={{ background: 'var(--border)', borderColor: 'var(--border)' }}
+                >
+                    {tabs.map(tab => {
+                        const active = isActive(tab.path);
+                        return (
+                            <Link
+                                key={tab.routeName}
+                                href={route(tab.routeName)}
+                                aria-current={active ? 'page' : undefined}
+                                aria-label={tab.label}
+                                className="flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 px-1 py-2 text-center transition-colors focus-visible:relative focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
+                                style={{
+                                    background: active ? 'var(--accent-light)' : 'var(--bg-surface)',
+                                    color: active ? 'var(--accent)' : 'var(--text-3)',
+                                }}
+                            >
+                                <svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <path d={tab.icon} />
+                                </svg>
+                                <span className="w-full truncate text-[11px] font-medium leading-tight">
+                                    {mobileLabel(tab.routeName, tab.label)}
+                                </span>
+                            </Link>
+                        );
+                    })}
                 </div>
-            </div>
+            </nav>
 
             <nav className="hidden overflow-x-auto scroll-hidden sm:block" aria-label="Configurações">
                 <div className="flex min-w-max gap-0.5" style={{ borderBottom: '1px solid var(--border)' }}>
