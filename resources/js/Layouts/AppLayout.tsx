@@ -92,12 +92,12 @@ export default function AppLayout({ children, title, subtitle, headerActions, fu
                 {subscription && <SubscriptionBanner subscription={subscription} />}
                 {flash?.success && <FlashMessage key={`success-${flash.success}`} message={flash.success} tone="success" />}
                 {flash?.erro && <FlashMessage key={`error-${flash.erro}`} message={flash.erro} tone="error" duration={8000} />}
-                <main id="main-content" className={fullHeight ? 'flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden' : `min-w-0 max-w-full p-4 sm:p-6 lg:min-h-0 lg:flex-1 lg:overflow-y-auto ${currentTenant ? 'app-content-with-bottom-nav' : ''}`}>
+                <main id="main-content" className={fullHeight ? `flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden ${currentTenant ? 'app-full-height-with-bottom-nav' : ''}` : `min-w-0 max-w-full p-4 sm:p-6 lg:min-h-0 lg:flex-1 lg:overflow-y-auto ${currentTenant ? 'app-content-with-bottom-nav' : ''}`}>
                     {!fullHeight && title && <PageHeader title={title} subtitle={subtitle} actions={headerActions} />}
                     {children}
                 </main>
             </div>
-            {!fullHeight && currentTenant && !sidebarOpen && <BottomNavigation />}
+            {currentTenant && !sidebarOpen && <BottomNavigation />}
         </div>
     );
 }
