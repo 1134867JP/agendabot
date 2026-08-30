@@ -19,6 +19,7 @@ export default function QuickActions() {
     const ref = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
     const modoAgendamento = (currentTenant?.modo_bot ?? 'agendamento') === 'agendamento';
+    const pathname = page.url.split('?')[0];
 
     useEffect(() => {
         if (!open) return;
@@ -43,7 +44,10 @@ export default function QuickActions() {
         };
     }, [open]);
 
-    if (!currentTenant || page.url.startsWith('/painel/agendamentos')) return null;
+    // As páginas operacionais já exibem sua ação principal no próprio contexto
+    // (novo cliente, profissional, serviço, conversa etc.). Manter um segundo
+    // botão flutuante nelas duplicava ações e cobria cards no mobile.
+    if (!currentTenant || pathname !== '/painel') return null;
 
     const actions = [
         ...(modoAgendamento ? [
