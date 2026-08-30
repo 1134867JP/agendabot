@@ -239,4 +239,3 @@ class QaExploratoryRegressionTest extends TestCase
         $this->assertGuest();
     }
 }
-
