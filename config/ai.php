@@ -15,7 +15,11 @@ return [
     'default_provider' => env('AI_PROVIDER', 'gemini'),
     'fallback_providers' => $csv(env('AI_FALLBACK_PROVIDERS', 'groq,openrouter,claude')),
     'timeout_seconds' => (int) env('AI_TIMEOUT_SECONDS', 30),
-    'fallback_statuses' => [404, 408, 409, 425, 429, 500, 502, 503, 504, 529],
+    // 400 entra aqui porque cada provider tem sua própria serialização/schema: uma
+    // peculiaridade que faz UM provider rejeitar a requisição (ex.: histórico de
+    // function-calling multi-turno específico do Gemini) não implica que os demais
+    // (com autenticação e formato de payload independentes) também rejeitem.
+    'fallback_statuses' => [400, 404, 408, 409, 425, 429, 500, 502, 503, 504, 529],
 
     'limits' => [
         'monthly_tokens' => $nullableInt(env('AI_MONTHLY_TOKEN_LIMIT')),
