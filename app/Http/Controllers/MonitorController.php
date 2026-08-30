@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\OperationalEvent;
 use App\Support\ErroLogScanner;
 use App\Support\FailedJobsFormatter;
+use App\Support\OperationalEventFormatter;
 use App\Support\RuntimeHealth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -35,7 +36,7 @@ class MonitorController extends Controller
                 'tipo' => $evento->type,
                 'provider' => $evento->provider,
                 'tenant' => $evento->tenant?->nome,
-                'mensagem' => data_get($evento->metadata, 'message') ?? data_get($evento->metadata, 'evento'),
+                'mensagem' => OperationalEventFormatter::mensagem($evento),
                 'metadata' => $evento->metadata,
                 'ocorrido_em' => $evento->created_at,
             ])

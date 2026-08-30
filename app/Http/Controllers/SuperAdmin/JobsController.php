@@ -5,6 +5,7 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\OperationalEvent;
 use App\Support\FailedJobsFormatter;
+use App\Support\OperationalEventFormatter;
 use App\Support\RuntimeHealth;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Artisan;
@@ -153,7 +154,7 @@ class JobsController extends Controller
                     'tipo' => $evento->type,
                     'provider' => $evento->provider,
                     'tenant' => $evento->tenant?->nome,
-                    'mensagem' => data_get($evento->metadata, 'message') ?? data_get($evento->metadata, 'evento'),
+                    'mensagem' => OperationalEventFormatter::mensagem($evento),
                     'metadata' => $evento->metadata,
                     'ocorrido_em' => $evento->created_at,
                 ])->toArray();

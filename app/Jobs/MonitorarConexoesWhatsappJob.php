@@ -48,6 +48,9 @@ class MonitorarConexoesWhatsappJob implements ShouldQueue
                     OperationalEvent::record($tenant->id, $connected ? 'integration_recovered' : 'integration_failure', [
                         'provider' => 'evolution',
                         'metadata' => [
+                            'message' => $connected
+                                ? 'WhatsApp reconectado.'
+                                : "WhatsApp desconectado (status: {$status}).",
                             'operation' => 'connection_watchdog',
                             'status' => $status,
                         ],

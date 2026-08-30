@@ -35,7 +35,7 @@ class SyncGoogleCalendarJob implements ShouldQueue
     public function failed(\Throwable $exception): void
     {
         OperationalEvent::record($this->agendamento->tenant_id, 'integration_failure', [
-            'provider' => 'google_calendar', 'metadata' => ['error' => $exception->getMessage()],
+            'provider' => 'google_calendar', 'metadata' => ['message' => $exception->getMessage()],
         ]);
     }
 }
