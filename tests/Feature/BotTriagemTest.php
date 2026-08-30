@@ -74,6 +74,8 @@ class BotTriagemTest extends TestCase
 
     public function test_transferir_para_humano_marca_flag_e_nao_cria_agendamento(): void
     {
+        Carbon::setTestNow(Carbon::create(2026, 7, 1, 10, 0, 0, 'America/Sao_Paulo'));
+
         Http::fake([
             'api.anthropic.com/*' => Http::sequence()
                 ->push([
@@ -85,22 +87,47 @@ class BotTriagemTest extends TestCase
                     ]],
                     'stop_reason' => 'tool_use',
                     'usage' => ['input_tokens' => 20, 'output_tokens' => 8],
-                ])
-                ->push([
-                    'content' => [['type' => 'text', 'text' => 'Perfeito! Uma atendente vai te retornar. 🙂']],
-                    'stop_reason' => 'end_turn',
-                    'usage' => ['input_tokens' => 5, 'output_tokens' => 5],
                 ]),
         ]);
 
-        $resultado = app(ClaudeAgentService::class)->processar(
-            $this->tenant,
-            [['role' => 'user', 'content' => 'quero marcar limpeza quarta de manhã, sou o Fulano']],
-            $this->clienteInfo(),
-        );
+        try {
+            $resultado = app(ClaudeAgentService::class)->processar(
+                $this->tenant,
+                [['role' => 'user', 'content' => 'quero marcar limpeza quarta de manhã, sou o Fulano']],
+                $this->clienteInfo(),
+            );
 
-        $this->assertTrue($resultado['transferir']);
-        $this->assertSame(0, Agendamento::count());
+            $this->assertTrue($resultado['transferir']);
+            $this->assertSame('Recebi sua solicitação. Vou encaminhar para uma atendente, que dará sequência em instantes.', $resultado['resposta']);
+            $this->assertSame(0, Agendamento::count());
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_texto_de_transferencia_sem_ferramenta_vira_handoff_real(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 7, 1, 10, 0, 0, 'America/Sao_Paulo'));
+        Http::fake([
+            'api.anthropic.com/*' => Http::response([
+                'content' => [['type' => 'text', 'text' => 'We have transferred to human. Please wait.']],
+                'stop_reason' => 'end_turn',
+                'usage' => ['input_tokens' => 10, 'output_tokens' => 5],
+            ]),
+        ]);
+
+        try {
+            $resultado = app(ClaudeAgentService::class)->processar(
+                $this->tenant,
+                [['role' => 'user', 'content' => 'oi']],
+                $this->clienteInfo(),
+            );
+
+            $this->assertTrue($resultado['transferir']);
+            $this->assertSame('Recebi sua solicitação. Vou encaminhar para uma atendente, que dará sequência em instantes.', $resultado['resposta']);
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_em_horario_atendimento_respeita_dia_e_faixa(): void

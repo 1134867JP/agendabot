@@ -129,6 +129,18 @@ class AgendouAgentService
                     'tool_use_id' => $block['id'],
                     'content' => json_encode($toolResult),
                 ];
+
+                // A transferência encerra o fluxo do bot. Não delegamos a mensagem
+                // final a uma segunda chamada de IA: em um fallback de provider esse
+                // histórico de ferramenta pode ser interpretado de forma diferente e
+                // gerar trechos soltos, outro idioma ou uma nova transferência.
+                if ($this->transferir) {
+                    return [
+                        'resposta' => $this->mensagemTransferencia($tenant, $hoje),
+                        'transferir' => true,
+                        'usage' => $totalUsage,
+                    ];
+                }
             }
 
             $messages[] = $assistantMessage;
@@ -141,6 +153,17 @@ class AgendouAgentService
             'input' => $totalUsage['input_tokens'],
             'output' => $totalUsage['output_tokens'],
         ]);
+
+        // Alguns modelos menores podem responder que transferiram a conversa sem
+        // efetivamente chamar a ferramenta. Nunca deixamos esse texto solto: ele vira
+        // um handoff real, pausa o bot no job e usa a mensagem padronizada abaixo.
+        if ($triagem && $this->respostaIndicaTransferencia($resposta)) {
+            return [
+                'resposta' => $this->mensagemTransferencia($tenant, $hoje),
+                'transferir' => true,
+                'usage' => $totalUsage,
+            ];
+        }
 
         return [
             'resposta' => $resposta ?: 'Desculpe, não consegui processar sua mensagem. Tente novamente.',
@@ -436,6 +459,42 @@ class AgendouAgentService
             : "Avise, de forma simpática, que uma atendente retornará no horário de atendimento ({$texto}).";
 
         return "ATENDIMENTO: Estamos FORA do horário de atendimento ({$texto}). Colete normalmente os dados e transfira, mas {$instrucao}";
+    }
+
+    /**
+     * A confirmação de handoff precisa ser estável e enviada uma única vez. Uma
+     * mensagem configurada pelo estabelecimento tem prioridade; sem ela, ajustamos
+     * o texto ao horário de atendimento, sem expor uma resposta gerada pela IA.
+     */
+    private function mensagemTransferencia(Tenant $tenant, Carbon $agora): string
+    {
+        $configurada = trim((string) ($tenant->triagemConfig()['mensagem_transferencia'] ?? ''));
+        if ($configurada !== '') {
+            return $configurada;
+        }
+
+        if (! $tenant->emHorarioAtendimento($agora)) {
+            $foraHorario = trim((string) $tenant->mensagem_fora_horario);
+            if ($foraHorario !== '') {
+                return $foraHorario;
+            }
+
+            $horario = $tenant->horarioAtendimentoTexto();
+
+            return $horario !== ''
+                ? "Recebi sua solicitação. Uma atendente retornará no horário de atendimento ({$horario})."
+                : 'Recebi sua solicitação. Uma atendente retornará assim que possível.';
+        }
+
+        return 'Recebi sua solicitação. Vou encaminhar para uma atendente, que dará sequência em instantes.';
+    }
+
+    private function respostaIndicaTransferencia(string $resposta): bool
+    {
+        return preg_match(
+            '/\b(transferi|transferimos|transferindo|encaminhei|encaminhamos|encaminhando)\b|\bwe have transferred\b|atendente humano.*\b(dispon[ií]vel|a caminho)\b/iu',
+            $resposta,
+        ) === 1;
     }
 
     private function buildTriagemPrompt(Tenant $tenant): string

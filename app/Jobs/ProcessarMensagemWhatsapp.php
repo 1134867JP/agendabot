@@ -150,7 +150,13 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         // chamada ao Claude quando o cliente pede atendente ou menciona um termo configurado.
         $triagem = $this->tenant->triagemConfig();
         if ($this->deveTransferirPorPalavraChave($conteudo, $triagem['palavras_chave_humano'])) {
-            $conversa->update(['status_v2' => 'aguardando_humano']);
+            $transferiuAgora = Conversa::whereKey($conversa->id)
+                ->where('status_v2', 'ativa')
+                ->update(['status_v2' => 'aguardando_humano']);
+            if ($transferiuAgora === 0) {
+                return;
+            }
+
             $mensagemTransferencia = $triagem['mensagem_transferencia']
                 ?: 'Já vou te transferir para um atendente, um momento! 🙋';
             $outboundMessages->queueConversationMessage(
@@ -225,7 +231,16 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             $resultado = $agendou->processarMensagem($this->tenant, $historico, $clienteInfo, $agendamentoPendente);
 
             if ($resultado['transferir']) {
-                $conversa->update(['status_v2' => 'aguardando_humano']);
+                // Somente o primeiro job que concluir o handoff pode enviar a
+                // confirmação. Isso elimina respostas duplicadas quando chegam
+                // mensagens rapidamente e dois workers ainda estavam processando.
+                $transferiuAgora = Conversa::whereKey($conversa->id)
+                    ->where('status_v2', 'ativa')
+                    ->update(['status_v2' => 'aguardando_humano']);
+
+                if ($transferiuAgora === 0) {
+                    return;
+                }
             }
 
             $resposta = $resultado['resposta'];
