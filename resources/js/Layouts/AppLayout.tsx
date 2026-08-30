@@ -14,7 +14,10 @@ function useAppHeight() {
         const set = () => {
             const viewport = window.visualViewport;
             const height = viewport?.height ?? window.innerHeight;
-            const top = viewport?.pageTop ?? 0;
+            // offsetTop representa somente o deslocamento da área visível (ex.: teclado).
+            // pageTop também inclui o scroll do documento e fazia telas full-height
+            // acompanharem o gesto novamente no Safari, dando sensação de scroll invertido.
+            const top = viewport?.offsetTop ?? 0;
             document.documentElement.style.setProperty('--app-height', `${height}px`);
             document.documentElement.style.setProperty('--app-top', `${top}px`);
         };
@@ -68,11 +71,11 @@ export default function AppLayout({ children, title, subtitle, headerActions, fu
             className={fullHeight ? 'flex w-full max-w-full overflow-hidden' : 'min-h-[100dvh] w-full max-w-full lg:flex lg:h-[100dvh] lg:overflow-hidden'}
             style={fullHeight ? {
                 position: 'fixed',
-                top: 0,
+                top: 'var(--app-top, 0px)',
                 left: 0,
                 right: 0,
                 height: 'var(--app-height, 100dvh)',
-                transform: 'translateY(var(--app-top, 0px))',
+                overscrollBehavior: 'none',
                 background: 'var(--bg-app)',
                 color: 'var(--text-1)',
             } : {

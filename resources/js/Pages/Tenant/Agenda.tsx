@@ -442,7 +442,7 @@ function WeekGrid({
             </div>
 
             {/* Scrollable body */}
-            <div ref={bodyRef} className="flex-1 overflow-y-auto scroll-hidden">
+            <div ref={bodyRef} className="flex-1 overflow-y-auto overscroll-contain scroll-hidden">
                 {loading ? (
                     <div className="flex items-center justify-center" style={{ height: TOTAL_HEIGHT }}>
                         <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24" style={{ color: 'var(--text-3)' }}>
@@ -562,7 +562,7 @@ function DayTimeline({
     }
 
     return (
-        <div className="flex-1 overflow-y-auto scroll-hidden px-4 py-3 pb-24 space-y-2">
+        <div className="flex-1 overflow-y-auto overscroll-contain scroll-hidden px-4 py-3 pb-24 space-y-2">
             {dayEvents.map(a => {
                 const { accent, bg, text } = slotColor(a);
                 const initials = a.title.trim().split(/\s+/).map(w => w[0] ?? '').slice(0, 2).join('').toUpperCase();
@@ -1244,7 +1244,7 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
             <div className="hidden flex-1 md:flex overflow-hidden">
                 {/* Left panel */}
                 <aside
-                    className="flex flex-col overflow-y-auto scroll-hidden flex-shrink-0"
+                    className="flex flex-col overflow-y-auto overscroll-contain scroll-hidden flex-shrink-0"
                     style={{ width: 220, borderRight: '1px solid var(--border)', background: 'var(--bg-sidebar)' }}
                 >
                     <MiniCalendar

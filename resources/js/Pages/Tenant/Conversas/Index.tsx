@@ -878,7 +878,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                     </div>
 
                     {/* Lista */}
-                    <div className="scrollbar-stable flex-1 overflow-y-auto">
+                    <div className="scrollbar-stable flex-1 overflow-y-auto overscroll-contain">
                         {conversas.data.length === 0 ? (
                             <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
                                 <svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
@@ -1028,7 +1028,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                         {/* Mensagens */}
                         <div
                             ref={chatRef}
-                            className="scrollbar-stable flex-1 overflow-y-auto px-3 py-4 sm:px-4 sm:py-5 md:px-6"
+                            className="scrollbar-stable flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-4 sm:py-5 md:px-6"
                             style={{
                                 background: 'var(--bg-app)',
                                 backgroundImage: 'radial-gradient(circle, var(--border) 1px, transparent 1px)',
