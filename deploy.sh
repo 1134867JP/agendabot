@@ -104,7 +104,7 @@ if [ -z "${EVOLUTION_API_URL:-}" ]; then
 elif [ -z "${EVOLUTION_API_KEY:-}" ]; then
     printf "chave_ausente"
 else
-    status=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 \
+    status=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 --retry 1 --retry-delay 1 --retry-all-errors \
         -H "apikey: ${EVOLUTION_API_KEY}" \
         "${EVOLUTION_API_URL%/}/instance/fetchInstances" 2>/dev/null || true)
     printf "http_%s" "${status:-000}"
