@@ -55,11 +55,28 @@ class EvolutionApiService
                 'qrcode' => true,
             ]);
 
-        if (! $response->successful()) {
+        if (! $response->successful() && ! $this->instanciaJaExiste($response->status(), $response->json())) {
             throw EvolutionApiException::requisicaoFalhou('criar instância', $response->status());
         }
 
         return $response->json() ?? [];
+    }
+
+    /**
+     * A Evolution pode devolver 403 ou 409 quando a instância já existe. Isso
+     * não impede a conexão: basta solicitar um novo QR para a mesma instância.
+     */
+    private function instanciaJaExiste(int $status, mixed $body): bool
+    {
+        if (! in_array($status, [403, 409], true)) {
+            return false;
+        }
+
+        $message = strtolower((string) (data_get($body, 'message') ?? data_get($body, 'error')));
+
+        return str_contains($message, 'already exist')
+            || str_contains($message, 'already registered')
+            || str_contains($message, 'já existe');
     }
 
     public function obterQrCode(string $instance): ?string

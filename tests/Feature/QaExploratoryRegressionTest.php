@@ -210,6 +210,23 @@ class QaExploratoryRegressionTest extends TestCase
         app(EvolutionApiService::class)->criarInstancia('tenant-qa');
     }
 
+    public function test_evolution_instance_creation_accepts_existing_instance_response(): void
+    {
+        config([
+            'services.evolution.url' => 'https://evolution.example.test',
+            'services.evolution.key' => 'test-key',
+        ]);
+        Http::fake([
+            'evolution.example.test/instance/create' => Http::response([
+                'message' => 'Instance already exists',
+            ], 409),
+        ]);
+
+        $resultado = app(EvolutionApiService::class)->criarInstancia('tenant-qa');
+
+        $this->assertSame(['message' => 'Instance already exists'], $resultado);
+    }
+
     public function test_evolution_qrcode_accepts_nested_response_format(): void
     {
         config([
