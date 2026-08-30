@@ -29,7 +29,8 @@ class EvolutionApiService
 
     public function configurado(): bool
     {
-        return filter_var($this->baseUrl, FILTER_VALIDATE_URL) !== false;
+        return filter_var($this->baseUrl, FILTER_VALIDATE_URL) !== false
+            && trim($this->globalApiKey) !== '';
     }
 
     public function enviarMensagem(string $instance, string $telefone, string $mensagem): bool
@@ -63,10 +64,32 @@ class EvolutionApiService
 
     public function obterQrCode(string $instance): ?string
     {
-        $response = $this->http()
-            ->get("{$this->baseUrl}/instance/connect/{$instance}");
+        // Logo após criar uma instância, a Evolution pode responder 200 antes de
+        // terminar de gerar o QR. Fazemos poucas tentativas seguras (GET) para
+        // não devolver uma tela vazia ao usuário nesse intervalo.
+        for ($tentativa = 0; $tentativa < 3; $tentativa++) {
+            $response = $this->http()
+                ->get("{$this->baseUrl}/instance/connect/{$instance}");
 
-        return $response->json('base64');
+            if (! $response->successful()) {
+                throw EvolutionApiException::requisicaoFalhou('gerar QR Code', $response->status());
+            }
+
+            $body = $response->json();
+            $qrcode = data_get($body, 'base64')
+                ?? data_get($body, 'qrcode.base64')
+                ?? data_get($body, 'qrcode');
+
+            if (is_string($qrcode) && $qrcode !== '') {
+                return $qrcode;
+            }
+
+            if ($tentativa < 2) {
+                usleep(350_000);
+            }
+        }
+
+        return null;
     }
 
     public function statusInstancia(string $instance): string

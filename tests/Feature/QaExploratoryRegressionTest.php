@@ -210,6 +210,23 @@ class QaExploratoryRegressionTest extends TestCase
         app(EvolutionApiService::class)->criarInstancia('tenant-qa');
     }
 
+    public function test_evolution_qrcode_accepts_nested_response_format(): void
+    {
+        config([
+            'services.evolution.url' => 'https://evolution.example.test',
+            'services.evolution.key' => 'test-key',
+        ]);
+        Http::fake([
+            'evolution.example.test/instance/connect/tenant-qa' => Http::response([
+                'qrcode' => ['base64' => 'data:image/png;base64,qr-de-teste'],
+            ]),
+        ]);
+
+        $qrcode = app(EvolutionApiService::class)->obterQrCode('tenant-qa');
+
+        $this->assertSame('data:image/png;base64,qr-de-teste', $qrcode);
+    }
+
     public function test_logout_clears_inertia_history(): void
     {
         $user = User::factory()->create();
@@ -222,3 +239,4 @@ class QaExploratoryRegressionTest extends TestCase
         $this->assertGuest();
     }
 }
+

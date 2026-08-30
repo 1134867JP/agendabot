@@ -117,7 +117,11 @@ export default function WhatsAppPage({ tenant, ultimo_backup }: Props) {
         setQrExpirado(false);
         try {
             const res = await fetch(route('tenant.whatsapp.qrcode'), {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'include',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
             });
             const json = await res.json();
             if (json.connected) {
@@ -126,7 +130,7 @@ export default function WhatsAppPage({ tenant, ultimo_backup }: Props) {
             } else if (json.qrcode) {
                 setQrcode(json.qrcode);
             } else {
-                setErro('Não foi possível gerar o QR Code. Tente novamente em alguns instantes.');
+                setErro(json.erro ?? 'Não foi possível gerar o QR Code. Tente novamente em alguns instantes.');
             }
         } catch {
             setErro('Erro de conexão. Verifique sua internet e tente novamente.');

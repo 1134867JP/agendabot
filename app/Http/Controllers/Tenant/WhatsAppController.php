@@ -90,6 +90,18 @@ class WhatsAppController extends Controller
             $this->evolution->configurarWebhook($instance, $webhookUrl, $tenant->webhook_token);
             $qrcode = $this->evolution->obterQrCode($instance);
 
+            if (! $qrcode) {
+                Log::warning('WHATSAPP_QRCODE_AUSENTE', [
+                    'tenant' => $tenant->id,
+                    'instance' => $instance,
+                    'status' => $status,
+                ]);
+
+                return response()->json([
+                    'erro' => 'O WhatsApp ainda está preparando o QR Code. Aguarde alguns segundos e tente novamente.',
+                ], 503);
+            }
+
             return response()->json(['qrcode' => $qrcode]);
         } catch (EvolutionApiException|ConnectionException $e) {
             Log::warning('WHATSAPP_QRCODE_INDISPONIVEL', [
