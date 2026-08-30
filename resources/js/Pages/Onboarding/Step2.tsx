@@ -21,12 +21,16 @@ export default function OnboardingStep2({ planos }: Props) {
 
     const escolherPlano = (slug: string) => {
         setLoading(slug);
-        router.post(route('onboarding.checkout'), { plano: slug });
+        router.post(route('onboarding.checkout'), { plano: slug }, {
+            onFinish: () => setLoading(null),
+        });
     };
 
     const pular = () => {
         setLoading('pular');
-        router.post(route('onboarding.pular'));
+        router.post(route('onboarding.pular'), {}, {
+            onFinish: () => setLoading(null),
+        });
     };
 
     const planoList = Object.entries(planos);
@@ -54,9 +58,30 @@ export default function OnboardingStep2({ planos }: Props) {
             <div className="flex flex-1 flex-col items-center px-4 py-6 sm:py-10">
                 <div className="mb-7 text-center sm:mb-10">
                     <h1 className="text-2xl text-primary sm:text-3xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
-                        Escolha seu plano
+                        Comece seu teste grátis
                     </h1>
-                    <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>Escolha o plano para o fim do trial. Nenhum pagamento será solicitado agora.</p>
+                    <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>Use todos os recursos essenciais por 14 dias, sem informar cartão.</p>
+                </div>
+
+                <div className="mb-7 flex w-full max-w-4xl flex-col gap-4 rounded-xl p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5" style={{ background: 'var(--accent-light)', border: '1px solid var(--accent)' }}>
+                    <div>
+                        <p className="text-sm font-semibold text-primary">Configure sua agenda agora</p>
+                        <p className="mt-1 text-xs leading-5" style={{ color: 'var(--text-2)' }}>Você poderá escolher ou trocar de plano depois, dentro do painel.</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={pular}
+                        disabled={loading !== null}
+                        className="btn-primary min-h-11 shrink-0 justify-center sm:min-w-48"
+                    >
+                        {loading === 'pular' ? 'Preparando…' : 'Começar teste grátis'}
+                    </button>
+                </div>
+
+                <div className="mb-4 flex w-full max-w-4xl items-center gap-3">
+                    <span className="h-px flex-1" style={{ background: 'var(--border)' }} />
+                    <p className="shrink-0 text-xs" style={{ color: 'var(--text-3)' }}>Ou indique o plano que pretende usar</p>
+                    <span className="h-px flex-1" style={{ background: 'var(--border)' }} />
                 </div>
 
                 <div className="grid w-full max-w-4xl gap-5 sm:grid-cols-3">
@@ -103,6 +128,7 @@ export default function OnboardingStep2({ planos }: Props) {
                             </ul>
 
                             <button
+                                type="button"
                                 onClick={() => escolherPlano(slug)}
                                 disabled={loading !== null}
                                 className="w-full rounded-lg py-2.5 text-sm font-medium transition-all hover:brightness-110 disabled:opacity-50"
@@ -112,25 +138,13 @@ export default function OnboardingStep2({ planos }: Props) {
                                         : { background: 'var(--bg-surface-2)', color: 'var(--text-2)', border: '1px solid var(--border-strong)' }
                                 }
                             >
-                                {loading === slug ? 'Aguarde…' : 'Escolher plano'}
+                                {loading === slug ? 'Aguarde…' : 'Usar este plano depois'}
                             </button>
                         </div>
                     ))}
                 </div>
 
-                <button
-                    onClick={pular}
-                    disabled={loading !== null}
-                    className="mt-6 min-h-11 px-3 text-sm transition-colors disabled:opacity-50 sm:mt-8"
-                    style={{ color: 'var(--text-3)' }}
-                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-2)')}
-                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
-                >
-                    Continuar com o período de teste gratuito →
-                </button>
-                <p className="mt-2 text-center text-xs" style={{ color: 'var(--text-3)' }}>
-                    14 dias grátis, sem cartão. Depois, escolha entre Pix ou cartão.
-                </p>
+                <p className="mt-6 text-center text-xs" style={{ color: 'var(--text-3)' }}>Nenhuma cobrança será criada nesta etapa.</p>
             </div>
         </div>
         </ForceDark>

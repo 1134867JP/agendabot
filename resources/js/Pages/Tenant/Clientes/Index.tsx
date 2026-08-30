@@ -1,6 +1,6 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import axios from 'axios';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import Modal from '@/Components/Modal';
 import EmptyState from '@/Components/UI/EmptyState';
@@ -66,7 +66,15 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
     const idsPagina = useMemo(() => clientes.data.map(cliente => cliente.id), [clientes.data]);
     const todosSelecionados = idsPagina.length > 0 && idsPagina.every(id => selecionados.includes(id));
 
+    useEffect(() => () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+    }, []);
+
     const navegar = (params: { busca?: string; segmento?: string }) => {
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+        }
         setSelecionados([]);
         router.get(route('tenant.clientes.index'), params, { preserveState: true, replace: true });
     };
@@ -137,7 +145,7 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
     ];
 
     return (
-        <AppLayout title="Clientes" subtitle="Encontre, selecione e resolva ações sem abrir várias telas">
+        <AppLayout title="Clientes" subtitle="Contatos, histórico e próximos agendamentos">
             <Head title="Clientes" />
 
             <Toolbar className="mb-4">

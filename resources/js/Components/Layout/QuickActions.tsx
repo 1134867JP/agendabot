@@ -49,14 +49,14 @@ export default function QuickActions() {
         ...(modoAgendamento ? [
             {
                 href: route('tenant.agendamentos.index', { novo: 1 }),
-                label: 'Novo agendamento',
-                description: 'Reserve um horário manualmente',
+                label: 'Agendar cliente',
+                description: 'Escolha data, horário e atendente',
                 icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
             },
             {
                 href: route('tenant.agenda'),
-                label: 'Abrir agenda',
-                description: 'Encontre horários disponíveis',
+                label: 'Ver horários',
+                description: 'Consulte disponibilidade e bloqueios',
                 icon: 'M3 12h18M12 3v18',
             },
         ] : []),

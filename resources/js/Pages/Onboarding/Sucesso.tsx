@@ -52,14 +52,14 @@ export default function OnboardingSucesso({ user, tenant }: Props) {
     return (
         <ForceDark>
         <div
-            className="flex min-h-screen flex-col items-center justify-center px-4"
+            className="flex min-h-[100dvh] flex-col items-center justify-start overflow-y-auto px-4 py-8 sm:justify-center sm:py-12"
             style={{ background: 'var(--bg-app)' }}
         >
             <Head title="Tudo pronto!" />
 
             <div className="fixed left-0 right-0 top-0 h-0.5" style={{ background: 'var(--accent)' }} />
 
-            <div className="w-full max-w-lg text-center">
+            <div className="w-full max-w-lg text-center sm:my-auto">
                 <div
                     className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full text-3xl"
                     style={{ background: 'var(--accent-light)', border: '1px solid var(--border-strong)' }}

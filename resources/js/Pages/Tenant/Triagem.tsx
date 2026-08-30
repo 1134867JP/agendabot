@@ -63,7 +63,7 @@ export default function Triagem({ config, horarioFuncionamento }: Props) {
         <ConfiguracoesLayout title="Triagem" subtitle="Defina quando o bot deve passar a conversa para sua equipe">
             <Head title="Triagem" />
 
-            <div className="mx-auto max-w-2xl space-y-5 pb-24">
+            <div className="mx-auto max-w-2xl space-y-5">
                 {wasSuccessful && (
                     <div className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm text-emerald-400" style={{ background: 'rgba(110,231,183,0.08)', border: '1px solid rgba(110,231,183,0.2)' }}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>

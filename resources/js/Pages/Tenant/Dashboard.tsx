@@ -148,7 +148,7 @@ export default function TenantDashboard({
         >
             <Head title="Hoje" />
 
-            <div className="space-y-6 pb-20 lg:pb-0">
+            <div className="space-y-6">
                 <div className="flex flex-col gap-3 rounded-xl p-4 sm:flex-row sm:items-center sm:justify-between" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
                     <div>
                         <div className="flex flex-wrap items-center gap-2">
