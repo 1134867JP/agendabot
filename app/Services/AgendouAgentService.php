@@ -461,7 +461,9 @@ class AgendouAgentService
             default => 'Linguagem clara e amigável. Emojis com moderação. Tratamento informal mas respeitoso.',
         };
 
-        $instrucoes = $tenant->instrucoes_extras ? "\nINSTRUÇÕES ESPECÍFICAS DO NEGÓCIO:\n{$tenant->instrucoes_extras}" : '';
+        $instrucoes = $tenant->instrucoes_extras
+            ? "\nINSTRUÇÕES ESPECÍFICAS DO NEGÓCIO (têm prioridade sobre o FLUXO padrão abaixo em caso de conflito):\n{$tenant->instrucoes_extras}"
+            : '';
         $saudacao = $tenant->bot_saudacao ? "\nMENSAGEM DE BOAS-VINDAS (use como referência ao saudar o cliente pela primeira vez):\n{$tenant->bot_saudacao}" : '';
         $servicosPart = $servicos ? "\nSERVIÇOS OFERECIDOS (apenas para contexto):\n{$servicos}\n" : '';
         $profPart = $profissionais ? "\nPROFISSIONAIS (apenas para contexto):\n{$profissionais}\n" : '';
@@ -520,7 +522,9 @@ PROMPT;
             default => 'Linguagem clara e amigável. Emojis com moderação. Tratamento informal mas respeitoso.',
         };
 
-        $instrucoes = $tenant->instrucoes_extras ? "\nINSTRUÇÕES ESPECÍFICAS DO NEGÓCIO:\n{$tenant->instrucoes_extras}" : '';
+        $instrucoes = $tenant->instrucoes_extras
+            ? "\nINSTRUÇÕES ESPECÍFICAS DO NEGÓCIO (têm prioridade sobre o FLUXO padrão abaixo em caso de conflito):\n{$tenant->instrucoes_extras}"
+            : '';
         $saudacao = $tenant->bot_saudacao ? "\nMENSAGEM DE BOAS-VINDAS (use como referência ao saudar o cliente pela primeira vez):\n{$tenant->bot_saudacao}" : '';
         $opcoesPart = $opcoes ? "\n{$opcoes}\n" : '';
         $maxTentativas = $tenant->triagemConfig()['max_tentativas_sem_entender'];
