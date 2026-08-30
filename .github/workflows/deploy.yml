@@ -220,3 +220,7 @@ jobs:
               fi
             fi
             bash deploy.sh
+            if [[ "${{ github.event.head_commit.message }}" == *"[diagnose-whatsapp]"* ]]; then
+              echo "--- diagnóstico pontual do QR Code ---"
+              docker exec agendabot-app sh -c 'grep "WHATSAPP_QRCODE" /var/www/html/storage/logs/laravel.log 2>/dev/null | tail -n 3' || true
+            fi
