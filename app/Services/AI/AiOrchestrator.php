@@ -90,6 +90,7 @@ class AiOrchestrator
                 OperationalEvent::record($tenant->id, 'integration_failure', [
                     'provider' => $providerName,
                     'metadata' => [
+                        'message' => $e->getMessage(),
                         'status' => $e->status,
                         'error_type' => $e->errorType,
                         'fallback' => $e->fallbackAllowed && $hasNextProvider,

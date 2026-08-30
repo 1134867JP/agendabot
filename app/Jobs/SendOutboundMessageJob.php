@@ -121,6 +121,7 @@ class SendOutboundMessageJob implements ShouldBeUnique, ShouldQueue
             OperationalEvent::record($outbound->tenant_id, 'integration_failure', [
                 'provider' => 'evolution',
                 'metadata' => [
+                    'message' => $e->getMessage(),
                     'operation' => 'send_message',
                     'purpose' => $outbound->purpose,
                     'outbound_message_id' => $outbound->id,
