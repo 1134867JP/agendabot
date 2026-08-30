@@ -1098,7 +1098,7 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
             <AgendaViewTabs active="calendar" />
 
             {/* ───────────── Mobile ───────────── */}
-            <div className="flex flex-1 flex-col md:hidden overflow-hidden">
+            <div className="flex flex-1 flex-col overflow-hidden lg:hidden">
                 {/* Top panel: mini calendar + day nav + entity pills */}
                 <div
                     className="flex-shrink-0"
@@ -1172,7 +1172,7 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
 
                     {entidades.length > 0 && (
                         <div className="flex items-center justify-between gap-3 px-4 pb-3">
-                            <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>
+                            <p className="min-w-0 flex-1 text-[11px] leading-relaxed" style={{ color: 'var(--text-3)' }}>
                                 Toque em um horário livre para agendar.
                             </p>
                             <Link
@@ -1242,7 +1242,7 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
             </div>
 
             {/* ───────────── Desktop ───────────── */}
-            <div className="hidden flex-1 md:flex overflow-hidden">
+            <div className="hidden flex-1 overflow-hidden lg:flex">
                 {/* Left panel */}
                 <aside
                     className="flex flex-col overflow-y-auto overscroll-contain scroll-hidden flex-shrink-0"

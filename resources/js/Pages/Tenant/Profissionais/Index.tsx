@@ -96,6 +96,7 @@ function EspecialidadesField({
 function HorariosEditor({ profissional, onClose }: { profissional: Profissional; onClose: () => void }) {
     const [rows, setRows] = useState<HorarioProfissional[]>(buildHorariosRows(profissional.horarios ?? []));
     const [saving, setSaving] = useState(false);
+    const [erro, setErro] = useState<string | null>(null);
 
     const toggle = (idx: number) =>
         setRows(r => r.map((row, i) => i === idx ? { ...row, ativo: !row.ativo } : row));
@@ -110,6 +111,13 @@ function HorariosEditor({ profissional, onClose }: { profissional: Profissional;
     })));
 
     const salvar = () => {
+        const invalido = rows.find(row => row.ativo && row.hora_fim <= row.hora_inicio);
+        if (invalido) {
+            setErro('O horário de término precisa ser posterior ao início nos dias ativos.');
+            return;
+        }
+
+        setErro(null);
         setSaving(true);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         router.post(route('tenant.profissionais.horarios.sync', profissional.id), { horarios: rows } as any, {
@@ -157,6 +165,11 @@ function HorariosEditor({ profissional, onClose }: { profissional: Profissional;
                     </div>
                 ))}
             </div>
+            {erro && (
+                <p role="alert" className="mt-3 rounded-lg px-3 py-2 text-sm" style={{ background: 'var(--danger-btn-bg)', color: 'var(--danger-text)' }}>
+                    {erro}
+                </p>
+            )}
             <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row">
                 <button onClick={salvar} disabled={saving} className="btn-primary">{saving ? 'Salvando…' : 'Salvar horários'}</button>
                 <button onClick={onClose} className="btn-secondary">Fechar</button>
