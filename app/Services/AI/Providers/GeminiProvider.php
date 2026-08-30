@@ -155,13 +155,76 @@ class GeminiProvider implements AiProviderInterface
             'systemInstruction' => $system !== '' ? ['parts' => [['text' => $system]]] : null,
             'contents' => $contents,
             'tools' => ! empty($payload['tools']) ? [[
-                'functionDeclarations' => collect($payload['tools'])->map(fn ($tool) => [
-                    'name' => $tool['name'],
-                    'description' => $tool['description'] ?? '',
-                    'parameters' => $tool['input_schema'] ?? ['type' => 'object', 'properties' => []],
-                ])->values()->all(),
+                'functionDeclarations' => collect($payload['tools'])->map(function ($tool) {
+                    $declaration = [
+                        'name' => $tool['name'],
+                        'description' => $tool['description'] ?? '',
+                    ];
+
+                    // Gemini valida os parâmetros contra o subconjunto OpenAPI 3.0: tipos-união
+                    // (ex.: ['string','null']) e um objeto de propriedades vazio são rejeitados
+                    // com HTTP 400 — que não é status de fallback, então derrubaria toda a cadeia.
+                    // Convertemos o JSON Schema da Anthropic e omitimos parameters quando vazio.
+                    $parameters = $this->toGeminiSchema($tool['input_schema'] ?? ['type' => 'object']);
+                    if (! empty($parameters['properties'])) {
+                        $declaration['parameters'] = $parameters;
+                    }
+
+                    return $declaration;
+                })->values()->all(),
             ]] : null,
             'generationConfig' => ['maxOutputTokens' => $payload['max_tokens'] ?? 1024],
         ], static fn ($value) => $value !== null);
+    }
+
+    /**
+     * Converte um JSON Schema (estilo Anthropic) para o subconjunto OpenAPI 3.0 aceito
+     * pelo Gemini: tipos-união com "null" viram um único tipo + nullable, e a conversão
+     * é recursiva em properties e items. stdClass vazio (properties sem campos) vira [].
+     */
+    private function toGeminiSchema(mixed $schema): array
+    {
+        $schema = (array) $schema;
+        $result = [];
+
+        $type = $schema['type'] ?? null;
+        if (is_array($type)) {
+            $nonNull = array_values(array_filter($type, static fn ($t) => $t !== 'null'));
+            if (in_array('null', $type, true)) {
+                $result['nullable'] = true;
+            }
+            $type = $nonNull[0] ?? 'string';
+        }
+        if ($type !== null) {
+            $result['type'] = $type;
+        }
+
+        foreach (['description', 'enum', 'format'] as $key) {
+            if (array_key_exists($key, $schema)) {
+                $result[$key] = $schema[$key];
+            }
+        }
+
+        if (isset($schema['properties'])) {
+            $properties = [];
+            foreach ((array) $schema['properties'] as $name => $definition) {
+                $properties[$name] = $this->toGeminiSchema($definition);
+            }
+            $result['properties'] = $properties;
+
+            $required = array_values(array_filter(
+                (array) ($schema['required'] ?? []),
+                static fn ($name) => isset($properties[$name]),
+            ));
+            if ($required !== []) {
+                $result['required'] = $required;
+            }
+        }
+
+        if (isset($schema['items'])) {
+            $result['items'] = $this->toGeminiSchema($schema['items']);
+        }
+
+        return $result;
     }
 }

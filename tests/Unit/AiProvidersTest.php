@@ -86,6 +86,58 @@ class AiProvidersTest extends TestCase
             && $request['tools'][0]['function']['name'] === 'buscar_slots');
     }
 
+    public function test_gemini_normaliza_schema_de_ferramenta_com_tipo_uniao_e_sem_propriedades(): void
+    {
+        config([
+            'ai.providers.gemini.key' => 'gemini-test',
+            'ai.providers.gemini.base_url' => 'https://gemini.test/v1beta',
+        ]);
+        Http::fake([
+            'gemini.test/*' => Http::response([
+                'candidates' => [[
+                    'content' => ['parts' => [['text' => 'Ok!']]],
+                    'finishReason' => 'STOP',
+                ]],
+                'usageMetadata' => ['promptTokenCount' => 5, 'candidatesTokenCount' => 2],
+            ]),
+        ]);
+
+        (new GeminiProvider)->chat(new AiRequest([
+            'messages' => [['role' => 'user', 'content' => 'Quero agendar']],
+            'tools' => [
+                [
+                    'name' => 'criar_agendamento',
+                    'description' => 'Cria agendamento',
+                    'input_schema' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'cliente_nome' => ['type' => 'string', 'description' => 'Nome'],
+                            'observacoes' => ['type' => ['string', 'null'], 'description' => 'Opcional'],
+                        ],
+                        'required' => ['cliente_nome'],
+                    ],
+                ],
+                [
+                    'name' => 'confirmar_agendamento',
+                    'description' => 'Confirma',
+                    'input_schema' => ['type' => 'object', 'properties' => new \stdClass],
+                ],
+            ],
+        ], 'gemini-2.5-flash'));
+
+        $declarations = Http::recorded()[0][0]->data()['tools'][0]['functionDeclarations'];
+
+        // Tipo-união ['string','null'] vira type=string + nullable=true (OpenAPI 3.0).
+        $observacoes = $declarations[0]['parameters']['properties']['observacoes'];
+        $this->assertSame('string', $observacoes['type']);
+        $this->assertTrue($observacoes['nullable']);
+        $this->assertSame(['cliente_nome'], $declarations[0]['parameters']['required']);
+
+        // Ferramenta sem propriedades não deve enviar "parameters" (Gemini rejeita objeto vazio).
+        $this->assertSame('confirmar_agendamento', $declarations[1]['name']);
+        $this->assertArrayNotHasKey('parameters', $declarations[1]);
+    }
+
     public function test_gemini_preserva_id_e_thought_signature_no_retorno_da_ferramenta(): void
     {
         config([
