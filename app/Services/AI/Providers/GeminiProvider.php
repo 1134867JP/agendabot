@@ -123,7 +123,10 @@ class GeminiProvider implements AiProviderInterface
                     ];
                     $functionCall = [
                         'name' => $block['name'],
-                        'args' => $block['input'] ?? [],
+                        // A API do Gemini espera um objeto JSON em functionCall.args.
+                        // Em PHP, [] vira uma lista JSON ([]) e é rejeitado pelo proto
+                        // quando uma ferramenta não possui parâmetros.
+                        'args' => $this->toGeminiFunctionArgs($block['input'] ?? []),
                     ];
                     if (filled($block['provider_call_id'] ?? null)) {
                         $functionCall['id'] = $block['provider_call_id'];
@@ -226,5 +229,15 @@ class GeminiProvider implements AiProviderInterface
         }
 
         return $result;
+    }
+
+    /**
+     * functionCall.args é um mapa no protocolo do Gemini, nunca uma lista. As
+     * ferramentas do agente sempre possuem input_schema do tipo object; portanto,
+     * entradas ausentes ou inválidas precisam ser serializadas como {}.
+     */
+    private function toGeminiFunctionArgs(mixed $input): array|\stdClass
+    {
+        return is_array($input) && ! array_is_list($input) ? $input : new \stdClass;
     }
 }

@@ -61,7 +61,7 @@ class AiProvidersTest extends TestCase
         try {
             (new GeminiProvider)->chat(new AiRequest([
                 'messages' => [['role' => 'user', 'content' => 'Olá']],
-            ], 'gemini-2.5-flash'));
+            ], 'gemini-3.6-flash'));
             $this->fail('Era esperada uma falha do provider.');
         } catch (AiProviderException $e) {
             $this->assertSame(400, $e->status);
@@ -154,7 +154,7 @@ class AiProvidersTest extends TestCase
                     'input_schema' => ['type' => 'object', 'properties' => new \stdClass],
                 ],
             ],
-        ], 'gemini-2.5-flash'));
+        ], 'gemini-3.6-flash'));
 
         $declarations = Http::recorded()[0][0]->data()['tools'][0]['functionDeclarations'];
 
@@ -167,6 +167,39 @@ class AiProvidersTest extends TestCase
         // Ferramenta sem propriedades não deve enviar "parameters" (Gemini rejeita objeto vazio).
         $this->assertSame('confirmar_agendamento', $declarations[1]['name']);
         $this->assertArrayNotHasKey('parameters', $declarations[1]);
+    }
+
+    public function test_gemini_serializa_args_vazio_da_ferramenta_como_objeto(): void
+    {
+        config([
+            'ai.providers.gemini.key' => 'gemini-test',
+            'ai.providers.gemini.base_url' => 'https://gemini.test/v1beta',
+        ]);
+        Http::fake([
+            'gemini.test/*' => Http::response([
+                'candidates' => [[
+                    'content' => ['parts' => [['text' => 'Confirmado.']]],
+                    'finishReason' => 'STOP',
+                ]],
+                'usageMetadata' => ['promptTokenCount' => 5, 'candidatesTokenCount' => 2],
+            ]),
+        ]);
+
+        (new GeminiProvider)->chat(new AiRequest([
+            'messages' => [
+                ['role' => 'user', 'content' => 'Pode confirmar?'],
+                ['role' => 'assistant', 'content' => [[
+                    'type' => 'tool_use',
+                    'id' => 'fc_1',
+                    'name' => 'confirmar_agendamento',
+                    'input' => [],
+                ]]],
+            ],
+        ], 'gemini-3.6-flash'));
+
+        $body = json_decode(Http::recorded()[0][0]->body());
+
+        $this->assertInstanceOf(\stdClass::class, $body->contents[1]->parts[0]->functionCall->args);
     }
 
     public function test_gemini_preserva_id_e_thought_signature_no_retorno_da_ferramenta(): void
@@ -206,7 +239,7 @@ class AiProvidersTest extends TestCase
             ]],
         ];
 
-        $first = $provider->chat(new AiRequest($basePayload, 'gemini-3.5-flash'));
+        $first = $provider->chat(new AiRequest($basePayload, 'gemini-3.6-flash'));
         $this->assertSame('assinatura', $first->content[0]['thought_signature']);
 
         $provider->chat(new AiRequest(array_merge($basePayload, [
@@ -219,7 +252,7 @@ class AiProvidersTest extends TestCase
                     'content' => '{"slots":["09:00"]}',
                 ]]],
             ],
-        ]), 'gemini-3.5-flash'));
+        ]), 'gemini-3.6-flash'));
 
         $requests = Http::recorded();
         $secondPayload = $requests[1][0]->data();

@@ -49,6 +49,12 @@ class AiOrchestrator
             }
 
             $model = $settings['models'][$providerName] ?? config("ai.providers.{$providerName}.model");
+            // Contas novas do Gemini não aceitam mais o modelo antigo. Mantemos esta
+            // migração em runtime para também cobrir valores já salvos no .env ou nas
+            // configurações dos tenants durante a atualização do deploy.
+            if ($providerName === 'gemini' && $model === 'gemini-2.5-flash') {
+                $model = 'gemini-3.6-flash';
+            }
 
             try {
                 $response = $provider->chat(new AiRequest($payload, $model));

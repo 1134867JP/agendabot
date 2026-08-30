@@ -21,7 +21,7 @@ CLAUDE_API_KEY=sk-ant-...
 CLAUDE_MODEL=claude-haiku-4-5-20251001
 
 GEMINI_API_KEY=...
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.6-flash
 
 GROQ_API_KEY=gsk_...
 GROQ_MODEL=openai/gpt-oss-120b
@@ -56,7 +56,7 @@ salvos em `tenants.configuracoes.ai`:
     "provider": "gemini",
     "fallback_providers": ["groq", "claude"],
     "models": {
-      "gemini": "gemini-2.5-flash",
+      "gemini": "gemini-3.6-flash",
       "groq": "openai/gpt-oss-120b"
     },
     "monthly_token_limit": 500000,
