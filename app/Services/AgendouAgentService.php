@@ -64,11 +64,11 @@ class AgendouAgentService
                 ?? 'serviço';
             $systemBlocks[] = [
                 'type' => 'text',
-                'text' => "PENDENTE: Agendamento ID #{$agendamentoPendente->id} — {$dataHora} — {$servico}. Use confirmar_agendamento ou cancelar_agendamento se o cliente confirmar/cancelar.",
+                'text' => "PENDENTE: Agendamento ID #{$agendamentoPendente->id} — {$dataHora} — {$servico}. Já está agendado — NÃO ofereça nem tente criar outro horário para este pedido. Use confirmar_agendamento ou cancelar_agendamento se o cliente confirmar/cancelar. Se o cliente só agradecer (ex: 'vlw', 'obrigado', 'ok'), responda normalmente sem chamar nenhuma ferramenta.",
             ];
         }
 
-        $tools = $triagem ? $this->buildToolsTriagem() : $this->buildTools();
+        $tools = $triagem ? $this->buildToolsTriagem() : $this->buildTools((bool) $agendamentoPendente);
         $messages = $mensagens;
         $totalUsage = [
             'input_tokens' => 0,
@@ -313,9 +313,16 @@ class AgendouAgentService
         return ['sucesso' => true];
     }
 
-    private function buildTools(): array
+    /**
+     * Com um agendamento pendente já em aberto, criar_agendamento fica fora do conjunto
+     * de ferramentas: um provider mais fraco (Gemini/Groq) pode ignorar a instrução de
+     * texto do bloco PENDENTE e tentar "reservar de novo", batendo contra a própria
+     * reserva recém-criada (horario_indisponivel). Remover a ferramenta torna isso
+     * estruturalmente impossível — só reagendar/confirmar/cancelar seguem disponíveis.
+     */
+    private function buildTools(bool $temAgendamentoPendente = false): array
     {
-        return [
+        $tools = [
             [
                 'name' => 'buscar_slots',
                 'description' => 'Busca horários disponíveis para agendamento nos próximos dias. DEVE ser chamada antes de criar_agendamento — nunca ofereça nem aceite horários sem antes chamar esta ferramenta.',
@@ -380,6 +387,12 @@ class AgendouAgentService
                 'cache_control' => ['type' => 'ephemeral'],
             ],
         ];
+
+        if ($temAgendamentoPendente) {
+            $tools = array_values(array_filter($tools, fn ($tool) => $tool['name'] !== 'criar_agendamento'));
+        }
+
+        return $tools;
     }
 
     private function buildToolsTriagem(): array
