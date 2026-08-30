@@ -113,19 +113,20 @@ function fmtRelativo(iso: string | null) {
 
 function DeleteModal({ nome, onConfirm, onCancel }: { nome: string; onConfirm: () => void; onCancel: () => void }) {
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
-            <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/50 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6" role="dialog" aria-modal="true" aria-labelledby="excluir-cliente-title">
+            <div className="max-h-[92dvh] w-full max-w-sm overflow-y-auto overscroll-contain rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl sm:p-6" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
                 <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full" style={{ background: 'rgba(239,68,68,0.1)' }}>
                     <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-red-400">
                         <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
                     </svg>
                 </div>
-                <h3 className="text-base font-semibold text-primary">Excluir cliente?</h3>
+                <h3 id="excluir-cliente-title" className="text-base font-semibold text-primary">Excluir cliente?</h3>
                 <p className="mt-1.5 text-sm" style={{ color: 'var(--text-3)' }}>
                     <strong className="text-primary">{nome}</strong> e todas as suas conversas serão excluídos permanentemente. Esta ação não pode ser desfeita.
                 </p>
                 <div className="mt-5 flex gap-2.5">
                     <button
+                        type="button"
                         onClick={onConfirm}
                         className="flex-1 rounded-xl py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
                         style={{ background: '#ef4444' }}
@@ -133,6 +134,7 @@ function DeleteModal({ nome, onConfirm, onCancel }: { nome: string; onConfirm: (
                         Excluir
                     </button>
                     <button
+                        type="button"
                         onClick={onCancel}
                         className="flex-1 rounded-xl py-2.5 text-sm font-medium transition-colors"
                         style={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border-strong)', color: 'var(--text-2)' }}
@@ -178,7 +180,7 @@ export default function ClienteShow({ cliente, agendamentos, conversas }: Props)
             <div className="mb-5 flex items-center justify-between">
                 <button
                     onClick={() => router.visit(route('tenant.clientes.index'))}
-                    className="flex items-center gap-1.5 text-xs transition-colors hover:text-[var(--text-1)]"
+                    className="flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs transition-colors hover:bg-[var(--bg-surface-2)] hover:text-[var(--text-1)]"
                     style={{ color: 'var(--text-3)' }}
                 >
                     <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -189,7 +191,7 @@ export default function ClienteShow({ cliente, agendamentos, conversas }: Props)
 
                 <button
                     onClick={() => setShowDelete(true)}
-                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-400/10"
+                    className="flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-red-400 transition-colors hover:bg-red-400/10"
                 >
                     <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
@@ -236,12 +238,13 @@ export default function ClienteShow({ cliente, agendamentos, conversas }: Props)
             <form onSubmit={salvarObservacoes} className="card mb-4 p-4 sm:p-5">
                 <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
-                        <h3 className="text-sm font-semibold text-primary">Anotações internas</h3>
+                        <label htmlFor="cliente-observacoes" className="text-sm font-semibold text-primary">Anotações internas</label>
                         <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>Preferências e contexto para o próximo atendimento.</p>
                     </div>
                     {notesForm.wasSuccessful && <span className="text-xs" style={{ color: 'var(--jade)' }}>Salvo</span>}
                 </div>
                 <textarea
+                    id="cliente-observacoes"
                     value={notesForm.data.observacoes}
                     onChange={event => notesForm.setData('observacoes', event.target.value)}
                     className="input min-h-24 resize-y"

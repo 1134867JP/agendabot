@@ -1,4 +1,4 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { PageProps, Tenant } from '@/types';
 import TipoServicoSelector from '@/Components/TipoServicoSelector';
@@ -32,8 +32,9 @@ export default function TenantEdit({ tenant }: Props) {
                 <div className="card p-4 sm:p-7">
                     <form onSubmit={submit} className="space-y-5">
                         <div>
-                            <label className="label mb-1">Nome do estabelecimento</label>
+                            <label className="label mb-1" htmlFor="editar-tenant-nome">Nome do estabelecimento</label>
                             <input
+                                id="editar-tenant-nome"
                                 value={data.nome}
                                 onChange={e => setData('nome', e.target.value)}
                                 className="input"
@@ -74,9 +75,9 @@ export default function TenantEdit({ tenant }: Props) {
                             <button type="submit" disabled={processing} className="btn-primary flex-1 justify-center py-2.5">
                                 {processing ? 'Salvando…' : 'Salvar alterações'}
                             </button>
-                            <a href={route('superadmin.tenants.index')} className="btn-secondary px-6">
+                            <Link href={route('superadmin.tenants.index')} className="btn-secondary px-6">
                                 Cancelar
-                            </a>
+                            </Link>
                         </div>
                     </form>
                 </div>

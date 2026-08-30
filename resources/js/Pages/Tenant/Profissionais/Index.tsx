@@ -65,9 +65,10 @@ function EspecialidadesField({
 
     return (
         <div>
-            <label className="label mb-1">Especialidades</label>
+            <label className="label mb-1" htmlFor="nova-especialidade">Especialidades</label>
             <div className="flex gap-2">
                 <input
+                    id="nova-especialidade"
                     value={novaEsp}
                     onChange={e => setNovaEsp(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}

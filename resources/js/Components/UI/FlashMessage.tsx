@@ -47,7 +47,7 @@ export default function FlashMessage({ message, tone, duration = 6000 }: Props) 
             <button
                 type="button"
                 onClick={() => setVisible(false)}
-                className="-mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-black/10"
+                className="-mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-black/10"
                 aria-label="Fechar aviso"
             >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>

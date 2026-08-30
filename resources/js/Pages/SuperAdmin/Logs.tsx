@@ -246,7 +246,8 @@ export default function Logs() {
                     >
                         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
-                    <input
+                            <input
+                                aria-label="Buscar nos logs"
                         type="text"
                         value={busca}
                         onChange={e => { setBusca(e.target.value); setExpanded(null); }}

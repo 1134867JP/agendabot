@@ -1,4 +1,4 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { PageProps, TipoServico } from '@/types';
 import { TIPOS_SERVICO } from '@/constants/tiposServico';
@@ -113,9 +113,9 @@ export default function TenantCreate(_: PageProps) {
                             <button type="submit" disabled={processing} className="btn-primary flex-1 justify-center py-2.5">
                                 {processing ? 'Criando…' : 'Criar tenant'}
                             </button>
-                            <a href={route('superadmin.tenants.index')} className="btn-secondary px-6 sm:w-auto">
+                            <Link href={route('superadmin.tenants.index')} className="btn-secondary px-6 sm:w-auto">
                                 Cancelar
-                            </a>
+                            </Link>
                         </div>
                     </form>
                 </div>

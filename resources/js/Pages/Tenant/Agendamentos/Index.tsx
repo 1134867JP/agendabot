@@ -283,8 +283,9 @@ function EditarReservaModal({
 
                 <form onSubmit={submit} className="space-y-4">
                     <div>
-                        <label className="label mb-1">Serviço / Recurso</label>
+                        <label className="label mb-1" htmlFor="editar-agendamento-recurso">Serviço / Recurso</label>
                         <select
+                            id="editar-agendamento-recurso"
                             value={data.recurso_id}
                             onChange={(e) =>
                                 setData("recurso_id", Number(e.target.value))
@@ -307,10 +308,11 @@ function EditarReservaModal({
 
                     <div className="grid gap-3 sm:grid-cols-2">
                         <div>
-                            <label className="label mb-1">
+                            <label className="label mb-1" htmlFor="editar-agendamento-cliente">
                                 Nome do cliente
                             </label>
                             <input
+                                id="editar-agendamento-cliente"
                                 value={data.cliente_nome}
                                 onChange={(e) =>
                                     setData("cliente_nome", e.target.value)
@@ -325,8 +327,9 @@ function EditarReservaModal({
                             )}
                         </div>
                         <div>
-                            <label className="label mb-1">Telefone</label>
+                            <label className="label mb-1" htmlFor="editar-agendamento-telefone">Telefone</label>
                             <input
+                                id="editar-agendamento-telefone"
                                 value={data.cliente_telefone}
                                 onChange={(e) =>
                                     setData("cliente_telefone", e.target.value)
@@ -339,8 +342,9 @@ function EditarReservaModal({
 
                     <div className="grid gap-3 sm:grid-cols-3">
                         <div>
-                            <label className="label mb-1">Data</label>
+                            <label className="label mb-1" htmlFor="editar-agendamento-data">Data</label>
                             <input
+                                id="editar-agendamento-data"
                                 type="date"
                                 value={datePart(data.inicio)}
                                 onChange={(e) => {
@@ -355,8 +359,9 @@ function EditarReservaModal({
                             />
                         </div>
                         <div>
-                            <label className="label mb-1">Início</label>
+                            <label className="label mb-1" htmlFor="editar-agendamento-inicio">Início</label>
                             <input
+                                id="editar-agendamento-inicio"
                                 type="time"
                                 value={timePart(data.inicio)}
                                 onChange={(e) =>
@@ -375,8 +380,9 @@ function EditarReservaModal({
                             )}
                         </div>
                         <div>
-                            <label className="label mb-1">Fim</label>
+                            <label className="label mb-1" htmlFor="editar-agendamento-fim">Fim</label>
                             <input
+                                id="editar-agendamento-fim"
                                 type="time"
                                 value={timePart(data.fim)}
                                 onChange={(e) =>
@@ -398,8 +404,9 @@ function EditarReservaModal({
 
                     <div className="grid gap-3 sm:grid-cols-2">
                         <div>
-                            <label className="label mb-1">Status</label>
+                            <label className="label mb-1" htmlFor="editar-agendamento-status">Status</label>
                             <select
+                                id="editar-agendamento-status"
                                 value={data.status}
                                 onChange={(e) =>
                                     setData("status", e.target.value as Agendamento["status"])
@@ -412,8 +419,9 @@ function EditarReservaModal({
                             </select>
                         </div>
                         <div>
-                            <label className="label mb-1">Observações</label>
+                            <label className="label mb-1" htmlFor="editar-agendamento-observacoes">Observações</label>
                             <textarea
+                                id="editar-agendamento-observacoes"
                                 value={data.observacoes}
                                 onChange={(e) =>
                                     setData("observacoes", e.target.value)

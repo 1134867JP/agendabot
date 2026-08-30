@@ -182,8 +182,9 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                 {/* Nome do agente + Ramo do negócio */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                        <label className="label mb-1">Nome do agente</label>
+                        <label className="label mb-1" htmlFor="bot-nome-agente">Nome do agente</label>
                         <input
+                            id="bot-nome-agente"
                             value={data.nome_agente}
                             onChange={e => setData('nome_agente', e.target.value)}
                             className="input"
@@ -192,8 +193,9 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                         {errors.nome_agente && <p className="mt-1 text-xs text-red-400">{errors.nome_agente}</p>}
                     </div>
                     <div>
-                        <label className="label mb-1">Ramo do negócio</label>
+                        <label className="label mb-1" htmlFor="bot-ramo-negocio">Ramo do negócio</label>
                         <input
+                            id="bot-ramo-negocio"
                             value={data.ramo_negocio}
                             onChange={e => setData('ramo_negocio', e.target.value)}
                             className="input"
@@ -205,8 +207,9 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
 
                 {/* Descrição do negócio */}
                 <div>
-                    <label className="label mb-1">Descrição do negócio</label>
+                    <label className="label mb-1" htmlFor="bot-descricao-negocio">Descrição do negócio</label>
                     <textarea
+                        id="bot-descricao-negocio"
                         value={data.descricao_negocio}
                         onChange={e => setData('descricao_negocio', e.target.value)}
                         rows={2}
@@ -222,8 +225,9 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                 {/* Cidade + Endereço */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                        <label className="label mb-1">Cidade</label>
+                        <label className="label mb-1" htmlFor="bot-cidade">Cidade</label>
                         <input
+                            id="bot-cidade"
                             value={data.cidade}
                             onChange={e => setData('cidade', e.target.value)}
                             className="input"
@@ -232,8 +236,9 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                         {errors.cidade && <p className="mt-1 text-xs text-red-400">{errors.cidade}</p>}
                     </div>
                     <div>
-                        <label className="label mb-1">Endereço</label>
+                        <label className="label mb-1" htmlFor="bot-endereco">Endereço</label>
                         <input
+                            id="bot-endereco"
                             value={data.endereco}
                             onChange={e => setData('endereco', e.target.value)}
                             className="input"
@@ -245,8 +250,9 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
 
                 {/* Mensagem de boas-vindas */}
                 <div>
-                    <label className="label mb-1">Mensagem de boas-vindas</label>
+                    <label className="label mb-1" htmlFor="bot-saudacao">Mensagem de boas-vindas</label>
                     <textarea
+                        id="bot-saudacao"
                         value={data.bot_saudacao}
                         onChange={e => setData('bot_saudacao', e.target.value)}
                         rows={2}
@@ -328,19 +334,20 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
                                     <div className="col-span-2 min-w-0 sm:col-span-1 sm:w-24">
                                         <Toggle checked={dia.ativo} onChange={() => setDia(i, 'ativo', !dia.ativo)} label={DIAS[i]} />
                                     </div>
-                                    <input type="time" value={dia.abertura} onChange={e => setDia(i, 'abertura', e.target.value)} disabled={!dia.ativo} className="input w-full min-w-0 disabled:opacity-40 sm:w-28" />
+                                    <input type="time" value={dia.abertura} onChange={e => setDia(i, 'abertura', e.target.value)} disabled={!dia.ativo} aria-label={`Abertura na ${DIAS[i]}`} className="input w-full min-w-0 disabled:opacity-40 sm:w-28" />
                                     <span className="hidden text-xs sm:inline" style={{ color: 'var(--text-3)' }}>até</span>
-                                    <input type="time" value={dia.fechamento} onChange={e => setDia(i, 'fechamento', e.target.value)} disabled={!dia.ativo} className="input w-full min-w-0 disabled:opacity-40 sm:w-28" />
+                                    <input type="time" value={dia.fechamento} onChange={e => setDia(i, 'fechamento', e.target.value)} disabled={!dia.ativo} aria-label={`Fechamento na ${DIAS[i]}`} className="input w-full min-w-0 disabled:opacity-40 sm:w-28" />
                                 </div>
                             ))}
                         </div>
 
                         <div className="mt-4">
-                            <label className="label mb-1">
+                            <label className="label mb-1" htmlFor="bot-mensagem-fora-horario">
                                 Mensagem fora do horário{' '}
                                 <span className="font-normal" style={{ color: 'var(--text-3)' }}>(opcional)</span>
                             </label>
                             <textarea
+                                id="bot-mensagem-fora-horario"
                                 value={data.mensagem_fora_horario}
                                 onChange={e => setData('mensagem_fora_horario', e.target.value)}
                                 rows={2}
@@ -355,8 +362,9 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
 
                 {/* Instruções extras */}
                 <div>
-                    <label className="label mb-1">Instruções extras</label>
+                    <label className="label mb-1" htmlFor="bot-instrucoes-extras">Instruções extras</label>
                     <textarea
+                        id="bot-instrucoes-extras"
                         value={data.instrucoes_extras}
                         onChange={e => setData('instrucoes_extras', e.target.value)}
                         rows={4}
@@ -384,11 +392,12 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
 
                     {data.lembrete_ativo && (
                         <div className="mt-3">
-                            <label className="label mb-1">
+                            <label className="label mb-1" htmlFor="bot-lembrete-texto">
                                 Mensagem personalizada{' '}
                                 <span className="font-normal" style={{ color: 'var(--text-3)' }}>(opcional)</span>
                             </label>
                             <textarea
+                                id="bot-lembrete-texto"
                                 value={data.lembrete_texto}
                                 onChange={e => setData('lembrete_texto', e.target.value)}
                                 rows={3}
@@ -495,8 +504,9 @@ export default function Configuracoes({ tenant }: Props) {
                     </div>
                     <form onSubmit={submit} className="space-y-5">
                         <div>
-                            <label className="label mb-1">Nome do estabelecimento</label>
+                            <label className="label mb-1" htmlFor="configuracao-tenant-nome">Nome do estabelecimento</label>
                             <input
+                                id="configuracao-tenant-nome"
                                 value={data.nome}
                                 onChange={e => setData('nome', e.target.value)}
                                 className="input"

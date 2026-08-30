@@ -132,17 +132,17 @@ function NovoRecursoForm({ onClose }: { onClose: () => void }) {
                     {errors.nome && <p className="mt-1 text-xs text-red-400">{errors.nome}</p>}
                 </div>
                 <div>
-                    <label className="label mb-1">Descrição</label>
-                    <textarea value={data.descricao} onChange={e => setData('descricao', e.target.value)} rows={2} className="input" />
+                    <label className="label mb-1" htmlFor="novo-recurso-descricao">Descrição</label>
+                    <textarea id="novo-recurso-descricao" value={data.descricao} onChange={e => setData('descricao', e.target.value)} rows={2} className="input" />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                     <div>
-                        <label className="label mb-1">Valor/hora (R$)</label>
-                        <input type="number" step="0.01" value={data.valor_hora} onChange={e => setData('valor_hora', e.target.value)} className="input" placeholder="60.00" />
+                        <label className="label mb-1" htmlFor="novo-recurso-valor">Valor/hora (R$)</label>
+                        <input id="novo-recurso-valor" type="number" step="0.01" value={data.valor_hora} onChange={e => setData('valor_hora', e.target.value)} className="input" placeholder="60.00" />
                     </div>
                     <div>
-                        <label className="label mb-1">Duração (min) *</label>
-                        <input type="number" value={data.duracao_padrao_minutos} onChange={e => setData('duracao_padrao_minutos', e.target.value)} className="input" required />
+                        <label className="label mb-1" htmlFor="novo-recurso-duracao">Duração (min) *</label>
+                        <input id="novo-recurso-duracao" type="number" value={data.duracao_padrao_minutos} onChange={e => setData('duracao_padrao_minutos', e.target.value)} className="input" required />
                     </div>
                 </div>
                 <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row">
@@ -205,17 +205,17 @@ function EditarRecursoForm({ recurso, onClose }: { recurso: Recurso; onClose: ()
                     {errors.nome && <p className="mt-1 text-xs text-red-400">{errors.nome}</p>}
                 </div>
                 <div>
-                    <label className="label mb-1">Descrição</label>
-                    <textarea value={data.descricao} onChange={e => setData('descricao', e.target.value)} rows={2} className="input" />
+                    <label className="label mb-1" htmlFor="editar-recurso-descricao">Descrição</label>
+                    <textarea id="editar-recurso-descricao" value={data.descricao} onChange={e => setData('descricao', e.target.value)} rows={2} className="input" />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                     <div>
-                        <label className="label mb-1">Valor/hora (R$)</label>
-                        <input type="number" step="0.01" value={data.valor_hora} onChange={e => setData('valor_hora', e.target.value)} className="input" placeholder="60.00" />
+                        <label className="label mb-1" htmlFor="editar-recurso-valor">Valor/hora (R$)</label>
+                        <input id="editar-recurso-valor" type="number" step="0.01" value={data.valor_hora} onChange={e => setData('valor_hora', e.target.value)} className="input" placeholder="60.00" />
                     </div>
                     <div>
-                        <label className="label mb-1">Duração (min) *</label>
-                        <input type="number" value={data.duracao_padrao_minutos} onChange={e => setData('duracao_padrao_minutos', e.target.value)} className="input" required />
+                        <label className="label mb-1" htmlFor="editar-recurso-duracao">Duração (min) *</label>
+                        <input id="editar-recurso-duracao" type="number" value={data.duracao_padrao_minutos} onChange={e => setData('duracao_padrao_minutos', e.target.value)} className="input" required />
                     </div>
                 </div>
 

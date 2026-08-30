@@ -161,8 +161,9 @@ export default function NotificacoesBell({ count, preview, size = 'md', align = 
                                     {/* Botão marcar como lida */}
                                     <button
                                         title="Marcar como lida"
+                                        aria-label={`Marcar conversa com ${c.nome} como lida`}
                                         onClick={() => marcarLida(c.id)}
-                                        className="shrink-0 opacity-0 group-hover:opacity-100 flex h-6 w-6 items-center justify-center rounded-full transition-all hover:bg-white/10"
+                                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full opacity-100 transition-all hover:bg-white/10 sm:h-8 sm:w-8 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                                         style={{ color: 'var(--text-3)' }}
                                     >
                                         <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

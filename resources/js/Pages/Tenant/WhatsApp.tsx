@@ -290,14 +290,14 @@ export default function WhatsAppPage({ tenant, ultimo_backup }: Props) {
 
             {/* Modal de confirmação de desconexão */}
             {confirmarDesconectar && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
-                    <div className="w-full max-w-sm rounded-2xl p-7 shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
+                <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/50 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6" role="dialog" aria-modal="true" aria-labelledby="desconectar-whatsapp-title">
+                    <div className="max-h-[92dvh] w-full max-w-sm overflow-y-auto overscroll-contain rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl sm:p-7" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
                         <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full" style={{ background: 'rgba(239,68,68,0.1)' }}>
                             <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
                             </svg>
                         </div>
-                        <h3 className="mb-1 text-lg font-semibold" style={{ color: 'var(--text-1)', fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                        <h3 id="desconectar-whatsapp-title" className="mb-1 text-lg font-semibold" style={{ color: 'var(--text-1)', fontFamily: 'Instrument Serif, Georgia, serif' }}>
                             Desconectar WhatsApp?
                         </h3>
                         <p className="mb-3 text-sm" style={{ color: 'var(--text-3)' }}>
@@ -308,12 +308,14 @@ export default function WhatsAppPage({ tenant, ultimo_backup }: Props) {
                         </p>
                         <div className="flex flex-col-reverse gap-3 sm:flex-row">
                             <button
+                                type="button"
                                 onClick={() => setConfirmarDesconectar(false)}
                                 className="btn-secondary flex-1 justify-center"
                             >
                                 Cancelar
                             </button>
                             <button
+                                type="button"
                                 onClick={desconectar}
                                 disabled={desconectando}
                                 className="btn-primary min-h-11 flex-1 justify-center"
@@ -328,9 +330,10 @@ export default function WhatsAppPage({ tenant, ultimo_backup }: Props) {
 
             {/* QR Code Modal */}
             {qrcode && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
-                    <div className="w-full max-w-xs rounded-2xl p-7 text-center shadow-2xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
+                <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/50 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6" role="dialog" aria-modal="true" aria-labelledby="whatsapp-qr-title">
+                    <div className="max-h-[92dvh] w-full max-w-xs overflow-y-auto overscroll-contain rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-center shadow-2xl sm:rounded-2xl sm:p-7" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
                         <h3
+                            id="whatsapp-qr-title"
                             className="mb-2 text-xl font-semibold text-primary"
                             style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
                         >
@@ -355,6 +358,7 @@ export default function WhatsAppPage({ tenant, ultimo_backup }: Props) {
                         </div>
                         {qrExpirado ? (
                             <button
+                                type="button"
                                 onClick={conectar}
                                 disabled={loading}
                                 className="btn-primary mt-4 w-full justify-center"
@@ -372,6 +376,7 @@ export default function WhatsAppPage({ tenant, ultimo_backup }: Props) {
                             </div>
                         )}
                         <button
+                            type="button"
                             onClick={() => { setQrcode(null); setQrExpirado(false); }}
                             className="btn-secondary mt-3 w-full justify-center"
                         >

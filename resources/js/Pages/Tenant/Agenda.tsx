@@ -675,7 +675,7 @@ function DetalheModal({
                             type="button"
                             onClick={onClose}
                             aria-label="Fechar detalhes do agendamento"
-                            className="flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-[var(--bg-surface-2)]"
+                            className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[var(--bg-surface-2)]"
                             style={{ color: 'var(--text-3)' }}
                         >
                             <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -687,12 +687,13 @@ function DetalheModal({
                     {editando ? (
                         <div className="space-y-3">
                             <div>
-                                <label className="label mb-1">Nome do cliente</label>
-                                <input ref={nomeRef} value={form.cliente_nome} onChange={e => setForm(f => ({ ...f, cliente_nome: e.target.value }))} className="input" />
+                                <label className="label mb-1" htmlFor="detalhe-agendamento-cliente">Nome do cliente</label>
+                                <input id="detalhe-agendamento-cliente" ref={nomeRef} value={form.cliente_nome} onChange={e => setForm(f => ({ ...f, cliente_nome: e.target.value }))} className="input" />
                             </div>
                             <div>
-                                <label className="label mb-1">Telefone</label>
+                                <label className="label mb-1" htmlFor="detalhe-agendamento-telefone">Telefone</label>
                                 <input
+                                    id="detalhe-agendamento-telefone"
                                     value={form.cliente_telefone}
                                     onChange={e => setForm(f => ({ ...f, cliente_telefone: normalizePhone(e.target.value) }))}
                                     className="input"
@@ -708,16 +709,16 @@ function DetalheModal({
                                 )}
                             </div>
                             <div>
-                                <label className="label mb-1">Início</label>
-                                <input type="datetime-local" value={form.inicio} onChange={e => setForm(f => ({ ...f, inicio: e.target.value }))} className="input" />
+                                <label className="label mb-1" htmlFor="detalhe-agendamento-inicio">Início</label>
+                                <input id="detalhe-agendamento-inicio" type="datetime-local" value={form.inicio} onChange={e => setForm(f => ({ ...f, inicio: e.target.value }))} className="input" />
                             </div>
                             <div>
-                                <label className="label mb-1">Término</label>
-                                <input type="datetime-local" value={form.fim} onChange={e => setForm(f => ({ ...f, fim: e.target.value }))} className="input" />
+                                <label className="label mb-1" htmlFor="detalhe-agendamento-fim">Término</label>
+                                <input id="detalhe-agendamento-fim" type="datetime-local" value={form.fim} onChange={e => setForm(f => ({ ...f, fim: e.target.value }))} className="input" />
                             </div>
                             <div>
-                                <label className="label mb-1">Status</label>
-                                <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as typeof f.status }))} className="input">
+                                <label className="label mb-1" htmlFor="detalhe-agendamento-status">Status</label>
+                                <select id="detalhe-agendamento-status" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as typeof f.status }))} className="input">
                                     <option value="confirmado">Confirmado</option>
                                     <option value="concluido">Concluído</option>
                                     <option value="cancelado">Cancelado</option>
@@ -1453,7 +1454,7 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                                     {detalheBloqueio.title}
                                 </h3>
                             </div>
-                            <button type="button" onClick={() => setDetalheBloqueio(null)} aria-label="Fechar detalhes do bloqueio" className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[var(--bg-surface-2)]" style={{ color: 'var(--text-3)' }}>
+                            <button type="button" onClick={() => setDetalheBloqueio(null)} aria-label="Fechar detalhes do bloqueio" className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-[var(--bg-surface-2)]" style={{ color: 'var(--text-3)' }}>
                                 <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
                             </button>
                         </div>
@@ -1481,7 +1482,7 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                                     <p className="label mb-1">Indisponibilidade</p>
                                     <h3 className="text-xl font-semibold text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>Bloquear horário</h3>
                                 </div>
-                                <button type="button" onClick={() => setModalBloqueio(null)} aria-label="Fechar bloqueio de horário" className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[var(--bg-surface-2)]" style={{ color: 'var(--text-3)' }}>
+                                <button type="button" onClick={() => setModalBloqueio(null)} aria-label="Fechar bloqueio de horário" className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-[var(--bg-surface-2)]" style={{ color: 'var(--text-3)' }}>
                                     <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
                                 </button>
                             </div>

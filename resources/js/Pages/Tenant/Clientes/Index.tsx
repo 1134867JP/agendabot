@@ -262,7 +262,7 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
                                 <h2 className="text-lg font-semibold text-primary">Novo cliente</h2>
                                 <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>Cadastre somente o necessário para agendar ou iniciar uma conversa.</p>
                             </div>
-                            <button type="button" onClick={() => setCadastroAberto(false)} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[var(--bg-surface-2)]" style={{ color: 'var(--text-3)' }} aria-label="Fechar cadastro">
+                            <button type="button" onClick={() => setCadastroAberto(false)} className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-[var(--bg-surface-2)]" style={{ color: 'var(--text-3)' }} aria-label="Fechar cadastro">
                                 <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
                             </button>
                         </div>

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 
 interface Props {
     open: boolean;
@@ -16,17 +16,24 @@ export default function ConfirmModal({
     variant = 'default', onConfirm, onCancel,
 }: Props) {
     const confirmRef = useRef<HTMLButtonElement>(null);
+    const titleId = useId();
+    const descriptionId = useId();
 
     useEffect(() => {
         if (!open) return;
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
         confirmRef.current?.focus();
         const onKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onCancel();
             if (e.key === 'Enter') onConfirm();
         };
         document.addEventListener('keydown', onKey);
-        return () => document.removeEventListener('keydown', onKey);
-    }, [open]);
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [open, onCancel, onConfirm]);
 
     if (!open) return null;
 
@@ -40,9 +47,13 @@ export default function ConfirmModal({
             className="fixed inset-0 z-[9999] flex items-end justify-center sm:items-center sm:px-4"
             style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
             onClick={e => { if (e.target === e.currentTarget) onCancel(); }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            aria-describedby={descriptionId}
         >
             <div
-                className="w-full max-w-sm rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl sm:p-6"
+                className="max-h-[92dvh] w-full max-w-sm overflow-y-auto overscroll-contain rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl sm:p-6"
                 style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}
             >
                 {/* Ícone */}
@@ -63,8 +74,8 @@ export default function ConfirmModal({
                     )}
                 </div>
 
-                <h3 className="mb-1 text-base font-semibold text-primary">{title}</h3>
-                <p className="mb-6 text-sm" style={{ color: 'var(--text-2)' }}>{message}</p>
+                <h3 id={titleId} className="mb-1 text-base font-semibold text-primary">{title}</h3>
+                <p id={descriptionId} className="mb-6 text-sm" style={{ color: 'var(--text-2)' }}>{message}</p>
 
                 <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                     <button

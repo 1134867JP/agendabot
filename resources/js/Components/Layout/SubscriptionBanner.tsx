@@ -16,18 +16,19 @@ export default function SubscriptionBanner({ subscription }: Props) {
         ));
         return (
             <div
-                className="flex flex-col items-start gap-2 px-4 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-5"
+                className="flex min-h-12 items-center justify-between gap-3 px-4 py-2 text-sm sm:px-5"
                 style={{ background: 'rgba(245,158,11,0.08)', borderBottom: '1px solid rgba(245,158,11,0.2)' }}
+                role="status"
             >
-                <span style={{ color: 'var(--amber-text)' }}>
-                    ⏳ Seu trial termina em <strong>{dias} dia{dias !== 1 ? 's' : ''}</strong>.
+                <span className="min-w-0 leading-tight" style={{ color: 'var(--amber-text)' }}>
+                    <span aria-hidden="true">⏳ </span>Trial: <strong>{dias} dia{dias !== 1 ? 's' : ''} restante{dias !== 1 ? 's' : ''}</strong>
                 </span>
                 <Link
                     href={route('tenant.renovar')}
-                    className="shrink-0 rounded-md px-3 py-1.5 text-xs font-semibold transition-all hover:brightness-110 sm:ml-4"
+                    className="inline-flex min-h-10 shrink-0 items-center rounded-md px-3 py-1.5 text-xs font-semibold transition-all hover:brightness-110 sm:ml-4"
                     style={{ background: 'var(--amber-btn-bg)', color: 'var(--amber-text)', border: '1px solid var(--amber-btn-bdr)' }}
                 >
-                    Escolher plano →
+                    Ver planos
                 </Link>
             </div>
         );
@@ -39,18 +40,19 @@ export default function SubscriptionBanner({ subscription }: Props) {
         ));
         return (
             <div
-                className="flex flex-col items-start gap-2 px-4 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-5"
+                className="flex min-h-12 items-center justify-between gap-3 px-4 py-2 text-sm sm:px-5"
                 style={{ background: 'rgba(239,68,68,0.08)', borderBottom: '1px solid rgba(239,68,68,0.2)' }}
+                role="alert"
             >
-                <span style={{ color: 'var(--danger-text)' }}>
-                    ⚠️ Pagamento pendente. Acesso suspenso em <strong>{Math.max(0, 3 - dias)} dia{dias !== 1 ? 's' : ''}</strong>.
+                <span className="min-w-0 leading-tight" style={{ color: 'var(--danger-text)' }}>
+                    <span aria-hidden="true">⚠️ </span>Pagamento pendente · <strong>{Math.max(0, 3 - dias)} dia{Math.max(0, 3 - dias) !== 1 ? 's' : ''}</strong> para suspensão
                 </span>
                 <Link
                     href={route('tenant.renovar')}
-                    className="shrink-0 rounded-md px-3 py-1.5 text-xs font-semibold transition-all hover:brightness-110 sm:ml-4"
+                    className="inline-flex min-h-10 shrink-0 items-center rounded-md px-3 py-1.5 text-xs font-semibold transition-all hover:brightness-110 sm:ml-4"
                     style={{ background: 'var(--danger-btn-bg)', color: 'var(--danger-text)', border: '1px solid var(--danger-btn-bdr)' }}
                 >
-                    Renovar →
+                    Regularizar
                 </Link>
             </div>
         );
