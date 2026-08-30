@@ -97,6 +97,24 @@ fi
 echo "--- reconfigurando webhooks com autenticação por header ---"
 docker exec agendabot-app php artisan whatsapp:reconfigure-webhooks
 
+echo "--- verificando integração Evolution API ---"
+evolution_check="$(docker exec agendabot-app sh -c '
+if [ -z "${EVOLUTION_API_URL:-}" ]; then
+    printf "url_ausente"
+elif [ -z "${EVOLUTION_API_KEY:-}" ]; then
+    printf "chave_ausente"
+else
+    status=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 \
+        -H "apikey: ${EVOLUTION_API_KEY}" \
+        "${EVOLUTION_API_URL%/}/instance/fetchInstances" 2>/dev/null || true)
+    printf "http_%s" "${status:-000}"
+fi
+')"
+case "$evolution_check" in
+    http_2*) echo "    Evolution API disponível (${evolution_check#http_})" ;;
+    *) echo "    AVISO: Evolution API indisponível (${evolution_check}). A conexão por WhatsApp não funcionará até a integração ser corrigida." ;;
+esac
+
 echo "--- subindo workers e scheduler com nova imagem ---"
 docker compose up -d --no-deps --force-recreate worker worker-batch scheduler
 for service in agendabot-worker agendabot-worker-batch agendabot-scheduler; do
