@@ -334,27 +334,37 @@ export default function WhatsAppPage({ tenant, ultimo_backup }: Props) {
 
             {/* QR Code Modal */}
             {qrcode && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/50 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6" role="dialog" aria-modal="true" aria-labelledby="whatsapp-qr-title">
-                    <div className="max-h-[92dvh] w-full max-w-xs overflow-y-auto overscroll-contain rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-center shadow-2xl sm:rounded-2xl sm:p-7" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
-                        <h3
-                            id="whatsapp-qr-title"
-                            className="mb-2 text-xl font-semibold text-primary"
-                            style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
-                        >
-                            Escaneie com seu celular
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/65 p-2 sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="whatsapp-qr-title">
+                    <div className="max-h-[calc(100dvh-1rem)] w-full max-w-sm overflow-y-auto overscroll-contain rounded-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-center shadow-2xl sm:p-7" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
+                        <div className="mb-4 flex items-center justify-between">
+                            <span className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--accent)' }}>WhatsApp</span>
+                            <button
+                                type="button"
+                                onClick={() => { setQrcode(null); setQrExpirado(false); }}
+                                className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
+                                style={{ color: 'var(--text-3)' }}
+                                aria-label="Fechar QR Code"
+                            >
+                                <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                    <path d="m6 6 12 12M18 6 6 18" />
+                                </svg>
+                            </button>
+                        </div>
+                        <h3 id="whatsapp-qr-title" className="text-2xl font-semibold text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
+                            Conecte seu WhatsApp
                         </h3>
-                        <p className="mb-5 text-sm" style={{ color: 'var(--text-3)' }}>
-                            Abra o WhatsApp → Aparelhos conectados → Conectar um aparelho
+                        <p className="mx-auto mt-2 max-w-[18rem] text-sm leading-relaxed" style={{ color: 'var(--text-2)' }}>
+                            No celular com WhatsApp, abra <strong className="font-semibold text-primary">Aparelhos conectados</strong> e toque em <strong className="font-semibold text-primary">Conectar um aparelho</strong>.
                         </p>
-                        <div className="relative mx-auto h-56 w-56">
+                        <div className="relative mx-auto mt-5 h-[min(66vw,17rem)] w-[min(66vw,17rem)] rounded-2xl bg-white p-2 shadow-lg">
                             <img
                                 src={qrcode}
                                 alt="QR Code"
-                                className="h-56 w-56 rounded-xl"
-                                style={{ border: '1px solid var(--border)', filter: qrExpirado ? 'blur(4px)' : 'none' }}
+                                className="h-full w-full rounded-xl object-contain"
+                                style={{ filter: qrExpirado ? 'blur(4px)' : 'none' }}
                             />
                             {qrExpirado && (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-xl" style={{ background: 'rgba(0,0,0,0.55)' }}>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-2xl" style={{ background: 'rgba(0,0,0,0.62)' }}>
                                     <span className="text-sm font-medium text-white">QR Code expirado</span>
                                     <span className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>Gere um novo para conectar</span>
                                 </div>
@@ -371,20 +381,21 @@ export default function WhatsAppPage({ tenant, ultimo_backup }: Props) {
                                 {loading ? 'Gerando…' : 'Gerar novo QR Code'}
                             </button>
                         ) : (
-                            <div className="mt-4 flex items-center justify-center gap-1.5 text-sm" style={{ color: 'var(--text-3)' }}>
-                                <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                </svg>
-                                Aguardando conexão…
+                            <div className="mt-4" role="status" aria-live="polite">
+                                <div className="flex items-center justify-center gap-2 text-sm font-medium" style={{ color: 'var(--text-2)' }}>
+                                    <span className="h-2 w-2 animate-pulse rounded-full" style={{ background: '#25D366' }} aria-hidden="true" />
+                                    Aguardando leitura do QR
+                                </div>
+                                <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>Este código expira em cerca de 1 minuto.</p>
                             </div>
                         )}
                         <button
                             type="button"
                             onClick={() => { setQrcode(null); setQrExpirado(false); }}
-                            className="btn-secondary mt-3 w-full justify-center"
+                            className="mt-4 min-h-11 px-4 text-sm font-medium transition-colors hover:opacity-75"
+                            style={{ color: 'var(--text-3)' }}
                         >
-                            {qrExpirado ? 'Fechar' : 'Cancelar'}
+                            {qrExpirado ? 'Fechar' : 'Agora não'}
                         </button>
                     </div>
                 </div>
