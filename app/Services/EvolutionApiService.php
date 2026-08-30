@@ -29,8 +29,10 @@ class EvolutionApiService
 
     public function configurado(): bool
     {
-        return filter_var($this->baseUrl, FILTER_VALIDATE_URL) !== false
-            && trim($this->globalApiKey) !== '';
+        // A Evolution normalmente fica em uma rede Docker privada. Alguns
+        // aliases internos válidos para o resolver do container não passam na
+        // validação de URL do PHP, apesar de funcionarem via HTTP.
+        return trim($this->baseUrl) !== '' && trim($this->globalApiKey) !== '';
     }
 
     public function enviarMensagem(string $instance, string $telefone, string $mensagem): bool

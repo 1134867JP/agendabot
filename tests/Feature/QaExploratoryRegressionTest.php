@@ -195,6 +195,16 @@ class QaExploratoryRegressionTest extends TestCase
             ]);
     }
 
+    public function test_evolution_accepts_private_docker_alias_when_url_and_key_are_present(): void
+    {
+        config([
+            'services.evolution.url' => 'http://evolution_api:8080',
+            'services.evolution.key' => 'test-key',
+        ]);
+
+        $this->assertTrue(app(EvolutionApiService::class)->configurado());
+    }
+
     public function test_evolution_instance_creation_raises_domain_error_on_http_failure(): void
     {
         config([
