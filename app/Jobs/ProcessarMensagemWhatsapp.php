@@ -287,10 +287,18 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         return false;
     }
 
+    /**
+     * "Pendente" aqui significa qualquer agendamento ativo do cliente (status agendado
+     * OU já confirmado) — não só o que aguarda confirmação. Usado tanto para o bloco
+     * PENDENTE do prompt quanto para confirmar_agendamento/cancelar_agendamento: um
+     * agendamento já confirmado continua precisando ser encontrável para cancelamento/
+     * reagendamento, e a proteção contra double-booking (ver AgendouAgentService)
+     * também depende disso — do contrário some assim que o cliente confirma.
+     */
     private function buscarAgendamentoPendente(Cliente $cliente): ?Agendamento
     {
         return Agendamento::where('tenant_id', $this->tenant->id)
-            ->where('status', 'agendado')
+            ->whereNotIn('status', ['cancelado', 'concluido'])
             ->where(function ($q) use ($cliente) {
                 $q->where('cliente_id', $cliente->id)
                     ->orWhere('cliente_telefone', $this->telefone);
