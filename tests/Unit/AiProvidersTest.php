@@ -39,6 +39,37 @@ class AiProvidersTest extends TestCase
         }
     }
 
+    public function test_gemini_permite_fallback_em_erro_400_de_argumento_invalido(): void
+    {
+        // Um 400 é específico da serialização/estado de UM provider (ex.: histórico de
+        // function-calling multi-turno incompatível só para o Gemini) — não deve impedir
+        // que o orquestrador tente os demais providers, que têm payload e auth próprios.
+        config([
+            'ai.providers.gemini.key' => 'gemini-test',
+            'ai.providers.gemini.base_url' => 'https://gemini.test/v1beta',
+            'ai.fallback_statuses' => [400, 404, 408, 409, 425, 429, 500, 502, 503, 504, 529],
+        ]);
+        Http::fake([
+            'gemini.test/*' => Http::response([
+                'error' => [
+                    'message' => 'Invalid JSON payload received. Unable to submit request because it must have a Content property.',
+                    'status' => 'INVALID_ARGUMENT',
+                ],
+            ], 400),
+        ]);
+
+        try {
+            (new GeminiProvider)->chat(new AiRequest([
+                'messages' => [['role' => 'user', 'content' => 'Olá']],
+            ], 'gemini-2.5-flash'));
+            $this->fail('Era esperada uma falha do provider.');
+        } catch (AiProviderException $e) {
+            $this->assertSame(400, $e->status);
+            $this->assertSame('INVALID_ARGUMENT', $e->errorType);
+            $this->assertTrue($e->fallbackAllowed);
+        }
+    }
+
     public function test_groq_normaliza_tool_call_e_tokens_em_cache(): void
     {
         config([
