@@ -29,7 +29,7 @@ class EquipeController extends Controller
 
         $tenant = app('tenant');
         $usuarios = $tenant->users()
-            ->select('users.id', 'users.name', 'users.email', 'tenant_users.papel', 'tenant_users.created_at as membro_desde')
+            ->select('users.id', 'users.name', 'users.email', 'tenant_users.papel', 'tenant_users.ativo', 'tenant_users.created_at as membro_desde')
             ->orderBy('tenant_users.created_at')
             ->get();
 
@@ -58,10 +58,33 @@ class EquipeController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
-        $tenant->users()->attach($user->id, ['papel' => $validated['papel']]);
+        $tenant->users()->attach($user->id, ['papel' => $validated['papel'], 'ativo' => true]);
         event(new Registered($user));
 
         return back()->with('success', 'Usuário adicionado à equipe.');
+    }
+
+    public function toggleAtivo(User $user): RedirectResponse
+    {
+        $this->apenasAdmin();
+
+        $tenant = app('tenant');
+        abort_if($user->id === auth()->id(), 422, 'Você não pode desativar o próprio acesso.');
+
+        $membro = $tenant->users()->where('user_id', $user->id)->firstOrFail();
+        $estaAtivo = (bool) $membro->pivot->ativo;
+
+        if ($estaAtivo && $membro->pivot->papel === 'admin') {
+            $adminsAtivos = $tenant->users()
+                ->wherePivot('papel', 'admin')
+                ->wherePivot('ativo', true)
+                ->count();
+            abort_if($adminsAtivos <= 1, 422, 'Mantenha ao menos um administrador ativo.');
+        }
+
+        $tenant->users()->updateExistingPivot($user->id, ['ativo' => ! $estaAtivo]);
+
+        return back()->with('success', $estaAtivo ? 'Acesso do atendente bloqueado.' : 'Acesso do atendente reativado.');
     }
 
     public function destroy(User $user): RedirectResponse

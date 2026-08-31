@@ -42,12 +42,12 @@ class EnsureHasTenant
         // Verificar acesso via query explícita (mais confiável que Collection::contains)
         $temAcesso = $isImpersonating
             || $user->is_super_admin
-            || $user->tenants()->where('tenants.id', $tenant->id)->exists();
+            || $user->tenants()->where('tenants.id', $tenant->id)->wherePivot('ativo', true)->exists();
 
         if (! $temAcesso) {
             session()->forget('tenant_id');
 
-            return redirect()->route('dashboard')->with('erro', 'Você não tem acesso a este estabelecimento.');
+            return redirect()->route('dashboard')->with('erro', 'Seu acesso a este estabelecimento está desativado. Fale com o administrador para reativá-lo.');
         }
 
         app()->instance('tenant', $tenant);

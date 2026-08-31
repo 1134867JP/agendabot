@@ -9,6 +9,7 @@ interface UsuarioEquipe {
     name: string;
     email: string;
     papel: 'admin' | 'operador';
+    ativo: boolean;
     membro_desde: string;
 }
 
@@ -19,7 +20,7 @@ interface Props extends PageProps {
 
 const PAPEL_LABEL: Record<string, string> = {
     admin:    'Admin',
-    operador: 'Operador',
+    operador: 'Atendente',
 };
 const PAPEL_BADGE: Record<string, string> = {
     admin:    'badge-blue',
@@ -78,6 +79,19 @@ export default function Equipe({ usuarios, meu_id }: Props) {
         if (ok) router.delete(route('tenant.equipe.destroy', u.id));
     };
 
+    const alternarAcesso = async (u: UsuarioEquipe) => {
+        const acao = u.ativo ? 'bloquear' : 'reativar';
+        const ok = await confirm({
+            title: `${u.ativo ? 'Bloquear' : 'Reativar'} acesso?`,
+            message: u.ativo
+                ? `${u.name} não conseguirá mais entrar no painel até você reativar o acesso.`
+                : `${u.name} poderá entrar novamente no painel com o mesmo e-mail e senha.`,
+            confirmLabel: u.ativo ? 'Bloquear acesso' : 'Reativar acesso',
+            variant: u.ativo ? 'danger' : 'default',
+        });
+        if (ok) router.patch(route('tenant.equipe.toggle-ativo', u.id));
+    };
+
     return (
         <ConfiguracoesLayout title="Equipe" subtitle="Gerencie quem tem acesso ao painel">
             <Head title="Equipe" />
@@ -95,7 +109,7 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                         <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
                         </svg>
-                        Adicionar usuário
+                        Adicionar atendente
                     </button>
                 )}
             </div>
@@ -104,7 +118,7 @@ export default function Equipe({ usuarios, meu_id }: Props) {
             {showForm && (
                 <div className="card mb-5 p-4 sm:p-5">
                     <div className="mb-4 flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-primary">Novo usuário</h3>
+                        <h3 className="text-sm font-semibold text-primary">Novo atendente</h3>
                         <button
                             onClick={() => { setShowForm(false); reset(); }}
                             className="text-xs transition-colors hover:text-[var(--text-1)]"
@@ -158,7 +172,7 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                                     onChange={e => setData('papel', e.target.value as 'admin' | 'operador')}
                                     className="input"
                                 >
-                                    <option value="operador">Operador — acessa o painel, não gerencia equipe</option>
+                                    <option value="operador">Atendente — acessa agenda e conversas</option>
                                     <option value="admin">Admin — acesso total, incluindo equipe</option>
                                 </select>
                             </div>
@@ -191,7 +205,7 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                         <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
                             <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 110 8 4 4 0 010-8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
                         </svg>
-                        <p className="text-sm font-medium text-primary">Nenhum usuário ainda</p>
+                        <p className="text-sm font-medium text-primary">Nenhum atendente ainda</p>
                     </div>
                 ) : (
                     <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
@@ -215,10 +229,20 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                                     <span className={`badge ${PAPEL_BADGE[u.papel] ?? 'badge-gray'}`}>
                                         {PAPEL_LABEL[u.papel] ?? u.papel}
                                     </span>
+                                    <span className={`badge ${u.ativo ? 'badge-green' : 'badge-gray'}`}>
+                                        {u.ativo ? 'Ativo' : 'Bloqueado'}
+                                    </span>
                                     <span className="hidden text-xs sm:inline" style={{ color: 'var(--text-3)' }}>
                                         desde {fmtData(u.membro_desde)}
                                     </span>
-                                    {u.id !== meu_id && (
+                                    {u.id !== meu_id && <>
+                                        <button
+                                            onClick={() => alternarAcesso(u)}
+                                            title={u.ativo ? 'Bloquear acesso' : 'Reativar acesso'}
+                                            className={`flex h-10 items-center justify-center rounded-md px-3 text-xs font-medium transition-colors ${u.ativo ? 'text-amber-500 hover:bg-amber-400/10' : 'text-emerald-500 hover:bg-emerald-400/10'}`}
+                                        >
+                                            {u.ativo ? 'Bloquear' : 'Reativar'}
+                                        </button>
                                         <button
                                             onClick={() => remover(u)}
                                             title="Remover da equipe"
@@ -228,7 +252,7 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                                                 <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>
                                             </svg>
                                         </button>
-                                    )}
+                                    </>}
                                 </div>
                             </div>
                         ))}

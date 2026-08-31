@@ -86,4 +86,104 @@ class AgendamentoConfirmadoCancelamentoTest extends TestCase
         $conversa = Conversa::where('tenant_id', $tenant->id)->where('telefone_cliente', $telefone)->first();
         $this->assertNotSame('aguardando_humano', $conversa->status_v2);
     }
+
+    public function test_mensagem_apos_agendamento_mantem_reserva_e_nao_disponibiliza_criacao(): void
+    {
+        $user = User::factory()->create();
+        $tenant = Tenant::create([
+            'nome' => 'Barbearia Agradecimento',
+            'slug' => 'barbearia-agradecimento',
+            'tipo_servico' => 'barbeiro',
+            'ativo' => true,
+            'bot_ativo' => true,
+            'evolution_instance' => 'instancia-teste',
+            'subscription_status' => 'trial',
+            'trial_ends_at' => now()->addDays(14),
+        ]);
+        $tenant->users()->attach($user->id, ['papel' => 'admin']);
+
+        $profissional = Profissional::create([
+            'tenant_id' => $tenant->id,
+            'nome' => 'Asafe',
+            'ativo' => true,
+        ]);
+        $telefone = '5551988000002';
+        $cliente = Cliente::create([
+            'tenant_id' => $tenant->id,
+            'telefone' => $telefone,
+            'nome' => 'João',
+        ]);
+        Agendamento::create([
+            'tenant_id' => $tenant->id,
+            'profissional_id' => $profissional->id,
+            'cliente_id' => $cliente->id,
+            'cliente_nome' => $cliente->nome,
+            'cliente_telefone' => $telefone,
+            'inicio' => now()->addDay(),
+            'fim' => now()->addDay()->addMinutes(30),
+            'data_hora' => now()->addDay(),
+            'duracao_minutos' => 30,
+            'status' => 'agendado',
+            'origem' => 'bot',
+        ]);
+
+        Http::fake([
+            'api.anthropic.com/*' => Http::response([
+                'content' => [['type' => 'text', 'text' => 'Pode deixar, João!']],
+                'stop_reason' => 'end_turn',
+                'usage' => ['input_tokens' => 10, 'output_tokens' => 5],
+            ]),
+            '*' => Http::response(['status' => 'success'], 200),
+        ]);
+        $mensagem = app(ConversaSyncService::class)->registrarMensagemRecebida(
+            $tenant, $telefone, 'E se eu precisar trocar o horário?', 'MSG_POS_AGENDAMENTO_1', 'João'
+        );
+
+        ProcessarMensagemWhatsapp::dispatchSync($tenant, $telefone, $mensagem->id);
+
+        $requisicaoClaude = Http::recorded(fn ($request) => str_contains($request->url(), 'anthropic.com'))->first();
+        $ferramentas = collect($requisicaoClaude[0]->data()['tools'])->pluck('name')->all();
+        $this->assertNotContains('criar_agendamento', $ferramentas);
+        $this->assertSame(1, Agendamento::where('tenant_id', $tenant->id)->count());
+    }
+
+    public function test_bot_nao_confirma_agendamento_se_a_ia_nao_persistiu_a_reserva(): void
+    {
+        $tenant = Tenant::create([
+            'nome' => 'Barbearia Reserva Segura',
+            'slug' => 'barbearia-reserva-segura',
+            'tipo_servico' => 'barbeiro',
+            'ativo' => true,
+            'bot_ativo' => true,
+            'evolution_instance' => 'instancia-teste',
+            'subscription_status' => 'trial',
+            'trial_ends_at' => now()->addDays(14),
+        ]);
+        $telefone = '5551988000003';
+
+        Http::fake([
+            'api.anthropic.com/*' => Http::response([
+                'content' => [['type' => 'text', 'text' => 'Show! Seu corte está agendado para amanhã às 10:30.']],
+                'stop_reason' => 'end_turn',
+                'usage' => ['input_tokens' => 10, 'output_tokens' => 5],
+            ]),
+            '*' => Http::response(['status' => 'success'], 200),
+        ]);
+        $mensagem = app(ConversaSyncService::class)->registrarMensagemRecebida(
+            $tenant, $telefone, '10:30', 'MSG_RESERVA_NAO_PERSISTIDA_1', 'João'
+        );
+
+        ProcessarMensagemWhatsapp::dispatchSync($tenant, $telefone, $mensagem->id);
+
+        $this->assertDatabaseMissing('agendamentos', ['tenant_id' => $tenant->id]);
+        $this->assertDatabaseHas('mensagens', [
+            'remetente' => 'bot',
+            'conteudo' => 'Não consegui concluir a reserva por aqui. Vou encaminhar você para confirmar o horário.',
+        ]);
+        $this->assertDatabaseHas('conversas', [
+            'tenant_id' => $tenant->id,
+            'telefone_cliente' => $telefone,
+            'status_v2' => 'aguardando_humano',
+        ]);
+    }
 }

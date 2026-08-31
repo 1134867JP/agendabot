@@ -90,7 +90,7 @@ class Tenant extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'tenant_users')
-            ->withPivot('papel')->withTimestamps();
+            ->withPivot('papel', 'ativo')->withTimestamps();
     }
 
     public function cobrancasBot(): HasMany

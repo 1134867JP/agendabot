@@ -7,7 +7,6 @@ interface Stat {
     receita_mes: number;
     conversas_mes: number;
     taxa_conversao: number;
-    falhas_integracao: number;
     tempo_resposta_ms: number;
     receita_bot: number;
 }
@@ -208,7 +207,6 @@ export default function Analytics({
                         <>
                             <StatCard label="Conversas" value={String(stats.conversas_mes)} sub="atendimentos iniciados" change={comparacao.conversas} />
                             <StatCard label="Tempo de resposta" value={tempoResposta} sub="média do processamento" />
-                            <StatCard label="Falhas de integração" value={String(stats.falhas_integracao)} sub="no período selecionado" />
                         </>
                     )}
                 </div>
@@ -227,18 +225,6 @@ export default function Analytics({
                     </div>
                     <BarChart data={por_dia} itemLabel={agendamento ? 'agendamentos' : 'conversas'} />
                 </div>
-
-                {stats.falhas_integracao > 0 && (
-                    <div className="card flex flex-col gap-4 border-l-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5" style={{ borderLeftColor: 'var(--danger)' }}>
-                        <div>
-                            <p className="text-sm font-semibold text-primary">A operação registrou falhas de integração</p>
-                            <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>Confira a conexão do WhatsApp antes de continuar o atendimento.</p>
-                        </div>
-                        <Link href={route('tenant.whatsapp')} className="btn-secondary min-h-11 shrink-0 text-center">
-                            Verificar conexão
-                        </Link>
-                    </div>
-                )}
 
                 {agendamento && (
                     <div className="grid gap-4 lg:grid-cols-2">

@@ -19,6 +19,9 @@ class AgendouAgentService
 
     private bool $transferir = false;
 
+    /** Confirmação textual só é permitida após a reserva gravada neste turno. */
+    private bool $agendamentoCriadoNesteTurno = false;
+
     public function __construct(
         private AgendamentoService $agendamentoService,
         private AiOrchestrator $ai,
@@ -33,6 +36,7 @@ class AgendouAgentService
         $this->currentTenant = $tenant;
         $this->currentCliente = $clienteInfo;
         $this->transferir = false;
+        $this->agendamentoCriadoNesteTurno = false;
 
         $hoje = Carbon::now('America/Sao_Paulo');
 
@@ -178,6 +182,24 @@ class AgendouAgentService
             ];
         }
 
+        // Prompt não é uma garantia: em especial em fallback para modelos menores,
+        // o modelo pode escrever "está agendado" sem ter chamado a ferramenta. Não
+        // deixamos uma promessa dessas chegar ao cliente se a reserva não foi gravada.
+        if (! $triagem && ! $agendamentoPendente && ! $this->agendamentoCriadoNesteTurno
+            && $this->respostaAfirmaNovoAgendamento($resposta)) {
+            Log::channel('jobs')->warning('BOT_BLOCKED_UNPERSISTED_APPOINTMENT_CONFIRMATION', [
+                'tenant_id' => $tenant->id,
+                'cliente_id' => $clienteInfo['id'] ?? null,
+                'resposta' => $resposta,
+            ]);
+
+            return [
+                'resposta' => 'Não consegui concluir a reserva por aqui. Vou encaminhar você para confirmar o horário.',
+                'transferir' => true,
+                'usage' => $totalUsage,
+            ];
+        }
+
         return [
             'resposta' => $resposta ?: 'Desculpe, não consegui processar sua mensagem. Tente novamente.',
             'transferir' => $this->transferir,
@@ -240,14 +262,16 @@ class AgendouAgentService
     private function toolCriarAgendamento(array $input): array
     {
         try {
-            $this->agendamentoService->criarAgendamentoV2($this->currentTenant, array_merge($input, [
+            $agendamento = $this->agendamentoService->criarAgendamentoV2($this->currentTenant, array_merge($input, [
                 'cliente_id' => $this->currentCliente['id'],
                 'cliente_nome' => $this->currentCliente['nome'],
                 'cliente_telefone' => $this->currentCliente['telefone'],
                 'origem' => 'bot',
             ]));
 
-            return ['sucesso' => true];
+            $this->agendamentoCriadoNesteTurno = true;
+
+            return ['sucesso' => true, 'agendamento_id' => $agendamento->id];
         } catch (HorarioIndisponivelException $e) {
             return ['sucesso' => false, 'erro' => 'horario_indisponivel', 'mensagem' => $e->getMessage()];
         } catch (\Throwable $e) {
@@ -506,6 +530,14 @@ class AgendouAgentService
     {
         return preg_match(
             '/\b(transferi|transferimos|transferindo|encaminhei|encaminhamos|encaminhando)\b|\bwe have transferred\b|atendente humano.*\b(dispon[ií]vel|a caminho)\b/iu',
+            $resposta,
+        ) === 1;
+    }
+
+    private function respostaAfirmaNovoAgendamento(string $resposta): bool
+    {
+        return preg_match(
+            '/\b(est[aá]\s+(agendad[oa]|confirmad[oa]|reservad[oa])|agendamento\s+(confirmad[oa]|realizad[oa])|reserva\s+(confirmad[oa]|realizad[oa]))\b/iu',
             $resposta,
         ) === 1;
     }
