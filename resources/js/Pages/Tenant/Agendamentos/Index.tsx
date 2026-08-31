@@ -63,11 +63,11 @@ const RECURSO_CORES = [
 ];
 
 function nomeRecurso(a: Agendamento) {
-    return a.recurso?.nome ?? (a as any).profissional?.nome ?? "Sem profissional";
+    return a.recurso?.nome ?? a.profissional?.nome ?? "Sem profissional";
 }
 
 function corRecurso(a: Agendamento) {
-    const id = Number(a.recurso?.id ?? (a as any).profissional?.id ?? a.id);
+    const id = Number(a.recurso?.id ?? a.profissional?.id ?? a.id);
     return RECURSO_CORES[Math.abs(id) % RECURSO_CORES.length];
 }
 
@@ -213,12 +213,15 @@ function toLocalInput(iso: string) {
 function EditarReservaModal({
     agendamento,
     recursos,
+    tenant,
     onClose,
 }: {
     agendamento: Agendamento;
     recursos: Recurso[];
+    tenant: Tenant;
     onClose: () => void;
 }) {
+    const usaRecursos = tenant.tipo_servico === "quadra";
     const { data, setData, put, processing, errors } = useForm({
         recurso_id: (agendamento.recurso?.id ?? "") as number | string,
         cliente_nome: agendamento.cliente_nome,
@@ -283,29 +286,52 @@ function EditarReservaModal({
                 </div>
 
                 <form onSubmit={submit} className="space-y-4">
-                    <div>
-                        <label className="label mb-1" htmlFor="editar-agendamento-recurso">Serviço / Recurso</label>
-                        <select
-                            id="editar-agendamento-recurso"
-                            value={data.recurso_id}
-                            onChange={(e) =>
-                                setData("recurso_id", Number(e.target.value))
-                            }
-                            className="input"
-                        >
-                            <option value="">Sem recurso</option>
-                            {recursos.map((r) => (
-                                <option key={r.id} value={r.id}>
-                                    {r.nome}
-                                </option>
-                            ))}
-                        </select>
-                        {errors.recurso_id && (
-                            <p className="mt-1 text-xs text-red-400">
-                                {errors.recurso_id}
-                            </p>
-                        )}
-                    </div>
+                    {usaRecursos ? (
+                        <div>
+                            <label className="label mb-1" htmlFor="editar-agendamento-recurso">Recurso</label>
+                            <select
+                                id="editar-agendamento-recurso"
+                                value={data.recurso_id}
+                                onChange={(e) =>
+                                    setData("recurso_id", e.target.value ? Number(e.target.value) : "")
+                                }
+                                className="input"
+                            >
+                                <option value="">Selecione o recurso</option>
+                                {recursos.map((r) => (
+                                    <option key={r.id} value={r.id}>
+                                        {r.nome}
+                                    </option>
+                                ))}
+                            </select>
+                            {errors.recurso_id && (
+                                <p className="mt-1 text-xs text-red-400">
+                                    {errors.recurso_id}
+                                </p>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                                <label className="label mb-1" htmlFor="editar-agendamento-servico">Serviço</label>
+                                <input
+                                    id="editar-agendamento-servico"
+                                    value={agendamento.servico?.nome ?? "Sem serviço definido"}
+                                    className="input"
+                                    readOnly
+                                />
+                            </div>
+                            <div>
+                                <label className="label mb-1" htmlFor="editar-agendamento-profissional">Profissional</label>
+                                <input
+                                    id="editar-agendamento-profissional"
+                                    value={agendamento.profissional?.nome ?? "Sem profissional definido"}
+                                    className="input"
+                                    readOnly
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     <div className="grid gap-3 sm:grid-cols-2">
                         <div>
@@ -1057,7 +1083,7 @@ export default function AgendamentosIndex({
                             )}
                         </div>
                     ) : agendamentos.data.map((a) => {
-                        const inicio = (a as any).data_hora ?? a.inicio;
+                        const inicio = a.data_hora ?? a.inicio;
                         return (
                             <article key={a.id} className="p-4">
                                 <div className="flex items-start justify-between gap-3">
@@ -1085,10 +1111,10 @@ export default function AgendamentosIndex({
                                 </div>
 
                                 <div className="mt-4 flex flex-wrap items-center gap-2 text-xs" style={{ color: "var(--text-3)" }}>
-                                    <span>{a.fim ? duracaoMin(a.inicio, a.fim) : ((a as any).duracao_minutos ?? "—")} min</span>
+                                    <span>{a.fim ? duracaoMin(a.inicio, a.fim) : (a.duracao_minutos ?? "—")} min</span>
                                     <span aria-hidden="true">•</span>
                                     <span>{a.origem === "bot" || a.origem === "whatsapp" ? "WhatsApp" : "Manual"}</span>
-                                    {(a as any).servico?.nome && <><span aria-hidden="true">•</span><span>{(a as any).servico.nome}</span></>}
+                                    {a.servico?.nome && <><span aria-hidden="true">•</span><span>{a.servico.nome}</span></>}
                                 </div>
 
                                 <div className="mt-4 border-t pt-3" style={{ borderColor: "var(--border)" }}>
@@ -1247,20 +1273,17 @@ export default function AgendamentosIndex({
                                             <div className="flex items-center gap-2">
                                                 <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: corRecurso(a) }} />
                                                 <p className="truncate">
-                                                {a.recurso?.nome ??
-                                                    (a as any).profissional
-                                                        ?.nome ??
-                                                    "—"}
+                                                    {a.recurso?.nome ?? a.profissional?.nome ?? "—"}
                                                 </p>
                                             </div>
-                                            {(a as any).servico?.nome && (
+                                            {a.servico?.nome && (
                                                 <p
                                                     className="text-xs"
                                                     style={{
                                                         color: "var(--text-3)",
                                                     }}
                                                 >
-                                                    {(a as any).servico.nome}
+                                                    {a.servico.nome}
                                                 </p>
                                             )}
                                         </td>
@@ -1268,10 +1291,7 @@ export default function AgendamentosIndex({
                                             className="px-4 py-3 whitespace-nowrap"
                                             style={{ color: "var(--text-2)" }}
                                         >
-                                            {fmtDt(
-                                                (a as any).data_hora ??
-                                                    a.inicio,
-                                            )}
+                                            {fmtDt(a.data_hora ?? a.inicio)}
                                         </td>
                                         <td
                                             className="px-4 py-3"
@@ -1279,8 +1299,7 @@ export default function AgendamentosIndex({
                                         >
                                             {a.fim
                                                 ? duracaoMin(a.inicio, a.fim)
-                                                : ((a as any).duracao_minutos ??
-                                                  "—")}{" "}
+                                                : (a.duracao_minutos ?? "—")}{" "}
                                             min
                                         </td>
                                         <td
@@ -1397,6 +1416,7 @@ export default function AgendamentosIndex({
                 <EditarReservaModal
                     agendamento={agendamentoEditando}
                     recursos={recursos}
+                    tenant={tenant}
                     onClose={() => setAgendamentoEditando(null)}
                 />
             )}
