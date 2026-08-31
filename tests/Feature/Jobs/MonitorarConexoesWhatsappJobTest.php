@@ -32,7 +32,10 @@ class MonitorarConexoesWhatsappJobTest extends TestCase
             ]),
         ]);
 
-        MonitorarConexoesWhatsappJob::dispatchSync();
+        app(MonitorarConexoesWhatsappJob::class)->handle(
+            app(\App\Services\EvolutionApiService::class),
+            app(\App\Services\WhatsAppSyncState::class),
+        );
 
         $this->assertTrue($connected->fresh()->whatsapp_conectado);
         $this->assertFalse($disconnected->fresh()->whatsapp_conectado);
