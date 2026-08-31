@@ -69,6 +69,7 @@ class ConversationSimulatorService
         $local = $agendamento->recurso?->nome ?? $agendamento->profissional?->nome ?? '';
         $personalizado = $agendamento->tenant->configuracoes['lembrete_texto'] ?? null;
         $corpo = $personalizado ? trim($personalizado)."\n\n" : "Para *confirmar*, responda: ✅ *CONFIRMO*\nPara *cancelar*, responda: ❌ *CANCELAR*\n\n";
+
         return "👋 *Olá, {$nome}!*\n\nLembrando que você tem um agendamento *amanhã*:\n\n📅 *Data:* ".$dataHora->translatedFormat('l, d \\d\\e F')."\n⏰ *Horário:* ".$dataHora->format('H:i')."\n📍 *Local/Serviço:* {$local} — {$agendamento->tenant->nome}\n\n{$corpo}_Até amanhã!_";
     }
 }
