@@ -27,9 +27,16 @@ class ConversationSimulatorService
         $cliente = Cliente::where('tenant_id', $tenant->id)->findOrFail($conversa->cliente_id);
         $historico = $conversa->mensagens()->latest('enviada_em')->latest('id')->limit(12)->get()->reverse()
             ->map(fn ($m) => ['role' => $m->remetente === 'cliente' ? 'user' : 'assistant', 'content' => $m->conteudo])->values()->all();
-        while ($historico !== [] && $historico[0]['role'] !== 'user') array_shift($historico);
+        while ($historico !== [] && $historico[0]['role'] !== 'user') {
+            array_shift($historico);
+        }
         $historico = array_values(array_reduce($historico, function (array $out, array $item): array {
-            if ($out !== [] && end($out)['role'] === $item['role']) $out[array_key_last($out)]['content'] .= "\n".$item['content']; else $out[] = $item;
+            if ($out !== [] && end($out)['role'] === $item['role']) {
+                $out[array_key_last($out)]['content'] .= "\n".$item['content'];
+            } else {
+                $out[] = $item;
+            }
+
             return $out;
         }, []));
 
@@ -38,7 +45,9 @@ class ConversationSimulatorService
             ->where(fn ($q) => $q->where('data_hora', '>', now())->orWhere('inicio', '>', now()))
             ->orderByRaw('COALESCE(data_hora, inicio)')->first();
         $resultado = $this->agendou->processarMensagem($tenant, $historico, ['id' => $cliente->id, 'nome' => $cliente->nome, 'telefone' => $cliente->telefone], $pendente);
-        if ($resultado['transferir']) $conversa->update(['status_v2' => 'aguardando_humano']);
+        if ($resultado['transferir']) {
+            $conversa->update(['status_v2' => 'aguardando_humano']);
+        }
         $conversa->registrarMensagem('bot', $resultado['resposta']);
         return $resultado;
     }
