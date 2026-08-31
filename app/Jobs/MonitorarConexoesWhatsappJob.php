@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use App\Jobs\Concerns\RegistraFalha;
-use App\Jobs\SincronizarConversasWhatsappJob;
 use App\Models\OperationalEvent;
 use App\Models\Tenant;
 use App\Services\EvolutionApiService;
@@ -32,7 +31,7 @@ class MonitorarConexoesWhatsappJob implements ShouldQueue
             ->where('ativo', true)
             ->whereNotNull('evolution_instance')
             ->where('evolution_instance', '!=', '')
-            ->chunkById(200, function ($tenants) use ($statuses): void {
+            ->chunkById(200, function ($tenants) use ($statuses, $syncState): void {
                 foreach ($tenants as $tenant) {
                     $status = $statuses[$tenant->evolution_instance] ?? null;
                     if (! in_array($status, ['open', 'close', 'connecting'], true)) {
