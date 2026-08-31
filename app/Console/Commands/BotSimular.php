@@ -2,12 +2,11 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Conversa;
 use App\Models\Agendamento;
+use App\Models\Conversa;
 use App\Models\Tenant;
 use App\Services\ConversationSimulatorService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Http;
 
 class BotSimular extends Command
 {
@@ -73,7 +72,9 @@ class BotSimular extends Command
             }
 
             try {
-                $resultado = app(ConversationSimulatorService::class)->enviar($tenant, $telefone, (string) $mensagem, 'sim_'.$msgId++);
+                $messageId = 'sim_'.$msgId;
+                $msgId++;
+                $resultado = app(ConversationSimulatorService::class)->enviar($tenant, $telefone, (string) $mensagem, $messageId);
             } catch (\Throwable $e) {
                 $this->error('Erro no job: '.$e->getMessage());
 
