@@ -29,8 +29,13 @@ class BotSimular extends Command
         $telefone = $this->option('telefone');
         if ($id = $this->option('lembrete')) {
             $agendamento = Agendamento::with(['tenant', 'cliente', 'recurso', 'profissional'])->where('tenant_id', $tenant->id)->find($id);
-            if (! $agendamento) { $this->error('Agendamento não encontrado para este tenant.'); return 1; }
+            if (! $agendamento) {
+                $this->error('Agendamento não encontrado para este tenant.');
+
+                return 1;
+            }
             $this->line(app(ConversationSimulatorService::class)->preverLembrete($agendamento));
+
             return 0;
         }
 
