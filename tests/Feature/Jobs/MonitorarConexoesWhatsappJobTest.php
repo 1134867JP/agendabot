@@ -3,9 +3,11 @@
 namespace Tests\Feature\Jobs;
 
 use App\Jobs\MonitorarConexoesWhatsappJob;
+use App\Jobs\SincronizarConversasWhatsappJob;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class MonitorarConexoesWhatsappJobTest extends TestCase
@@ -21,6 +23,7 @@ class MonitorarConexoesWhatsappJobTest extends TestCase
 
         $connected = $this->tenant('watchdog-connected', false);
         $disconnected = $this->tenant('watchdog-disconnected', true);
+        Queue::fake();
 
         Http::fake([
             'https://evolution.test/instance/fetchInstances' => Http::response([
@@ -38,6 +41,7 @@ class MonitorarConexoesWhatsappJobTest extends TestCase
             'type' => 'integration_recovered',
             'provider' => 'evolution',
         ]);
+        Queue::assertPushed(SincronizarConversasWhatsappJob::class, 1);
         $this->assertDatabaseHas('operational_events', [
             'tenant_id' => $disconnected->id,
             'type' => 'integration_failure',
