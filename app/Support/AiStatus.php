@@ -10,6 +10,9 @@ class AiStatus
         'claude' => 'Claude',
         'gemini' => 'Gemini',
         'groq' => 'Groq',
+        'groq_qwen' => 'Groq / Qwen',
+        'groq_gpt_oss' => 'Groq / GPT-OSS',
+        'cloudflare' => 'Cloudflare Workers AI',
         'openrouter' => 'OpenRouter',
     ];
 
