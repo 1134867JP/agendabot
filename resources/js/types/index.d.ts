@@ -88,11 +88,15 @@ export interface Recurso {
 
 export interface Agendamento {
     id: number;
-    recurso: Recurso;
+    recurso: Recurso | null;
+    profissional?: { id: number; nome: string } | null;
+    servico?: { id: number; nome: string; duracao_minutos?: number | null } | null;
     cliente_nome: string;
     cliente_telefone: string;
     inicio: string;
     fim: string;
+    data_hora?: string | null;
+    duracao_minutos?: number | null;
     status: StatusAgendamento;
     valor_total: number | null;
     origem: 'bot' | 'whatsapp' | 'manual';
