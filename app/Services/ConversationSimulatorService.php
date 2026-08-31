@@ -11,10 +11,17 @@ use Carbon\Carbon;
 /** Executa o núcleo conversacional sem criar mensagem de saída no WhatsApp. */
 class ConversationSimulatorService
 {
+    private ConversaSyncService $sync;
+
+    private AgendouService $agendou;
+
     public function __construct(
-        private ConversaSyncService $sync,
-        private AgendouService $agendou,
-    ) {}
+        ConversaSyncService $sync,
+        AgendouService $agendou,
+    ) {
+        $this->sync = $sync;
+        $this->agendou = $agendou;
+    }
 
     public function enviar(Tenant $tenant, string $telefone, string $texto, string $messageId): array
     {
