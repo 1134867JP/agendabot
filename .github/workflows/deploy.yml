@@ -6,13 +6,16 @@ on:
     paths-ignore:
       - '**.md'
       - '.gitignore'
-      - 'LICENSE'
   push:
     branches: [master]
     paths-ignore:
       - '**.md'
       - '.gitignore'
       - 'LICENSE'
+
+permissions:
+  contents: read
+  pull-requests: write
 
 # Mantém apenas a validação mais recente da mesma branch/PR.
 concurrency:
@@ -174,6 +177,60 @@ jobs:
             echo "Concluído $file"
           done
 
+  validacao-ia-real:
+    name: Validação real de IA
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[testar-fluxos-ia]')
+    needs: [backend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: agendou_testing
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d agendou_testing"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          coverage: none
+
+      - name: Instalar dependências PHP
+        run: composer install --no-interaction --prefer-dist --no-progress --optimize-autoloader
+
+      - name: Executar cenários reais sem WhatsApp
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: agendou_testing
+          DB_USERNAME: postgres
+          DB_PASSWORD: postgres
+          AI_PROVIDER: gemini
+          AI_FALLBACK_PROVIDERS: groq
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan migrate --force
+          php artisan bot:testar-fluxos-reais --provider=gemini
+
   deploy:
     name: Deploy para VPS
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
@@ -229,5 +286,18 @@ jobs:
             fi
             if [[ "$COMMIT_MESSAGE" == *"[testar-fluxos-ia]"* ]]; then
               echo "--- validação isolada de conversa com IA ---"
-              docker exec agendabot-app php artisan bot:testar-fluxos-reais --provider=gemini
+              set +e
+              resultado="$(docker exec agendabot-app php artisan bot:testar-fluxos-reais --provider=gemini 2>&1)"
+              status=$?
+              set -e
+              echo "$resultado"
+
+              pr="$(curl -fsSL -H "Authorization: Bearer ${{ github.token }}" -H 'Accept: application/vnd.github+json' \
+                "https://api.github.com/repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" | jq -r '.[0].number // empty')"
+              if [ -n "$pr" ]; then
+                payload="$(jq -n --arg body "## Validação real de IA\n\n\`\`\`text\n${resultado}\n\`\`\`" '{body: $body}')"
+                curl -fsSL -X POST -H "Authorization: Bearer ${{ github.token }}" -H 'Accept: application/vnd.github+json' \
+                  "https://api.github.com/repos/${{ github.repository }}/issues/${pr}/comments" -d "$payload" >/dev/null
+              fi
+              exit "$status"
             fi

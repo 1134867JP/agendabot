@@ -100,6 +100,7 @@ class TestarFluxosReaisBot extends Command
                 $this->garantir(OutboundMessage::where('tenant_id', $tenant->id)->count() === 0, 'O simulador criou uma mensagem de saída.');
             }, $falhas);
         } finally {
+            Agendamento::where('tenant_id', $tenant->id)->delete();
             $tenant->delete();
             $this->line('Dados temporários removidos.');
         }
@@ -157,6 +158,8 @@ class TestarFluxosReaisBot extends Command
             'profissional_id' => $profissional->id,
             'servico_id' => $servico->id,
             'data_hora' => $dataHora,
+            'inicio' => $dataHora,
+            'fim' => $dataHora->copy()->addMinutes(30),
             'duracao_minutos' => 30,
             'status' => 'pendente',
             'origem' => 'teste_ia',
