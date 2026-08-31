@@ -8,8 +8,11 @@ use App\Services\AgendouAgentService;
 use App\Services\AgendouService;
 use App\Services\AI\AiOrchestrator;
 use App\Services\AI\Providers\ClaudeProvider;
+use App\Services\AI\Providers\CloudflareProvider;
 use App\Services\AI\Providers\GeminiProvider;
+use App\Services\AI\Providers\GroqGptOssProvider;
 use App\Services\AI\Providers\GroqProvider;
+use App\Services\AI\Providers\GroqQwenProvider;
 use App\Services\AI\Providers\OpenRouterProvider;
 use App\Services\ClaudeAgentService;
 use App\Services\EvolutionApiService;
@@ -35,7 +38,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(AiOrchestrator::class, fn ($app) => new AiOrchestrator([
             $app->make(ClaudeProvider::class),
             $app->make(GeminiProvider::class),
+            $app->make(GroqQwenProvider::class),
+            $app->make(GroqGptOssProvider::class),
             $app->make(GroqProvider::class),
+            $app->make(CloudflareProvider::class),
             $app->make(OpenRouterProvider::class),
         ]));
         $this->app->singleton(AgendouAgentService::class);
