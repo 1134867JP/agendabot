@@ -55,7 +55,9 @@ class ConversationSimulatorService
         if ($resultado['transferir']) {
             $conversa->update(['status_v2' => 'aguardando_humano']);
         }
+
         $conversa->registrarMensagem('bot', $resultado['resposta']);
+
         return $resultado;
     }
 
