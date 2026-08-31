@@ -227,3 +227,7 @@ jobs:
               echo "--- diagnóstico pontual do QR Code ---"
               docker exec agendabot-app sh -c 'grep "WHATSAPP_QRCODE" /var/www/html/storage/logs/laravel.log 2>/dev/null | tail -n 3' || true
             fi
+            if [[ "$COMMIT_MESSAGE" == *"[testar-fluxos-ia]"* ]]; then
+              echo "--- validação isolada de conversa com IA ---"
+              docker exec agendabot-app php artisan bot:testar-fluxos-reais --provider=gemini
+            fi
