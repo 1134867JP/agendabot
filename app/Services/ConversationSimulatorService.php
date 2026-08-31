@@ -19,7 +19,7 @@ class ConversationSimulatorService
     public function enviar(Tenant $tenant, string $telefone, string $texto, string $messageId): array
     {
         $recebida = $this->sync->registrarMensagemRecebida($tenant, $telefone, $texto, $messageId, 'Cliente Simulado');
-        if (!$recebida) {
+        if (! $recebida) {
             return ['resposta' => 'Mensagem duplicada ignorada.', 'transferir' => false];
         }
 
@@ -30,15 +30,15 @@ class ConversationSimulatorService
         while ($historico !== [] && $historico[0]['role'] !== 'user') {
             array_shift($historico);
         }
-        $historico = array_values(array_reduce($historico, function (array $out, array $item): array {
-            if ($out !== [] && end($out)['role'] === $item['role']) {
-                $out[array_key_last($out)]['content'] .= "\n".$item['content'];
+        $historicoMesclado = [];
+        foreach ($historico as $item) {
+            if ($historicoMesclado !== [] && end($historicoMesclado)['role'] === $item['role']) {
+                $historicoMesclado[array_key_last($historicoMesclado)]['content'] .= "\n".$item['content'];
             } else {
-                $out[] = $item;
+                $historicoMesclado[] = $item;
             }
-
-            return $out;
-        }, []));
+        }
+        $historico = $historicoMesclado;
 
         $pendente = Agendamento::where('tenant_id', $tenant->id)->whereNotIn('status', ['cancelado', 'concluido'])
             ->where(fn ($q) => $q->where('cliente_id', $cliente->id)->orWhere('cliente_telefone', $telefone))
