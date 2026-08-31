@@ -3,9 +3,11 @@
 namespace App\Jobs;
 
 use App\Jobs\Concerns\RegistraFalha;
+use App\Jobs\SincronizarConversasWhatsappJob;
 use App\Models\OperationalEvent;
 use App\Models\Tenant;
 use App\Services\EvolutionApiService;
+use App\Services\WhatsAppSyncState;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -22,7 +24,7 @@ class MonitorarConexoesWhatsappJob implements ShouldQueue
 
     public array $backoff = [30, 120];
 
-    public function handle(EvolutionApiService $evolution): void
+    public function handle(EvolutionApiService $evolution, WhatsAppSyncState $syncState): void
     {
         $statuses = $evolution->listarStatusInstancias();
 
@@ -64,6 +66,8 @@ class MonitorarConexoesWhatsappJob implements ShouldQueue
                     ];
 
                     if ($connected) {
+                        $executionId = $syncState->iniciar($tenant);
+                        SincronizarConversasWhatsappJob::dispatch($tenant, $executionId)->onQueue('sync');
                         Log::channel('jobs')->info('WHATSAPP_CONNECTION_CHANGED', $context);
                     } else {
                         Log::channel('jobs')->warning('WHATSAPP_CONNECTION_CHANGED', $context);
