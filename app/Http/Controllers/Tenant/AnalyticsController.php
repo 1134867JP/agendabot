@@ -53,11 +53,6 @@ class AnalyticsController extends Controller
         $taxaConversao = $conversas > 0 ? round(($agendWhatsapp / $conversas) * 100, 1) : 0;
         $taxaConversaoAnterior = $conversasAnterior > 0 ? round(($agendWhatsappAnterior / $conversasAnterior) * 100, 1) : 0;
 
-        $falhas = OperationalEvent::where('tenant_id', $tenant->id)
-            ->where('type', 'integration_failure')
-            ->whereBetween('created_at', [$inicio, $fim])
-            ->count();
-
         $tempoResposta = (int) round((float) OperationalEvent::where('tenant_id', $tenant->id)
             ->where('type', 'bot_response')
             ->whereBetween('created_at', [$inicio, $fim])
@@ -128,7 +123,6 @@ class AnalyticsController extends Controller
                 'receita_mes' => $receita,
                 'conversas_mes' => $conversas,
                 'taxa_conversao' => $taxaConversao,
-                'falhas_integracao' => $falhas,
                 'tempo_resposta_ms' => $tempoResposta,
                 'receita_bot' => $receitaBot,
             ],

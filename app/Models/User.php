@@ -37,7 +37,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function tenants(): BelongsToMany
     {
         return $this->belongsToMany(Tenant::class, 'tenant_users')
-            ->withPivot('papel')
+            ->withPivot('papel', 'ativo')
             ->withTimestamps();
     }
 }

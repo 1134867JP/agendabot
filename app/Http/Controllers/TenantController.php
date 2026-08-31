@@ -70,7 +70,7 @@ class TenantController extends Controller
 
     public function selecionar(Request $request, Tenant $tenant): RedirectResponse
     {
-        abort_unless($request->user()->tenants()->where('tenants.id', $tenant->id)->exists(), 403);
+        abort_unless($request->user()->tenants()->where('tenants.id', $tenant->id)->wherePivot('ativo', true)->exists(), 403);
         abort_unless($tenant->ativo, 403);
 
         session(['tenant_id' => $tenant->id]);

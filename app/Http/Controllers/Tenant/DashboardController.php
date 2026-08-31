@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Agendamento;
 use App\Models\CobrancaBot;
 use App\Models\Conversa;
-use App\Models\OperationalEvent;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -46,11 +45,6 @@ class DashboardController extends Controller
                 $query->whereNull('ultima_leitura_em')
                     ->orWhereColumn('ultima_mensagem_em', '>', 'ultima_leitura_em');
             })
-            ->count();
-
-        $falhasRecentes = OperationalEvent::where('tenant_id', $tenant->id)
-            ->where('type', 'integration_failure')
-            ->where('created_at', '>=', now()->subDay())
             ->count();
 
         $depositosPendentes = $modoAgendamento
@@ -104,17 +98,6 @@ class DashboardController extends Controller
             ]);
         }
 
-        if ($falhasRecentes > 0) {
-            $pendencias->push([
-                'id' => 'failures',
-                'tone' => 'danger',
-                'title' => "{$falhasRecentes} falha".($falhasRecentes === 1 ? '' : 's').' de integração nas últimas 24h',
-                'description' => 'Confira se WhatsApp, Calendar e automações estão funcionando.',
-                'action' => 'Ver desempenho',
-                'href' => route('tenant.analytics'),
-            ]);
-        }
-
         return Inertia::render('Tenant/Dashboard', [
             'tenant' => $tenant,
             'stats' => [
@@ -142,7 +125,6 @@ class DashboardController extends Controller
                 'conversas_aguardando' => $aguardandoHumano,
                 'conversas_nao_lidas' => $conversasNaoLidas,
                 'clientes_total' => $tenant->clientes()->count(),
-                'falhas_recentes' => $falhasRecentes,
             ],
             'pendencias' => $pendencias->values(),
             'ultima_cobranca_bot' => Schema::hasTable('cobrancas_bot')

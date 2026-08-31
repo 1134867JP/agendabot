@@ -17,7 +17,7 @@ class DashboardController extends Controller
             return redirect()->route('superadmin.dashboard');
         }
 
-        $tenants = $user->tenants()->get();
+        $tenants = $user->tenants()->wherePivot('ativo', true)->get();
 
         if ($tenants->count() === 1 && $tenants->first()->ativo) {
             session(['tenant_id' => $tenants->first()->id]);
