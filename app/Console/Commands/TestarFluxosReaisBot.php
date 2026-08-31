@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Agendamento;
 use App\Models\Cliente;
+use App\Models\Conversa;
 use App\Models\HorarioProfissional;
 use App\Models\OutboundMessage;
 use App\Models\Profissional;
@@ -46,16 +47,16 @@ class TestarFluxosReaisBot extends Command
             $amanha = Carbon::tomorrow($tenant->resolvedTimezone())->setTime(10, 0);
             $agendamento = $this->criarAgendamento($tenant, $cliente, $profissional, $servico, $amanha);
 
-            $this->executar('IA reconhece agendamento existente', function () use ($simulador, $tenant, $cliente, $agendamento): void {
+            $this->executar('IA reconhece agendamento existente', function () use ($simulador, $tenant, $cliente, $agendamento, $sufixo): void {
                 $antes = Agendamento::whereKey($agendamento->id)->value('id');
-                $resultado = $simulador->enviar($tenant, $cliente->telefone, 'Qual é meu próximo agendamento?', 'real_existing_1');
+                $resultado = $simulador->enviar($tenant, $cliente->telefone, 'Qual é meu próximo agendamento?', 'real_existing_'.$sufixo);
 
                 $this->line('  Resposta: '.$resultado['resposta']);
                 $this->garantir($antes === $agendamento->id, 'O agendamento existente foi alterado ao apenas consultar.');
             }, $falhas);
 
-            $this->executar('IA cancela agendamento', function () use ($simulador, $tenant, $cliente, $agendamento): void {
-                $resultado = $simulador->enviar($tenant, $cliente->telefone, 'Pode cancelar meu agendamento, por favor.', 'real_cancel_1');
+            $this->executar('IA cancela agendamento', function () use ($simulador, $tenant, $cliente, $agendamento, $sufixo): void {
+                $resultado = $simulador->enviar($tenant, $cliente->telefone, 'Pode cancelar meu agendamento, por favor.', 'real_cancel_'.$sufixo);
                 $status = $agendamento->fresh()->status;
 
                 $this->line('  Resposta: '.$resultado['resposta']);
@@ -63,8 +64,8 @@ class TestarFluxosReaisBot extends Command
             }, $falhas);
 
             $reagendar = $this->criarAgendamento($tenant, $cliente, $profissional, $servico, Carbon::tomorrow($tenant->resolvedTimezone())->setTime(11, 0));
-            $this->executar('IA reagenda agendamento', function () use ($simulador, $tenant, $cliente, $reagendar): void {
-                $resultado = $simulador->enviar($tenant, $cliente->telefone, "Reagende o agendamento #{$reagendar->id} para amanhã às 14:00.", 'real_reschedule_1');
+            $this->executar('IA reagenda agendamento', function () use ($simulador, $tenant, $cliente, $reagendar, $sufixo): void {
+                $resultado = $simulador->enviar($tenant, $cliente->telefone, "Quero remarcar meu agendamento #{$reagendar->id} para amanhã às 14:00.", 'real_reschedule_'.$sufixo);
                 $hora = $reagendar->fresh()->data_hora?->setTimezone($tenant->resolvedTimezone())->format('H:i');
 
                 $this->line('  Resposta: '.$resultado['resposta']);
@@ -76,13 +77,14 @@ class TestarFluxosReaisBot extends Command
                 'nome' => 'Cliente Novo',
                 'telefone' => '555'.random_int(100000000, 999999999),
             ]);
-            $this->executar('IA cria agendamento', function () use ($simulador, $tenant, $novoCliente, $profissional, $servico): void {
-                $resultado = $simulador->enviar(
+            $this->executar('IA cria agendamento após confirmação', function () use ($simulador, $tenant, $novoCliente, $profissional, $servico, $sufixo): void {
+                $simulador->enviar(
                     $tenant,
                     $novoCliente->telefone,
                     "Quero agendar {$servico->nome} com {$profissional->nome} amanhã às 15:00.",
-                    'real_booking_1',
+                    'real_booking_'.$sufixo,
                 );
+                $resultado = $simulador->enviar($tenant, $novoCliente->telefone, 'Confirmo. Meu nome completo é Cliente Novo.', 'real_booking_confirm_'.$sufixo);
                 $criado = Agendamento::where('tenant_id', $tenant->id)->where('cliente_id', $novoCliente->id)->exists();
 
                 $this->line('  Resposta: '.$resultado['resposta']);
@@ -100,7 +102,12 @@ class TestarFluxosReaisBot extends Command
                 $this->garantir(OutboundMessage::where('tenant_id', $tenant->id)->count() === 0, 'O simulador criou uma mensagem de saída.');
             }, $falhas);
         } finally {
+            Conversa::where('tenant_id', $tenant->id)->each(function (Conversa $conversa): void {
+                $conversa->mensagens()->delete();
+                $conversa->delete();
+            });
             Agendamento::where('tenant_id', $tenant->id)->delete();
+            Cliente::where('tenant_id', $tenant->id)->delete();
             $tenant->delete();
             $this->line('Dados temporários removidos.');
         }
