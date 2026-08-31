@@ -55,10 +55,23 @@ class GeminiProvider implements AiProviderInterface
                 $content[] = ['type' => 'text', 'text' => $part['text']];
             }
             if (isset($part['functionCall'])) {
+                $name = $part['functionCall']['name'] ?? null;
+                if (! is_string($name) || trim($name) === '') {
+                    // Uma resposta HTTP 200 ainda pode vir incompleta/bloqueada. Não
+                    // deixe um aviso de índice indefinido derrubar o job inteiro: o
+                    // orquestrador pode tentar o próximo provider normalmente.
+                    throw new AiProviderException(
+                        'Resposta de ferramenta inválida da API Gemini.',
+                        $this->name(),
+                        errorType: 'invalid_tool_call',
+                        fallbackAllowed: true,
+                    );
+                }
+
                 $content[] = [
                     'type' => 'tool_use',
                     'id' => $part['functionCall']['id'] ?? 'gemini_'.Str::uuid(),
-                    'name' => $part['functionCall']['name'],
+                    'name' => $name,
                     'input' => $part['functionCall']['args'] ?? [],
                     'provider_call_id' => $part['functionCall']['id'] ?? null,
                     'thought_signature' => $part['thoughtSignature'] ?? null,

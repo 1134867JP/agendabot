@@ -70,6 +70,31 @@ class AiProvidersTest extends TestCase
         }
     }
 
+    public function test_gemini_trata_function_call_sem_nome_como_falha_recuperavel(): void
+    {
+        config([
+            'ai.providers.gemini.key' => 'gemini-test',
+            'ai.providers.gemini.base_url' => 'https://gemini.test/v1beta',
+        ]);
+        Http::fake([
+            'gemini.test/*' => Http::response([
+                'candidates' => [[
+                    'content' => ['parts' => [['functionCall' => ['args' => []]]]],
+                ]],
+            ]),
+        ]);
+
+        try {
+            (new GeminiProvider)->chat(new AiRequest([
+                'messages' => [['role' => 'user', 'content' => 'Olá']],
+            ], 'gemini-3.6-flash'));
+            $this->fail('Era esperada uma falha do provider.');
+        } catch (AiProviderException $e) {
+            $this->assertSame('invalid_tool_call', $e->errorType);
+            $this->assertTrue($e->fallbackAllowed);
+        }
+    }
+
     public function test_groq_normaliza_tool_call_e_tokens_em_cache(): void
     {
         config([

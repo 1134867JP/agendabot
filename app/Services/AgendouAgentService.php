@@ -95,6 +95,19 @@ class AgendouAgentService
                 ]);
 
                 return ['resposta' => 'Tive uma instabilidade e vou encaminhar você para um atendente. 🙋', 'transferir' => true, 'usage' => $totalUsage];
+            } catch (\Throwable $e) {
+                // Falhas inesperadas (por exemplo, uma resposta malformada de um
+                // provider) não podem encerrar o job sem resposta ao cliente. O
+                // detalhe fica no log para investigação, enquanto a conversa segue
+                // com handoff seguro para a equipe.
+                Log::channel('jobs')->error('AI_UNEXPECTED_ERROR', [
+                    'tenant_id' => $tenant->id,
+                    'exception' => $e::class,
+                    'message' => $e->getMessage(),
+                    'total_messages' => count($messages),
+                ]);
+
+                return ['resposta' => 'Tive uma instabilidade e vou encaminhar você para um atendente. 🙋', 'transferir' => true, 'usage' => $totalUsage];
             }
 
             $usage = $response->usage;
