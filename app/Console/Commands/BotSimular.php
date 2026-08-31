@@ -2,22 +2,18 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\ProcessarMensagemWhatsapp;
 use App\Models\Conversa;
+use App\Models\Agendamento;
 use App\Models\Tenant;
-use App\Services\AgendamentoService;
-use App\Services\ClaudeAgentService;
-use App\Services\ConversaSyncService;
-use App\Services\EvolutionApiService;
-use App\Services\IntencaoService;
+use App\Services\ConversationSimulatorService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 
 class BotSimular extends Command
 {
-    protected $signature = 'bot:simular {tenant? : Slug do tenant} {--telefone=5551999999999 : Telefone do cliente simulado} {--reset : Apaga histórico da conversa antes de iniciar}';
+    protected $signature = 'bot:simular {tenant? : Slug do tenant} {--telefone=5551999999999 : Telefone do cliente simulado} {--reset : Apaga histórico da conversa antes de iniciar} {--lembrete= : Exibe o lembrete de um agendamento sem enviar}';
 
-    protected $description = 'Simula uma conversa com o bot sem gastar tokens reais (HTTP fakado)';
+    protected $description = 'Simula o fluxo real de IA e agenda sem enviar nada ao WhatsApp';
 
     public function handle(): int
     {
@@ -31,6 +27,12 @@ class BotSimular extends Command
         }
 
         $telefone = $this->option('telefone');
+        if ($id = $this->option('lembrete')) {
+            $agendamento = Agendamento::with(['tenant', 'cliente', 'recurso', 'profissional'])->where('tenant_id', $tenant->id)->find($id);
+            if (! $agendamento) { $this->error('Agendamento não encontrado para este tenant.'); return 1; }
+            $this->line(app(ConversationSimulatorService::class)->preverLembrete($agendamento));
+            return 0;
+        }
 
         if ($this->option('reset')) {
             Conversa::where('tenant_id', $tenant->id)
@@ -65,59 +67,8 @@ class BotSimular extends Command
                 continue;
             }
 
-            // Interceptar chamadas HTTP para não gastar tokens
-            $respostaBot = null;
-
-            Http::fake([
-                // Anthropic API → resposta simulada baseada na mensagem
-                'api.anthropic.com/*' => function ($request) use ($mensagem, &$respostaBot) {
-                    $resposta = $this->gerarRespostaFake($request->data(), $mensagem);
-                    $respostaBot = $resposta['resposta'];
-                    $json = json_encode($resposta);
-
-                    return Http::response([
-                        'content' => [['type' => 'text', 'text' => $json]],
-                        'usage' => [
-                            'input_tokens' => 0,
-                            'output_tokens' => 0,
-                            'cache_creation_input_tokens' => 0,
-                            'cache_read_input_tokens' => 0,
-                        ],
-                    ], 200);
-                },
-                // Evolution API → silenciar envio real
-                '*' => Http::response(['status' => 'ok'], 200),
-            ]);
-
             try {
-                // Persistir a mensagem como o webhook faria em produção
-                $mensagemModel = app(ConversaSyncService::class)->registrarMensagemRecebida(
-                    $tenant,
-                    $telefone,
-                    $mensagem,
-                    'sim_'.$msgId++,
-                    'Cliente Simulado',
-                );
-
-                if (! $mensagemModel) {
-                    $this->line('<fg=yellow>Mensagem duplicada ignorada.</fg=yellow>');
-
-                    continue;
-                }
-
-                $job = new ProcessarMensagemWhatsapp(
-                    tenant: $tenant,
-                    telefone: $telefone,
-                    mensagemId: $mensagemModel->id,
-                );
-
-                // Rodar síncronamente (sem queue)
-                app()->call([$job, 'handle'], [
-                    'claude' => app(ClaudeAgentService::class),
-                    'agendamentoService' => app(AgendamentoService::class),
-                    'evolution' => app(EvolutionApiService::class),
-                    'intencao' => app(IntencaoService::class),
-                ]);
+                $resultado = app(ConversationSimulatorService::class)->enviar($tenant, $telefone, (string) $mensagem, 'sim_'.$msgId++);
             } catch (\Throwable $e) {
                 $this->error('Erro no job: '.$e->getMessage());
 
@@ -134,7 +85,7 @@ class BotSimular extends Command
                 ->latest('enviada_em')
                 ->first();
 
-            $textoBot = $ultimaMensagem?->conteudo ?? $respostaBot ?? '(sem resposta)';
+            $textoBot = $ultimaMensagem?->conteudo ?? $resultado['resposta'] ?? '(sem resposta)';
 
             $this->line('');
             $this->line('<fg=green>🤖 Bot</fg=green>  '.str_replace("\n", "\n       ", $textoBot));
