@@ -71,6 +71,65 @@ class AiOrchestratorTest extends TestCase
         $this->assertEqualsWithDelta(0.002, (float) TokenUsage::first()->cost_usd, 0.00000001);
     }
 
+    public function test_percorre_a_cadeia_gratis_na_ordem_configurada(): void
+    {
+        config([
+            'ai.providers.groq_qwen.model' => 'qwen-test',
+            'ai.providers.groq_gpt_oss.model' => 'gpt-oss-test',
+            'ai.providers.cloudflare.model' => 'cloudflare-test',
+            'ai.providers.gemini.model' => 'gemini-test',
+            'ai.providers.openrouter.model' => 'openrouter-test',
+        ]);
+
+        $tenant = $this->tenant([
+            'provider' => 'groq_qwen',
+            'fallback_providers' => ['groq_gpt_oss', 'cloudflare', 'gemini', 'openrouter'],
+        ]);
+
+        $calls = [];
+        $failing = function (string $name) use (&$calls): FakeAiProvider {
+            return new FakeAiProvider($name, function () use (&$calls, $name) {
+                $calls[] = $name;
+                throw new AiProviderException('rate limit', $name, 429, 'rate_limit', true);
+            });
+        };
+
+        $qwen = $failing('groq_qwen');
+        $gptOss = $failing('groq_gpt_oss');
+        $cloudflare = $failing('cloudflare');
+        $gemini = $failing('gemini');
+        $openrouter = new FakeAiProvider('openrouter', function (AiRequest $request) use (&$calls) {
+            $calls[] = 'openrouter';
+
+            return new AiResponse(
+                'openrouter',
+                $request->model,
+                [['type' => 'text', 'text' => 'ok']],
+                'stop',
+                [
+                    'input_tokens' => 1,
+                    'output_tokens' => 1,
+                    'cache_creation_input_tokens' => 0,
+                    'cache_read_input_tokens' => 0,
+                ],
+                0,
+                1,
+            );
+        });
+
+        $response = (new AiOrchestrator([
+            $qwen,
+            $gptOss,
+            $cloudflare,
+            $gemini,
+            $openrouter,
+        ]))->processar($tenant, ['messages' => []]);
+
+        $this->assertSame(['groq_qwen', 'groq_gpt_oss', 'cloudflare', 'gemini', 'openrouter'], $calls);
+        $this->assertSame('openrouter', $response->provider);
+        $this->assertSame('openrouter-test', $response->model);
+    }
+
     public function test_nao_faz_fallback_em_erro_de_autenticacao(): void
     {
         $tenant = $this->tenant([
