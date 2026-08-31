@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Tenant;
 
 use App\Exceptions\EvolutionApiException;
 use App\Http\Controllers\Controller;
+use App\Jobs\SincronizarConversasWhatsappJob;
 use App\Models\Tenant;
 use App\Services\EvolutionApiService;
 use App\Services\WhatsAppConversationBackupService;
@@ -69,8 +70,12 @@ class WhatsAppController extends Controller
 
             // Já conectado — garantir webhook atualizado e avisar o frontend.
             if ($status === 'open') {
+                $eraConectado = $tenant->whatsapp_conectado;
                 $tenant->update(['whatsapp_conectado' => true]);
                 $this->evolution->configurarWebhook($instance, $webhookUrl, $tenant->webhook_token);
+                if (! $eraConectado) {
+                    $this->iniciarSincronizacaoInicial($tenant);
+                }
 
                 return response()->json(['connected' => true]);
             }
@@ -183,6 +188,9 @@ class WhatsAppController extends Controller
         $conectado = $status === 'open';
         if ($conectado !== $tenant->whatsapp_conectado) {
             $tenant->update(['whatsapp_conectado' => $conectado]);
+            if ($conectado) {
+                $this->iniciarSincronizacaoInicial($tenant);
+            }
         }
 
         if (! $conectado) {
@@ -193,5 +201,11 @@ class WhatsAppController extends Controller
         }
 
         return response()->json(['status' => $status]);
+    }
+
+    private function iniciarSincronizacaoInicial(Tenant $tenant): void
+    {
+        $executionId = $this->syncState->iniciar($tenant);
+        SincronizarConversasWhatsappJob::dispatch($tenant, $executionId)->onQueue('sync');
     }
 }
