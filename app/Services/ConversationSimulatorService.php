@@ -19,7 +19,7 @@ class ConversationSimulatorService
     public function enviar(Tenant $tenant, string $telefone, string $texto, string $messageId): array
     {
         $recebida = $this->sync->registrarMensagemRecebida($tenant, $telefone, $texto, $messageId, 'Cliente Simulado');
-        if (! $recebida) {
+        if ($recebida === null) {
             return ['resposta' => 'Mensagem duplicada ignorada.', 'transferir' => false];
         }
 
