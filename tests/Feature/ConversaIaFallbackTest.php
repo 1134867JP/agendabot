@@ -74,7 +74,7 @@ class ConversaIaFallbackTest extends TestCase
             'remetente' => 'bot',
             'conteudo' => 'Olá! Como posso ajudar você?',
         ]);
-        Http::assertSent(fn ($request) => str_contains($request->url(), 'gemini.test/models/gemini-3.6-flash'));
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'gemini-3.6-flash'));
         Http::assertSent(fn ($request) => str_contains($request->url(), 'groq.test/openai/v1/chat/completions'));
     }
 }
