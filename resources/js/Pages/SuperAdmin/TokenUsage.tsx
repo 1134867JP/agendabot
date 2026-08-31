@@ -22,6 +22,19 @@ interface TenantRow {
     custo_usd:   number;
 }
 
+interface ProviderRow {
+    provider:           string;
+    model:              string;
+    calls:              number;
+    input:              number;
+    output:             number;
+    cache_write:        number;
+    cache_read:         number;
+    custo_usd:          number;
+    latencia_media_ms:  number;
+    falhas:             number;
+}
+
 interface DiaRow {
     dia:        string;
     calls:      number;
@@ -56,8 +69,16 @@ interface Props {
     cacheHitRate:      number;
     economiaCacheUsd:  number;
     porTenant:         TenantRow[];
+    porProvider:       ProviderRow[];
     porDia:            DiaRow[];
 }
+
+const PROVIDER_LABELS: Record<string, string> = {
+    claude: 'Claude',
+    gemini: 'Gemini',
+    groq: 'Groq',
+    openrouter: 'OpenRouter',
+};
 
 function usd(valor: number) {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 4 }).format(valor);
@@ -117,7 +138,7 @@ function MiniBarChart({ data }: { data: DiaRow[] }) {
     );
 }
 
-export default function TokenUsage({ ia, mes, mesAnterior, cacheHitRate, economiaCacheUsd, porTenant, porDia }: Props) {
+export default function TokenUsage({ ia, mes, mesAnterior, cacheHitRate, economiaCacheUsd, porTenant, porProvider, porDia }: Props) {
     const totalTokensMes = mes.input + mes.output + mes.cache_read;
 
     return (
@@ -233,10 +254,10 @@ export default function TokenUsage({ ia, mes, mesAnterior, cacheHitRate, economi
                 </p>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                     {[
-                        { label: 'Input', value: mes.input,       custo: mes.input * 0.000001,    cor: '#a5b4fc' },
-                        { label: 'Output', value: mes.output,     custo: mes.output * 0.000005,   cor: '#34d399' },
-                        { label: 'Cache write', value: mes.cache_write, custo: mes.cache_write * 0.00000125, cor: '#fbbf24' },
-                        { label: 'Cache read', value: mes.cache_read,   custo: mes.cache_read * 0.0000001,  cor: '#60a5fa' },
+                        { label: 'Input', value: mes.input, cor: '#a5b4fc' },
+                        { label: 'Output', value: mes.output, cor: '#34d399' },
+                        { label: 'Cache write', value: mes.cache_write, cor: '#fbbf24' },
+                        { label: 'Cache read', value: mes.cache_read, cor: '#60a5fa' },
                     ].map(item => (
                         <div key={item.label}>
                             <div className="flex items-center gap-1.5 mb-1">
@@ -246,10 +267,97 @@ export default function TokenUsage({ ia, mes, mesAnterior, cacheHitRate, economi
                             <p className="text-base font-semibold tabular-nums" style={{ color: 'var(--text-1)' }}>
                                 {num(item.value)}
                             </p>
-                            <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>{usd(item.custo)}</p>
                         </div>
                     ))}
                 </div>
+                <p className="mt-3 text-[11px]" style={{ color: 'var(--text-3)' }}>
+                    Custo por tipo de token varia por provider/modelo — ver o custo real na tabela abaixo.
+                </p>
+            </div>
+
+            {/* Tabela por provider/modelo */}
+            <div
+                className="mb-6 overflow-hidden rounded-xl"
+                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+            >
+                <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>
+                        Consumo por provider/modelo — mês atual
+                    </p>
+                </div>
+
+                {porProvider.length === 0 ? (
+                    <div className="py-12 text-center text-sm" style={{ color: 'var(--text-3)' }}>
+                        Nenhum registro ainda
+                    </div>
+                ) : (
+                    <>
+                    <div className="divide-y lg:hidden" style={{ borderColor: 'var(--border)' }}>
+                        {porProvider.map(p => (
+                            <article key={`${p.provider}-${p.model}`} className="px-4 py-4">
+                                <div className="flex min-w-0 items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <h2 className="truncate font-medium" style={{ color: 'var(--text-1)' }}>
+                                            {PROVIDER_LABELS[p.provider] ?? p.provider}
+                                        </h2>
+                                        <p className="truncate text-xs font-mono" style={{ color: 'var(--text-3)' }}>{p.model}</p>
+                                    </div>
+                                    <span className="shrink-0 font-semibold tabular-nums" style={{ color: 'var(--jade)' }}>{usd(p.custo_usd)}</span>
+                                </div>
+                                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                    <div>
+                                        <dt className="text-xs" style={{ color: 'var(--text-3)' }}>Chamadas</dt>
+                                        <dd className="tabular-nums" style={{ color: 'var(--text-2)' }}>{num(p.calls)}</dd>
+                                    </div>
+                                    <div>
+                                        <dt className="text-xs" style={{ color: 'var(--text-3)' }}>Falhas (fallback)</dt>
+                                        <dd className="tabular-nums" style={{ color: p.falhas > 0 ? '#f87171' : 'var(--text-2)' }}>{num(p.falhas)}</dd>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <dt className="text-xs" style={{ color: 'var(--text-3)' }}>Input / output</dt>
+                                        <dd className="tabular-nums" style={{ color: 'var(--text-2)' }}>{num(p.input)} / {num(p.output)}</dd>
+                                    </div>
+                                </dl>
+                            </article>
+                        ))}
+                    </div>
+                    <div className="hidden max-w-full overflow-x-auto overscroll-x-contain lg:block">
+                    <table className="w-full min-w-[820px] text-[13px]">
+                        <thead>
+                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                {['Provider', 'Modelo', 'Calls', 'Input', 'Output', 'Latência média', 'Falhas', 'Custo USD'].map(h => (
+                                    <th
+                                        key={h}
+                                        className="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wider"
+                                        style={{ color: 'var(--text-3)' }}
+                                    >
+                                        {h}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                            {porProvider.map(p => (
+                                <tr key={`${p.provider}-${p.model}`} className="transition-colors hover:bg-white/[0.02]">
+                                    <td className="px-5 py-3 font-medium" style={{ color: 'var(--text-1)' }}>
+                                        {PROVIDER_LABELS[p.provider] ?? p.provider}
+                                    </td>
+                                    <td className="px-5 py-3 font-mono text-xs" style={{ color: 'var(--text-2)' }}>{p.model}</td>
+                                    <td className="px-5 py-3 tabular-nums" style={{ color: 'var(--text-2)' }}>{num(p.calls)}</td>
+                                    <td className="px-5 py-3 tabular-nums" style={{ color: 'var(--text-2)' }}>{num(p.input)}</td>
+                                    <td className="px-5 py-3 tabular-nums" style={{ color: 'var(--text-2)' }}>{num(p.output)}</td>
+                                    <td className="px-5 py-3 tabular-nums" style={{ color: 'var(--text-2)' }}>{num(p.latencia_media_ms)}ms</td>
+                                    <td className="px-5 py-3 tabular-nums" style={{ color: p.falhas > 0 ? '#f87171' : 'var(--text-2)' }}>{num(p.falhas)}</td>
+                                    <td className="px-5 py-3 tabular-nums font-semibold" style={{ color: 'var(--jade)' }}>
+                                        {usd(p.custo_usd)}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    </div>
+                    </>
+                )}
             </div>
 
             {/* Tabela por tenant */}
@@ -339,7 +447,7 @@ export default function TokenUsage({ ia, mes, mesAnterior, cacheHitRate, economi
             </div>
 
             <p className="mt-3 text-center text-[11px]" style={{ color: 'var(--text-3)' }}>
-                Preços: Haiku 4.5 · Input $1/MTok · Output $5/MTok · Cache write $1.25/MTok · Cache read $0.10/MTok
+                Preços por token variam por provider/modelo — ver config/ai.php
             </p>
         </AppLayout>
     );

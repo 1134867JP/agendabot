@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Models\OperationalEvent;
 use App\Models\TokenUsage;
 use App\Support\AiStatus;
 use Inertia\Inertia;
@@ -82,6 +83,38 @@ class TokenUsageController extends Controller
                 return $row;
             });
 
+        // Por provider/modelo — mês atual. É esta tabela que responde "quanto cada
+        // modelo está gastando": com múltiplos providers em fallback (ver config/ai.php),
+        // o card de "Custo do mês" sozinho não mostra quem está consumindo o quê.
+        $falhasPorProvider = OperationalEvent::where('created_at', '>=', $inicioMes)
+            ->where('type', 'integration_failure')
+            ->selectRaw('provider, COUNT(*) AS falhas')
+            ->groupBy('provider')
+            ->pluck('falhas', 'provider');
+
+        $porProvider = TokenUsage::where('created_at', '>=', $inicioMes)
+            ->selectRaw('
+                provider,
+                model,
+                COUNT(*)                              AS calls,
+                COALESCE(SUM(input_tokens), 0)                AS input,
+                COALESCE(SUM(output_tokens), 0)               AS output,
+                COALESCE(SUM(cache_creation_input_tokens), 0) AS cache_write,
+                COALESCE(SUM(cache_read_input_tokens), 0)     AS cache_read,
+                COALESCE(SUM(cost_usd), 0)                    AS cost_usd,
+                COALESCE(AVG(latency_ms), 0)                  AS latencia_media_ms
+            ')
+            ->groupBy('provider', 'model')
+            ->orderByRaw('SUM(cost_usd) DESC')
+            ->get()
+            ->map(function ($row) use ($falhasPorProvider) {
+                $row->custo_usd = (float) $row->cost_usd;
+                $row->latencia_media_ms = (int) round($row->latencia_media_ms);
+                $row->falhas = (int) ($falhasPorProvider[$row->provider] ?? 0);
+
+                return $row;
+            });
+
         // Por dia — últimos 30 dias
         $porDia = TokenUsage::where('token_usages.created_at', '>=', $agora->copy()->subDays(29)->startOfDay())
             ->selectRaw('
@@ -117,6 +150,7 @@ class TokenUsageController extends Controller
             'cacheHitRate' => $cacheHitRate,
             'economiaCacheUsd' => $economiaCacheUsd,
             'porTenant' => $porTenant,
+            'porProvider' => $porProvider,
             'porDia' => $porDia,
         ]);
     }
