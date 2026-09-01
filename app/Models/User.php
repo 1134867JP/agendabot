@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -39,5 +40,10 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsToMany(Tenant::class, 'tenant_users')
             ->withPivot('papel', 'ativo')
             ->withTimestamps();
+    }
+
+    public function profissionais(): HasMany
+    {
+        return $this->hasMany(Profissional::class);
     }
 }

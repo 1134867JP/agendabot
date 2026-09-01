@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use App\Support\TenantAccess;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,7 +20,7 @@ class ClienteController extends Controller
     {
         $tenant = app('tenant');
 
-        $query = $tenant->clientes()
+        $query = TenantAccess::scopeClientes($tenant->clientes(), $tenant)
             ->where('nome', '!=', 'Cliente anonimizado')
             ->withCount('agendamentos')
             ->orderBy('nome');
@@ -41,9 +42,9 @@ class ClienteController extends Controller
             'clientes' => $query->paginate(30)->withQueryString(),
             'filtros' => $request->only('busca', 'segmento'),
             'resumo' => [
-                'total' => $tenant->clientes()->where('nome', '!=', 'Cliente anonimizado')->count(),
-                'recorrentes' => $tenant->clientes()->where('nome', '!=', 'Cliente anonimizado')->has('agendamentos', '>=', 2)->count(),
-                'sem_agendamento' => $tenant->clientes()->where('nome', '!=', 'Cliente anonimizado')->doesntHave('agendamentos')->count(),
+                'total' => TenantAccess::scopeClientes($tenant->clientes(), $tenant)->where('nome', '!=', 'Cliente anonimizado')->count(),
+                'recorrentes' => TenantAccess::scopeClientes($tenant->clientes(), $tenant)->where('nome', '!=', 'Cliente anonimizado')->has('agendamentos', '>=', 2)->count(),
+                'sem_agendamento' => TenantAccess::scopeClientes($tenant->clientes(), $tenant)->where('nome', '!=', 'Cliente anonimizado')->doesntHave('agendamentos')->count(),
             ],
         ]);
     }
@@ -59,7 +60,7 @@ class ClienteController extends Controller
 
         $digitos = preg_replace('/\D+/', '', $termo);
 
-        $clientes = $tenant->clientes()
+        $clientes = TenantAccess::scopeClientes($tenant->clientes(), $tenant)
             ->where('nome', '!=', 'Cliente anonimizado')
             ->withCount('agendamentos')
             ->where(function ($query) use ($termo, $digitos): void {
@@ -85,6 +86,7 @@ class ClienteController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $tenant = app('tenant');
+        abort_if(TenantAccess::profissionalId($tenant), 403);
         $data = $request->validate([
             'nome' => ['required', 'string', 'max:120'],
             'telefone' => ['required', 'string', 'max:30'],
@@ -126,16 +128,16 @@ class ClienteController extends Controller
 
     public function show(Cliente $cliente): Response
     {
-        abort_if((int) $cliente->tenant_id !== (int) app('tenant')->id, 403);
+        TenantAccess::assertCliente($cliente, app('tenant'));
 
         return Inertia::render('Tenant/Clientes/Show', [
             'cliente' => $cliente,
-            'agendamentos' => $cliente->agendamentos()
+            'agendamentos' => TenantAccess::scopeAgendamentos($cliente->agendamentos(), app('tenant'))
                 ->with('profissional', 'servico')
                 ->orderByDesc('data_hora')
                 ->limit(30)
                 ->get(),
-            'conversas' => $cliente->conversas()
+            'conversas' => TenantAccess::scopeConversas($cliente->conversas(), app('tenant'))
                 ->orderByDesc('ultima_mensagem_em')
                 ->limit(20)
                 ->get(),
@@ -144,7 +146,7 @@ class ClienteController extends Controller
 
     public function update(Request $request, Cliente $cliente): RedirectResponse
     {
-        abort_if((int) $cliente->tenant_id !== (int) app('tenant')->id, 403);
+        TenantAccess::assertCliente($cliente, app('tenant'));
 
         $data = $request->validate([
             'nome' => ['required', 'string', 'max:120'],
@@ -162,7 +164,7 @@ class ClienteController extends Controller
 
         // Resolve o cliente explicitamente dentro do tenant. Além de evitar que a
         // exclusão dependa do binding implícito, a consulta já nasce tenant-scoped.
-        $cliente = $tenant->clientes()
+        $cliente = TenantAccess::scopeClientes($tenant->clientes(), $tenant)
             ->whereKey($cliente)
             ->where('nome', '!=', 'Cliente anonimizado')
             ->firstOrFail();
@@ -188,7 +190,7 @@ class ClienteController extends Controller
         ]);
 
         $quantidade = DB::transaction(function () use ($tenant, $data): int {
-            $clientes = $tenant->clientes()
+            $clientes = TenantAccess::scopeClientes($tenant->clientes(), $tenant)
                 ->whereIn('id', $data['cliente_ids'])
                 ->where('nome', '!=', 'Cliente anonimizado')
                 ->orderBy('id')
@@ -246,7 +248,7 @@ class ClienteController extends Controller
 
     public function export(Cliente $cliente): JsonResponse
     {
-        abort_if((int) $cliente->tenant_id !== (int) app('tenant')->id, 403);
+        TenantAccess::assertCliente($cliente, app('tenant'));
 
         return response()->json([
             'exported_at' => now()->toIso8601String(),

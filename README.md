@@ -499,9 +499,16 @@ CLAUDE_MODEL=claude-haiku-4-5-20251001
 ASAAS_API_KEY=
 ASAAS_SANDBOX=true
 
+# E-mail transacional: domínio validado com SPF, DKIM e DMARC configurados.
 MAIL_MAILER=smtp
-MAIL_HOST=
-MAIL_FROM_ADDRESS=noreply@agendou.com
+MAIL_SCHEME=smtps
+MAIL_HOST=smtp.resend.com
+MAIL_PORT=465
+MAIL_USERNAME=resend
+MAIL_FROM_ADDRESS=contato@seu-dominio.com
+
+Defina `MAIL_PASSWORD` diretamente no ambiente de produção. Não a inclua em
+arquivos versionados, documentação ou mensagens.
 
 LEGAL_ENTITY_NAME="Razão social do controlador"
 LEGAL_ENTITY_DOCUMENT="CNPJ do controlador"
@@ -509,8 +516,8 @@ LEGAL_CONTACT_EMAIL=privacidade@seu-dominio.com
 LEGAL_VERSION=2026-08-28
 ```
 
-O SMTP precisa entregar e-mails antes de abrir o cadastro ao público: usuários não
-verificados não acessam o onboarding nem o painel. Atualize `LEGAL_VERSION` sempre que
+O e-mail transacional precisa entregar e-mails antes de abrir o cadastro ao público:
+usuários não verificados não acessam o onboarding nem o painel. Atualize `LEGAL_VERSION` sempre que
 os documentos legais mudarem; novos aceites ficam vinculados à versão publicada.
 
 ### Subir com Docker

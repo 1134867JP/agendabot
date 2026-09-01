@@ -235,11 +235,11 @@ class SecurityHardeningTest extends TestCase
         );
     }
 
-    public function test_operator_is_forbidden_from_tenant_configuration(): void
+    public function test_recepcionista_is_forbidden_from_tenant_configuration(): void
     {
         $user = User::factory()->create();
         $tenant = $this->tenant(['subscription_status' => 'active']);
-        $tenant->users()->attach($user->id, ['papel' => 'operador']);
+        $tenant->users()->attach($user->id, ['papel' => 'recepcionista']);
 
         $this->actingAs($user)
             ->withSession(['tenant_id' => $tenant->id])

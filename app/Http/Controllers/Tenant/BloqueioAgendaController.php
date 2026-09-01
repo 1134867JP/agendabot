@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use App\Support\TenantAccess;
 
 class BloqueioAgendaController extends Controller
 {
@@ -20,6 +21,7 @@ class BloqueioAgendaController extends Controller
     {
         $tenant = app('tenant');
         $agendaUsaRecursos = $tenant->agendaUsaRecursos();
+        $profissionalIdLogado = TenantAccess::profissionalId($tenant);
         $data = $request->validate([
             'profissional_id' => [Rule::prohibitedIf($agendaUsaRecursos), 'nullable', Rule::exists('profissionais', 'id')->where('tenant_id', $tenant->id)],
             'recurso_id' => [Rule::requiredIf($agendaUsaRecursos), 'nullable', Rule::exists('recursos', 'id')->where('tenant_id', $tenant->id)],
@@ -36,6 +38,8 @@ class BloqueioAgendaController extends Controller
                 'profissional_id' => 'Selecione exatamente um profissional ou recurso.',
             ]);
         }
+
+        abort_if($profissionalIdLogado && (int) ($data['profissional_id'] ?? 0) !== $profissionalIdLogado, 403);
 
         $inicio = Carbon::parse($data['inicio']);
         $fim = Carbon::parse($data['fim']);
@@ -92,7 +96,10 @@ class BloqueioAgendaController extends Controller
 
     public function destroy(BloqueioAgenda $bloqueio): RedirectResponse
     {
-        abort_if((int) $bloqueio->tenant_id !== (int) app('tenant')->id, 403);
+        $tenant = app('tenant');
+        abort_if((int) $bloqueio->tenant_id !== (int) $tenant->id, 403);
+        $profissionalIdLogado = TenantAccess::profissionalId($tenant);
+        abort_if($profissionalIdLogado && (int) $bloqueio->profissional_id !== $profissionalIdLogado, 403);
         $bloqueio->delete();
 
         return back()->with('success', 'Bloqueio removido.');

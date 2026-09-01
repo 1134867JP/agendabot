@@ -10,6 +10,7 @@ use App\Models\Mensagem;
 use App\Services\EvolutionApiService;
 use App\Services\OutboundMessageService;
 use App\Services\WhatsAppSyncState;
+use App\Support\TenantAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,7 @@ class ConversaController extends Controller
     {
         $tenant = app('tenant');
 
-        $query = Conversa::where('tenant_id', $tenant->id)
+        $query = TenantAccess::scopeConversas(Conversa::where('tenant_id', $tenant->id), $tenant)
             ->with([
                 'cliente',
                 'mensagens' => fn ($q) => $q->orderByDesc('enviada_em')->limit(1),
@@ -65,7 +66,7 @@ class ConversaController extends Controller
 
     public function mensagens(Conversa $conversa): JsonResponse
     {
-        abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
+        TenantAccess::assertConversa($conversa, app('tenant'));
 
         $conversa->update(['ultima_leitura_em' => now()]);
 
@@ -90,15 +91,14 @@ class ConversaController extends Controller
     {
         $tenant = app('tenant');
 
-        $ultimaMensagem = Mensagem::whereHas(
-            'conversa',
-            fn ($q) => $q->where('tenant_id', $tenant->id),
-        )
+        $ultimaMensagem = Mensagem::whereHas('conversa', function ($query) use ($tenant): void {
+            TenantAccess::scopeConversas($query->where('tenant_id', $tenant->id), $tenant);
+        })
             ->orderByDesc('enviada_em')
             ->orderByDesc('id')
             ->first(['id', 'conversa_id', 'enviada_em']);
 
-        $query = Conversa::where('tenant_id', $tenant->id)
+        $query = TenantAccess::scopeConversas(Conversa::where('tenant_id', $tenant->id), $tenant)
             ->whereNotNull('ultima_mensagem_em')
             ->where(function ($q) {
                 $q->whereNull('ultima_leitura_em')
@@ -136,7 +136,7 @@ class ConversaController extends Controller
 
     public function marcarLida(Conversa $conversa): JsonResponse
     {
-        abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
+        TenantAccess::assertConversa($conversa, app('tenant'));
         $conversa->update(['ultima_leitura_em' => now()]);
 
         return response()->json(['ok' => true]);
@@ -145,7 +145,7 @@ class ConversaController extends Controller
     public function atualizarNomeCliente(Request $request, Conversa $conversa): RedirectResponse
     {
         $tenant = app('tenant');
-        abort_if((int) $conversa->tenant_id !== (int) $tenant->id, 403);
+        TenantAccess::assertConversa($conversa, $tenant);
 
         $data = $request->validate([
             'nome' => ['required', 'string', 'max:120'],
@@ -167,16 +167,21 @@ class ConversaController extends Controller
 
     public function assumir(Conversa $conversa): RedirectResponse
     {
-        abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
+        $tenant = app('tenant');
+        TenantAccess::assertConversa($conversa, $tenant);
 
-        $conversa->update(['status_v2' => 'em_atendimento_humano']);
+        $dados = ['status_v2' => 'em_atendimento_humano'];
+        if ($profissionalId = TenantAccess::profissionalId($tenant)) {
+            $dados['profissional_id'] = $profissionalId;
+        }
+        $conversa->update($dados);
 
         return back()->with('success', 'Você assumiu o atendimento. O bot foi pausado para esta conversa.');
     }
 
     public function devolver(Conversa $conversa): RedirectResponse
     {
-        abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
+        TenantAccess::assertConversa($conversa, app('tenant'));
 
         $conversa->update(['status_v2' => 'ativa']);
 
@@ -185,7 +190,7 @@ class ConversaController extends Controller
 
     public function enviarMensagem(Request $request, Conversa $conversa, OutboundMessageService $outboundMessages): RedirectResponse
     {
-        abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
+        TenantAccess::assertConversa($conversa, app('tenant'));
 
         $data = $request->validate([
             'conteudo' => 'required|string|max:4000',
@@ -229,8 +234,14 @@ class ConversaController extends Controller
 
         $conversa = Conversa::firstOrCreate(
             ['tenant_id' => $tenant->id, 'telefone_cliente' => $telefone],
-            ['cliente_id' => $cliente->id, 'status_v2' => 'em_atendimento_humano']
+            array_filter([
+                'cliente_id' => $cliente->id,
+                'status_v2' => 'em_atendimento_humano',
+                'profissional_id' => TenantAccess::profissionalId($tenant),
+            ])
         );
+
+        TenantAccess::assertConversa($conversa, $tenant);
 
         if ($conversa->status_v2 === 'ativa') {
             $conversa->update(['status_v2' => 'em_atendimento_humano']);
@@ -250,7 +261,7 @@ class ConversaController extends Controller
 
     public function media(Conversa $conversa, Mensagem $mensagem, EvolutionApiService $evolution): HttpResponse
     {
-        abort_if((int) $conversa->tenant_id !== (int) app('tenant')->id, 403);
+        TenantAccess::assertConversa($conversa, app('tenant'));
         abort_if((int) $mensagem->conversa_id !== (int) $conversa->id, 404);
         abort_if(! $mensagem->evolution_message_id, 404);
 

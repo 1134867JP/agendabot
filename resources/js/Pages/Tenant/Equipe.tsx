@@ -8,23 +8,29 @@ interface UsuarioEquipe {
     id: number;
     name: string;
     email: string;
-    papel: 'admin' | 'operador';
+    papel: 'admin' | 'recepcionista' | 'profissional';
     ativo: boolean;
     membro_desde: string;
+    profissional_nome?: string | null;
 }
+
+interface ProfissionalDisponivel { id: number; nome: string; }
 
 interface Props extends PageProps {
     usuarios: UsuarioEquipe[];
     meu_id: number;
+    profissionais_disponiveis: ProfissionalDisponivel[];
 }
 
 const PAPEL_LABEL: Record<string, string> = {
     admin:    'Admin',
-    operador: 'Atendente',
+    recepcionista: 'Recepcionista',
+    profissional: 'Profissional',
 };
 const PAPEL_BADGE: Record<string, string> = {
     admin:    'badge-blue',
-    operador: 'badge-gray',
+    recepcionista: 'badge-gray',
+    profissional: 'badge-green',
 };
 
 function Avatar({ nome, size = 36 }: { nome: string; size?: number }) {
@@ -51,7 +57,7 @@ function fmtData(iso: string) {
     return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-export default function Equipe({ usuarios, meu_id }: Props) {
+export default function Equipe({ usuarios, meu_id, profissionais_disponiveis }: Props) {
     const [showForm, setShowForm] = useState(false);
     const [senhaVisivel, setSenhaVisivel] = useState(false);
     const [acessoCriado, setAcessoCriado] = useState<{ name: string; email: string; password: string } | null>(null);
@@ -61,7 +67,8 @@ export default function Equipe({ usuarios, meu_id }: Props) {
         name:     '',
         email:    '',
         password: '',
-        papel:    'operador' as 'admin' | 'operador',
+        papel:    'recepcionista' as 'admin' | 'recepcionista' | 'profissional',
+        profissional_id: '' as number | '',
     });
 
     const gerarSenha = () => {
@@ -91,7 +98,7 @@ export default function Equipe({ usuarios, meu_id }: Props) {
         const ok = await confirm({
             title: 'Remover usuário?',
             message: `${u.name} perderá o acesso imediatamente. Se este for o único estabelecimento dele, o login também será excluído.`,
-            confirmLabel: 'Excluir atendente',
+            confirmLabel: 'Excluir membro',
             variant: 'danger',
         });
         if (ok) router.delete(route('tenant.equipe.destroy', u.id));
@@ -137,8 +144,8 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                 <div className="card mb-5 p-4 sm:p-5">
                     <div className="mb-4 flex items-center justify-between">
                         <div>
-                            <h3 className="text-sm font-semibold text-primary">Criar acesso para atendente</h3>
-                            <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>O e-mail será o login. Gere uma senha provisória e compartilhe-a por um canal seguro.</p>
+                            <h3 className="text-sm font-semibold text-primary">Criar acesso para a equipe</h3>
+                            <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>O e-mail será o login. Profissionais ficam vinculados à própria agenda.</p>
                         </div>
                         <button
                             onClick={() => { setShowForm(false); reset(); }}
@@ -201,13 +208,36 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                                 <select
                                     id="equipe-papel"
                                     value={data.papel}
-                                    onChange={e => setData('papel', e.target.value as 'admin' | 'operador')}
+                                    onChange={e => {
+                                        const papel = e.target.value as 'admin' | 'recepcionista' | 'profissional';
+                                        setData('papel', papel);
+                                        if (papel !== 'profissional') setData('profissional_id', '');
+                                    }}
                                     className="input"
                                 >
-                                    <option value="operador">Atendente — acessa agenda e conversas</option>
+                                    <option value="recepcionista">Recepcionista — agenda, clientes e conversas</option>
+                                    <option value="profissional">Profissional — apenas a própria agenda e clientes</option>
                                     <option value="admin">Admin — acesso total, incluindo equipe</option>
                                 </select>
                             </div>
+                            {data.papel === 'profissional' && (
+                                <div className="sm:col-span-2">
+                                    <label htmlFor="equipe-profissional" className="label mb-1">Profissional vinculado</label>
+                                    <select
+                                        id="equipe-profissional"
+                                        value={data.profissional_id}
+                                        onChange={e => setData('profissional_id', e.target.value ? Number(e.target.value) : '')}
+                                        className="input"
+                                    >
+                                        <option value="">Selecione um profissional</option>
+                                        {profissionais_disponiveis.map(profissional => (
+                                            <option key={profissional.id} value={profissional.id}>{profissional.nome}</option>
+                                        ))}
+                                    </select>
+                                    {profissionais_disponiveis.length === 0 && <p className="mt-1 text-xs text-amber-500">Cadastre primeiro o profissional em Configurações → Profissionais.</p>}
+                                    {errors.profissional_id && <p className="mt-1 text-xs text-red-400">{errors.profissional_id}</p>}
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
@@ -261,7 +291,7 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                         <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)' }}>
                             <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 110 8 4 4 0 010-8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
                         </svg>
-                        <p className="text-sm font-medium text-primary">Nenhum atendente ainda</p>
+                        <p className="text-sm font-medium text-primary">Nenhum membro na equipe ainda</p>
                     </div>
                 ) : (
                     <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
@@ -279,6 +309,7 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                                         )}
                                     </div>
                                     <p className="mt-0.5 truncate text-xs" style={{ color: 'var(--text-3)' }}>{u.email}</p>
+                                    {u.profissional_nome && <p className="mt-0.5 truncate text-xs text-emerald-600 dark:text-emerald-400">Agenda de {u.profissional_nome}</p>}
                                 </div>
 
                                 <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-3">
@@ -301,7 +332,7 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                                         </button>
                                         <button
                                             onClick={() => remover(u)}
-                                            title="Excluir atendente"
+                                            title="Excluir membro"
                                             className="flex h-10 items-center justify-center rounded-md px-3 text-xs font-medium text-red-400/70 transition-colors hover:bg-red-400/10 hover:text-red-400"
                                         >
                                             <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

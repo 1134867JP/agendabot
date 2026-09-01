@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Support\TenantAccess;
 
 class AgendaController extends Controller
 {
@@ -24,11 +25,15 @@ class AgendaController extends Controller
             'recursos' => $tenant->recursos()->where('ativo', true)->get(),
             'profissionais' => $agendaUsaRecursos
                 ? collect()
-                : $tenant->profissionais()->where('ativo', true)->get(['id', 'nome']),
+                : $tenant->profissionais()
+                    ->where('ativo', true)
+                    ->when(TenantAccess::profissionalId($tenant), fn ($query, $id) => $query->whereKey($id))
+                    ->get(['id', 'nome']),
             'servicos' => $agendaUsaRecursos
                 ? collect()
                 : $tenant->servicos()
                     ->where('ativo', true)
+                    ->when(TenantAccess::profissionalId($tenant), fn ($query, $id) => $query->whereHas('profissionais', fn ($profissionais) => $profissionais->whereKey($id)))
                     ->with('profissionais:id')
                     ->orderBy('nome')
                     ->get(['id', 'tenant_id', 'nome', 'duracao_minutos', 'valor_min', 'valor_max'])
@@ -49,6 +54,7 @@ class AgendaController extends Controller
         $agendaUsaRecursos = $tenant->agendaUsaRecursos();
 
         $tenantId = $tenant->id;
+        $profissionalIdLogado = TenantAccess::profissionalId($tenant);
         $request->validate([
             'recurso_id' => [Rule::requiredIf($agendaUsaRecursos), 'nullable', Rule::exists('recursos', 'id')->where('tenant_id', $tenantId)],
             'profissional_id' => [Rule::prohibitedIf($agendaUsaRecursos), 'nullable', Rule::exists('profissionais', 'id')->where('tenant_id', $tenantId)],
@@ -64,6 +70,11 @@ class AgendaController extends Controller
         $query = Agendamento::where('tenant_id', $tenant->id)
             ->where('status', '!=', 'cancelado')
             ->with(['profissional:id,nome', 'servico:id,nome']);
+
+        if ($profissionalIdLogado) {
+            abort_if($agendaUsaRecursos, 403);
+            $request->merge(['profissional_id' => $profissionalIdLogado, 'todos_profissionais' => false]);
+        }
 
         $dataFim = Carbon::parse($request->data_fim)->endOfDay()->toIso8601String();
 
@@ -114,6 +125,10 @@ class AgendaController extends Controller
             ->where('inicio', '<', $dataFim)
             ->where('fim', '>', $request->data_inicio)
             ->with('profissional:id,nome');
+
+        if ($profissionalIdLogado) {
+            $bloqueiosQuery->where('profissional_id', $profissionalIdLogado);
+        }
 
         if ($request->filled('recurso_id')) {
             $bloqueiosQuery->where('recurso_id', $request->recurso_id);

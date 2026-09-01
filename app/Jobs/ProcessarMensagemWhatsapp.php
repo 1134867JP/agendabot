@@ -230,6 +230,17 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             $clienteInfo = ['id' => $cliente->id, 'nome' => $cliente->nome, 'telefone' => $cliente->telefone];
             $resultado = $agendou->processarMensagem($this->tenant, $historico, $clienteInfo, $agendamentoPendente);
 
+            // Quando o bot conclui um agendamento, a conversa passa a pertencer ao
+            // profissional escolhido. Assim o barbeiro vê somente os próprios
+            // clientes, enquanto a recepção continua com a visão operacional total.
+            if (! empty($resultado['agendamento_id'])) {
+                $agendamentoCriado = Agendamento::where('tenant_id', $this->tenant->id)
+                    ->find($resultado['agendamento_id']);
+                if ($agendamentoCriado?->profissional_id) {
+                    $conversa->update(['profissional_id' => $agendamentoCriado->profissional_id]);
+                }
+            }
+
             if ($resultado['transferir']) {
                 // Somente o primeiro job que concluir o handoff pode enviar a
                 // confirmação. Isso elimina respostas duplicadas quando chegam

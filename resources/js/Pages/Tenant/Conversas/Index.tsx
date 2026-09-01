@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Head, InfiniteScroll, router, useForm } from '@inertiajs/react';
+import { Head, InfiniteScroll, router, useForm, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import Modal from '@/Components/Modal';
 import FormField from '@/Components/UI/FormField';
@@ -411,6 +411,8 @@ function RenomearContatoModal({ conversa, onClose, onSaved }: { conversa: Conver
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function ConversasIndex({ conversas, filtros }: Props) {
+    const { auth, tenantPapel } = usePage<PageProps<{ tenantPapel?: string | null }>>().props;
+    const podeSincronizar = auth.user.is_super_admin || tenantPapel === 'admin';
     const [selecionada,    setSelecionada]    = useState<Conversa | null>(null);
     const [mensagens,      setMensagens]      = useState<Mensagem[]>([]);
     const [carregando,     setCarregando]     = useState(false);
@@ -603,12 +605,12 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
     };
 
     useEffect(() => {
-        iniciarSyncPolling();
+        if (podeSincronizar) iniciarSyncPolling();
         return () => {
             pararPolling();
             if (syncRef.current) clearInterval(syncRef.current);
         };
-    }, []);
+    }, [podeSincronizar]);
 
     useEffect(() => {
         if (syncStatus?.status !== 'completed') return;
@@ -710,7 +712,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                 Conversas
                             </h2>
                             <div className="flex items-center gap-1.5">
-                                <button
+                                {podeSincronizar && <button
                                     onClick={sincronizar}
                                     disabled={sincronizando}
                                     title={sincronizando ? 'Sincronização em andamento' : 'Sincronizar conversas do WhatsApp'}
@@ -726,7 +728,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                         <polyline points="23 4 23 10 17 10"/>
                                         <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
                                     </svg>
-                                </button>
+                                </button>}
                                 <button
                                     onClick={() => setShowModalNova(true)}
                                     title="Nova conversa"
@@ -742,7 +744,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                             </div>
                         </div>
 
-                        {syncVisivel && syncStatus && syncStatus.status !== 'idle' && (
+                        {podeSincronizar && syncVisivel && syncStatus && syncStatus.status !== 'idle' && (
                             <div
                                 className={`rounded-xl ${syncStatus.status === 'completed' ? 'mb-2 p-2.5' : 'mb-3 p-3'}`}
                                 style={{

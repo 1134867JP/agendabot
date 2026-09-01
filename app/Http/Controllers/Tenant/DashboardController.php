@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Agendamento;
 use App\Models\CobrancaBot;
 use App\Models\Conversa;
+use App\Support\TenantAccess;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -32,8 +33,8 @@ class DashboardController extends Controller
                 || $recursoComHorario,
         ];
 
-        $agendamentos = Agendamento::where('tenant_id', $tenant->id);
-        $conversas = Conversa::where('tenant_id', $tenant->id);
+        $agendamentos = TenantAccess::scopeAgendamentos(Agendamento::where('tenant_id', $tenant->id), $tenant);
+        $conversas = TenantAccess::scopeConversas(Conversa::where('tenant_id', $tenant->id), $tenant);
 
         $aguardandoHumano = (clone $conversas)
             ->where('status_v2', 'aguardando_humano')
@@ -124,7 +125,7 @@ class DashboardController extends Controller
                 'bot_taxa' => (float) $tenant->taxa_agendamento_bot,
                 'conversas_aguardando' => $aguardandoHumano,
                 'conversas_nao_lidas' => $conversasNaoLidas,
-                'clientes_total' => $tenant->clientes()->count(),
+                'clientes_total' => TenantAccess::scopeClientes($tenant->clientes(), $tenant)->count(),
             ],
             'pendencias' => $pendencias->values(),
             'ultima_cobranca_bot' => Schema::hasTable('cobrancas_bot')

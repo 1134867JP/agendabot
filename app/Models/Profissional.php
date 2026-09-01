@@ -14,13 +14,18 @@ class Profissional extends Model
 {
     protected $table = 'profissionais';
 
-    protected $fillable = ['tenant_id', 'nome', 'especialidades', 'ativo'];
+    protected $fillable = ['tenant_id', 'user_id', 'nome', 'especialidades', 'ativo'];
 
     protected $casts = ['tenant_id' => 'integer', 'especialidades' => 'array', 'ativo' => 'boolean'];
 
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function horarios(): HasMany

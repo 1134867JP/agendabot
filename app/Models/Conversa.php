@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Conversa extends Model
 {
     protected $fillable = [
-        'tenant_id', 'cliente_id', 'telefone_cliente',
+        'tenant_id', 'cliente_id', 'profissional_id', 'telefone_cliente',
         'status_v2', 'ultima_mensagem_em',
     ];
 
@@ -26,6 +26,11 @@ class Conversa extends Model
     public function cliente(): BelongsTo
     {
         return $this->belongsTo(Cliente::class);
+    }
+
+    public function profissional(): BelongsTo
+    {
+        return $this->belongsTo(Profissional::class);
     }
 
     public function mensagens(): HasMany

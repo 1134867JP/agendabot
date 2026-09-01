@@ -6,12 +6,14 @@ use App\Exceptions\HorarioIndisponivelException;
 use App\Http\Controllers\Controller;
 use App\Models\Agendamento;
 use App\Models\Cliente;
+use App\Models\Conversa;
 use App\Models\Profissional;
 use App\Models\Recurso;
 use App\Models\Servico;
 use App\Services\AgendamentoService;
 use App\Services\AsaasService;
 use App\Support\Csv;
+use App\Support\TenantAccess;
 use Carbon\Carbon;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\RedirectResponse;
@@ -32,13 +34,13 @@ class AgendamentoController extends Controller
         $agendaUsaRecursos = $tenant->agendaUsaRecursos();
         $telefoneCliente = preg_replace('/\D+/', '', (string) $request->query('cliente'));
         $clienteInicial = $telefoneCliente !== ''
-            ? Cliente::query()
+            ? TenantAccess::scopeClientes(Cliente::query(), $tenant)
                 ->where('tenant_id', $tenant->id)
                 ->where('telefone', $telefoneCliente)
                 ->first(['nome', 'telefone'])
             : null;
 
-        $query = Agendamento::where('tenant_id', $tenant->id)
+        $query = TenantAccess::scopeAgendamentos(Agendamento::where('tenant_id', $tenant->id), $tenant)
             ->with(['recurso', 'profissional', 'servico'])
             ->orderByRaw('COALESCE(inicio, data_hora) DESC');
 
@@ -66,12 +68,14 @@ class AgendamentoController extends Controller
                 ? collect()
                 : $tenant->profissionais()
                     ->where('ativo', true)
+                    ->when(TenantAccess::profissionalId($tenant), fn ($query, $id) => $query->whereKey($id))
                     ->orderBy('nome')
                     ->get(['id', 'nome']),
             'servicos' => $agendaUsaRecursos
                 ? collect()
                 : $tenant->servicos()
                     ->where('ativo', true)
+                    ->when(TenantAccess::profissionalId($tenant), fn ($query, $id) => $query->whereHas('profissionais', fn ($profissionais) => $profissionais->whereKey($id)))
                     ->with('profissionais:id')
                     ->orderBy('nome')
                     ->get(['id', 'tenant_id', 'nome', 'duracao_minutos'])
@@ -119,6 +123,9 @@ class AgendamentoController extends Controller
             return back()->withErrors(['profissional_id' => 'Selecione um profissional ou recurso.']);
         }
 
+        $profissionalIdLogado = TenantAccess::profissionalId($tenant);
+        abort_if($profissionalIdLogado && (int) ($validated['profissional_id'] ?? 0) !== $profissionalIdLogado, 403);
+
         $servico = null;
         if (! empty($validated['servico_id'])) {
             $servico = Servico::where('tenant_id', $tenant->id)
@@ -149,6 +156,12 @@ class AgendamentoController extends Controller
             'servico_id' => $servico?->id,
         ];
 
+        $cliente = Cliente::firstOrCreate(
+            ['tenant_id' => $tenant->id, 'telefone' => $validated['cliente_telefone']],
+            ['nome' => trim($validated['cliente_nome'])],
+        );
+        $dados['cliente_id'] = $cliente->id;
+
         if ($servico && $servico->valor_min !== null
             && ($servico->valor_max === null || abs((float) $servico->valor_max - (float) $servico->valor_min) < 0.01)) {
             $dados['valor_total'] = $servico->valor_min;
@@ -170,9 +183,15 @@ class AgendamentoController extends Controller
         }
 
         try {
-            $this->agendamentoService->criar($tenant, $dados);
+            $agendamento = $this->agendamentoService->criar($tenant, $dados);
         } catch (HorarioIndisponivelException $e) {
             return back()->withErrors(['inicio' => $e->getMessage()]);
+        }
+
+        if ($agendamento->profissional_id) {
+            Conversa::where('tenant_id', $tenant->id)
+                ->where('telefone_cliente', $agendamento->cliente_telefone)
+                ->update(['profissional_id' => $agendamento->profissional_id]);
         }
 
         return back()->with('success', 'Agendamento criado com sucesso.');
@@ -181,7 +200,7 @@ class AgendamentoController extends Controller
     public function update(Request $request, Agendamento $agendamento): RedirectResponse
     {
         $tenant = app('tenant');
-        abort_unless($agendamento->tenant_id === $tenant->id, 403);
+        TenantAccess::assertAgendamento($agendamento, $tenant);
 
         $request->merge([
             'cliente_telefone' => preg_replace('/\D+/', '', (string) $request->input('cliente_telefone')),
@@ -210,7 +229,7 @@ class AgendamentoController extends Controller
 
     public function cancelar(Agendamento $agendamento): RedirectResponse
     {
-        abort_unless($agendamento->tenant_id === app('tenant')->id, 403);
+        TenantAccess::assertAgendamento($agendamento, app('tenant'));
         $this->agendamentoService->cancelar($agendamento);
 
         return back()->with('success', 'Agendamento cancelado.');
@@ -218,7 +237,7 @@ class AgendamentoController extends Controller
 
     public function concluir(Agendamento $agendamento): RedirectResponse
     {
-        abort_unless($agendamento->tenant_id === app('tenant')->id, 403);
+        TenantAccess::assertAgendamento($agendamento, app('tenant'));
         $agendamento->update(['status' => 'concluido']);
 
         return back()->with('success', 'Agendamento concluído.');
@@ -226,7 +245,7 @@ class AgendamentoController extends Controller
 
     public function marcarNoShow(Agendamento $agendamento): RedirectResponse
     {
-        abort_unless($agendamento->tenant_id === app('tenant')->id, 403);
+        TenantAccess::assertAgendamento($agendamento, app('tenant'));
         $agendamento->update(['no_show' => true, 'status' => 'concluido']);
 
         return back()->with('success', 'Ausência registrada.');
@@ -234,7 +253,7 @@ class AgendamentoController extends Controller
 
     public function gerarSinal(Request $request, Agendamento $agendamento, AsaasService $asaas): RedirectResponse
     {
-        abort_unless($agendamento->tenant_id === app('tenant')->id, 403);
+        TenantAccess::assertAgendamento($agendamento, app('tenant'));
         $data = $request->validate(['valor' => ['required', 'numeric', 'min:1', 'max:9999']]);
 
         try {
@@ -274,7 +293,7 @@ class AgendamentoController extends Controller
     {
         $tenant = app('tenant');
 
-        $query = Agendamento::where('tenant_id', $tenant->id)
+        $query = TenantAccess::scopeAgendamentos(Agendamento::where('tenant_id', $tenant->id), $tenant)
             ->with(['recurso', 'profissional', 'servico'])
             ->orderBy('inicio', 'desc');
 

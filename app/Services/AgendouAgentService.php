@@ -22,6 +22,8 @@ class AgendouAgentService
     /** Confirmação textual só é permitida após a reserva gravada neste turno. */
     private bool $agendamentoCriadoNesteTurno = false;
 
+    private ?int $agendamentoCriadoId = null;
+
     public function __construct(
         private AgendamentoService $agendamentoService,
         private AiOrchestrator $ai,
@@ -37,6 +39,7 @@ class AgendouAgentService
         $this->currentCliente = $clienteInfo;
         $this->transferir = false;
         $this->agendamentoCriadoNesteTurno = false;
+        $this->agendamentoCriadoId = null;
 
         $hoje = Carbon::now('America/Sao_Paulo');
 
@@ -204,6 +207,7 @@ class AgendouAgentService
             'resposta' => $resposta ?: 'Desculpe, não consegui processar sua mensagem. Tente novamente.',
             'transferir' => $this->transferir,
             'usage' => $totalUsage,
+            'agendamento_id' => $this->agendamentoCriadoId,
         ];
     }
 
@@ -270,6 +274,7 @@ class AgendouAgentService
             ]));
 
             $this->agendamentoCriadoNesteTurno = true;
+            $this->agendamentoCriadoId = $agendamento->id;
 
             return ['sucesso' => true, 'agendamento_id' => $agendamento->id];
         } catch (HorarioIndisponivelException $e) {

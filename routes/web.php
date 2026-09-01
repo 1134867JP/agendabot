@@ -83,7 +83,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('agendamentos/{agendamento}', [Tenant\AgendamentoController::class, 'destroy'])->middleware(['tenant.admin', 'password.confirm'])->name('agendamentos.destroy');
 
         // Analytics
-        Route::get('analytics', [Tenant\AnalyticsController::class, 'index'])->name('analytics');
+        Route::get('analytics', [Tenant\AnalyticsController::class, 'index'])->middleware('tenant.admin')->name('analytics');
         Route::post('lista-espera', [Tenant\WaitlistController::class, 'store'])->name('waitlist.store');
         Route::delete('lista-espera/{waitlistEntry}', [Tenant\WaitlistController::class, 'destroy'])->name('waitlist.destroy');
         Route::patch('agendamentos/{agendamento}/no-show', [Tenant\AgendamentoController::class, 'marcarNoShow'])->name('agendamentos.no-show');
@@ -138,9 +138,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('conversas/{conversa}/marcar-lida', [ConversaController::class, 'marcarLida'])->name('conversas.marcar-lida');
         Route::patch('conversas/{conversa}/cliente/nome', [ConversaController::class, 'atualizarNomeCliente'])->name('conversas.cliente.nome');
         Route::post('conversas/iniciar', [ConversaController::class, 'iniciar'])->name('conversas.iniciar');
-        Route::get('conversas/sincronizacao/status', [ConversaController::class, 'statusSincronizacao'])->name('conversas.sincronizacao.status');
-        Route::post('conversas/sincronizar', [ConversaController::class, 'sincronizar'])->name('conversas.sincronizar');
-        Route::post('conversas/sincronizacao/cancelar', [ConversaController::class, 'cancelarSincronizacao'])->name('conversas.sincronizacao.cancelar');
+        Route::get('conversas/sincronizacao/status', [ConversaController::class, 'statusSincronizacao'])->middleware('tenant.admin')->name('conversas.sincronizacao.status');
+        Route::post('conversas/sincronizar', [ConversaController::class, 'sincronizar'])->middleware('tenant.admin')->name('conversas.sincronizar');
+        Route::post('conversas/sincronizacao/cancelar', [ConversaController::class, 'cancelarSincronizacao'])->middleware('tenant.admin')->name('conversas.sincronizacao.cancelar');
         Route::get('conversas/{conversa}/mensagens', [ConversaController::class, 'mensagens'])->name('conversas.mensagens');
         Route::get('conversas/{conversa}/mensagens/{mensagem}/media', [ConversaController::class, 'media'])->name('conversas.media');
         Route::post('conversas/{conversa}/assumir', [ConversaController::class, 'assumir'])->name('conversas.assumir');
