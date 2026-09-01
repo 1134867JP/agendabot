@@ -99,10 +99,14 @@ class EquipeController extends Controller
         $tenant->users()->detach($user->id);
 
         // Remove a conta se não pertence a mais nenhum tenant
-        if ($user->tenants()->count() === 0) {
+        $contaExcluida = $user->tenants()->count() === 0;
+
+        if ($contaExcluida) {
             $user->delete();
         }
 
-        return back()->with('success', 'Usuário removido da equipe.');
+        return back()->with('success', $contaExcluida
+            ? 'Atendente e login excluídos.'
+            : 'Atendente removido deste estabelecimento.');
     }
 }
