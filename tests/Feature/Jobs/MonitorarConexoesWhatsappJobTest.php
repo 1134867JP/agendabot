@@ -5,6 +5,8 @@ namespace Tests\Feature\Jobs;
 use App\Jobs\MonitorarConexoesWhatsappJob;
 use App\Jobs\SincronizarConversasWhatsappJob;
 use App\Models\Tenant;
+use App\Services\EvolutionApiService;
+use App\Services\WhatsAppSyncState;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -33,8 +35,8 @@ class MonitorarConexoesWhatsappJobTest extends TestCase
         ]);
 
         app(MonitorarConexoesWhatsappJob::class)->handle(
-            app(\App\Services\EvolutionApiService::class),
-            app(\App\Services\WhatsAppSyncState::class),
+            app(EvolutionApiService::class),
+            app(WhatsAppSyncState::class),
         );
 
         $this->assertTrue($connected->fresh()->whatsapp_conectado);
