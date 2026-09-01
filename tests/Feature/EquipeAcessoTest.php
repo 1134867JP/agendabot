@@ -75,4 +75,45 @@ class EquipeAcessoTest extends TestCase
             'ativo' => true,
         ]);
     }
+
+    public function test_admin_pode_criar_e_excluir_login_de_atendente(): void
+    {
+        $admin = User::factory()->create();
+        $tenant = Tenant::create([
+            'nome' => 'Equipe Login',
+            'slug' => 'equipe-login',
+            'tipo_servico' => 'barbeiro',
+            'ativo' => true,
+            'subscription_status' => 'trial',
+            'trial_ends_at' => now()->addDays(14),
+        ]);
+        $tenant->users()->attach($admin->id, ['papel' => 'admin', 'ativo' => true]);
+
+        $this->actingAs($admin)->withSession(['tenant_id' => $tenant->id])
+            ->post(route('tenant.equipe.store'), [
+                'name' => 'Ana Atendente',
+                'email' => 'ana@example.test',
+                'password' => 'Senha-provisoria-123',
+                'papel' => 'operador',
+            ])
+            ->assertRedirect();
+
+        $atendente = User::where('email', 'ana@example.test')->firstOrFail();
+        $this->assertDatabaseHas('tenant_users', [
+            'tenant_id' => $tenant->id,
+            'user_id' => $atendente->id,
+            'papel' => 'operador',
+            'ativo' => true,
+        ]);
+
+        $this->actingAs($admin)->withSession(['tenant_id' => $tenant->id])
+            ->delete(route('tenant.equipe.destroy', $atendente))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('tenant_users', [
+            'tenant_id' => $tenant->id,
+            'user_id' => $atendente->id,
+        ]);
+        $this->assertDatabaseMissing('users', ['id' => $atendente->id]);
+    }
 }
