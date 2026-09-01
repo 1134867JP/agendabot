@@ -53,6 +53,8 @@ function fmtData(iso: string) {
 
 export default function Equipe({ usuarios, meu_id }: Props) {
     const [showForm, setShowForm] = useState(false);
+    const [senhaVisivel, setSenhaVisivel] = useState(false);
+    const [acessoCriado, setAcessoCriado] = useState<{ name: string; email: string; password: string } | null>(null);
     const { confirm, modal: confirmModal } = useConfirm();
 
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -62,18 +64,34 @@ export default function Equipe({ usuarios, meu_id }: Props) {
         papel:    'operador' as 'admin' | 'operador',
     });
 
+    const gerarSenha = () => {
+        const caracteres = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+        const senha = Array.from({ length: 14 }, () => caracteres[Math.floor(Math.random() * caracteres.length)]).join('');
+        setData('password', senha);
+        setSenhaVisivel(true);
+    };
+
+    const copiar = async (texto: string) => {
+        await navigator.clipboard.writeText(texto);
+    };
+
     const salvar = (e: React.FormEvent) => {
         e.preventDefault();
         post(route('tenant.equipe.store'), {
-            onSuccess: () => { reset(); setShowForm(false); },
+            onSuccess: () => {
+                setAcessoCriado({ name: data.name, email: data.email, password: data.password });
+                reset();
+                setShowForm(false);
+                setSenhaVisivel(false);
+            },
         });
     };
 
     const remover = async (u: UsuarioEquipe) => {
         const ok = await confirm({
             title: 'Remover usuário?',
-            message: `${u.name} perderá o acesso ao painel imediatamente.`,
-            confirmLabel: 'Remover',
+            message: `${u.name} perderá o acesso imediatamente. Se este for o único estabelecimento dele, o login também será excluído.`,
+            confirmLabel: 'Excluir atendente',
             variant: 'danger',
         });
         if (ok) router.delete(route('tenant.equipe.destroy', u.id));
@@ -109,7 +127,7 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                         <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
                         </svg>
-                        Adicionar atendente
+                        Criar acesso
                     </button>
                 )}
             </div>
@@ -118,7 +136,10 @@ export default function Equipe({ usuarios, meu_id }: Props) {
             {showForm && (
                 <div className="card mb-5 p-4 sm:p-5">
                     <div className="mb-4 flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-primary">Novo atendente</h3>
+                        <div>
+                            <h3 className="text-sm font-semibold text-primary">Criar acesso para atendente</h3>
+                            <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>O e-mail será o login. Gere uma senha provisória e compartilhe-a por um canal seguro.</p>
+                        </div>
                         <button
                             onClick={() => { setShowForm(false); reset(); }}
                             className="text-xs transition-colors hover:text-[var(--text-1)]"
@@ -153,15 +174,26 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                                 {errors.email && <p className="mt-1 text-xs text-red-400">{errors.email}</p>}
                             </div>
                             <div>
-                                <label htmlFor="equipe-password" className="label mb-1">Senha</label>
-                                <input
-                                    id="equipe-password"
-                                    type="password"
-                                    value={data.password}
-                                    onChange={e => setData('password', e.target.value)}
-                                    className="input"
-                                    placeholder="Mínimo 8 caracteres"
-                                />
+                                <div className="mb-1 flex items-center justify-between gap-2">
+                                    <label htmlFor="equipe-password" className="label">Senha provisória</label>
+                                    <button type="button" onClick={gerarSenha} className="text-xs font-medium text-primary hover:opacity-80">Gerar senha segura</button>
+                                </div>
+                                <div className="relative">
+                                    <input
+                                        id="equipe-password"
+                                        type={senhaVisivel ? 'text' : 'password'}
+                                        value={data.password}
+                                        onChange={e => setData('password', e.target.value)}
+                                        className="input pr-20"
+                                        placeholder="Gere ou informe uma senha"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setSenhaVisivel(!senhaVisivel)}
+                                        className="absolute inset-y-0 right-2 px-2 text-xs font-medium"
+                                        style={{ color: 'var(--text-3)' }}
+                                    >{senhaVisivel ? 'Ocultar' : 'Ver'}</button>
+                                </div>
                                 {errors.password && <p className="mt-1 text-xs text-red-400">{errors.password}</p>}
                             </div>
                             <div>
@@ -191,10 +223,34 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                                 disabled={processing}
                                 className="btn-primary justify-center py-2 text-sm"
                             >
-                                {processing ? 'Salvando…' : 'Adicionar'}
+                                {processing ? 'Criando…' : 'Criar login'}
                             </button>
                         </div>
                     </form>
+                </div>
+            )}
+
+            {acessoCriado && (
+                <div className="card mb-5 border border-emerald-400/25 p-4 sm:p-5">
+                    <div className="flex items-start gap-3">
+                        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-500">✓</div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-primary">Acesso de {acessoCriado.name} criado</p>
+                            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>Copie os dados agora e envie ao atendente. Por segurança, esta senha não aparecerá novamente.</p>
+                            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                {[
+                                    ['Login', acessoCriado.email],
+                                    ['Senha provisória', acessoCriado.password],
+                                ].map(([rotulo, valor]) => (
+                                    <div key={rotulo} className="flex min-w-0 items-center justify-between gap-2 rounded-md px-3 py-2" style={{ background: 'var(--bg-surface-2)' }}>
+                                        <div className="min-w-0"><p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>{rotulo}</p><p className="truncate text-sm font-medium text-primary">{valor}</p></div>
+                                        <button type="button" onClick={() => copiar(valor)} className="shrink-0 text-xs font-medium text-primary hover:opacity-80">Copiar</button>
+                                    </div>
+                                ))}
+                            </div>
+                            <button type="button" onClick={() => setAcessoCriado(null)} className="mt-3 text-xs font-medium" style={{ color: 'var(--text-3)' }}>Já copiei, ocultar dados</button>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -245,12 +301,13 @@ export default function Equipe({ usuarios, meu_id }: Props) {
                                         </button>
                                         <button
                                             onClick={() => remover(u)}
-                                            title="Remover da equipe"
-                                            className="flex h-10 w-10 items-center justify-center rounded-md text-red-400/60 transition-colors hover:bg-red-400/10 hover:text-red-400"
+                                            title="Excluir atendente"
+                                            className="flex h-10 items-center justify-center rounded-md px-3 text-xs font-medium text-red-400/70 transition-colors hover:bg-red-400/10 hover:text-red-400"
                                         >
                                             <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                 <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>
                                             </svg>
+                                            <span className="ml-1.5">Excluir</span>
                                         </button>
                                     </>}
                                 </div>
