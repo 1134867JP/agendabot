@@ -86,7 +86,7 @@ export default function AgendamentosTable({ agendamentos, filtros }: Props) {
                                                 <div className="font-medium text-primary">{agendamento.cliente_nome}</div>
                                                 <div className="mt-0.5 text-xs text-muted">{agendamento.cliente_telefone}</div>
                                             </td>
-                                            <td className="px-4 py-3 text-secondary">{agendamento.recurso.nome}</td>
+                                            <td className="px-4 py-3 text-secondary">{agendamento.recurso?.nome ?? '—'}</td>
                                             <td className="whitespace-nowrap px-4 py-3 text-secondary">{fmt(agendamento.inicio)}</td>
                                             <td className="whitespace-nowrap px-4 py-3 text-secondary">{fmt(agendamento.fim)}</td>
                                             <td className="px-4 py-3">{badge(agendamento.status)}</td>
@@ -118,7 +118,7 @@ export default function AgendamentosTable({ agendamentos, filtros }: Props) {
                                 <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
                                     <div className="col-span-2">
                                         <dt className="label">Recurso</dt>
-                                        <dd className="mt-1 text-sm text-secondary">{agendamento.recurso.nome}</dd>
+                                        <dd className="mt-1 text-sm text-secondary">{agendamento.recurso?.nome ?? '—'}</dd>
                                     </div>
                                     <div>
                                         <dt className="label">Início</dt>
