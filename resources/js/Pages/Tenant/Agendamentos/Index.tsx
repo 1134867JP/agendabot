@@ -11,11 +11,15 @@ interface Props extends PageProps {
     agendamentos: PaginatedData<Agendamento>;
     recursos: Recurso[];
     profissionais: { id: number; nome: string }[];
+    agenda: { profissional: string; profissionais: string; recurso: string; recursos: string; modo: 'profissional' | 'recurso' | 'combinada' };
     servicos: {
         id: number;
         nome: string;
         duracao_minutos: number;
         profissional_ids: number[];
+        recurso_ids: number[];
+        requer_profissional: boolean;
+        requer_recurso: boolean;
     }[];
     clienteInicial: { nome: string; telefone: string } | null;
     filtros: {
@@ -487,17 +491,19 @@ function NovaReservaModal({
     recursos,
     profissionais,
     servicos,
+    agenda,
     clienteInicial,
     onClose,
 }: {
     recursos: Recurso[];
     profissionais: Props["profissionais"];
     servicos: Props["servicos"];
+    agenda: Props['agenda'];
     clienteInicial: Props["clienteInicial"];
     onClose: () => void;
 }) {
     const primeiroProfissional = profissionais[0]?.id ?? "";
-    const primeiroRecurso = primeiroProfissional ? "" : (recursos[0]?.id ?? "");
+    const primeiroRecurso = recursos[0]?.id ?? "";
     const { data, setData, post, processing, errors } = useForm({
         recurso_id: primeiroRecurso as number | string,
         profissional_id: primeiroProfissional as number | string,
@@ -552,49 +558,13 @@ function NovaReservaModal({
         }
     };
 
-    const selecionarResponsavel = (valor: string) => {
-        const [tipo, id] = valor.split(":");
-        const responsavelId = Number(id);
-
-        if (tipo === "profissional") {
-            setData((atual) => ({
-                ...atual,
-                profissional_id: responsavelId,
-                recurso_id: "",
-                servico_id: atual.servico_id
-                    && servicos.find((servico) => servico.id === Number(atual.servico_id))
-                        ?.profissional_ids.some((profissionalId) => profissionalId === responsavelId)
-                        ? atual.servico_id
-                        : "",
-            }));
-        } else {
-            setData((atual) => ({
-                ...atual,
-                profissional_id: "",
-                recurso_id: responsavelId,
-                servico_id: "",
-            }));
-        }
-
-        buscarSlots(
-            tipo as "recurso" | "profissional",
-            responsavelId,
-            datePart(data.inicio),
-        );
-    };
-
-    const responsavelSelecionado = data.profissional_id
-        ? `profissional:${data.profissional_id}`
-        : data.recurso_id
-          ? `recurso:${data.recurso_id}`
-          : "";
-    const servicosDisponiveis = data.profissional_id
-        ? servicos.filter(
-              (servico) =>
-                  servico.profissional_ids.length === 0
-                  || servico.profissional_ids.includes(Number(data.profissional_id)),
-          )
-        : [];
+    const servicoSelecionado = servicos.find(servico => servico.id === Number(data.servico_id));
+    const precisaProfissional = servicoSelecionado?.requer_profissional ?? agenda.modo !== 'recurso';
+    const precisaRecurso = servicoSelecionado?.requer_recurso ?? agenda.modo === 'recurso';
+    const servicosDisponiveis = servicos.filter((servico) =>
+        (!data.profissional_id || servico.profissional_ids.length === 0 || servico.profissional_ids.includes(Number(data.profissional_id)))
+        && (!data.recurso_id || servico.recurso_ids.length === 0 || servico.recurso_ids.includes(Number(data.recurso_id))),
+    );
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -640,54 +610,7 @@ function NovaReservaModal({
                 </div>
 
                 <form onSubmit={submit} className="space-y-4">
-                    <div>
-                        <label
-                            className="label mb-1"
-                            htmlFor="nova-reserva-responsavel"
-                        >
-                            Profissional ou recurso
-                        </label>
-                        <select
-                            id="nova-reserva-responsavel"
-                            value={responsavelSelecionado}
-                            onChange={(e) => selecionarResponsavel(e.target.value)}
-                            className="input"
-                            required
-                        >
-                            <option value="" disabled>Selecione</option>
-                            {profissionais.length > 0 && (
-                                <optgroup label="Profissionais">
-                                    {profissionais.map((profissional) => (
-                                        <option
-                                            key={`profissional-${profissional.id}`}
-                                            value={`profissional:${profissional.id}`}
-                                        >
-                                            {profissional.nome}
-                                        </option>
-                                    ))}
-                                </optgroup>
-                            )}
-                            {recursos.length > 0 && (
-                                <optgroup label="Recursos">
-                                    {recursos.map((recurso) => (
-                                        <option
-                                            key={`recurso-${recurso.id}`}
-                                            value={`recurso:${recurso.id}`}
-                                        >
-                                            {recurso.nome}
-                                        </option>
-                                    ))}
-                                </optgroup>
-                            )}
-                        </select>
-                        {(errors.profissional_id || errors.recurso_id) && (
-                            <p className="mt-1 text-xs text-red-400">
-                                {errors.profissional_id || errors.recurso_id}
-                            </p>
-                        )}
-                    </div>
-
-                    {data.profissional_id && (
+                    {servicos.length > 0 && (
                         <div>
                             <label className="label mb-1" htmlFor="nova-reserva-servico">
                                 Serviço
@@ -703,7 +626,7 @@ function NovaReservaModal({
                                 }
                                 className="input"
                             >
-                                <option value="">Sem serviço definido</option>
+                                <option value="">Selecione o serviço</option>
                                 {servicosDisponiveis.map((servico) => (
                                     <option key={servico.id} value={servico.id}>
                                         {servico.nome} · {servico.duracao_minutos} min
@@ -715,6 +638,35 @@ function NovaReservaModal({
                                     {errors.servico_id}
                                 </p>
                             )}
+                        </div>
+                    )}
+
+                    {precisaProfissional && (
+                        <div>
+                            <label className="label mb-1" htmlFor="nova-reserva-profissional">{agenda.profissional}</label>
+                            <select id="nova-reserva-profissional" value={data.profissional_id} onChange={e => {
+                                const profissional_id = e.target.value ? Number(e.target.value) : '';
+                                setData('profissional_id', profissional_id);
+                                if (datePart(data.inicio) && profissional_id) buscarSlots('profissional', profissional_id, datePart(data.inicio));
+                            }} className="input" required>
+                                <option value="">Selecione</option>
+                                {profissionais.map(profissional => <option key={profissional.id} value={profissional.id}>{profissional.nome}</option>)}
+                            </select>
+                            {errors.profissional_id && <p className="mt-1 text-xs text-red-400">{errors.profissional_id}</p>}
+                        </div>
+                    )}
+                    {precisaRecurso && (
+                        <div>
+                            <label className="label mb-1" htmlFor="nova-reserva-recurso">{agenda.recurso}</label>
+                            <select id="nova-reserva-recurso" value={data.recurso_id} onChange={e => {
+                                const recurso_id = e.target.value ? Number(e.target.value) : '';
+                                setData('recurso_id', recurso_id);
+                                if (datePart(data.inicio) && recurso_id && !precisaProfissional) buscarSlots('recurso', recurso_id, datePart(data.inicio));
+                            }} className="input" required>
+                                <option value="">Selecione</option>
+                                {recursos.map(recurso => <option key={recurso.id} value={recurso.id}>{recurso.nome}</option>)}
+                            </select>
+                            {errors.recurso_id && <p className="mt-1 text-xs text-red-400">{errors.recurso_id}</p>}
                         </div>
                     )}
 
@@ -922,12 +874,13 @@ export default function AgendamentosIndex({
     recursos,
     profissionais,
     servicos,
+    agenda,
     clienteInicial,
     filtros,
 }: Props) {
     const [modalAberto, setModalAberto] = useState(false);
     const podeCriarReserva = recursos.length > 0 || profissionais.length > 0;
-    const rotaConfiguracaoAgenda = route(tenant.tipo_servico === "quadra" ? "tenant.recursos.index" : "tenant.profissionais.index");
+    const rotaConfiguracaoAgenda = route(agenda.modo === "recurso" ? "tenant.recursos.index" : "tenant.profissionais.index");
 
     useEffect(() => {
         if (podeCriarReserva && new URLSearchParams(window.location.search).get("novo") === "1") {
@@ -1408,6 +1361,7 @@ export default function AgendamentosIndex({
                     recursos={recursos}
                     profissionais={profissionais}
                     servicos={servicos}
+                    agenda={agenda}
                     clienteInicial={clienteInicial}
                     onClose={() => setModalAberto(false)}
                 />
