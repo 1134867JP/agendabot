@@ -17,12 +17,17 @@ interface Servico {
     valor_min: number | null;
     valor_max: number | null;
     duracao_minutos: number;
+    requer_profissional: boolean;
+    requer_recurso: boolean;
     requer_avaliacao: boolean;
     ativo: boolean;
+    recursos: { id: number; nome: string }[];
 }
 
 interface Props extends PageProps {
     servicos: Servico[];
+    recursos: { id: number; nome: string }[];
+    agenda: { profissional: string; profissionais: string; recurso: string; recursos: string; modo: 'profissional' | 'recurso' | 'combinada' };
 }
 
 const DURACOES = [15, 20, 30, 45, 60, 90, 120];
@@ -43,13 +48,60 @@ function faixaValor(s: Servico): string {
 
 // ─── Formulário novo serviço (inline) ────────────────────────────────────────
 
-function NovoServicoForm({ onClose }: { onClose: () => void }) {
+function RequisitosAgenda({
+    data,
+    setData,
+    agenda,
+    recursos,
+}: {
+    data: { requer_profissional: boolean; requer_recurso: boolean; recurso_ids: number[] };
+    setData: (key: 'requer_profissional' | 'requer_recurso' | 'recurso_ids', value: boolean | number[]) => void;
+    agenda: Props['agenda'];
+    recursos: Props['recursos'];
+}) {
+    const alternarRecurso = (id: number) => setData('recurso_ids', data.recurso_ids.includes(id)
+        ? data.recurso_ids.filter(item => item !== id)
+        : [...data.recurso_ids, id]);
+
+    return (
+        <fieldset className="rounded-lg p-3.5" style={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border)' }}>
+            <legend className="px-1 text-xs font-semibold text-primary">O que este serviço precisa?</legend>
+            <p className="mb-3 text-xs" style={{ color: 'var(--text-3)' }}>O Agendou mostra apenas as escolhas necessárias no momento do agendamento.</p>
+            <div className="space-y-2.5">
+                <Toggle checked={data.requer_profissional} onChange={value => setData('requer_profissional', value)} label={`Precisa de ${agenda.profissional.toLowerCase()}`} />
+                <Toggle checked={data.requer_recurso} onChange={value => setData('requer_recurso', value)} label={`Precisa de ${agenda.recurso.toLowerCase()}`} />
+            </div>
+            {data.requer_recurso && (
+                <div className="mt-3 border-t pt-3" style={{ borderColor: 'var(--border)' }}>
+                    <p className="mb-2 text-xs font-medium text-primary">Onde este serviço pode acontecer?</p>
+                    {recursos.length === 0 ? (
+                        <p className="text-xs text-amber-600 dark:text-amber-400">Cadastre {agenda.recursos.toLowerCase()} antes de ativar esta exigência.</p>
+                    ) : (
+                        <div className="grid gap-2 sm:grid-cols-2">
+                            {recursos.map(recurso => (
+                                <label key={recurso.id} className="flex min-h-10 cursor-pointer items-center gap-2 rounded-md px-2.5 text-sm" style={{ background: 'var(--bg-app)' }}>
+                                    <input type="checkbox" checked={data.recurso_ids.includes(recurso.id)} onChange={() => alternarRecurso(recurso.id)} className="rounded" />
+                                    {recurso.nome}
+                                </label>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+        </fieldset>
+    );
+}
+
+function NovoServicoForm({ onClose, agenda, recursos }: { onClose: () => void; agenda: Props['agenda']; recursos: Props['recursos'] }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         nome: '',
         descricao: '',
         valor_min: '',
         valor_max: '',
         duracao_minutos: 30,
+        requer_profissional: agenda.modo !== 'recurso',
+        requer_recurso: agenda.modo === 'recurso',
+        recurso_ids: [],
         requer_avaliacao: false,
         ativo: true,
     });
@@ -130,6 +182,8 @@ function NovoServicoForm({ onClose }: { onClose: () => void }) {
                     </div>
                 </div>
 
+                <RequisitosAgenda data={data} setData={setData} agenda={agenda} recursos={recursos} />
+
                 <Toggle
                     checked={data.requer_avaliacao}
                     onChange={v => setData('requer_avaliacao', v)}
@@ -154,9 +208,13 @@ function NovoServicoForm({ onClose }: { onClose: () => void }) {
 function EditarServicoForm({
     servico,
     onClose,
+    agenda,
+    recursos,
 }: {
     servico: Servico;
     onClose: () => void;
+    agenda: Props['agenda'];
+    recursos: Props['recursos'];
 }) {
     const { data, setData, put, processing, errors } = useForm({
         nome: servico.nome,
@@ -164,6 +222,9 @@ function EditarServicoForm({
         valor_min: servico.valor_min?.toString() ?? '',
         valor_max: servico.valor_max?.toString() ?? '',
         duracao_minutos: servico.duracao_minutos,
+        requer_profissional: servico.requer_profissional,
+        requer_recurso: servico.requer_recurso,
+        recurso_ids: servico.recursos.map(recurso => recurso.id),
         requer_avaliacao: servico.requer_avaliacao,
         ativo: servico.ativo,
     });
@@ -249,6 +310,8 @@ function EditarServicoForm({
                     </div>
                 </div>
 
+                <RequisitosAgenda data={data} setData={setData} agenda={agenda} recursos={recursos} />
+
                 <Toggle
                     checked={data.requer_avaliacao}
                     onChange={v => setData('requer_avaliacao', v)}
@@ -287,7 +350,7 @@ function EditarServicoForm({
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function ServicosIndex({ servicos }: Props) {
+export default function ServicosIndex({ servicos, recursos, agenda }: Props) {
     const [novoAberto, setNovoAberto] = useState(false);
     const [editando, setEditando] = useState<number | null>(null);
 
@@ -300,6 +363,9 @@ export default function ServicosIndex({ servicos }: Props) {
                 valor_min: s.valor_min?.toString() ?? '',
                 valor_max: s.valor_max?.toString() ?? '',
                 duracao_minutos: s.duracao_minutos,
+                requer_profissional: s.requer_profissional,
+                requer_recurso: s.requer_recurso,
+                recurso_ids: s.recursos.map(recurso => recurso.id),
                 requer_avaliacao: s.requer_avaliacao,
                 ativo: !s.ativo,
             },
@@ -325,7 +391,7 @@ export default function ServicosIndex({ servicos }: Props) {
             <div className="space-y-3">
                 {/* Formulário novo serviço inline */}
                 {novoAberto && (
-                    <NovoServicoForm onClose={() => setNovoAberto(false)} />
+                    <NovoServicoForm onClose={() => setNovoAberto(false)} agenda={agenda} recursos={recursos} />
                 )}
 
                 {servicos.length === 0 && !novoAberto && (
@@ -344,6 +410,8 @@ export default function ServicosIndex({ servicos }: Props) {
                             key={s.id}
                             servico={s}
                             onClose={() => setEditando(null)}
+                            agenda={agenda}
+                            recursos={recursos}
                         />
                     ) : (
                         <div key={s.id} className="card overflow-hidden">
@@ -365,9 +433,11 @@ export default function ServicosIndex({ servicos }: Props) {
                                         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
                                             <span>{s.duracao_minutos} min</span>
                                             <span>{faixaValor(s)}</span>
-                                            {s.requer_avaliacao && (
-                                                <StatusBadge tone="info">Requer avaliação</StatusBadge>
-                                            )}
+                            {s.requer_avaliacao && (
+                                <StatusBadge tone="info">Requer avaliação</StatusBadge>
+                            )}
+                            {s.requer_profissional && <StatusBadge tone="neutral">{agenda.profissional}</StatusBadge>}
+                            {s.requer_recurso && <StatusBadge tone="neutral">{agenda.recurso}</StatusBadge>}
                                         </div>
                                     </div>
                                 </div>
