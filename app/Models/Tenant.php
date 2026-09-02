@@ -125,13 +125,48 @@ class Tenant extends Model
     }
 
     /**
-     * Quadras, arenas e societies organizam a agenda por espaço físico, não por
-     * profissional. Manter essa decisão no domínio evita que uma tela sem
-     * recursos faça fallback silencioso para profissionais antigos.
+     * O motor de agenda é único, mas cada negócio usa uma linguagem e uma
+     * combinação diferente de disponibilidade. A configuração fica no tenant
+     * para que o produto não dependa de papéis ou segmentos fixos.
      */
+    public function agendaConfig(): array
+    {
+        $defaultMode = match ($this->tipo_servico) {
+            'quadra' => 'recurso',
+            'clinica', 'personalizado' => 'combinada',
+            default => 'profissional',
+        };
+        $defaults = match ($this->tipo_servico) {
+            'quadra' => ['recurso' => 'Quadra', 'recursos' => 'Quadras'],
+            'clinica' => ['recurso' => 'Sala', 'recursos' => 'Salas'],
+            default => ['recurso' => 'Recurso', 'recursos' => 'Recursos'],
+        };
+        $configuracoes = is_array($this->configuracoes) ? $this->configuracoes : [];
+        $agenda = is_array($configuracoes['agenda'] ?? null) ? $configuracoes['agenda'] : [];
+        $mode = $agenda['modo'] ?? $defaultMode;
+
+        return [
+            'modo' => in_array($mode, ['profissional', 'recurso', 'combinada'], true) ? $mode : $defaultMode,
+            'profissional' => $agenda['rotulo_profissional'] ?? 'Profissional',
+            'profissionais' => $agenda['rotulo_profissionais'] ?? 'Profissionais',
+            'recurso' => $agenda['rotulo_recurso'] ?? $defaults['recurso'],
+            'recursos' => $agenda['rotulo_recursos'] ?? $defaults['recursos'],
+        ];
+    }
+
+    public function agendaUsaProfissionais(): bool
+    {
+        return in_array($this->agendaConfig()['modo'], ['profissional', 'combinada'], true);
+    }
+
     public function agendaUsaRecursos(): bool
     {
-        return $this->tipo_servico === 'quadra';
+        return in_array($this->agendaConfig()['modo'], ['recurso', 'combinada'], true);
+    }
+
+    public function agendaUsaApenasRecursos(): bool
+    {
+        return $this->agendaConfig()['modo'] === 'recurso';
     }
 
     public function limiteProfissionais(): ?int
