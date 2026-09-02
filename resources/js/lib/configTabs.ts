@@ -24,16 +24,19 @@ const ICONS = {
     equipe:          'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
 };
 
-export function buildConfigTabs(tipo: TipoServico, isAdmin: boolean): ConfigTab[] {
+export function buildConfigTabs(tipo: TipoServico, isAdmin: boolean, agenda?: { modo?: string; recursos?: string; profissionais?: string }): ConfigTab[] {
     const tabs: ConfigTab[] = [
         { label: 'Estabelecimento', routeName: 'tenant.configuracoes.index', path: '/painel/configuracoes', icon: ICONS.estabelecimento },
     ];
 
-    if (usaRecursos(tipo)) {
-        tabs.push({ label: rotuloRecursos(tipo), routeName: 'tenant.recursos.index', path: '/painel/recursos', icon: ICONS.recursos });
+    const exibeRecursos = agenda ? ['recurso', 'combinada'].includes(agenda.modo ?? '') : usaRecursos(tipo);
+    const exibeProfissionais = agenda ? ['profissional', 'combinada'].includes(agenda.modo ?? '') : usaProfissionais(tipo);
+
+    if (exibeRecursos) {
+        tabs.push({ label: agenda?.recursos ?? rotuloRecursos(tipo), routeName: 'tenant.recursos.index', path: '/painel/recursos', icon: ICONS.recursos });
     }
-    if (usaProfissionais(tipo)) {
-        tabs.push({ label: 'Profissionais', routeName: 'tenant.profissionais.index', path: '/painel/profissionais', icon: ICONS.profissionais });
+    if (exibeProfissionais) {
+        tabs.push({ label: agenda?.profissionais ?? 'Profissionais', routeName: 'tenant.profissionais.index', path: '/painel/profissionais', icon: ICONS.profissionais });
         tabs.push({ label: 'Serviços',      routeName: 'tenant.servicos.index',      path: '/painel/servicos',      icon: ICONS.servicos });
     }
 
