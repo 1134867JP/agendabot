@@ -32,6 +32,7 @@ interface EntidadeAgenda {
 
 interface Props extends PageProps {
     tenant: Tenant;
+    agenda: { profissional: string; profissionais: string; recurso: string; recursos: string; modo: 'profissional' | 'recurso' | 'combinada' };
     recursos: Recurso[];
     profissionais: { id: number; nome: string }[];
     servicos: ServicoAgenda[];
@@ -44,6 +45,9 @@ interface ServicoAgenda {
     valor_min: number | string | null;
     valor_max: number | string | null;
     profissional_ids: number[];
+    recurso_ids: number[];
+    requer_profissional: boolean;
+    requer_recurso: boolean;
 }
 
 interface ClienteBusca {
@@ -807,8 +811,8 @@ function DetalheModal({
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function Agenda({ tenant, recursos, profissionais, servicos }: Props) {
-    const usaRecursos = tenant.tipo_servico === 'quadra';
+export default function Agenda({ tenant, agenda, recursos, profissionais, servicos }: Props) {
+    const usaRecursos = agenda.modo === 'recurso';
     const entidades = useMemo<EntidadeAgenda[]>(() =>
         usaRecursos
             ? recursos.map((r, index) => ({ id: r.id, nome: r.nome, tipo: 'recurso' as const, cor: PROFESSIONAL_COLORS[index % PROFESSIONAL_COLORS.length].accent }))
@@ -836,6 +840,7 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
     const [clienteSelecionadoId, setClienteSelecionadoId] = useState<number | null>(null);
     const clienteBuscaTimer = useRef<number | null>(null);
     const [novoProfissionalId, setNovoProfissionalId] = useState<number>(() => profissionais[0]?.id ?? 0);
+    const [novoRecursoId, setNovoRecursoId] = useState<number>(() => recursos[0]?.id ?? 0);
     const [salvando, setSalvando]     = useState(false);
     const [erroReserva, setErroReserva] = useState<string | null>(null);
     const telefoneValido = isValidPhone(novaForm.tel);
@@ -891,10 +896,9 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
     );
 
     const servicosDisponiveis = useMemo(() => servicos.filter(servico =>
-        tipoEntidade === 'recurso'
-        || servico.profissional_ids.length === 0
-        || servico.profissional_ids.includes(novoProfissionalId)
-    ), [novoProfissionalId, servicos, tipoEntidade]);
+        (tipoEntidade === 'recurso' || servico.profissional_ids.length === 0 || servico.profissional_ids.includes(novoProfissionalId))
+        && (tipoEntidade === 'profissional' || servico.recurso_ids.length === 0 || servico.recurso_ids.includes(novoRecursoId))
+    ), [novoProfissionalId, novoRecursoId, servicos, tipoEntidade]);
 
     const atualizarServico = (servicoId: number) => {
         const servico = servicos.find(item => item.id === servicoId);
@@ -1007,7 +1011,10 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
     };
 
     const criarReserva = () => {
-        if (!modalNova || (tipoEntidade === 'recurso' ? !entidadeId : !novoProfissionalId)) return;
+        const servico = servicos.find(item => item.id === novaForm.servicoId);
+        const requerProfissional = servico?.requer_profissional ?? tipoEntidade === 'profissional';
+        const requerRecurso = servico?.requer_recurso ?? tipoEntidade === 'recurso';
+        if (!modalNova || (requerProfissional && !novoProfissionalId) || (requerRecurso && !(tipoEntidade === 'recurso' ? entidadeId : novoRecursoId))) return;
         if (!telefoneValido) {
             setErroReserva('Informe um telefone válido com DDD, por exemplo: 54999999999.');
             return;
@@ -1025,9 +1032,11 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
             servico_id:        novaForm.servicoId || undefined,
             notificar_cliente: false as boolean,
         };
-        const payload = tipoEntidade === 'recurso'
-            ? { ...base, recurso_id: entidadeId }
-            : { ...base, profissional_id: novoProfissionalId };
+        const payload = {
+            ...base,
+            ...(requerProfissional ? { profissional_id: novoProfissionalId } : {}),
+            ...(requerRecurso ? { recurso_id: tipoEntidade === 'recurso' ? entidadeId : novoRecursoId } : {}),
+        };
 
         router.post(route('tenant.agendamentos.store'), payload, {
             onSuccess: () => {
@@ -1597,6 +1606,19 @@ export default function Agenda({ tenant, recursos, profissionais, servicos }: Pr
                                 ) : (
                                     <div className="rounded-xl px-3 py-2.5 text-xs" style={{ background: 'var(--bg-surface-2)', color: 'var(--text-3)', border: '1px solid var(--border)' }}>
                                         Nenhum serviço disponível para este profissional. A reserva será criada sem serviço, com 30 minutos.
+                                    </div>
+                                )}
+                                {agenda.modo === 'combinada' && servicos.find(servico => servico.id === novaForm.servicoId)?.requer_recurso && (
+                                    <div>
+                                        <label className="label mb-1" htmlFor="novo-agendamento-recurso">{agenda.recurso}</label>
+                                        <select
+                                            id="novo-agendamento-recurso"
+                                            value={novoRecursoId}
+                                            onChange={e => setNovoRecursoId(Number(e.target.value))}
+                                            className="input"
+                                        >
+                                            {recursos.map(recurso => <option key={recurso.id} value={recurso.id}>{recurso.nome}</option>)}
+                                        </select>
                                     </div>
                                 )}
                                 <div className="relative">

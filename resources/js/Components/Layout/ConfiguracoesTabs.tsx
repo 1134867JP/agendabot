@@ -4,7 +4,7 @@ import { buildConfigTabs } from '@/lib/configTabs';
 
 export default function ConfiguracoesTabs() {
     const page = usePage<PageProps<{
-        currentTenant?: { tipo_servico: TipoServico } | null;
+        currentTenant?: { tipo_servico: TipoServico; agenda?: { modo?: string; recursos?: string; profissionais?: string } } | null;
         tenantPapel?: string | null;
     }>>();
     const { auth, currentTenant, tenantPapel } = page.props as typeof page.props & { tenantPapel?: string | null };
@@ -12,7 +12,7 @@ export default function ConfiguracoesTabs() {
     const tipo    = currentTenant?.tipo_servico ?? 'personalizado';
     const url     = page.url;
 
-    const tabs = buildConfigTabs(tipo, isAdmin);
+    const tabs = buildConfigTabs(tipo, isAdmin, currentTenant?.agenda);
     const isActive = (path: string) => url === path || url.startsWith(path + '/');
 
     const mobileLabel = (routeName: string, label: string) => ({

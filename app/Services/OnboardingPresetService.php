@@ -29,6 +29,7 @@ class OnboardingPresetService
                 ],
                 'horarios_funcionamento_semana' => $horariosSemana,
                 'regras_agendamento' => $regras,
+                'agenda' => $this->agendaInicial($tenant),
             ]);
 
             $tenant->update([
@@ -98,6 +99,8 @@ class OnboardingPresetService
                 'valor_max' => $dados['valor'],
                 'duracao_minutos' => $dados['duracao_minutos'],
                 'ativo' => true,
+                'requer_profissional' => true,
+                'requer_recurso' => false,
             ],
         );
 
@@ -135,6 +138,16 @@ class OnboardingPresetService
                 ],
             );
         }
+    }
+
+    private function agendaInicial(Tenant $tenant): array
+    {
+        return match ($tenant->tipo_servico) {
+            'quadra' => ['modo' => 'recurso', 'rotulo_recurso' => 'Quadra', 'rotulo_recursos' => 'Quadras'],
+            'clinica' => ['modo' => 'combinada', 'rotulo_recurso' => 'Sala', 'rotulo_recursos' => 'Salas'],
+            'personalizado' => ['modo' => 'combinada'],
+            default => ['modo' => 'profissional'],
+        };
     }
 
     private function diasDoPreset(string $preset): array
