@@ -41,7 +41,8 @@ class AgendamentoService
             if (! empty($dados['recurso_id'])) {
                 Recurso::where('id', $dados['recurso_id'])->where('tenant_id', $tenant->id)->firstOrFail();
                 $this->validarConflitoRecurso((int) $dados['recurso_id'], $inicio, $fim, $buffer);
-            } elseif (! empty($dados['profissional_id'])) {
+            }
+            if (! empty($dados['profissional_id'])) {
                 $profissional = Profissional::where('id', $dados['profissional_id'])
                     ->where('tenant_id', $tenant->id)
                     ->where('ativo', true)
@@ -80,7 +81,7 @@ class AgendamentoService
             $buffer = (int) $regras['buffer_entre_agendamentos_minutos'];
 
             $recursoId = $dados['recurso_id'] ?? $agendamento->recurso_id;
-            $profissionalId = $recursoId ? null : $agendamento->profissional_id;
+            $profissionalId = $dados['profissional_id'] ?? $agendamento->profissional_id;
 
             $inicio = Carbon::parse($dados['inicio'], $tz);
             $fim = Carbon::parse($dados['fim'], $tz);
@@ -105,7 +106,8 @@ class AgendamentoService
                 $updateData['valor_total'] = $recurso->valor_hora
                     ? $recurso->valor_hora * $inicio->diffInMinutes($fim) / 60
                     : null;
-            } elseif ($profissionalId) {
+            }
+            if ($profissionalId) {
                 $profissional = Profissional::where('id', $profissionalId)->where('tenant_id', $tenant->id)->firstOrFail();
                 $this->validarExpediente($profissional, $inicio, $fim, $tz);
                 $this->validarConflitoProfissional($profissionalId, $inicio, $fim, $buffer, ignorarAgendamentoId: $agendamento->id);
