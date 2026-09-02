@@ -18,25 +18,22 @@ class AgendaController extends Controller
     public function index(): Response
     {
         $tenant = app('tenant');
-        $agendaUsaRecursos = $tenant->agendaUsaRecursos();
-
         return Inertia::render('Tenant/Agenda', [
             'tenant' => $tenant,
-            'recursos' => $tenant->recursos()->where('ativo', true)->get(),
-            'profissionais' => $agendaUsaRecursos
+            'agenda' => $tenant->agendaConfig(),
+            'recursos' => $tenant->agendaUsaRecursos() ? $tenant->recursos()->where('ativo', true)->get() : collect(),
+            'profissionais' => ! $tenant->agendaUsaProfissionais()
                 ? collect()
                 : $tenant->profissionais()
                     ->where('ativo', true)
                     ->when(TenantAccess::profissionalId($tenant), fn ($query, $id) => $query->whereKey($id))
                     ->get(['id', 'nome']),
-            'servicos' => $agendaUsaRecursos
-                ? collect()
-                : $tenant->servicos()
+            'servicos' => $tenant->servicos()
                     ->where('ativo', true)
                     ->when(TenantAccess::profissionalId($tenant), fn ($query, $id) => $query->whereHas('profissionais', fn ($profissionais) => $profissionais->whereKey($id)))
-                    ->with('profissionais:id')
+                    ->with(['profissionais:id', 'recursos:id'])
                     ->orderBy('nome')
-                    ->get(['id', 'tenant_id', 'nome', 'duracao_minutos', 'valor_min', 'valor_max'])
+                    ->get(['id', 'tenant_id', 'nome', 'duracao_minutos', 'valor_min', 'valor_max', 'requer_profissional', 'requer_recurso'])
                     ->map(fn ($servico) => [
                         'id' => $servico->id,
                         'nome' => $servico->nome,
@@ -44,6 +41,9 @@ class AgendaController extends Controller
                         'valor_min' => $servico->valor_min,
                         'valor_max' => $servico->valor_max,
                         'profissional_ids' => $servico->profissionais->pluck('id')->values(),
+                        'recurso_ids' => $servico->recursos->pluck('id')->values(),
+                        'requer_profissional' => $servico->requer_profissional,
+                        'requer_recurso' => $servico->requer_recurso,
                     ]),
         ]);
     }
@@ -51,20 +51,15 @@ class AgendaController extends Controller
     public function disponibilidade(Request $request): JsonResponse
     {
         $tenant = app('tenant');
-        $agendaUsaRecursos = $tenant->agendaUsaRecursos();
-
         $tenantId = $tenant->id;
         $profissionalIdLogado = TenantAccess::profissionalId($tenant);
         $request->validate([
-            'recurso_id' => [Rule::requiredIf($agendaUsaRecursos), 'nullable', Rule::exists('recursos', 'id')->where('tenant_id', $tenantId)],
-            'profissional_id' => [Rule::prohibitedIf($agendaUsaRecursos), 'nullable', Rule::exists('profissionais', 'id')->where('tenant_id', $tenantId)],
-            'todos_profissionais' => [Rule::prohibitedIf($agendaUsaRecursos), 'nullable', 'boolean'],
+            'recurso_id' => ['nullable', Rule::exists('recursos', 'id')->where('tenant_id', $tenantId)],
+            'profissional_id' => ['nullable', Rule::exists('profissionais', 'id')->where('tenant_id', $tenantId)],
+            'todos_profissionais' => ['nullable', 'boolean'],
             'data_inicio' => ['required', 'date'],
             'data_fim' => ['required', 'date'],
         ], [
-            'recurso_id.required' => 'Selecione uma quadra para consultar a agenda.',
-            'profissional_id.prohibited' => 'A agenda deste estabelecimento é organizada por quadras.',
-            'todos_profissionais.prohibited' => 'A agenda deste estabelecimento é organizada por quadras.',
         ]);
 
         $query = Agendamento::where('tenant_id', $tenant->id)
@@ -72,7 +67,7 @@ class AgendaController extends Controller
             ->with(['profissional:id,nome', 'servico:id,nome']);
 
         if ($profissionalIdLogado) {
-            abort_if($agendaUsaRecursos, 403);
+            abort_if(! $tenant->agendaUsaProfissionais(), 403);
             $request->merge(['profissional_id' => $profissionalIdLogado, 'todos_profissionais' => false]);
         }
 
