@@ -33,6 +33,7 @@ class UpdateBotRequest extends FormRequest
             'mensagem_fora_horario' => ['nullable', 'string', 'max:500'],
             'lembrete_ativo' => ['boolean'],
             'lembrete_texto' => ['nullable', 'string', 'max:500'],
+            'lembrete_horas_antes' => ['nullable', 'integer', 'in:1,2,3,6,12,24'],
         ];
     }
 }

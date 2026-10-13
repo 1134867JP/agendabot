@@ -6,7 +6,7 @@ export default function Guest({ children }: PropsWithChildren) {
     return (
         <ForceDark>
             <div
-                className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden px-4 py-8"
+                className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-8"
                 style={{
                     background:
                         'radial-gradient(circle at 50% -20%, rgba(45,212,191,0.10), transparent 34%), var(--bg-app)',
@@ -20,7 +20,7 @@ export default function Guest({ children }: PropsWithChildren) {
                 <div className="relative w-full max-w-md">
                     <Link href={route('home')} className="mb-7 flex items-center justify-center gap-2.5">
                         <span
-                            className="flex h-9 w-9 items-center justify-center rounded-lg text-sm font-bold text-white shadow-sm"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg text-sm font-bold text-white shadow-xs"
                             style={{ background: 'var(--accent)' }}
                         >
                             A
@@ -29,7 +29,7 @@ export default function Guest({ children }: PropsWithChildren) {
                             className="text-2xl text-primary"
                             style={{ fontFamily: 'Instrument Serif, Georgia, serif', letterSpacing: '-0.02em' }}
                         >
-                            Agendou
+                            Agendabot
                         </span>
                     </Link>
 
@@ -37,7 +37,7 @@ export default function Guest({ children }: PropsWithChildren) {
                         {children}
                     </main>
 
-                    <p className="mt-5 text-center text-xs text-muted">© {new Date().getFullYear()} Agendou</p>
+                    <p className="mt-5 text-center text-xs text-muted">© {new Date().getFullYear()} Agendabot</p>
                 </div>
             </div>
         </ForceDark>

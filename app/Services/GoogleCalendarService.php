@@ -16,7 +16,7 @@ class GoogleCalendarService
         $timezone = $agendamento->tenant?->resolvedTimezone() ?? config('app.timezone');
         $payload = [
             'summary' => ($agendamento->servico?->nome ?? $agendamento->recurso?->nome ?? 'Agendamento').' — '.$agendamento->cliente_nome,
-            'description' => "Agendou #{$agendamento->id}",
+            'description' => "Agendabot #{$agendamento->id}",
             'start' => ['dateTime' => $start->toRfc3339String(), 'timeZone' => $timezone],
             'end' => ['dateTime' => $end->toRfc3339String(), 'timeZone' => $timezone],
         ];

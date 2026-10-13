@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
+use App\Jobs\EnviarLembretesJob;
 use App\Models\Agendamento;
 use App\Models\Cliente;
 use App\Models\Conversa;
 use App\Models\Tenant;
-use Carbon\Carbon;
 
 /** Executa o núcleo conversacional sem criar mensagem de saída no WhatsApp. */
 class ConversationSimulatorService
@@ -64,12 +64,6 @@ class ConversationSimulatorService
     /** Gera exatamente o texto do lembrete para inspeção, sem enfileirar ou enviar. */
     public function preverLembrete(Agendamento $agendamento): string
     {
-        $dataHora = Carbon::parse($agendamento->data_hora ?? $agendamento->inicio)->locale('pt_BR');
-        $nome = $agendamento->cliente_nome ?? $agendamento->cliente?->nome ?? 'Cliente';
-        $local = $agendamento->recurso?->nome ?? $agendamento->profissional?->nome ?? '';
-        $personalizado = $agendamento->tenant->configuracoes['lembrete_texto'] ?? null;
-        $corpo = $personalizado ? trim($personalizado)."\n\n" : "Para *confirmar*, responda: ✅ *CONFIRMO*\nPara *cancelar*, responda: ❌ *CANCELAR*\n\n";
-
-        return "👋 *Olá, {$nome}!*\n\nLembrando que você tem um agendamento *amanhã*:\n\n📅 *Data:* ".$dataHora->translatedFormat('l, d \\d\\e F')."\n⏰ *Horário:* ".$dataHora->format('H:i')."\n📍 *Local/Serviço:* {$local} — {$agendamento->tenant->nome}\n\n{$corpo}_Até amanhã!_";
+        return EnviarLembretesJob::montarMensagem($agendamento, $agendamento->tenant->configuracoes['lembrete_texto'] ?? null);
     }
 }

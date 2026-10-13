@@ -12,6 +12,7 @@ interface UsuarioEquipe {
     ativo: boolean;
     membro_desde: string;
     profissional_nome?: string | null;
+    convite_pendente: boolean;
 }
 
 interface ProfissionalDisponivel { id: number; nome: string; }
@@ -20,6 +21,7 @@ interface Props extends PageProps {
     usuarios: UsuarioEquipe[];
     meu_id: number;
     profissionais_disponiveis: ProfissionalDisponivel[];
+    email_configurado: boolean;
 }
 
 const PAPEL_LABEL: Record<string, string> = {
@@ -57,8 +59,11 @@ function fmtData(iso: string) {
     return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-export default function Equipe({ usuarios, meu_id, profissionais_disponiveis }: Props) {
+export default function Equipe({ usuarios, meu_id, profissionais_disponiveis, email_configurado }: Props) {
     const [showForm, setShowForm] = useState(false);
+    // Convite por e-mail é o padrão; senha provisória fica como alternativa
+    // (ex.: e-mail do servidor ainda não configurado).
+    const [modoAcesso, setModoAcesso] = useState<'convite' | 'senha'>(email_configurado ? 'convite' : 'senha');
     const [senhaVisivel, setSenhaVisivel] = useState(false);
     const [acessoCriado, setAcessoCriado] = useState<{ name: string; email: string; password: string } | null>(null);
     const { confirm, modal: confirmModal } = useConfirm();
@@ -86,12 +91,21 @@ export default function Equipe({ usuarios, meu_id, profissionais_disponiveis }: 
         e.preventDefault();
         post(route('tenant.equipe.store'), {
             onSuccess: () => {
-                setAcessoCriado({ name: data.name, email: data.email, password: data.password });
+                if (modoAcesso === 'senha') setAcessoCriado({ name: data.name, email: data.email, password: data.password });
                 reset();
                 setShowForm(false);
                 setSenhaVisivel(false);
             },
         });
+    };
+
+    const escolherModo = (modo: 'convite' | 'senha') => {
+        setModoAcesso(modo);
+        if (modo === 'convite') setData('password', '');
+    };
+
+    const reenviarConvite = (u: UsuarioEquipe) => {
+        router.post(route('tenant.equipe.reenviar-convite', u.id), {}, { preserveScroll: true });
     };
 
     const remover = async (u: UsuarioEquipe) => {
@@ -149,7 +163,7 @@ export default function Equipe({ usuarios, meu_id, profissionais_disponiveis }: 
                         </div>
                         <button
                             onClick={() => { setShowForm(false); reset(); }}
-                            className="text-xs transition-colors hover:text-[var(--text-1)]"
+                            className="text-xs transition-colors hover:text-primary"
                             style={{ color: 'var(--text-3)' }}
                         >✕ Cancelar</button>
                     </div>
@@ -180,6 +194,35 @@ export default function Equipe({ usuarios, meu_id, profissionais_disponiveis }: 
                                 />
                                 {errors.email && <p className="mt-1 text-xs text-red-400">{errors.email}</p>}
                             </div>
+                            <div className="sm:col-span-2">
+                                <span className="label mb-1 block">Como a pessoa vai entrar</span>
+                                <div className="grid gap-2 sm:grid-cols-2" role="radiogroup">
+                                    {([
+                                        ['convite', 'Enviar convite por e-mail', 'Ela recebe um link e cria a própria senha.'],
+                                        ['senha', 'Definir senha provisória', 'Você cria a senha e repassa para ela.'],
+                                    ] as const).map(([modo, titulo, descricao]) => (
+                                        <button
+                                            key={modo}
+                                            type="button"
+                                            role="radio"
+                                            aria-checked={modoAcesso === modo}
+                                            onClick={() => escolherModo(modo)}
+                                            className="rounded-md px-3 py-2.5 text-left transition-colors"
+                                            style={{
+                                                background: modoAcesso === modo ? 'var(--bg-surface-2)' : 'transparent',
+                                                border: `1px solid ${modoAcesso === modo ? 'var(--accent, #00a884)' : 'var(--border)'}`,
+                                            }}
+                                        >
+                                            <span className="block text-sm font-medium text-primary">{titulo}</span>
+                                            <span className="mt-0.5 block text-xs" style={{ color: 'var(--text-3)' }}>{descricao}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                                {modoAcesso === 'convite' && !email_configurado && (
+                                    <p className="mt-2 text-xs text-amber-500">O envio de e-mails ainda não está configurado no servidor: o convite não vai chegar. Use a senha provisória por enquanto.</p>
+                                )}
+                            </div>
+                            {modoAcesso === 'senha' && (
                             <div>
                                 <div className="mb-1 flex items-center justify-between gap-2">
                                     <label htmlFor="equipe-password" className="label">Senha provisória</label>
@@ -193,6 +236,7 @@ export default function Equipe({ usuarios, meu_id, profissionais_disponiveis }: 
                                         onChange={e => setData('password', e.target.value)}
                                         className="input pr-20"
                                         placeholder="Gere ou informe uma senha"
+                                        required
                                     />
                                     <button
                                         type="button"
@@ -203,6 +247,7 @@ export default function Equipe({ usuarios, meu_id, profissionais_disponiveis }: 
                                 </div>
                                 {errors.password && <p className="mt-1 text-xs text-red-400">{errors.password}</p>}
                             </div>
+                            )}
                             <div>
                                 <label htmlFor="equipe-papel" className="label mb-1">Papel</label>
                                 <select
@@ -253,7 +298,7 @@ export default function Equipe({ usuarios, meu_id, profissionais_disponiveis }: 
                                 disabled={processing}
                                 className="btn-primary justify-center py-2 text-sm"
                             >
-                                {processing ? 'Criando…' : 'Criar login'}
+                                {processing ? 'Criando…' : modoAcesso === 'convite' ? 'Enviar convite' : 'Criar login'}
                             </button>
                         </div>
                     </form>
@@ -303,7 +348,7 @@ export default function Equipe({ usuarios, meu_id, profissionais_disponiveis }: 
                                     <div className="flex items-center gap-2">
                                         <p className="truncate text-sm font-medium text-primary">{u.name}</p>
                                         {u.id === meu_id && (
-                                            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium" style={{ background: 'var(--bg-surface-2)', color: 'var(--text-3)' }}>
+                                            <span className="shrink-0 rounded-sm px-1.5 py-0.5 text-[10px] font-medium" style={{ background: 'var(--bg-surface-2)', color: 'var(--text-3)' }}>
                                                 Você
                                             </span>
                                         )}
@@ -316,13 +361,26 @@ export default function Equipe({ usuarios, meu_id, profissionais_disponiveis }: 
                                     <span className={`badge ${PAPEL_BADGE[u.papel] ?? 'badge-gray'}`}>
                                         {PAPEL_LABEL[u.papel] ?? u.papel}
                                     </span>
-                                    <span className={`badge ${u.ativo ? 'badge-green' : 'badge-gray'}`}>
-                                        {u.ativo ? 'Ativo' : 'Bloqueado'}
-                                    </span>
+                                    {u.convite_pendente && u.ativo ? (
+                                        <span className="badge badge-gray" title="Ainda não criou a senha pelo convite">Convite pendente</span>
+                                    ) : (
+                                        <span className={`badge ${u.ativo ? 'badge-green' : 'badge-gray'}`}>
+                                            {u.ativo ? 'Ativo' : 'Bloqueado'}
+                                        </span>
+                                    )}
                                     <span className="hidden text-xs sm:inline" style={{ color: 'var(--text-3)' }}>
                                         desde {fmtData(u.membro_desde)}
                                     </span>
                                     {u.id !== meu_id && <>
+                                        {u.convite_pendente && u.ativo && (
+                                            <button
+                                                onClick={() => reenviarConvite(u)}
+                                                title="Enviar um novo link para criar a senha"
+                                                className="flex h-10 items-center justify-center rounded-md px-3 text-xs font-medium text-primary transition-colors hover:bg-[var(--bg-surface-2)]"
+                                            >
+                                                Reenviar convite
+                                            </button>
+                                        )}
                                         <button
                                             onClick={() => alternarAcesso(u)}
                                             title={u.ativo ? 'Bloquear acesso' : 'Reativar acesso'}

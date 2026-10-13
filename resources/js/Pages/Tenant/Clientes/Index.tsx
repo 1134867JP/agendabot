@@ -218,7 +218,7 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
                 ) : (
                     <>
                         <div className="flex min-h-12 items-center gap-3 px-4" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
-                            <input type="checkbox" checked={todosSelecionados} onChange={alternarPagina} aria-label="Selecionar clientes desta página" className="h-4 w-4 rounded" />
+                            <input type="checkbox" checked={todosSelecionados} onChange={alternarPagina} aria-label="Selecionar clientes desta página" className="h-4 w-4 rounded-sm" />
                             <span className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>Selecionar página</span>
                         </div>
                         <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
@@ -226,7 +226,7 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
                                 const selecionado = selecionados.includes(cliente.id);
                                 return (
                                     <div key={cliente.id} className="table-row-hover flex min-h-16 items-center gap-3.5 px-4 py-3.5" style={selecionado ? { background: 'var(--accent-light)' } : undefined}>
-                                        <input type="checkbox" checked={selecionado} onChange={() => alternarCliente(cliente.id)} aria-label={`Selecionar ${cliente.nome}`} className="h-4 w-4 shrink-0 rounded" />
+                                        <input type="checkbox" checked={selecionado} onChange={() => alternarCliente(cliente.id)} aria-label={`Selecionar ${cliente.nome}`} className="h-4 w-4 shrink-0 rounded-sm" />
                                         <button type="button" onClick={() => router.visit(route('tenant.clientes.show', cliente.id))} className="flex min-w-0 flex-1 items-center gap-3.5 text-left">
                                             <Avatar nome={cliente.nome} />
                                             <div className="min-w-0 flex-1">
@@ -270,7 +270,7 @@ export default function ClientesIndex({ clientes, filtros, resumo }: Props) {
                                 <h2 className="text-lg font-semibold text-primary">Novo cliente</h2>
                                 <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>Cadastre somente o necessário para agendar ou iniciar uma conversa.</p>
                             </div>
-                            <button type="button" onClick={() => setCadastroAberto(false)} className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-[var(--bg-surface-2)]" style={{ color: 'var(--text-3)' }} aria-label="Fechar cadastro">
+                            <button type="button" onClick={() => setCadastroAberto(false)} className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-(--bg-surface-2)" style={{ color: 'var(--text-3)' }} aria-label="Fechar cadastro">
                                 <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
                             </button>
                         </div>

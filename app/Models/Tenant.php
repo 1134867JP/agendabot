@@ -206,6 +206,39 @@ class Tenant extends Model
      * Regras gerais de agendamento (antecedência, buffer, cancelamento), com defaults
      * permissivos equivalentes ao comportamento atual.
      */
+    /**
+     * Carteira Asaas do próprio estabelecimento. O sinal PIX é cobrado com
+     * split de 100% para ela: o dinheiro do cliente nunca fica na plataforma.
+     */
+    public function asaasWalletId(): ?string
+    {
+        $wallet = trim((string) (($this->configuracoes ?? [])['asaas_wallet_id'] ?? ''));
+
+        return $wallet !== '' ? $wallet : null;
+    }
+
+    /**
+     * Quantas horas antes do atendimento o lembrete sai. Barbearia marca muito
+     * para o mesmo dia, então o padrão é 2h; os demais ramos mantêm 24h.
+     */
+    public function lembreteHorasAntes(): int
+    {
+        $horas = (int) (($this->configuracoes ?? [])['lembrete_horas_antes'] ?? 0);
+
+        return $horas > 0 ? $horas : ($this->tipo_servico === 'barbeiro' ? 2 : 24);
+    }
+
+    /**
+     * Pedido de confirmação 36–48h antes. Desligado por padrão na barbearia,
+     * onde o lembrete curto já cumpre esse papel e duas mensagens incomodam.
+     */
+    public function confirmacaoAntecipadaAtiva(): bool
+    {
+        $valor = ($this->configuracoes ?? [])['confirmacao_antecipada'] ?? null;
+
+        return $valor === null ? $this->tipo_servico !== 'barbeiro' : (bool) $valor;
+    }
+
     public function regrasAgendamentoConfig(): array
     {
         return array_merge([
@@ -256,7 +289,7 @@ class Tenant extends Model
             return true;
         }
 
-        $agora = ($agora ?? Carbon::now())->copy()->setTimezone('America/Sao_Paulo');
+        $agora = ($agora ?? Carbon::now())->copy()->setTimezone($this->resolvedTimezone());
         $dia = (int) $agora->format('w'); // 0=Dom .. 6=Sáb
 
         $config = $horarios[$dia] ?? $horarios[(string) $dia] ?? null;

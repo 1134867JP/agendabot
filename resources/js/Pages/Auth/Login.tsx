@@ -27,7 +27,7 @@ export default function Login({
 
     return (
         <ForceDark>
-        <div className="flex min-h-[100dvh]" style={{ background: 'var(--bg-app)' }}>
+        <div className="flex min-h-dvh" style={{ background: 'var(--bg-app)' }}>
             <Head title="Entrar" />
 
             {/* ── Painel esquerdo — marca ─────────────────────────────────────── */}
@@ -57,7 +57,7 @@ export default function Login({
                         className="text-xl"
                         style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}
                     >
-                        Agendou
+                        Agendabot
                     </span>
                 </Link>
 
@@ -118,7 +118,7 @@ export default function Login({
 
                 {/* Rodapé esquerdo */}
                 <p className="relative text-[11px]" style={{ color: 'var(--text-3)' }}>
-                    © {new Date().getFullYear()} Agendou
+                    © {new Date().getFullYear()} Agendabot
                 </p>
             </div>
 
@@ -146,7 +146,7 @@ export default function Login({
                                 A
                             </span>
                             <span className="text-xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}>
-                                Agendou
+                                Agendabot
                             </span>
                         </div>
                     </div>
@@ -257,7 +257,7 @@ export default function Login({
                                 type="checkbox"
                                 checked={data.remember}
                                 onChange={e => setData('remember', e.target.checked as false)}
-                                className="rounded"
+                                className="rounded-sm"
                                 style={{ accentColor: INDIGO }}
                             />
                             Lembrar de mim
@@ -267,7 +267,7 @@ export default function Login({
                         <button
                             type="submit"
                             disabled={processing}
-                            className="relative mt-2 w-full overflow-hidden rounded-xl py-3 text-sm font-semibold text-white transition-all hover:brightness-110 disabled:opacity-60"
+                            className="relative w-full overflow-hidden rounded-xl py-3 text-sm font-semibold text-white transition-all hover:brightness-110 disabled:opacity-60"
                             style={{ background: INDIGO }}
                         >
                             {processing ? (

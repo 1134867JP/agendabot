@@ -5,10 +5,11 @@ import ForceDark from '@/Components/ForceDark';
 const INDIGO = '#6366F1';
 const JADE   = '#00a884';
 
-export default function ResetPassword({ token, email }: { token: string; email: string }) {
+export default function ResetPassword({ token, email, convite = false }: { token: string; email: string; convite?: boolean }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         token,
         email,
+        convite,
         password: '',
         password_confirmation: '',
     });
@@ -35,8 +36,8 @@ export default function ResetPassword({ token, email }: { token: string; email: 
 
     return (
         <ForceDark>
-        <div className="flex min-h-[100dvh]" style={{ background: 'var(--bg-app)' }}>
-            <Head title="Nova senha" />
+        <div className="flex min-h-dvh" style={{ background: 'var(--bg-app)' }}>
+            <Head title={convite ? 'Criar senha' : 'Nova senha'} />
 
             {/* ── Painel esquerdo — marca ─────────────────────────────────────── */}
             <div
@@ -48,7 +49,7 @@ export default function ResetPassword({ token, email }: { token: string; email: 
 
                 <Link href={route('home')} className="relative flex items-center gap-2.5">
                     <span className="flex h-8 w-8 items-center justify-center rounded-xl text-sm font-bold text-white" style={{ background: JADE }}>A</span>
-                    <span className="text-xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}>Agendou</span>
+                    <span className="text-xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}>Agendabot</span>
                 </Link>
 
                 <div className="relative">
@@ -59,20 +60,20 @@ export default function ResetPassword({ token, email }: { token: string; email: 
                         <span className="text-xl">✅</span>
                         <div>
                             <p className="text-[12px] font-semibold" style={{ color: 'var(--text-1)' }}>Quase lá!</p>
-                            <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>Defina sua nova senha</p>
+                            <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>{convite ? 'Crie sua senha de acesso' : 'Defina sua nova senha'}</p>
                         </div>
                     </div>
 
                     <h2 className="text-4xl leading-tight" style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}>
-                        Nova senha,<br />
-                        <span className="italic" style={{ color: 'var(--text-2)' }}>novo começo.</span>
+                        {convite ? <>Boas-vindas<br /><span className="italic" style={{ color: 'var(--text-2)' }}>à equipe.</span></> : <>Nova senha,<br />
+                        <span className="italic" style={{ color: 'var(--text-2)' }}>novo começo.</span></>}
                     </h2>
                     <p className="mt-4 text-sm leading-relaxed" style={{ color: 'var(--text-3)' }}>
                         Escolha uma senha forte com pelo menos 8 caracteres.
                     </p>
                 </div>
 
-                <p className="relative text-[11px]" style={{ color: 'var(--text-3)' }}>© {new Date().getFullYear()} Agendou</p>
+                <p className="relative text-[11px]" style={{ color: 'var(--text-3)' }}>© {new Date().getFullYear()} Agendabot</p>
             </div>
 
             {/* ── Painel direito — formulário ─────────────────────────────────── */}
@@ -81,21 +82,22 @@ export default function ResetPassword({ token, email }: { token: string; email: 
                     <div className="mb-8 lg:hidden text-center">
                         <div className="mb-3 flex items-center justify-center gap-2">
                             <span className="flex h-8 w-8 items-center justify-center rounded-xl text-sm font-bold text-white" style={{ background: JADE }}>A</span>
-                            <span className="text-xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}>Agendou</span>
+                            <span className="text-xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}>Agendabot</span>
                         </div>
                     </div>
 
                     <div className="mb-7">
-                        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-1)' }}>Redefinir senha</h1>
+                        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-1)' }}>{convite ? 'Criar sua senha' : 'Redefinir senha'}</h1>
                         <p className="mt-1 text-sm" style={{ color: 'var(--text-3)' }}>
-                            Crie uma nova senha para a conta <span style={{ color: 'var(--text-2)' }}>{email}</span>.
+                            {convite ? 'Defina a senha que você vai usar para entrar com' : 'Crie uma nova senha para a conta'} <span style={{ color: 'var(--text-2)' }}>{email}</span>.
                         </p>
+                        {errors.email && <p className="mt-2 text-xs text-red-400">{errors.email}</p>}
                     </div>
 
                     <form onSubmit={submit} className="space-y-4">
                         {/* Senha nova */}
                         <div>
-                            <label className="label mb-1.5 block" htmlFor="password">Nova senha</label>
+                            <label className="label mb-1.5 block" htmlFor="password">{convite ? 'Senha' : 'Nova senha'}</label>
                             <div className="relative">
                                 <input
                                     id="password"
@@ -147,7 +149,7 @@ export default function ResetPassword({ token, email }: { token: string; email: 
                         <button
                             type="submit"
                             disabled={processing}
-                            className="relative mt-2 w-full overflow-hidden rounded-xl py-3 text-sm font-semibold text-white transition-all hover:brightness-110 disabled:opacity-60"
+                            className="relative w-full overflow-hidden rounded-xl py-3 text-sm font-semibold text-white transition-all hover:brightness-110 disabled:opacity-60"
                             style={{ background: INDIGO }}
                         >
                             {processing ? (
@@ -158,7 +160,7 @@ export default function ResetPassword({ token, email }: { token: string; email: 
                                     </svg>
                                     Salvando…
                                 </span>
-                            ) : 'Redefinir senha'}
+                            ) : convite ? 'Criar senha' : 'Redefinir senha'}
                         </button>
                     </form>
                 </div>

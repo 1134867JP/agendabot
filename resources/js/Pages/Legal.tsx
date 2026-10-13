@@ -12,7 +12,7 @@ interface Props {
 }
 
 const terms = [
-    ['1. Serviço', 'O Agendou oferece agenda, automação de atendimento, integrações com WhatsApp e recursos de inteligência artificial para estabelecimentos. As funcionalidades disponíveis dependem do plano contratado.'],
+    ['1. Serviço', 'O Agendabot oferece agenda, automação de atendimento, integrações com WhatsApp e recursos de inteligência artificial para estabelecimentos. As funcionalidades disponíveis dependem do plano contratado.'],
     ['2. Conta e responsabilidades', 'Você deve fornecer informações verdadeiras, proteger suas credenciais, manter os dados do estabelecimento atualizados e garantir que possui autorização para tratar os dados inseridos na plataforma.'],
     ['3. Uso do WhatsApp e de IA', 'Você é responsável pelas mensagens enviadas em nome do estabelecimento, pelas instruções configuradas para o bot e pelo cumprimento das regras do WhatsApp. Respostas automatizadas podem conter imprecisões e devem ser supervisionadas em situações sensíveis.'],
     ['4. Uso proibido', 'Não é permitido usar o serviço para fraude, assédio, conteúdo ilegal, discriminação, coleta abusiva de dados, envio de spam ou tentativa de comprometer a segurança da plataforma e de terceiros.'],
@@ -23,7 +23,7 @@ const terms = [
 ];
 
 const privacy = [
-    ['1. Papéis no tratamento', 'O estabelecimento é controlador dos dados de seus clientes. O Agendou atua principalmente como operador ao processar esses dados conforme as configurações e instruções do estabelecimento, e como controlador dos dados necessários para administrar contas, segurança e cobrança.'],
+    ['1. Papéis no tratamento', 'O estabelecimento é controlador dos dados de seus clientes. O Agendabot atua principalmente como operador ao processar esses dados conforme as configurações e instruções do estabelecimento, e como controlador dos dados necessários para administrar contas, segurança e cobrança.'],
     ['2. Dados tratados', 'Podemos tratar dados de cadastro e contato, informações do estabelecimento, agenda, clientes, conversas, registros técnicos, uso da plataforma, pagamentos e dados necessários às integrações habilitadas. Evite inserir dados sensíveis que não sejam necessários ao atendimento.'],
     ['3. Finalidades e bases legais', 'Os dados são usados para executar o serviço contratado, autenticar usuários, processar agendamentos, entregar mensagens, cobrar planos, prevenir fraude, manter segurança, cumprir obrigações legais e atender direitos dos titulares. A base legal varia conforme a finalidade, incluindo execução de contrato, cumprimento legal e legítimo interesse.'],
     ['4. Compartilhamento', 'Dados podem ser enviados, no limite necessário, a provedores de hospedagem e banco de dados, WhatsApp e Evolution API, provedores de inteligência artificial configurados, Asaas, Google Calendar, e-mail e ferramentas de observabilidade. Esses fornecedores podem processar dados em outros países.'],
@@ -54,7 +54,7 @@ export default function Legal({ kind, legal }: Props) {
                         </section>
                     ))}
 
-                    <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
+                    <section className="rounded-xl border border-white/10 bg-white/3 p-5">
                         <h2 className="text-lg font-semibold text-white/90">Responsável e contato</h2>
                         <p className="mt-2">{legal.entity_name}{legal.entity_document ? ` · ${legal.entity_document}` : ''}</p>
                         {legal.contact_email

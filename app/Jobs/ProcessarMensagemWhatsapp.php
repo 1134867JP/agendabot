@@ -13,6 +13,7 @@ use App\Services\AgendamentoService;
 use App\Services\AgendouService;
 use App\Services\IntencaoService;
 use App\Services\OutboundMessageService;
+use App\Services\TranscricaoAudioService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Builder;
@@ -52,6 +53,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         AgendamentoService $agendamentoService,
         IntencaoService $intencao,
         OutboundMessageService $outboundMessages,
+        TranscricaoAudioService $transcricao,
     ): void {
         $startedAt = hrtime(true);
 
@@ -106,6 +108,10 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
             return;
         }
 
+        // 5a. Áudios do cliente viram texto antes de o bot ler a conversa.
+        $transcricao->transcreverPendentes($this->tenant, $conversa->id, $this->telefone);
+        $conteudo = $mensagem->fresh()?->conteudo ?? $conteudo;
+
         // 5b. Verificar limite de agendamentos via bot do plano (isentos não têm limite).
         // A mensagem do cliente já foi salva no webhook; aqui só respondemos o aviso.
         $limiteBot = $this->tenant->isento_cobranca ? null : config("plans.{$this->tenant->plano}.limite_bot_mes");
@@ -123,7 +129,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
                     $outboundMessages->queue(
                         tenant: $this->tenant,
                         telefone: $this->tenant->telefone_whatsapp,
-                        conteudo: "⚠️ *Agendou — Aviso de limite*\n\nVocê atingiu 80% do limite de agendamentos via bot do seu plano ({$agendamentosMes}/{$limiteBot} este mês).\n\nFaça upgrade para continuar recebendo agendamentos automaticamente: ".url('/renovar'),
+                        conteudo: "⚠️ *Agendabot — Aviso de limite*\n\nVocê atingiu 80% do limite de agendamentos via bot do seu plano ({$agendamentosMes}/{$limiteBot} este mês).\n\nFaça upgrade para continuar recebendo agendamentos automaticamente: ".url('/renovar'),
                         purpose: 'plan_limit_warning',
                         idempotencyKey: "plan-limit-warning:{$this->tenant->id}:".now()->format('Ym'),
                     );
@@ -226,7 +232,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
                 $resposta = 'Entendido, agendamento cancelado.';
             }
         } else {
-            // 9. Chamar o serviço central do Agendou; o provider é escolhido pelo AiOrchestrator
+            // 9. Chamar o serviço central do Agendabot; o provider é escolhido pelo AiOrchestrator
             $clienteInfo = ['id' => $cliente->id, 'nome' => $cliente->nome, 'telefone' => $cliente->telefone];
             $resultado = $agendou->processarMensagem($this->tenant, $historico, $clienteInfo, $agendamentoPendente);
 

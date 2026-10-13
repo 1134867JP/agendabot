@@ -106,6 +106,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('profissionais/{profissional}/horarios', [HorarioProfissionalController::class, 'sync'])
             ->middleware('tenant.admin')
             ->name('profissionais.horarios.sync');
+        Route::post('profissionais/{profissional}/servicos', [ProfissionalController::class, 'sincronizarServicos'])
+            ->middleware('tenant.admin')
+            ->name('profissionais.servicos.sync');
 
         // Serviços
         Route::resource('servicos', ServicoController::class)->except(['show'])->middleware('tenant.admin');
@@ -120,6 +123,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('equipe', [EquipeController::class, 'index'])->middleware('tenant.admin')->name('equipe.index');
         Route::post('equipe', [EquipeController::class, 'store'])->middleware('tenant.admin')->name('equipe.store');
         Route::patch('equipe/{user}/acesso', [EquipeController::class, 'toggleAtivo'])->middleware(['tenant.admin', 'throttle:10,1'])->name('equipe.toggle-ativo');
+        Route::post('equipe/{user}/convite', [EquipeController::class, 'reenviarConvite'])->middleware(['tenant.admin', 'throttle:6,1'])->name('equipe.reenviar-convite');
         Route::delete('equipe/{user}', [EquipeController::class, 'destroy'])->middleware('tenant.admin')->name('equipe.destroy');
 
         // Clientes
@@ -152,6 +156,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Config bot
         Route::put('configuracoes/bot', [Tenant\ConfiguracaoController::class, 'updateBot'])->middleware('tenant.admin')->name('configuracoes.bot');
+        Route::put('configuracoes/pagamentos', [Tenant\ConfiguracaoController::class, 'updatePagamentos'])->middleware('tenant.admin')->name('configuracoes.pagamentos');
 
         // WhatsApp
         Route::get('whatsapp', [Tenant\WhatsAppController::class, 'index'])->name('whatsapp');

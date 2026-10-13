@@ -54,7 +54,7 @@ export default function TenantCreate(_: PageProps) {
                                         }
                                     >
                                         <span>{t.emoji}</span>
-                                        <span className="break-words font-medium">{t.label}</span>
+                                        <span className="wrap-break-word font-medium">{t.label}</span>
                                     </button>
                                 ))}
                             </div>
@@ -95,17 +95,18 @@ export default function TenantCreate(_: PageProps) {
 
                         {/* Senha */}
                         <div>
-                            <label className="label mb-1" htmlFor="tenant-senha-dono">Senha inicial</label>
+                            <label className="label mb-1" htmlFor="tenant-senha-dono">Senha inicial <span className="font-normal" style={{ color: 'var(--text-3)' }}>(opcional)</span></label>
                             <input
                                 id="tenant-senha-dono"
                                 type="password"
                                 value={data.senha_dono}
                                 onChange={e => setData('senha_dono', e.target.value)}
                                 className="input"
-                                placeholder="Mínimo 8 caracteres"
-                                required
+                                placeholder="Deixe em branco para enviar convite"
                                 minLength={8}
+                                autoComplete="new-password"
                             />
+                            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>Em branco, o dono recebe um e-mail com link para criar a própria senha.</p>
                             {errors.senha_dono && <p className="mt-1 text-xs text-red-400">{errors.senha_dono}</p>}
                         </div>
 

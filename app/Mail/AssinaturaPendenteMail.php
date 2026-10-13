@@ -18,7 +18,7 @@ class AssinaturaPendenteMail extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: '⚠️ Pagamento pendente — Agendou');
+        return new Envelope(subject: '⚠️ Pagamento pendente — Agendabot');
     }
 
     public function content(): Content

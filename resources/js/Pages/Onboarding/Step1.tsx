@@ -54,7 +54,7 @@ export default function OnboardingStep1() {
                 <header className="border-b px-4 py-4 sm:px-6" style={{ borderColor: 'var(--border)' }}>
                     <div className="mx-auto flex w-full max-w-md items-center justify-between gap-4">
                         <Link href={route('home')} className="text-xl text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
-                            Agendou
+                            Agendabot
                         </Link>
                         <span className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>Etapa 1 de 2</span>
                     </div>
@@ -218,7 +218,7 @@ export default function OnboardingStep1() {
                                     type="checkbox"
                                     checked={data.aceite_legal}
                                     onChange={event => setData('aceite_legal', event.target.checked)}
-                                    className="mt-0.5 rounded border-[var(--border-strong)] bg-transparent text-[var(--accent)] focus:ring-[var(--accent)]"
+                                    className="mt-0.5 rounded-sm border-(--border-strong) bg-transparent text-(--accent) focus:ring-(--accent)"
                                     aria-invalid={Boolean(errors.aceite_legal)}
                                     required
                                 />

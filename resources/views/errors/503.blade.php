@@ -11,7 +11,7 @@
         <h1 class="title">Em manutenção</h1>
         <div class="divider"></div>
         <p class="description">
-            O Agendou está temporariamente fora do ar para manutenção.<br>
+            O Agendabot está temporariamente fora do ar para manutenção.<br>
             Voltaremos em breve. Obrigado pela paciência!
         </p>
         <div class="actions">

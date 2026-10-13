@@ -28,6 +28,19 @@ class ExpirarConversasInativasJob implements ShouldQueue
         if ($expiradas > 0) {
             Log::info("ExpirarConversasInativasJob: {$expiradas} conversa(s) encerrada(s) por inatividade.");
         }
+
+        // Sem isso, uma resposta da equipe pelo celular deixaria o bot pausado
+        // para sempre com aquele cliente.
+        $retomarApos = (int) config('bot.retomar_apos_humano_minutos', 120);
+        if ($retomarApos > 0) {
+            $retomadas = Conversa::where('status_v2', 'em_atendimento_humano')
+                ->where('ultima_mensagem_em', '<', now()->subMinutes($retomarApos))
+                ->update(['status_v2' => 'encerrada']);
+
+            if ($retomadas > 0) {
+                Log::info("ExpirarConversasInativasJob: bot retomado em {$retomadas} conversa(s) após atendimento humano.");
+            }
+        }
     }
 
     public function failed(\Throwable $e): void

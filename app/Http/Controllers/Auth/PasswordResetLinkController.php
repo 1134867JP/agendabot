@@ -40,8 +40,11 @@ class PasswordResetLinkController extends Controller
             $request->only('email')
         );
 
-        if ($status == Password::RESET_LINK_SENT) {
-            return back()->with('status', __($status));
+        // A resposta é a mesma com ou sem conta para esse e-mail (e também
+        // quando um link acabou de ser enviado), para a tela não revelar quem
+        // é cliente. O limite de tentativas da rota segura abusos.
+        if (in_array($status, [Password::RESET_LINK_SENT, Password::INVALID_USER, Password::RESET_THROTTLED], true)) {
+            return back()->with('status', __(Password::RESET_LINK_SENT));
         }
 
         throw ValidationException::withMessages([

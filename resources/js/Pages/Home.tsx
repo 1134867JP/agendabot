@@ -70,7 +70,7 @@ function ChatMockup() {
                 {chatMessages.slice(0, visible).map((m, i) => (
                     <div
                         key={i}
-                        className={`max-w-[88%] rounded-lg px-3 py-2 text-[11px] leading-relaxed shadow-sm ${
+                        className={`max-w-[88%] rounded-lg px-3 py-2 text-[11px] leading-relaxed shadow-xs ${
                             m.from === 'client'
                                 ? 'ml-auto rounded-tr-none bg-[#DCF8C6] text-gray-800'
                                 : 'rounded-tl-none bg-white text-gray-800'
@@ -198,7 +198,7 @@ export default function Home() {
 
     return (
         <LandingLayout currentPage="home">
-            <Head title="Agendou — Agendamento automático via WhatsApp" />
+            <Head title="Agendabot — Agendamento automático via WhatsApp" />
 
             <style>{`
                 @keyframes fadeUp {
@@ -234,7 +234,7 @@ export default function Home() {
                         </div>
 
                         {/* Headline — risco: duas fontes na mesma frase */}
-                        <h1 className="text-[42px] leading-[1.08] tracking-tight sm:text-5xl lg:text-[62px]">
+                        <h1 className="text-[42px] leading-[1.08] tracking-tight sm:text-5xl sm:leading-none lg:text-[62px]">
                             <span
                                 className="block font-bold"
                                 style={{ fontFamily: "'DM Sans', sans-serif", color: 'rgba(232,230,225,0.95)' }}
@@ -428,7 +428,7 @@ export default function Home() {
                             </h2>
                         </div>
                         <p className="max-w-xs text-sm leading-relaxed" style={{ color: 'rgba(232,230,225,0.35)' }}>
-                            Se o seu cliente precisa de horário, o Agendou resolve.
+                            Se o seu cliente precisa de horário, o Agendabot resolve.
                         </p>
                     </div>
 
@@ -560,7 +560,7 @@ export default function Home() {
                 <div className="relative mx-auto max-w-2xl text-center">
                     <p className="mb-4 text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: JADE }}>Comece hoje</p>
                     <h2
-                        className="mb-4 text-4xl leading-tight sm:text-5xl"
+                        className="mb-4 text-4xl leading-tight sm:text-5xl sm:leading-none"
                         style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'rgba(232,230,225,0.95)' }}
                     >
                         Chega de anotar horário<br />

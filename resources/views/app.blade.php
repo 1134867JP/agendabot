@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title inertia>{{ config('app.name', 'Agendou') }}</title>
+        <title inertia>{{ config('app.name', 'Agendabot') }}</title>
 
         <!-- Favicon -->
         <link rel="icon"             href="/favicon.svg"        type="image/svg+xml">

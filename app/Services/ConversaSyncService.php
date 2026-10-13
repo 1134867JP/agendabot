@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Cliente;
 use App\Models\Conversa;
 use App\Models\Mensagem;
+use App\Models\OutboundMessage;
 use App\Models\Tenant;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
@@ -63,6 +64,63 @@ class ConversaSyncService
 
             return null;
         }
+    }
+
+    /**
+     * Mensagem fromMe que não foi enviada pelo sistema: o dono ou a equipe
+     * respondeu direto pelo WhatsApp do celular. Registra no histórico e pausa
+     * o bot nessa conversa para ele não responder por cima da pessoa.
+     * Retorna null quando a mensagem é apenas o eco de um envio do sistema.
+     */
+    public function registrarMensagemDoCelular(
+        Tenant $tenant,
+        string $telefone,
+        string $conteudo,
+        ?string $evolutionMessageId = null,
+        string $tipo = 'texto',
+    ): ?Mensagem {
+        if ($this->ehEcoDeEnvioDoSistema($tenant, $telefone, $conteudo, $evolutionMessageId)) {
+            return null;
+        }
+
+        // O pushName de uma mensagem fromMe é o nome do dono, não do cliente.
+        [, $conversa] = $this->upsertClienteEConversa($tenant, $telefone, null);
+
+        try {
+            $mensagem = DB::transaction(fn () => $conversa->registrarMensagem('humano', $conteudo, $evolutionMessageId, $tipo));
+        } catch (QueryException $e) {
+            if (! $this->isUniqueViolation($e)) {
+                throw $e;
+            }
+
+            return null;
+        }
+
+        if ($conversa->status_v2 !== 'em_atendimento_humano') {
+            $conversa->update(['status_v2' => 'em_atendimento_humano']);
+            Log::info('BOT_PAUSADO_RESPOSTA_PELO_CELULAR', ['tenant_id' => $tenant->id, 'conversa_id' => $conversa->id]);
+        }
+
+        return $mensagem;
+    }
+
+    private function ehEcoDeEnvioDoSistema(Tenant $tenant, string $telefone, string $conteudo, ?string $evolutionMessageId): bool
+    {
+        if ($evolutionMessageId && (
+            Mensagem::where('evolution_message_id', $evolutionMessageId)->exists()
+            || OutboundMessage::where('tenant_id', $tenant->id)->where('provider_message_id', $evolutionMessageId)->exists()
+        )) {
+            return true;
+        }
+
+        // O webhook pode chegar antes de o job gravar o id devolvido pela
+        // Evolution. Nesse intervalo, reconhece o eco pelo destino e pelo texto.
+        return OutboundMessage::where('tenant_id', $tenant->id)
+            ->whereIn('telefone', $this->variantesTelefone($telefone))
+            ->whereIn('status', [OutboundMessage::STATUS_PENDING, OutboundMessage::STATUS_PROCESSING, OutboundMessage::STATUS_SENT])
+            ->where('created_at', '>=', now()->subMinutes(10))
+            ->where('conteudo', $conteudo)
+            ->exists();
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Jobs\Concerns\RegistraFalha;
+use App\Models\Mensagem;
 use App\Models\OperationalEvent;
 use App\Models\OutboundMessage;
 use App\Services\EvolutionApiService;
@@ -80,13 +81,22 @@ class SendOutboundMessageJob implements ShouldBeUnique, ShouldQueue
                 throw new RuntimeException('A Evolution API não confirmou o envio da mensagem.');
             }
 
-            DB::transaction(function () use ($outbound): void {
+            $providerMessageId = is_string($sent) ? $sent : null;
+
+            DB::transaction(function () use ($outbound, $providerMessageId): void {
                 $message = OutboundMessage::query()->lockForUpdate()->find($outbound->id);
                 if (! $message || $message->status === OutboundMessage::STATUS_SENT) {
                     return;
                 }
 
+                if ($providerMessageId && $message->mensagem_id) {
+                    Mensagem::whereKey($message->mensagem_id)
+                        ->whereNull('evolution_message_id')
+                        ->update(['evolution_message_id' => $providerMessageId]);
+                }
+
                 $message->update([
+                    'provider_message_id' => $providerMessageId,
                     'status' => OutboundMessage::STATUS_SENT,
                     'sent_at' => now(),
                     'locked_at' => null,

@@ -66,7 +66,7 @@ function RequisitosAgenda({
     return (
         <fieldset className="rounded-lg p-3.5" style={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border)' }}>
             <legend className="px-1 text-xs font-semibold text-primary">O que este serviço precisa?</legend>
-            <p className="mb-3 text-xs" style={{ color: 'var(--text-3)' }}>O Agendou mostra apenas as escolhas necessárias no momento do agendamento.</p>
+            <p className="mb-3 text-xs" style={{ color: 'var(--text-3)' }}>O Agendabot mostra apenas as escolhas necessárias no momento do agendamento.</p>
             <div className="space-y-2.5">
                 <Toggle checked={data.requer_profissional} onChange={value => setData('requer_profissional', value)} label={`Precisa de ${agenda.profissional.toLowerCase()}`} />
                 <Toggle checked={data.requer_recurso} onChange={value => setData('requer_recurso', value)} label={`Precisa de ${agenda.recurso.toLowerCase()}`} />
@@ -80,7 +80,7 @@ function RequisitosAgenda({
                         <div className="grid gap-2 sm:grid-cols-2">
                             {recursos.map(recurso => (
                                 <label key={recurso.id} className="flex min-h-10 cursor-pointer items-center gap-2 rounded-md px-2.5 text-sm" style={{ background: 'var(--bg-app)' }}>
-                                    <input type="checkbox" checked={data.recurso_ids.includes(recurso.id)} onChange={() => alternarRecurso(recurso.id)} className="rounded" />
+                                    <input type="checkbox" checked={data.recurso_ids.includes(recurso.id)} onChange={() => alternarRecurso(recurso.id)} className="rounded-sm" />
                                     {recurso.nome}
                                 </label>
                             ))}

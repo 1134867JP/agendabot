@@ -56,7 +56,7 @@ export default function OnboardingStep3({ tenant, defaults }: Props) {
                 <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 sm:px-6 sm:py-10">
                     <div className="mb-8 flex items-center justify-between gap-3">
                         <span className="text-lg text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>
-                            Agendou
+                            Agendabot
                         </span>
                         <span className="shrink-0 rounded-full px-3 py-1 text-xs" style={{ background: 'var(--jade-light)', color: 'var(--jade)' }}>
                             Etapa 2 de 2 · cerca de 2 minutos
@@ -168,14 +168,14 @@ export default function OnboardingStep3({ tenant, defaults }: Props) {
                                 </section>
 
                                 <button type="submit" disabled={processing} className="btn-primary w-full justify-center py-3 text-base">
-                                    {processing ? 'Preparando seu Agendou…' : 'Criar minha agenda →'}
+                                    {processing ? 'Preparando seu Agendabot…' : 'Criar minha agenda →'}
                                 </button>
                             </form>
                         </main>
 
                         <aside className="hidden lg:block lg:pt-24">
                             <div className="sticky top-6 rounded-2xl p-5" style={{ background: 'var(--jade-light)', border: '1px solid rgba(0,168,132,.2)' }}>
-                                <p className="text-sm font-semibold" style={{ color: 'var(--jade)' }}>O Agendou fará por você</p>
+                                <p className="text-sm font-semibold" style={{ color: 'var(--jade)' }}>O Agendabot fará por você</p>
                                 <ul className="mt-4 space-y-3 text-sm" style={{ color: 'var(--text-2)' }}>
                                     {[
                                         'Criar o primeiro item agendável',

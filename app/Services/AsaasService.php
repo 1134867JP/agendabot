@@ -59,7 +59,7 @@ class AsaasService
             'value' => $valor,
             'nextDueDate' => now()->addDays((int) env('TRIAL_DAYS', 14))->format('Y-m-d'),
             'cycle' => 'MONTHLY',
-            'description' => 'Agendou — Plano '.ucfirst($plano),
+            'description' => 'Agendabot — Plano '.ucfirst($plano),
             'externalReference' => "plano_{$plano}",
         ]);
 
@@ -183,6 +183,11 @@ class AsaasService
 
     public function criarSinalAgendamento(Agendamento $agendamento, float $valor): array
     {
+        $walletId = $agendamento->tenant?->asaasWalletId();
+        if (! $walletId) {
+            throw new AsaasApiException('O estabelecimento ainda não cadastrou a carteira Asaas para receber o sinal.');
+        }
+
         $customer = $this->http()->post('/customers', [
             'name' => $agendamento->cliente_nome,
             'mobilePhone' => preg_replace('/\D/', '', (string) $agendamento->cliente_telefone),
@@ -198,8 +203,10 @@ class AsaasService
             'billingType' => 'PIX',
             'value' => round($valor, 2),
             'dueDate' => now()->addDay()->format('Y-m-d'),
-            'description' => "Sinal do agendamento #{$agendamento->id}",
+            'description' => "Sinal do agendamento #{$agendamento->id} — {$agendamento->tenant->nome}",
             'externalReference' => "deposit_agendamento_{$agendamento->id}",
+            // Todo o valor líquido vai para a carteira do estabelecimento.
+            'split' => [['walletId' => $walletId, 'percentualValue' => 100]],
         ]);
 
         if (! $payment->successful() || ! $payment->json('id')) {

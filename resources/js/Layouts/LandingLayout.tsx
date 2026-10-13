@@ -26,7 +26,7 @@ function LandingNavbar({ currentPage, scrolled }: { currentPage?: string; scroll
                     className="inline-flex min-h-11 shrink-0 items-center text-xl italic"
                     style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'rgba(232,230,225,0.95)' }}
                 >
-                    Agendou
+                    Agendabot
                 </Link>
 
                 <nav className="hidden items-center gap-6 md:flex">
@@ -109,7 +109,7 @@ function LandingFooter() {
                     className="text-lg font-semibold italic"
                     style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'rgba(255,255,255,0.6)' }}
                 >
-                    Agendou
+                    Agendabot
                 </span>
                 <div className="flex gap-5 text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
                     <Link href={route('precos')}           className="inline-flex min-h-11 items-center transition-colors hover:text-primary">Preços</Link>
@@ -119,7 +119,7 @@ function LandingFooter() {
                     <Link href={route('privacidade')}       className="inline-flex min-h-11 items-center transition-colors hover:text-primary">Privacidade</Link>
                 </div>
                 <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
-                    © {new Date().getFullYear()} Agendou
+                    © {new Date().getFullYear()} Agendabot
                 </p>
             </div>
         </footer>

@@ -18,4 +18,20 @@ return [
 
     'debounce_seconds' => (int) env('BOT_DEBOUNCE_SECONDS', 5),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Retomada do bot após atendimento humano
+    |--------------------------------------------------------------------------
+    |
+    | Quando alguém da equipe assume a conversa (pelo painel ou respondendo
+    | direto no WhatsApp do celular), o bot pausa. Depois deste tempo sem
+    | nenhuma mensagem na conversa, ela é encerrada e o bot volta a atender
+    | o próximo contato do cliente.
+    |
+    | 0 = nunca retomar automaticamente.
+    |
+    */
+
+    'retomar_apos_humano_minutos' => (int) env('BOT_RETOMAR_APOS_HUMANO_MINUTOS', 120),
+
 ];

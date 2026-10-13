@@ -13,29 +13,44 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Lembrete relativo ao horário do atendimento (padrão: 2h antes na barbearia,
+ * 24h nos demais ramos). Roda a cada 15 minutos e respeita o horário de
+ * silêncio, para não acordar o cliente.
+ */
 class EnviarLembretesJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, RegistraFalha, SerializesModels;
 
+    /** Não envia lembrete antes das 8h nem a partir das 21h (fuso do estabelecimento). */
+    public const HORA_INICIO_ENVIO = 8;
+
+    public const HORA_FIM_ENVIO = 21;
+
+    /** Quem marcou há menos tempo que isso acabou de receber a confirmação. */
+    public const HORAS_MINIMAS_DESDE_A_MARCACAO = 2;
+
     public function handle(OutboundMessageService $outboundMessages): void
     {
-        $amanha = now()->addDay();
-
+        // Pré-filtro amplo; a janela exata é calculada no fuso de cada tenant.
         $agendamentos = Agendamento::query()
-            ->with(['recurso', 'profissional', 'tenant', 'cliente'])
+            ->with(['recurso', 'profissional', 'tenant', 'cliente', 'servico', 'itensServico'])
             ->whereIn('status', ['agendado', 'confirmado'])
-            ->where(fn ($q) => $q
-                ->whereDate('inicio', $amanha->toDateString())
-                ->orWhereDate('data_hora', $amanha->toDateString())
-            )
             ->where('lembrete_enviado', false)
+            ->where(fn ($q) => $q
+                ->whereBetween('data_hora', [now()->subDay(), now()->addDays(2)])
+                ->orWhere(fn ($q) => $q
+                    ->whereNull('data_hora')
+                    ->whereBetween('inicio', [now()->subDay(), now()->addDays(2)]))
+            )
             ->whereHas('tenant', fn ($q) => $q->where('whatsapp_conectado', true)
                 ->whereIn('subscription_status', ['trial', 'active'])
             )
             ->get();
 
         foreach ($agendamentos as $agendamento) {
-            $cfg = $agendamento->tenant->configuracoes ?? [];
+            $tenant = $agendamento->tenant;
+            $cfg = $tenant->configuracoes ?? [];
             if (($cfg['lembrete_ativo'] ?? true) === false) {
                 continue;
             }
@@ -43,17 +58,15 @@ class EnviarLembretesJob implements ShouldQueue
             $telefone = $agendamento->cliente_telefone
                 ?? $agendamento->cliente?->telefone;
 
-            if (! $telefone) {
+            if (! $telefone || ! $this->estaNaJanela($agendamento)) {
                 continue;
             }
 
             try {
-                $mensagem = $this->montarMensagemLembrete($agendamento, $cfg['lembrete_texto'] ?? null);
-
                 $outboundMessages->queue(
-                    tenant: $agendamento->tenant,
+                    tenant: $tenant,
                     telefone: $telefone,
-                    conteudo: $mensagem,
+                    conteudo: self::montarMensagem($agendamento, $cfg['lembrete_texto'] ?? null),
                     purpose: 'appointment_reminder',
                     idempotencyKey: "appointment-reminder:{$agendamento->id}",
                     agendamento: $agendamento,
@@ -64,30 +77,70 @@ class EnviarLembretesJob implements ShouldQueue
         }
     }
 
-    private function montarMensagemLembrete(Agendamento $agendamento, ?string $textoPersonalizado): string
+    private function estaNaJanela(Agendamento $agendamento): bool
     {
-        $dataHora = Carbon::parse($agendamento->data_hora ?? $agendamento->inicio)->locale('pt_BR');
-        $horario = $dataHora->format('H:i');
+        $tz = $agendamento->tenant->resolvedTimezone();
+        $inicio = self::inicioNoFuso($agendamento);
+        $agora = Carbon::now($tz);
+
+        if ($inicio->lte($agora) || $inicio->gt($agora->copy()->addHours($agendamento->tenant->lembreteHorasAntes()))) {
+            return false;
+        }
+
+        if ($agora->hour < self::HORA_INICIO_ENVIO || $agora->hour >= self::HORA_FIM_ENVIO) {
+            return false;
+        }
+
+        return ! $agendamento->created_at
+            || $agendamento->created_at->lte(now()->subHours(self::HORAS_MINIMAS_DESDE_A_MARCACAO));
+    }
+
+    /**
+     * data_hora é gravado com o horário de parede do estabelecimento; relê no
+     * fuso do tenant para não depender do fuso do processo.
+     */
+    public static function inicioNoFuso(Agendamento $agendamento): Carbon
+    {
+        $tz = $agendamento->tenant?->resolvedTimezone() ?? config('app.timezone');
+        $bruto = $agendamento->getRawOriginal('data_hora') ?? $agendamento->getRawOriginal('inicio');
+
+        return $bruto
+            ? Carbon::parse(substr((string) $bruto, 0, 19), $tz)
+            : Carbon::parse($agendamento->data_hora ?? $agendamento->inicio)->setTimezone($tz);
+    }
+
+    public static function montarMensagem(Agendamento $agendamento, ?string $textoPersonalizado): string
+    {
+        $tz = $agendamento->tenant->resolvedTimezone();
+        $dataHora = self::inicioNoFuso($agendamento)->locale('pt_BR');
+        $hoje = Carbon::now($tz);
+        $quando = match (true) {
+            $dataHora->isSameDay($hoje) => 'hoje',
+            $dataHora->isSameDay($hoje->copy()->addDay()) => 'amanhã',
+            default => $dataHora->translatedFormat('l, d \d\e F'),
+        };
         $nomeCliente = $agendamento->cliente_nome ?? $agendamento->cliente?->nome ?? 'Cliente';
         $recursoNome = $agendamento->recurso?->nome ?? $agendamento->profissional?->nome ?? '';
         $tenant = $agendamento->tenant->nome;
 
         $cabecalho = "👋 *Olá, {$nomeCliente}!*\n\n"
-                   ."Lembrando que você tem um agendamento *amanhã*:\n\n"
+                   ."Passando para lembrar do seu horário *{$quando}*:\n\n"
                    ."📅 *Data:* {$dataHora->translatedFormat('l, d \d\e F')}\n"
-                   ."⏰ *Horário:* {$horario}\n"
-                   ."📍 *Local/Serviço:* {$recursoNome} — {$tenant}\n\n";
+                   ."⏰ *Horário:* {$dataHora->format('H:i')}\n"
+                   .(($servicos = $agendamento->descricaoServicos()) ? "✂️ *Serviço:* {$servicos}\n" : '')
+                   ."📍 *Com:* {$recursoNome} — {$tenant}\n\n";
 
-        $corpo = $textoPersonalizado
-            ? trim($textoPersonalizado)."\n\n"
-            : "Para *confirmar*, responda: ✅ *CONFIRMO*\n"
-            ."Para *cancelar*, responda: ❌ *CANCELAR*\n\n";
+        $corpo = match (true) {
+            (bool) $textoPersonalizado => trim($textoPersonalizado)."\n\n",
+            $quando === 'hoje' => "Se não puder vir, responda ❌ *CANCELAR* para liberar o horário.\n\n",
+            default => "Para *confirmar*, responda: ✅ *CONFIRMO*\nPara *cancelar*, responda: ❌ *CANCELAR*\n\n",
+        };
 
-        return $cabecalho.$corpo.'_Até amanhã!_';
+        return $cabecalho.$corpo.'_Até já!_';
     }
 
     public function failed(\Throwable $e): void
     {
-        $this->registrarFalha($e, null, ['evento' => 'enviar_lembretes_d1']);
+        $this->registrarFalha($e, null, ['evento' => 'enviar_lembretes']);
     }
 }

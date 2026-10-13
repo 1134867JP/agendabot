@@ -164,7 +164,7 @@ export default function Sidebar({
             {/* Mobile overlay */}
             {open && (
                 <div
-                    className="fixed inset-0 z-20 bg-black/60 backdrop-blur-sm lg:hidden" aria-hidden="true"
+                    className="fixed inset-0 z-20 bg-black/60 backdrop-blur-xs lg:hidden" aria-hidden="true"
                     onClick={onClose}
                 />
             )}
@@ -193,7 +193,7 @@ export default function Sidebar({
                                     <polyline points="9 16 11 18 15 14"/>
                                 </svg>
                             </span>
-                            Agendou
+                            Agendabot
                         </span>
                     </div>
                     {currentTenant && (

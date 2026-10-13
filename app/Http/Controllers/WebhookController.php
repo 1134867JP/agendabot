@@ -89,10 +89,6 @@ class WebhookController extends Controller
             $msgData = $msgData[0]; // v2 às vezes envolve em array
         }
 
-        if (data_get($msgData, 'key.fromMe')) {
-            return response('ok');
-        }
-
         // Em mensagens de grupo, a Evolution também informa participantAlt com o
         // telefone de quem escreveu. O participante nunca deve ser tratado como
         // uma conversa privada: descarte o evento pelo JID do chat primeiro.
@@ -143,6 +139,14 @@ class WebhookController extends Controller
         $evolutionMessageId = data_get($msgData, 'key.id');
         $pushName = data_get($msgData, 'pushName') ?: null;
         $tipoInterno = $tipoMidia ?? 'texto';
+
+        // fromMe é o eco do que o sistema enviou ou alguém da equipe respondendo
+        // pelo WhatsApp do celular. No segundo caso o bot pausa nessa conversa.
+        if (data_get($msgData, 'key.fromMe')) {
+            $sync->registrarMensagemDoCelular($tenant, $telefone, $conteudoClaude, $evolutionMessageId, $tipoInterno);
+
+            return response('ok');
+        }
 
         Log::info('WEBHOOK_MESSAGE_ACCEPTED', ['tenant_id' => $tenant->id, 'message_id' => $evolutionMessageId, 'tipo' => $messageType, 'conteudo_length' => mb_strlen($conteudoClaude)]);
 

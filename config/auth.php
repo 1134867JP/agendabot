@@ -99,6 +99,14 @@ return [
             'expire' => 60,
             'throttle' => 60,
         ],
+
+        // Convite da equipe/dono: o link para criar a própria senha vale 7 dias.
+        'convites' => [
+            'provider' => 'users',
+            'table' => 'convites_equipe_tokens',
+            'expire' => 60 * 24 * 7,
+            'throttle' => 60,
+        ],
     ],
 
     /*

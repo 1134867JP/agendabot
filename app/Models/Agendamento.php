@@ -58,4 +58,25 @@ class Agendamento extends Model
     {
         return $this->hasMany(OutboundMessage::class);
     }
+
+    /** Serviços do atendimento (combo), na ordem em que foram pedidos. */
+    public function itensServico(): HasMany
+    {
+        return $this->hasMany(AgendamentoServico::class)->orderBy('ordem')->orderBy('id');
+    }
+
+    /** "Corte + Barba" para combos; o nome do serviço único nos demais casos. */
+    public function descricaoServicos(): ?string
+    {
+        $itens = $this->relationLoaded('itensServico') ? $this->itensServico : $this->itensServico()->get();
+
+        return $itens->isNotEmpty()
+            ? $itens->pluck('nome')->join(' + ')
+            : $this->servico?->nome;
+    }
+
+    public function getServicosNomeAttribute(): ?string
+    {
+        return $this->descricaoServicos();
+    }
 }

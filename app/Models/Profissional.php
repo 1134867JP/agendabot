@@ -45,13 +45,21 @@ class Profissional extends Model
 
     public function servicos(): BelongsToMany
     {
-        return $this->belongsToMany(Servico::class, 'profissional_servico');
+        return $this->belongsToMany(Servico::class, 'profissional_servico')
+            ->withPivot(['valor', 'duracao_minutos']);
     }
 
-    public function slotsDisponiveis(Carbon $data): array
+    /**
+     * Horários do dia na grade do profissional. Com $duracao, um horário só
+     * fica disponível se o atendimento inteiro couber (antes do fim do
+     * expediente, fora do almoço, sem encostar em outro agendamento ou
+     * bloqueio, respeitando a folga $buffer entre atendimentos).
+     *
+     * @return list<array{hora: string, disponivel: bool}>
+     */
+    public function slotsDisponiveis(Carbon $data, ?int $duracao = null, int $buffer = 0): array
     {
-        $diaSemana = (int) $data->format('N'); // 1=seg..7=dom → usar 1..6 para seg..sab
-        // Carbon format('N'): 1=seg..7=dom; banco usa 0=dom..6=sab
+        $diaSemana = (int) $data->format('N'); // Carbon: 1=seg..7=dom; banco: 0=dom..6=sab
         if ($diaSemana === 7) {
             $diaSemana = 0;
         }
@@ -62,49 +70,52 @@ class Profissional extends Model
         }
 
         $tz = $this->tenant?->resolvedTimezone() ?? 'America/Sao_Paulo';
-        $slots = [];
-        $horaInicio = substr($horario->hora_inicio, 0, 5); // garante HH:MM
-        $horaFim = substr($horario->hora_fim, 0, 5);
-        $inicio = Carbon::createFromFormat('Y-m-d H:i', $data->format('Y-m-d').' '.$horaInicio, $tz);
-        $fim = Carbon::createFromFormat('Y-m-d H:i', $data->format('Y-m-d').' '.$horaFim, $tz);
-        $duracao = $horario->duracao_slot;
+        $dia = $data->format('Y-m-d');
+        $inicio = Carbon::createFromFormat('Y-m-d H:i', $dia.' '.substr($horario->hora_inicio, 0, 5), $tz);
+        $fim = Carbon::createFromFormat('Y-m-d H:i', $dia.' '.substr($horario->hora_fim, 0, 5), $tz);
+        $passo = (int) $horario->duracao_slot ?: 30;
+        $necessario = max((int) $duracao, 0) ?: $passo;
 
-        $inicioDia = $data->copy()->startOfDay();
-        $fimDia = $data->copy()->endOfDay();
+        $inicioDia = Carbon::createFromFormat('Y-m-d H:i', $dia.' 00:00', $tz);
+        $fimDia = $inicioDia->copy()->addDay();
 
-        $agendados = $this->agendamentos()
-            ->whereBetween('data_hora', [$inicioDia, $fimDia])
+        $ocupados = $this->agendamentos()
+            ->where('data_hora', '<', $fimDia)
+            ->where('data_hora', '>=', $inicioDia->copy()->subDay())
             ->whereNotIn('status', ['cancelado'])
             ->get(['data_hora', 'duracao_minutos'])
-            ->map(fn ($a) => [
-                'inicio' => Carbon::parse($a->data_hora, $tz),
-                'fim' => Carbon::parse($a->data_hora, $tz)->addMinutes((int) ($a->duracao_minutos ?? $duracao)),
-            ])
-            ->all();
+            ->map(function ($a) use ($tz, $passo, $buffer) {
+                $comeco = Carbon::parse($a->getRawOriginal('data_hora'), $tz);
 
-        $agendadosCollection = collect($agendados);
-        $bloqueios = $this->bloqueiosAgenda()
-            ->where('inicio', '<', $fimDia)
-            ->where('fim', '>', $inicioDia)
-            ->get(['inicio', 'fim'])
-            ->map(fn ($bloqueio) => [
-                'inicio' => Carbon::parse($bloqueio->inicio, $tz),
-                'fim' => Carbon::parse($bloqueio->fim, $tz),
-            ]);
+                return [
+                    $comeco->copy()->subMinutes($buffer),
+                    $comeco->copy()->addMinutes((int) ($a->duracao_minutos ?: $passo) + $buffer),
+                ];
+            })
+            ->concat($this->bloqueiosAgenda()
+                ->where('inicio', '<', $fimDia)
+                ->where('fim', '>', $inicioDia)
+                ->get(['inicio', 'fim'])
+                ->map(fn ($b) => [Carbon::parse($b->inicio)->setTimezone($tz), Carbon::parse($b->fim)->setTimezone($tz)]));
+
+        $intervalo = $horario->intervaloNoDia($data, $tz);
         $agora = Carbon::now($tz);
+        $slots = [];
         $cursor = $inicio->copy();
-        while ($cursor->copy()->addMinutes($duracao)->lte($fim)) {
-            $hora = $cursor->format('H:i');
-            $slotFim = $cursor->copy()->addMinutes($duracao);
-            if ($cursor->gt($agora)) {
-                $ocupado = $agendadosCollection->contains(
-                    fn ($a) => $cursor->lt($a['fim']) && $slotFim->gt($a['inicio'])
-                ) || $bloqueios->contains(
-                    fn ($bloqueio) => $cursor->lt($bloqueio['fim']) && $slotFim->gt($bloqueio['inicio'])
-                );
-                $slots[] = ['hora' => $hora, 'disponivel' => ! $ocupado];
+        while ($cursor->copy()->addMinutes($necessario)->lte($fim)) {
+            $slotFim = $cursor->copy()->addMinutes($necessario);
+            // Atendimento que encosta no almoço não é oferecido; a grade recomeça na volta.
+            // Qualquer posição até a volta também invadiria a pausa.
+            if ($intervalo && $cursor->lt($intervalo[1]) && $slotFim->gt($intervalo[0])) {
+                $cursor = $intervalo[1]->copy();
+
+                continue;
             }
-            $cursor->addMinutes($duracao);
+            if ($cursor->gt($agora)) {
+                $ocupado = $ocupados->contains(fn ($o) => $cursor->lt($o[1]) && $slotFim->gt($o[0]));
+                $slots[] = ['hora' => $cursor->format('H:i'), 'disponivel' => ! $ocupado];
+            }
+            $cursor->addMinutes($passo);
         }
 
         return $slots;

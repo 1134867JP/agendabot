@@ -65,8 +65,8 @@ function StatCard({ label, value, sub, href, icon }: {
     return (
         <Link href={href} className="card-hover group flex min-h-28 flex-col justify-between p-4">
             <div className="flex items-start justify-between gap-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--text-3)' }}>{label}</p>
-                <span className="transition-colors group-hover:text-[var(--accent)]" style={{ color: 'var(--text-3)' }}><Icon path={icon} /></span>
+                <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{label}</p>
+                <span className="transition-colors group-hover:text-(--accent)" style={{ color: 'var(--text-3)' }}><Icon path={icon} /></span>
             </div>
             <div>
                 <p className="text-2xl font-semibold leading-none text-primary">{value}</p>
@@ -185,7 +185,7 @@ export default function TenantDashboard({
                                 <Link
                                     key={item.label}
                                     href={item.href}
-                                    className="flex min-h-20 items-start gap-3 px-4 py-3.5 transition-colors hover:bg-[var(--bg-surface-2)] sm:px-5"
+                                    className="flex min-h-20 items-start gap-3 px-4 py-3.5 transition-colors hover:bg-(--bg-surface-2) sm:px-5"
                                     style={{ borderBottom: '1px solid var(--border)' }}
                                 >
                                     <span
@@ -291,7 +291,7 @@ export default function TenantDashboard({
                     <section className="rounded-xl p-4 sm:p-5" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div>
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--text-3)' }}>Uso do agendamento automático</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Uso do agendamento automático</p>
                                 <p className="mt-2 text-xl font-semibold text-primary">{stats.bot_agendamentos_mes} reserva{stats.bot_agendamentos_mes === 1 ? '' : 's'} pelo bot neste mês</p>
                                 <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>Estimativa de cobrança: <strong style={{ color: 'var(--text-2)' }}>{formatBrl(stats.bot_agendamentos_mes * stats.bot_taxa)}</strong></p>
                             </div>
