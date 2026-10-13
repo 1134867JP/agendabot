@@ -5,19 +5,20 @@ namespace App\Http\Controllers\Tenant;
 use App\Http\Controllers\Controller;
 use App\Models\Agendamento;
 use App\Models\BloqueioAgenda;
+use App\Support\TenantAccess;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
-use App\Support\TenantAccess;
 
 class AgendaController extends Controller
 {
     public function index(): Response
     {
         $tenant = app('tenant');
+
         return Inertia::render('Tenant/Agenda', [
             'tenant' => $tenant,
             'agenda' => $tenant->agendaConfig(),
@@ -29,22 +30,22 @@ class AgendaController extends Controller
                     ->when(TenantAccess::profissionalId($tenant), fn ($query, $id) => $query->whereKey($id))
                     ->get(['id', 'nome']),
             'servicos' => $tenant->servicos()
-                    ->where('ativo', true)
-                    ->when(TenantAccess::profissionalId($tenant), fn ($query, $id) => $query->whereHas('profissionais', fn ($profissionais) => $profissionais->whereKey($id)))
-                    ->with(['profissionais:id', 'recursos:id'])
-                    ->orderBy('nome')
-                    ->get(['id', 'tenant_id', 'nome', 'duracao_minutos', 'valor_min', 'valor_max', 'requer_profissional', 'requer_recurso'])
-                    ->map(fn ($servico) => [
-                        'id' => $servico->id,
-                        'nome' => $servico->nome,
-                        'duracao_minutos' => (int) ($servico->duracao_minutos ?? 30),
-                        'valor_min' => $servico->valor_min,
-                        'valor_max' => $servico->valor_max,
-                        'profissional_ids' => $servico->profissionais->pluck('id')->values(),
-                        'recurso_ids' => $servico->recursos->pluck('id')->values(),
-                        'requer_profissional' => $servico->requer_profissional,
-                        'requer_recurso' => $servico->requer_recurso,
-                    ]),
+                ->where('ativo', true)
+                ->when(TenantAccess::profissionalId($tenant), fn ($query, $id) => $query->whereHas('profissionais', fn ($profissionais) => $profissionais->whereKey($id)))
+                ->with(['profissionais:id', 'recursos:id'])
+                ->orderBy('nome')
+                ->get(['id', 'tenant_id', 'nome', 'duracao_minutos', 'valor_min', 'valor_max', 'requer_profissional', 'requer_recurso'])
+                ->map(fn ($servico) => [
+                    'id' => $servico->id,
+                    'nome' => $servico->nome,
+                    'duracao_minutos' => (int) ($servico->duracao_minutos ?? 30),
+                    'valor_min' => $servico->valor_min,
+                    'valor_max' => $servico->valor_max,
+                    'profissional_ids' => $servico->profissionais->pluck('id')->values(),
+                    'recurso_ids' => $servico->recursos->pluck('id')->values(),
+                    'requer_profissional' => $servico->requer_profissional,
+                    'requer_recurso' => $servico->requer_recurso,
+                ]),
         ]);
     }
 

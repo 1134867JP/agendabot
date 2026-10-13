@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Servico;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -37,7 +38,7 @@ class ServicoController extends Controller
             'requer_profissional' => 'boolean',
             'requer_recurso' => 'boolean',
             'recurso_ids' => ['array'],
-            'recurso_ids.*' => ['integer', \Illuminate\Validation\Rule::exists('recursos', 'id')->where('tenant_id', $tenant->id)],
+            'recurso_ids.*' => ['integer', Rule::exists('recursos', 'id')->where('tenant_id', $tenant->id)],
             'requer_avaliacao' => 'boolean',
             'ativo' => 'boolean',
         ]);
@@ -62,7 +63,7 @@ class ServicoController extends Controller
             'requer_profissional' => 'boolean',
             'requer_recurso' => 'boolean',
             'recurso_ids' => ['array'],
-            'recurso_ids.*' => ['integer', \Illuminate\Validation\Rule::exists('recursos', 'id')->where('tenant_id', $tenant->id)],
+            'recurso_ids.*' => ['integer', Rule::exists('recursos', 'id')->where('tenant_id', $tenant->id)],
             'requer_avaliacao' => 'boolean',
             'ativo' => 'boolean',
         ]);

@@ -7,20 +7,22 @@ use App\Models\Agendamento;
 use App\Models\BloqueioAgenda;
 use App\Models\Profissional;
 use App\Models\Recurso;
+use App\Support\TenantAccess;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use App\Support\TenantAccess;
 
 class BloqueioAgendaController extends Controller
 {
     public function store(Request $request): RedirectResponse
     {
         $tenant = app('tenant');
-        $agendaUsaRecursos = $tenant->agendaUsaRecursos();
+        // Só a agenda exclusivamente por recurso (quadras) exige recurso; na
+        // agenda combinada o bloqueio pode ser de um profissional ou de um recurso.
+        $agendaUsaRecursos = $tenant->agendaUsaApenasRecursos();
         $profissionalIdLogado = TenantAccess::profissionalId($tenant);
         $data = $request->validate([
             'profissional_id' => [Rule::prohibitedIf($agendaUsaRecursos), 'nullable', Rule::exists('profissionais', 'id')->where('tenant_id', $tenant->id)],

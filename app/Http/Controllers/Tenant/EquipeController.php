@@ -8,8 +8,9 @@ use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -67,7 +68,7 @@ class EquipeController extends Controller
                 'nullable',
                 'required_if:papel,profissional',
                 'integer',
-                \Illuminate\Validation\Rule::exists('profissionais', 'id')->where('tenant_id', app('tenant')->id),
+                Rule::exists('profissionais', 'id')->where('tenant_id', app('tenant')->id),
             ],
         ]);
 
