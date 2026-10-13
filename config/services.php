@@ -45,6 +45,15 @@ return [
         'key' => env('EVOLUTION_API_KEY'),
     ],
 
+    // Transcrição dos áudios enviados pelo cliente (Whisper via Groq).
+    'transcricao' => [
+        'ativa' => (bool) env('AUDIO_TRANSCRICAO_ATIVA', true),
+        'key' => env('GROQ_API_KEY'),
+        'model' => env('GROQ_WHISPER_MODEL', 'whisper-large-v3-turbo'),
+        'base_url' => env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1'),
+        'max_bytes' => (int) env('AUDIO_TRANSCRICAO_MAX_BYTES', 10 * 1024 * 1024),
+    ],
+
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),

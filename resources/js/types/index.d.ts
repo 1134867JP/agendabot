@@ -43,6 +43,7 @@ export interface Tenant {
     mensagem_fora_horario?: string | null;
     lembrete_ativo?: boolean | null;
     lembrete_texto?: string | null;
+    lembrete_horas_antes?: number;
     agenda?: {
         modo: 'profissional' | 'recurso' | 'combinada';
         profissional: string;

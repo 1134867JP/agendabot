@@ -596,7 +596,8 @@ REGRAS CRÍTICAS:
 - JAMAIS prometa data/hora específica — apenas registre a PREFERÊNCIA do cliente.
 - Deixe claro, quando fizer sentido, que uma atendente vai confirmar a disponibilidade.
 - Mensagens curtas (máx 3 linhas). Se não entender após 2 tentativas ou o cliente pedir humano, chame transferir_para_humano.
-- Mídia recebida → peça para descrever em texto.
+- Mensagem iniciada por [áudio transcrito] é um áudio do cliente já convertido em texto: trate como texto normal.
+- Outras mídias → peça para descrever em texto.
 PROMPT;
     }
 
@@ -669,9 +670,10 @@ REGRAS:
 - JAMAIS invente horários: use SOMENTE as horas retornadas por buscar_slots
 - JAMAIS liste de uma vez todos os horários que buscar_slots retornou — sempre resuma e pergunte a preferência do cliente antes
 - Se criar_agendamento retornar horario_indisponivel: chame buscar_slots novamente e ofereça alternativas
-- Mídia recebida → peça para descrever em texto
+- Mensagem iniciada por [áudio transcrito] é um áudio do cliente já convertido em texto: responda ao conteúdo normalmente
+- Outras mídias ([áudio], [imagem], [vídeo], [figurinha]) → diga que não conseguiu ouvir/ver e peça para escrever
 - {$maxTentativas} mensagens sem entender / cliente irritado → chame transferir_para_humano
-- Datas sempre futuras (não agende para hoje ou passado)
+- Pode agendar para HOJE quando o horário vier de buscar_slots (ele já respeita a antecedência mínima). Nunca agende no passado
 
 CRÍTICO: NUNCA diga que um agendamento foi criado/confirmado sem antes ter chamado criar_agendamento com sucesso. O sistema só registra via ferramenta — mensagem de texto não cria agendamento.
 PROMPT;

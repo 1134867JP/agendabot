@@ -40,6 +40,7 @@ class ConfiguracaoController extends Controller
                 'horarios_funcionamento_semana' => $cfg['horarios_funcionamento_semana'] ?? null,
                 'lembrete_ativo' => $cfg['lembrete_ativo'] ?? true,
                 'lembrete_texto' => $cfg['lembrete_texto'] ?? '',
+                'lembrete_horas_antes' => $tenant->lembreteHorasAntes(),
             ]),
         ]);
     }
@@ -71,9 +72,10 @@ class ConfiguracaoController extends Controller
         $configuracoes = array_merge($tenant->configuracoes ?? [], [
             'lembrete_ativo' => $data['lembrete_ativo'] ?? true,
             'lembrete_texto' => $data['lembrete_texto'] ?? null,
+            'lembrete_horas_antes' => $data['lembrete_horas_antes'] ?? $tenant->lembreteHorasAntes(),
         ]);
 
-        unset($data['lembrete_ativo'], $data['lembrete_texto']);
+        unset($data['lembrete_ativo'], $data['lembrete_texto'], $data['lembrete_horas_antes']);
 
         $tenant->update(array_merge($data, ['configuracoes' => $configuracoes]));
 

@@ -25,11 +25,11 @@ Schedule::call(function () {
         ->update(['subscription_status' => 'blocked']);
 })->name('subscriptions:block-past-due')->daily()->withoutOverlapping(10);
 
-// Enviar lembretes D-1 para agendamentos de amanhã
+// Lembretes relativos ao horário do atendimento (2h antes na barbearia, 24h nos demais)
 Schedule::job(new EnviarLembretesJob, 'notifications')
     ->name('notifications:appointment-reminders')
-    ->dailyAt('09:00')
-    ->withoutOverlapping(60);
+    ->everyFifteenMinutes()
+    ->withoutOverlapping(10);
 Schedule::job(new SendAppointmentConfirmationsJob, 'notifications')
     ->name('notifications:appointment-confirmations')
     ->hourly()

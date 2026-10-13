@@ -25,7 +25,7 @@ class SendAppointmentConfirmationsJob implements ShouldQueue
                 ->where('whatsapp_conectado', true)
                 ->whereIn('subscription_status', ['trial', 'active']))
             ->each(function (Agendamento $agendamento) use ($outboundMessages): void {
-                if (! $agendamento->cliente_telefone) {
+                if (! $agendamento->cliente_telefone || ! $agendamento->tenant->confirmacaoAntecipadaAtiva()) {
                     return;
                 }
 

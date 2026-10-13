@@ -35,7 +35,11 @@ class EvolutionApiService
         return trim($this->baseUrl) !== '' && trim($this->globalApiKey) !== '';
     }
 
-    public function enviarMensagem(string $instance, string $telefone, string $mensagem): bool
+    /**
+     * Retorna o key.id da mensagem enviada quando a Evolution o informa, true em
+     * sucesso sem id e false em falha. O id permite reconhecer o eco fromMe.
+     */
+    public function enviarMensagem(string $instance, string $telefone, string $mensagem): string|bool
     {
         // Não repetir POST automaticamente: em um timeout ambíguo a Evolution pode
         // ter aceitado a mensagem. A caixa de saída controla as novas tentativas.
@@ -45,7 +49,13 @@ class EvolutionApiService
                 'text' => $mensagem,
             ]);
 
-        return $response->successful();
+        if (! $response->successful()) {
+            return false;
+        }
+
+        $id = $response->json('key.id');
+
+        return is_string($id) && $id !== '' ? $id : true;
     }
 
     public function criarInstancia(string $instanceName): array

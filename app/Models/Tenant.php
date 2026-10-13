@@ -206,6 +206,28 @@ class Tenant extends Model
      * Regras gerais de agendamento (antecedência, buffer, cancelamento), com defaults
      * permissivos equivalentes ao comportamento atual.
      */
+    /**
+     * Quantas horas antes do atendimento o lembrete sai. Barbearia marca muito
+     * para o mesmo dia, então o padrão é 2h; os demais ramos mantêm 24h.
+     */
+    public function lembreteHorasAntes(): int
+    {
+        $horas = (int) (($this->configuracoes ?? [])['lembrete_horas_antes'] ?? 0);
+
+        return $horas > 0 ? $horas : ($this->tipo_servico === 'barbeiro' ? 2 : 24);
+    }
+
+    /**
+     * Pedido de confirmação 36–48h antes. Desligado por padrão na barbearia,
+     * onde o lembrete curto já cumpre esse papel e duas mensagens incomodam.
+     */
+    public function confirmacaoAntecipadaAtiva(): bool
+    {
+        $valor = ($this->configuracoes ?? [])['confirmacao_antecipada'] ?? null;
+
+        return $valor === null ? $this->tipo_servico !== 'barbeiro' : (bool) $valor;
+    }
+
     public function regrasAgendamentoConfig(): array
     {
         return array_merge([

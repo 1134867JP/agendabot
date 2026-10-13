@@ -16,6 +16,8 @@ interface HorarioProfissional {
     dia_semana: number;
     hora_inicio: string;
     hora_fim: string;
+    intervalo_inicio: string | null;
+    intervalo_fim: string | null;
     duracao_slot: number;
     ativo: boolean;
 }
@@ -37,11 +39,23 @@ const DURACOES = [15, 20, 30, 45, 60, 90, 120];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+// O banco devolve "HH:MM:SS"; o backend valida "HH:MM".
+const hhmm = (hora: string | null | undefined) => (hora ? hora.slice(0, 5) : null);
+
 function buildHorariosRows(horarios: HorarioProfissional[]): HorarioProfissional[] {
     return DIAS.map((_, i) => {
         const h = horarios.find(h => h.dia_semana === i);
-        if (h) return { ...h, ativo: true };
-        return { dia_semana: i, hora_inicio: '09:00', hora_fim: '18:00', duracao_slot: 30, ativo: false };
+        if (h) {
+            return {
+                ...h,
+                hora_inicio: hhmm(h.hora_inicio) ?? '09:00',
+                hora_fim: hhmm(h.hora_fim) ?? '18:00',
+                intervalo_inicio: hhmm(h.intervalo_inicio),
+                intervalo_fim: hhmm(h.intervalo_fim),
+                ativo: true,
+            };
+        }
+        return { dia_semana: i, hora_inicio: '09:00', hora_fim: '18:00', intervalo_inicio: null, intervalo_fim: null, duracao_slot: 30, ativo: false };
     });
 }
 
@@ -100,13 +114,22 @@ function HorariosEditor({ profissional, onClose }: { profissional: Profissional;
 
     const toggle = (idx: number) =>
         setRows(r => r.map((row, i) => i === idx ? { ...row, ativo: !row.ativo } : row));
-    const setField = (idx: number, field: 'hora_inicio' | 'hora_fim' | 'duracao_slot', value: string | number) =>
+    const setField = (idx: number, field: 'hora_inicio' | 'hora_fim' | 'intervalo_inicio' | 'intervalo_fim' | 'duracao_slot', value: string | number | null) =>
         setRows(r => r.map((row, i) => i === idx ? { ...row, [field]: value } : row));
+    const toggleIntervalo = (idx: number) =>
+        setRows(r => r.map((row, i) => {
+            if (i !== idx) return row;
+            return row.intervalo_inicio
+                ? { ...row, intervalo_inicio: null, intervalo_fim: null }
+                : { ...row, intervalo_inicio: '12:00', intervalo_fim: '13:00' };
+        }));
     const aplicarHorarioComercial = () => setRows(r => r.map((row, i) => ({
         ...row,
         ativo: i >= 1 && i <= 5,
         hora_inicio: '09:00',
         hora_fim: '18:00',
+        intervalo_inicio: '12:00',
+        intervalo_fim: '13:00',
         duracao_slot: 30,
     })));
 
@@ -114,6 +137,15 @@ function HorariosEditor({ profissional, onClose }: { profissional: Profissional;
         const invalido = rows.find(row => row.ativo && row.hora_fim <= row.hora_inicio);
         if (invalido) {
             setErro('O horário de término precisa ser posterior ao início nos dias ativos.');
+            return;
+        }
+        const intervaloInvalido = rows.find(row => row.ativo && row.intervalo_inicio && row.intervalo_fim && (
+            row.intervalo_fim <= row.intervalo_inicio
+            || row.intervalo_inicio <= row.hora_inicio
+            || row.intervalo_fim >= row.hora_fim
+        ));
+        if (intervaloInvalido) {
+            setErro(`O intervalo de ${DIAS[intervaloInvalido.dia_semana]} precisa ficar dentro do expediente.`);
             return;
         }
 
@@ -135,11 +167,11 @@ function HorariosEditor({ profissional, onClose }: { profissional: Profissional;
                         Horários de atendimento
                     </h4>
                     <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
-                        Ative os dias e defina o período disponível para novos agendamentos.
+                        Ative os dias, defina o expediente e, se houver, o intervalo de almoço. O bot não oferece horários durante o intervalo.
                     </p>
                 </div>
                 <button type="button" onClick={aplicarHorarioComercial} className="btn-secondary min-h-10 justify-center text-xs">
-                    Usar seg–sex, 9h–18h
+                    Usar seg–sex, 9h–18h, almoço 12h–13h
                 </button>
             </div>
             <div className="space-y-2.5">
@@ -157,11 +189,24 @@ function HorariosEditor({ profissional, onClose }: { profissional: Profissional;
                             <input type="time" value={row.hora_fim} onChange={e => setField(i, 'hora_fim', e.target.value)} disabled={!row.ativo} className="input w-full min-w-0 disabled:opacity-40" />
                         </label>
                         <label className="col-span-2 sm:col-span-1">
-                            <span className="label mb-1">Intervalos</span>
+                            <span className="label mb-1">Horários a cada</span>
                             <select value={row.duracao_slot} onChange={e => setField(i, 'duracao_slot', parseInt(e.target.value))} disabled={!row.ativo} className="input w-full min-w-0 disabled:opacity-40">
                                 {DURACOES.map(m => <option key={m} value={m}>{m} min</option>)}
                             </select>
                         </label>
+                        <div className="col-span-2 flex flex-wrap items-center gap-2 sm:col-span-3 sm:col-start-2">
+                            <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-2)' }}>
+                                <input type="checkbox" checked={!!row.intervalo_inicio} onChange={() => toggleIntervalo(i)} disabled={!row.ativo} />
+                                Intervalo (almoço)
+                            </label>
+                            {row.intervalo_inicio && (
+                                <>
+                                    <input type="time" aria-label={`Início do intervalo de ${DIAS[i]}`} value={row.intervalo_inicio ?? ''} onChange={e => setField(i, 'intervalo_inicio', e.target.value)} disabled={!row.ativo} className="input w-28 min-w-0 disabled:opacity-40" />
+                                    <span className="text-xs" style={{ color: 'var(--text-3)' }}>até</span>
+                                    <input type="time" aria-label={`Fim do intervalo de ${DIAS[i]}`} value={row.intervalo_fim ?? ''} onChange={e => setField(i, 'intervalo_fim', e.target.value)} disabled={!row.ativo} className="input w-28 min-w-0 disabled:opacity-40" />
+                                </>
+                            )}
+                        </div>
                     </div>
                 ))}
             </div>

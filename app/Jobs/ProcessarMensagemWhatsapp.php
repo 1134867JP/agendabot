@@ -13,6 +13,7 @@ use App\Services\AgendamentoService;
 use App\Services\AgendouService;
 use App\Services\IntencaoService;
 use App\Services\OutboundMessageService;
+use App\Services\TranscricaoAudioService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Builder;
@@ -52,6 +53,7 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         AgendamentoService $agendamentoService,
         IntencaoService $intencao,
         OutboundMessageService $outboundMessages,
+        TranscricaoAudioService $transcricao,
     ): void {
         $startedAt = hrtime(true);
 
@@ -105,6 +107,10 @@ class ProcessarMensagemWhatsapp implements ShouldQueue
         if (in_array($conversa->status_v2, ['aguardando_humano', 'em_atendimento_humano'])) {
             return;
         }
+
+        // 5a. Áudios do cliente viram texto antes de o bot ler a conversa.
+        $transcricao->transcreverPendentes($this->tenant, $conversa->id, $this->telefone);
+        $conteudo = $mensagem->fresh()?->conteudo ?? $conteudo;
 
         // 5b. Verificar limite de agendamentos via bot do plano (isentos não têm limite).
         // A mensagem do cliente já foi salva no webhook; aqui só respondemos o aviso.

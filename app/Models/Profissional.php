@@ -91,11 +91,18 @@ class Profissional extends Model
                 'inicio' => Carbon::parse($bloqueio->inicio, $tz),
                 'fim' => Carbon::parse($bloqueio->fim, $tz),
             ]);
+        $intervalo = $horario->intervaloNoDia($data, $tz);
         $agora = Carbon::now($tz);
         $cursor = $inicio->copy();
         while ($cursor->copy()->addMinutes($duracao)->lte($fim)) {
-            $hora = $cursor->format('H:i');
             $slotFim = $cursor->copy()->addMinutes($duracao);
+            // Slot que encosta no almoço não é oferecido; a grade recomeça na volta.
+            if ($intervalo && $cursor->lt($intervalo[1]) && $slotFim->gt($intervalo[0])) {
+                $cursor = $intervalo[1]->copy();
+
+                continue;
+            }
+            $hora = $cursor->format('H:i');
             if ($cursor->gt($agora)) {
                 $ocupado = $agendadosCollection->contains(
                     fn ($a) => $cursor->lt($a['fim']) && $slotFim->gt($a['inicio'])

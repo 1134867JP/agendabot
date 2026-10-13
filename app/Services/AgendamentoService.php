@@ -164,6 +164,12 @@ class AgendamentoService
                 "{$profissional->nome} atende neste dia das {$abertura} às {$fechamento}. Escolha um horário dentro desse período."
             );
         }
+        $intervalo = $horarioDia->intervaloNoDia($inicio, $tz);
+        if ($intervalo && $inicio->lt($intervalo[1]) && $fim->gt($intervalo[0])) {
+            throw new HorarioIndisponivelException(
+                "{$profissional->nome} está em intervalo das {$intervalo[0]->format('H:i')} às {$intervalo[1]->format('H:i')}. Escolha outro horário."
+            );
+        }
     }
 
     /**

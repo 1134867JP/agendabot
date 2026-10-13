@@ -17,7 +17,7 @@ class OutboundMessage extends Model
 
     protected $fillable = [
         'tenant_id', 'conversa_id', 'mensagem_id', 'agendamento_id',
-        'telefone', 'conteudo', 'purpose', 'idempotency_key', 'status',
+        'telefone', 'conteudo', 'purpose', 'idempotency_key', 'status', 'provider_message_id',
         'attempts', 'last_error', 'locked_at', 'sent_at', 'failed_at',
     ];
 

@@ -58,6 +58,19 @@ class SendOutboundMessageJobTest extends TestCase
         $this->assertTrue($agendamento->fresh()->lembrete_enviado);
     }
 
+    public function test_guarda_id_da_evolution_para_reconhecer_o_eco(): void
+    {
+        Queue::fake();
+        [, $outbound] = $this->queueReminder();
+
+        $evolution = $this->mock(EvolutionApiService::class);
+        $evolution->shouldReceive('enviarMensagem')->once()->andReturn('EVO-ID-123');
+
+        (new SendOutboundMessageJob($outbound->id))->handle($evolution);
+
+        $this->assertSame('EVO-ID-123', $outbound->fresh()->provider_message_id);
+    }
+
     private function queueReminder(): array
     {
         $tenant = Tenant::create([
