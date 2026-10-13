@@ -1,6 +1,125 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@plugin '@tailwindcss/forms';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  /* Entrelinhas fixas como no Tailwind 3: elementos com tamanho de fonte
+     próprio (ex.: text-[11px]) herdam a altura em rem, não uma proporção. */
+  --text-xs--line-height: 1rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+
+  --font-sans:
+    DM Sans, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-display: Instrument Serif, Georgia, serif;
+  --font-syne: Syne, sans-serif;
+
+  --color-app-bg: #071214;
+  --color-app-sidebar: #0a181a;
+  --color-app-surface: #0f1f21;
+  --color-app-surface2: #172b2e;
+
+  --color-accent: #2dd4bf;
+  --color-accent-light: rgba(45, 212, 191, 0.12);
+  --color-accent-hover: #5eead4;
+
+  --color-ink-1: #ecfdfb;
+  --color-ink-2: rgba(219, 242, 238, 0.68);
+  --color-ink-3: rgba(173, 207, 201, 0.48);
+
+  --color-border: rgba(184, 226, 219, 0.1);
+  --color-border-strong: rgba(184, 226, 219, 0.18);
+
+  --color-brand-50: #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-200: #99f6e4;
+  --color-brand-300: #5eead4;
+  --color-brand-400: #2dd4bf;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;
+  --color-brand-700: #0f766e;
+  --color-brand-800: #115e59;
+  --color-brand-900: #134e4a;
+  --color-brand-950: #042f2e;
+
+  --color-warm-50: #faf7f2;
+  --color-warm-100: #f5efe6;
+  --color-warm-200: #ede4d8;
+  --color-warm-300: #ddd3c5;
+  --color-warm-400: #c8baaa;
+  --color-warm-500: #a89b8a;
+  --color-warm-600: #8a7d6e;
+  --color-warm-700: #6e6254;
+  --color-warm-800: #544a3e;
+  --color-warm-900: #3a332c;
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+/* No Tailwind 4 os botões deixaram de ter cursor pointer por padrão. */
+@layer base {
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 @layer base {
     :root, .dark {
@@ -130,205 +249,15 @@
 }
 
 @layer components {
-    .text-primary   { color: var(--text-1); }
-    .text-secondary { color: var(--text-2); }
-    .text-muted     { color: var(--text-3); }
-
-    .card {
-        background: var(--bg-surface);
-        border: 1px solid var(--border);
-        box-shadow: 0 10px 28px rgba(3, 24, 22, 0.10), 0 1px 2px rgba(3, 24, 22, 0.18);
-        @apply min-w-0 rounded-xl;
-    }
-
-    .btn-primary {
-        background: var(--accent);
-        color: white !important;
-        box-shadow: 0 1px 1px rgba(3, 24, 22, 0.18), 0 8px 20px rgba(45, 212, 191, 0.14);
-        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50;
-    }
-
-    .btn-primary:hover {
-        background: var(--accent-hover);
-        transform: translateY(-1px);
-    }
-
-    .btn-primary:active {
-        transform: translateY(0);
-    }
-
-    .btn-secondary {
-        border: 1px solid var(--border-strong);
-        background: transparent;
-        color: var(--text-2);
-        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all disabled:opacity-50;
-    }
-
-    .btn-secondary:hover {
-        background: var(--bg-surface-2);
-        color: var(--text-1);
-        border-color: var(--border-strong);
-    }
-
-    .btn-danger {
-        color: var(--danger-text);
-        background: var(--danger-btn-bg);
-        border: 1px solid var(--danger-btn-bdr);
-        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors;
-    }
-
-    .btn-danger:hover {
-        filter: brightness(1.08);
-    }
-
-    .badge {
-        @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium;
-    }
-
-    .badge-green  { @apply bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20; }
-    .badge-red    { @apply bg-red-500/10 text-red-500 ring-1 ring-red-500/20; }
-    .badge-gray   { background: var(--bg-surface-2); color: var(--text-3); box-shadow: 0 0 0 1px var(--border); @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium; }
-    .badge-amber  { @apply bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20; }
-    .badge-blue   { @apply bg-accent/10 text-accent ring-1 ring-accent/20; }
-    .badge-brand  { @apply bg-accent/10 text-accent ring-1 ring-accent/20; }
-
-    .input {
-        background: var(--bg-surface-2);
-        border: 1px solid var(--border);
-        color: var(--text-1);
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.015);
-        @apply block min-h-11 w-full rounded-lg px-3 py-2 text-sm transition
-               placeholder:text-[color:var(--text-3)]
-               focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20;
-    }
-
-    .input:hover:not(:focus) {
-        border-color: var(--border-strong);
-    }
-
-    @supports (-webkit-touch-callout: none) {
-        .input, input, select, textarea { font-size: 16px !important; }
-    }
-
-    .label {
-        color: var(--text-3);
-        @apply block text-[10px] font-semibold uppercase tracking-[0.09em];
-    }
-
-    .page-title {
-        font-family: 'Instrument Serif', Georgia, serif;
-        color: var(--text-1);
-        letter-spacing: -0.015em;
-        @apply text-2xl;
-    }
-
-    .nav-item {
-        color: var(--text-2);
-        background: transparent;
-        border: 1px solid transparent;
-        @apply flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-all;
-    }
-
-    .nav-item:hover {
-        color: var(--text-1);
-        background: var(--bg-surface-2);
-    }
-
-    .nav-item.active {
-        color: var(--text-1);
-        background: var(--accent-light);
-        border-color: rgba(45, 212, 191, 0.18);
-        font-weight: 600;
-        box-shadow: none;
-    }
-
-    .light .nav-item.active {
-        border-color: rgba(15, 118, 110, 0.18);
-    }
-
-    .nav-item svg { color: var(--text-3); }
-    .nav-item:hover svg { color: var(--text-2); }
-    .nav-item.active svg { color: var(--accent); }
-
-    .sidebar-btn {
-        color: var(--text-3);
-        background: transparent;
-        border: 1px solid transparent;
-        @apply rounded-md transition-colors;
-    }
-
-    .sidebar-btn:hover {
-        color: var(--text-2);
-        background: var(--bg-surface-2);
-        border-color: var(--border);
-    }
-
-    .config-tab {
-        color: var(--text-3);
-        border-bottom: 2px solid transparent;
-        margin-bottom: -1px;
-        @apply flex items-center gap-2 whitespace-nowrap rounded-t-lg px-3.5 py-2.5 text-sm font-medium transition-all;
-    }
-
-    .config-tab svg {
-        color: var(--text-3);
-        transition: color .15s;
-    }
-
-    .config-tab:hover {
-        color: var(--text-1);
-        background: var(--bg-surface-2);
-    }
-
-    .config-tab:hover svg { color: var(--text-2); }
-    .config-tab--active { color: var(--accent); border-bottom-color: var(--accent); }
-    .config-tab--active svg { color: var(--accent); }
-    .config-tab--active:hover { color: var(--accent); background: var(--accent-light); }
-    .config-tab--active:hover svg { color: var(--accent); }
-
-    .scroll-hidden { scrollbar-width: none; -ms-overflow-style: none; }
-    .scroll-hidden::-webkit-scrollbar { display: none; }
-    .scrollbar-stable { scrollbar-gutter: stable; }
-
-    .table-row-hover { @apply transition-colors; }
-    .table-row-hover:hover { background: var(--bg-surface-2); }
-
-    .card-hover {
-        background: var(--bg-surface);
-        border: 1px solid var(--border);
-        box-shadow: 0 1px 2px rgba(3, 24, 22, 0.08);
-        @apply rounded-xl transition-all;
-    }
-
-    .card-hover:hover {
-        background: var(--bg-surface-2);
-        border-color: var(--border-strong);
-        transform: translateY(-1px);
-        box-shadow: 0 10px 24px rgba(3, 24, 22, 0.10);
-    }
-
-    .gradient-text {
-        background: none;
-        color: var(--accent);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: currentColor;
-        background-clip: initial;
-    }
-
     @keyframes slideDown {
         from { opacity: 0; transform: translateY(-8px); }
         to   { opacity: 1; transform: translateY(0); }
     }
 
-    .flash-msg { animation: slideDown 0.2s ease-out; }
-
     @keyframes marquee {
         0%   { transform: translateX(0); }
         100% { transform: translateX(-50%); }
     }
-
-    .marquee-track { animation: marquee 28s linear infinite; }
-    .marquee-track:hover { animation-play-state: paused; }
 
     @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after {
@@ -338,21 +267,311 @@
             transition-duration: 0.01ms !important;
         }
     }
+}
 
-    @media (max-width: 639px) {
-        .btn-primary,
-        .btn-secondary,
-        .btn-danger {
-            min-height: 44px;
-        }
+/* Classes próprias do painel. Ficam como CSS normal (não @utility) para
+   sempre irem para o build, mesmo quando o nome é montado dinamicamente. */
+@layer components {
+    .text-primary {
+      color: var(--text-1);
+    }
 
-        .input {
-            min-height: 44px;
-        }
+    .text-secondary {
+      color: var(--text-2);
+    }
 
-        .config-tab {
-            min-height: 44px;
-            padding-inline: 0.75rem;
-        }
+    .text-muted {
+      color: var(--text-3);
+    }
+
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      box-shadow:
+        0 10px 28px rgba(3, 24, 22, 0.1),
+        0 1px 2px rgba(3, 24, 22, 0.18);
+      @apply min-w-0 rounded-xl;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white !important;
+      box-shadow:
+        0 1px 1px rgba(3, 24, 22, 0.18),
+        0 8px 20px rgba(45, 212, 191, 0.14);
+      @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50;
+
+      &:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+
+      @media (max-width: 639px) {
+        min-height: 44px;
+      }
+    }
+
+    .btn-secondary {
+      border: 1px solid var(--border-strong);
+      background: transparent;
+      color: var(--text-2);
+      @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all disabled:opacity-50;
+
+      &:hover {
+        background: var(--bg-surface-2);
+        color: var(--text-1);
+        border-color: var(--border-strong);
+      }
+
+      @media (max-width: 639px) {
+        min-height: 44px;
+      }
+    }
+
+    .btn-danger {
+      color: var(--danger-text);
+      background: var(--danger-btn-bg);
+      border: 1px solid var(--danger-btn-bdr);
+      @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors;
+
+      &:hover {
+        filter: brightness(1.08);
+      }
+
+      @media (max-width: 639px) {
+        min-height: 44px;
+      }
+    }
+
+    .badge {
+      @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium;
+    }
+
+    .badge-green {
+      @apply bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20;
+    }
+
+    .badge-red {
+      @apply bg-red-500/10 text-red-500 ring-1 ring-red-500/20;
+    }
+
+    .badge-gray {
+      background: var(--bg-surface-2);
+      color: var(--text-3);
+      box-shadow: 0 0 0 1px var(--border);
+      @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium;
+    }
+
+    .badge-amber {
+      @apply bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20;
+    }
+
+    .badge-blue {
+      @apply bg-accent/10 text-accent ring-1 ring-accent/20;
+    }
+
+    .badge-brand {
+      @apply bg-accent/10 text-accent ring-1 ring-accent/20;
+    }
+
+    .input {
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-1);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.015);
+      @apply block min-h-11 w-full rounded-lg px-3 py-2 text-sm transition
+                   placeholder:text-(--text-3)
+                   focus:border-accent focus:outline-hidden focus:ring-2 focus:ring-accent/20;
+
+      &:hover:not(:focus) {
+        border-color: var(--border-strong);
+      }
+
+      @supports (-webkit-touch-callout: none) {
+        font-size: 16px !important;
+      }
+
+      @media (max-width: 639px) {
+        min-height: 44px;
+      }
+    }
+
+    .label {
+      color: var(--text-3);
+      @apply block text-[10px] font-semibold uppercase tracking-[0.09em];
+    }
+
+    .page-title {
+      font-family: 'Instrument Serif', Georgia, serif;
+      color: var(--text-1);
+      letter-spacing: -0.015em;
+      @apply text-2xl;
+    }
+
+    .nav-item {
+      color: var(--text-2);
+      background: transparent;
+      border: 1px solid transparent;
+      @apply flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-all;
+
+      &:hover {
+        color: var(--text-1);
+        background: var(--bg-surface-2);
+      }
+
+      &.active {
+        color: var(--text-1);
+        background: var(--accent-light);
+        border-color: rgba(45, 212, 191, 0.18);
+        font-weight: 600;
+        box-shadow: none;
+      }
+
+      .light &.active {
+        border-color: rgba(15, 118, 110, 0.18);
+      }
+
+      & svg {
+        color: var(--text-3);
+      }
+      &:hover svg {
+        color: var(--text-2);
+      }
+      &.active svg {
+        color: var(--accent);
+      }
+    }
+
+    .active {
+      &.nav-item {
+        color: var(--text-1);
+        background: var(--accent-light);
+        border-color: rgba(45, 212, 191, 0.18);
+        font-weight: 600;
+        box-shadow: none;
+      }
+
+      .light &.nav-item {
+        border-color: rgba(15, 118, 110, 0.18);
+      }
+      &.nav-item svg {
+        color: var(--accent);
+      }
+    }
+
+    .light {
+      & .nav-item.active {
+        border-color: rgba(15, 118, 110, 0.18);
+      }
+    }
+
+    .sidebar-btn {
+      color: var(--text-3);
+      background: transparent;
+      border: 1px solid transparent;
+      @apply rounded-md transition-colors;
+
+      &:hover {
+        color: var(--text-2);
+        background: var(--bg-surface-2);
+        border-color: var(--border);
+      }
+    }
+
+    .config-tab {
+      color: var(--text-3);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      @apply flex items-center gap-2 whitespace-nowrap rounded-t-lg px-3.5 py-2.5 text-sm font-medium transition-all;
+
+      & svg {
+        color: var(--text-3);
+        transition: color 0.15s;
+      }
+
+      &:hover {
+        color: var(--text-1);
+        background: var(--bg-surface-2);
+      }
+
+      &:hover svg {
+        color: var(--text-2);
+      }
+
+      @media (max-width: 639px) {
+        min-height: 44px;
+        padding-inline: 0.75rem;
+      }
+    }
+
+    .config-tab--active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      & svg {
+        color: var(--accent);
+      }
+      &:hover {
+        color: var(--accent);
+        background: var(--accent-light);
+      }
+      &:hover svg {
+        color: var(--accent);
+      }
+    }
+
+    .scroll-hidden {
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    .scrollbar-stable {
+      scrollbar-gutter: stable;
+    }
+
+    .table-row-hover {
+      @apply transition-colors;
+      &:hover {
+        background: var(--bg-surface-2);
+      }
+    }
+
+    .card-hover {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgba(3, 24, 22, 0.08);
+      @apply rounded-xl transition-all;
+
+      &:hover {
+        background: var(--bg-surface-2);
+        border-color: var(--border-strong);
+        transform: translateY(-1px);
+        box-shadow: 0 10px 24px rgba(3, 24, 22, 0.1);
+      }
+    }
+
+    .gradient-text {
+      background: none;
+      color: var(--accent);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: currentColor;
+      background-clip: initial;
+    }
+
+    .flash-msg {
+      animation: slideDown 0.2s ease-out;
+    }
+
+    .marquee-track {
+      animation: marquee 28s linear infinite;
+      &:hover {
+        animation-play-state: paused;
+      }
     }
 }

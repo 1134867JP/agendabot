@@ -54,7 +54,7 @@ export default function Legal({ kind, legal }: Props) {
                         </section>
                     ))}
 
-                    <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
+                    <section className="rounded-xl border border-white/10 bg-white/3 p-5">
                         <h2 className="text-lg font-semibold text-white/90">Responsável e contato</h2>
                         <p className="mt-2">{legal.entity_name}{legal.entity_document ? ` · ${legal.entity_document}` : ''}</p>
                         {legal.contact_email

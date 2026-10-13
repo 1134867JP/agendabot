@@ -54,7 +54,7 @@ export default function TenantCreate(_: PageProps) {
                                         }
                                     >
                                         <span>{t.emoji}</span>
-                                        <span className="break-words font-medium">{t.label}</span>
+                                        <span className="wrap-break-word font-medium">{t.label}</span>
                                     </button>
                                 ))}
                             </div>

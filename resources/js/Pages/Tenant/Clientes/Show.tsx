@@ -114,7 +114,7 @@ function fmtRelativo(iso: string | null) {
 
 function DeleteModal({ nome, onConfirm, onCancel }: { nome: string; onConfirm: () => void; onCancel: () => void }) {
     return (
-        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/50 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6" role="dialog" aria-modal="true" aria-labelledby="excluir-cliente-title">
+        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/50 backdrop-blur-xs sm:items-center sm:px-4 sm:py-6" role="dialog" aria-modal="true" aria-labelledby="excluir-cliente-title">
             <div className="max-h-[92dvh] w-full max-w-sm overflow-y-auto overscroll-contain rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl sm:p-6" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
                 <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full" style={{ background: 'rgba(239,68,68,0.1)' }}>
                     <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-red-400">
@@ -181,7 +181,7 @@ export default function ClienteShow({ cliente, agendamentos, conversas }: Props)
             <div className="mb-5 flex items-center justify-between">
                 <button
                     onClick={() => router.visit(route('tenant.clientes.index'))}
-                    className="flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs transition-colors hover:bg-[var(--bg-surface-2)] hover:text-[var(--text-1)]"
+                    className="flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs transition-colors hover:bg-(--bg-surface-2) hover:text-primary"
                     style={{ color: 'var(--text-3)' }}
                 >
                     <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -354,7 +354,7 @@ export default function ClienteShow({ cliente, agendamentos, conversas }: Props)
             )}
 
             {deleting && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-xs">
                     <div className="rounded-2xl p-6" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
                         <svg className="mx-auto h-6 w-6 animate-spin" fill="none" viewBox="0 0 24 24" style={{ color: 'var(--accent)' }}>
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />

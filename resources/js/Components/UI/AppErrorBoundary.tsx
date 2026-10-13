@@ -31,7 +31,7 @@ export default class AppErrorBoundary extends Component<Props, State> {
 
         return (
             <main
-                className="flex min-h-[100dvh] items-center justify-center p-5"
+                className="flex min-h-dvh items-center justify-center p-5"
                 style={{ background: 'var(--bg-app)', color: 'var(--text-1)' }}
             >
                 <section

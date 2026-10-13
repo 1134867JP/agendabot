@@ -12,7 +12,7 @@ export default function PageHeader({ title, subtitle, eyebrow, actions }: PageHe
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
                 {eyebrow && (
-                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--accent)' }}>
+                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'var(--accent)' }}>
                         {eyebrow}
                     </p>
                 )}

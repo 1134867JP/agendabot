@@ -15,7 +15,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
 
     return (
         <ForceDark>
-        <div className="flex min-h-[100dvh]" style={{ background: 'var(--bg-app)' }}>
+        <div className="flex min-h-dvh" style={{ background: 'var(--bg-app)' }}>
             <Head title="Esqueci a senha" />
 
             {/* ── Painel esquerdo — marca ─────────────────────────────────────── */}
@@ -108,7 +108,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                         <button
                             type="submit"
                             disabled={processing}
-                            className="relative mt-2 w-full overflow-hidden rounded-xl py-3 text-sm font-semibold text-white transition-all hover:brightness-110 disabled:opacity-60"
+                            className="relative w-full overflow-hidden rounded-xl py-3 text-sm font-semibold text-white transition-all hover:brightness-110 disabled:opacity-60"
                             style={{ background: INDIGO }}
                         >
                             {processing ? (

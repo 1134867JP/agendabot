@@ -110,7 +110,7 @@ function EspecialidadesField({
             {value.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                     {value.map((esp, i) => (
-                        <span key={i} className="flex items-center gap-1 rounded px-2 py-0.5 text-xs" style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}>
+                        <span key={i} className="flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs" style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}>
                             {esp}
                             <button type="button" onClick={() => onChange(value.filter((_, j) => j !== i))} className="transition-opacity hover:opacity-70">×</button>
                         </span>
@@ -516,7 +516,7 @@ export default function ProfissionaisIndex({ profissionais, servicos_disponiveis
                                             {p.especialidades && p.especialidades.length > 0 && (
                                                 <div className="mt-1 flex flex-wrap gap-1">
                                                     {p.especialidades.map((esp, i) => (
-                                                        <span key={i} className="rounded px-1.5 py-0.5 text-[11px]" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-3)' }}>
+                                                        <span key={i} className="rounded-sm px-1.5 py-0.5 text-[11px]" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-3)' }}>
                                                             {esp}
                                                         </span>
                                                     ))}

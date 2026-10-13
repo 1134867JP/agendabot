@@ -25,7 +25,7 @@ export default function TipoServicoSelector({ value, onChange, customValue, onCh
                         }
                     >
                         <span className="mr-1 text-base sm:mr-0">{t.emoji}</span>
-                        <span className="break-words font-medium leading-tight">{t.label}</span>
+                        <span className="wrap-break-word font-medium leading-tight">{t.label}</span>
                         <span className="hidden text-[11px] leading-tight opacity-60 sm:block">{t.desc}</span>
                     </button>
                 ))}

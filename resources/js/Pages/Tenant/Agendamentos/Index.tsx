@@ -172,7 +172,7 @@ function AcoesAgendamento({
             {aberto && createPortal(
                 <div
                     ref={menuRef}
-                    className="fixed z-[100] w-[184px] rounded-xl p-1.5 shadow-2xl"
+                    className="fixed z-100 w-[184px] rounded-xl p-1.5 shadow-2xl"
                     style={{
                         top: posicao.top,
                         left: posicao.left,
@@ -321,7 +321,7 @@ function EditarReservaModal({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center sm:px-4"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-xs sm:items-center sm:px-4"
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-editar-reserva"
@@ -347,7 +347,7 @@ function EditarReservaModal({
                         type="button"
                         onClick={onClose}
                         style={{ color: "var(--text-3)" }}
-                        className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)] hover:text-primary"
+                        className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-(--bg-surface-2) hover:text-primary"
                         aria-label="Fechar"
                     >
                         ✕
@@ -647,7 +647,7 @@ function NovaReservaModal({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center sm:px-4"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-xs sm:items-center sm:px-4"
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-nova-reserva"
@@ -673,7 +673,7 @@ function NovaReservaModal({
                         type="button"
                         onClick={onClose}
                         style={{ color: "var(--text-3)" }}
-                        className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)] hover:text-primary"
+                        className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-(--bg-surface-2) hover:text-primary"
                         aria-label="Fechar"
                     >
                         ✕
@@ -921,7 +921,7 @@ function NovaReservaModal({
                             onChange={(e) =>
                                 setData("notificar_cliente", e.target.checked)
                             }
-                            className="rounded"
+                            className="rounded-sm"
                         />
                         Notificar cliente via WhatsApp
                     </label>
@@ -1436,7 +1436,7 @@ export default function AgendamentosIndex({
                         boxShadow: "0 4px 20px rgba(99,102,241,0.4)",
                     }}
                 >
-                    <span className="text-xl leading-none sm:text-base">+</span>
+                    <span className="text-xl leading-none sm:text-base sm:leading-6">+</span>
                     <span className="hidden sm:inline">Nova reserva</span>
                 </button>
             )}

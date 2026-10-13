@@ -80,7 +80,7 @@ function RequisitosAgenda({
                         <div className="grid gap-2 sm:grid-cols-2">
                             {recursos.map(recurso => (
                                 <label key={recurso.id} className="flex min-h-10 cursor-pointer items-center gap-2 rounded-md px-2.5 text-sm" style={{ background: 'var(--bg-app)' }}>
-                                    <input type="checkbox" checked={data.recurso_ids.includes(recurso.id)} onChange={() => alternarRecurso(recurso.id)} className="rounded" />
+                                    <input type="checkbox" checked={data.recurso_ids.includes(recurso.id)} onChange={() => alternarRecurso(recurso.id)} className="rounded-sm" />
                                     {recurso.nome}
                                 </label>
                             ))}

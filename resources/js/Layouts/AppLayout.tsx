@@ -68,7 +68,7 @@ export default function AppLayout({ children, title, subtitle, headerActions, fu
 
     return (
         <div
-            className={fullHeight ? 'flex w-full max-w-full overflow-hidden' : 'min-h-[100dvh] w-full max-w-full lg:flex lg:h-[100dvh] lg:overflow-hidden'}
+            className={fullHeight ? 'flex w-full max-w-full overflow-hidden' : 'min-h-dvh w-full max-w-full lg:flex lg:h-dvh lg:overflow-hidden'}
             style={fullHeight ? {
                 position: 'fixed',
                 top: 'var(--app-top, 0px)',
@@ -83,11 +83,11 @@ export default function AppLayout({ children, title, subtitle, headerActions, fu
                 color: 'var(--text-1)',
             }}
         >
-            <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white" style={{ background: 'var(--accent)' }}>Pular para o conteúdo</a>
+            <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-100 focus:rounded-lg focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white" style={{ background: 'var(--accent)' }}>Pular para o conteúdo</a>
             <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} conversasNaoLidas={conversasNaoLidas} novaMensagem={novaMensagem} resetarNovaMensagem={resetarNovaMensagem} />
             <div className={`flex min-w-0 flex-1 flex-col ${fullHeight ? 'overflow-hidden' : 'lg:overflow-hidden'}`}>
                 <header className="sticky top-0 z-10 flex min-h-14 items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3 lg:hidden" style={{ background: 'var(--bg-sidebar)', borderBottom: '1px solid var(--border)' }}>
-                    <button onClick={() => setSidebarOpen(true)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]" style={{ color: 'var(--text-2)' }} aria-label="Abrir menu"><MenuIcon /></button>
+                    <button onClick={() => setSidebarOpen(true)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-(--bg-surface-2)" style={{ color: 'var(--text-2)' }} aria-label="Abrir menu"><MenuIcon /></button>
                     <span className="text-base text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>Agendou</span>
                     {currentTenant && <span className="min-w-0 flex-1 truncate text-sm text-muted">{currentTenant.nome}</span>}
                     {currentTenant && <div className="ml-auto"><NotificacoesBell count={conversasNaoLidas} preview={conversasPreview} size="md" align="right" /></div>}
