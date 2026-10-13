@@ -11,6 +11,7 @@ use App\Notifications\VerificarEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class ConviteEquipeTest extends TestCase
@@ -200,15 +201,16 @@ class ConviteEquipeTest extends TestCase
     {
         Notification::fake();
         [$tenant, $admin] = $this->tenantComAdmin();
+        $senhaProvisoria = Str::password(16);
 
         $this->actingAs($admin)->withSession(['tenant_id' => $tenant->id])
             ->post(route('tenant.equipe.store'), [
                 'name' => 'Maria', 'email' => 'maria@barbearia.test', 'papel' => 'recepcionista',
-                'password' => 'Provisoria#2026',
+                'password' => $senhaProvisoria,
             ])->assertSessionHasNoErrors();
 
         $maria = User::where('email', 'maria@barbearia.test')->firstOrFail();
-        $this->assertTrue(Hash::check('Provisoria#2026', $maria->password));
+        $this->assertTrue(Hash::check($senhaProvisoria, $maria->password));
         Notification::assertNotSentTo($maria, ConviteEquipe::class);
         Notification::assertSentTo($maria, VerificarEmail::class);
     }
