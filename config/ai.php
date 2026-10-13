@@ -78,7 +78,7 @@ return [
 
     /*
      * USD por 1 milhão de tokens. Revise estes valores quando trocar de modelo:
-     * os provedores alteram preços independentemente do deploy do Agendou.
+     * os provedores alteram preços independentemente do deploy do Agendabot.
      */
     'pricing' => [
         'claude' => [

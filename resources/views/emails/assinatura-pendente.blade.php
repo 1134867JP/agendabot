@@ -3,7 +3,7 @@
 
 Olá, **{{ $tenant->nome }}**!
 
-Identificamos que o pagamento da sua assinatura Agendou não foi processado.
+Identificamos que o pagamento da sua assinatura Agendabot não foi processado.
 
 **Você tem 3 dias** antes do sistema ser suspenso.
 
@@ -15,5 +15,5 @@ Se já pagou, aguarde alguns minutos para a confirmação automática.
 
 Qualquer dúvida, responda este e-mail.
 
-— Equipe Agendou
+— Equipe Agendabot
 </x-mail::message>

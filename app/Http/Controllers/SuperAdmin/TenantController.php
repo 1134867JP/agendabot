@@ -5,6 +5,7 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\ConviteEquipeService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,17 +32,19 @@ class TenantController extends Controller
         return Inertia::render('SuperAdmin/Tenants/Create');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, ConviteEquipeService $convites): RedirectResponse
     {
         $validated = $request->validate([
             'nome' => ['required', 'string', 'max:255'],
             'tipo_servico' => ['required', 'in:barbeiro,quadra,estetica,clinica,studio,personalizado'],
             'tipo_servico_personalizado' => ['nullable', 'required_if:tipo_servico,personalizado', 'string', 'max:100'],
             'email_dono' => ['required', 'email', 'unique:users,email'],
-            'senha_dono' => ['required', 'min:8'],
+            // Sem senha, o dono recebe um convite por e-mail para criar a própria.
+            'senha_dono' => ['nullable', 'min:8'],
         ]);
+        $porConvite = blank($validated['senha_dono'] ?? null);
 
-        $tenant = DB::transaction(function () use ($validated): Tenant {
+        $tenant = DB::transaction(function () use ($validated, $porConvite): Tenant {
             $slug = Str::slug($validated['nome']).'-'.Str::random(4);
 
             $webhookToken = Str::random(64);
@@ -58,7 +61,7 @@ class TenantController extends Controller
             $dono = User::create([
                 'name' => $validated['nome'],
                 'email' => $validated['email_dono'],
-                'password' => Hash::make($validated['senha_dono']),
+                'password' => Hash::make($porConvite ? Str::password(40) : $validated['senha_dono']),
             ]);
 
             $tenant->users()->attach($dono->id, ['papel' => 'admin']);
@@ -66,7 +69,16 @@ class TenantController extends Controller
             return $tenant;
         });
 
-        event(new Registered($tenant->users()->firstOrFail()));
+        $dono = $tenant->users()->firstOrFail();
+
+        if ($porConvite) {
+            $convites->enviar($dono, $tenant->nome);
+
+            return redirect()->route('superadmin.tenants.index')
+                ->with('success', "Tenant criado. Convite enviado para {$dono->email} criar a senha (vale 7 dias).");
+        }
+
+        event(new Registered($dono));
 
         return redirect()->route('superadmin.tenants.index')
             ->with('success', 'Tenant criado. O proprietário deve verificar o e-mail antes de preparar o WhatsApp.');

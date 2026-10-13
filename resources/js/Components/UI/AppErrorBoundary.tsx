@@ -53,7 +53,7 @@ export default class AppErrorBoundary extends Component<Props, State> {
 
                     <h1 className="mt-4 text-lg font-semibold text-primary">Não foi possível carregar esta tela</h1>
                     <p className="mt-2 text-sm leading-6" style={{ color: 'var(--text-3)' }}>
-                        O Agendou encontrou um erro inesperado. Seus dados não foram apagados. Recarregue a página para continuar.
+                        O Agendabot encontrou um erro inesperado. Seus dados não foram apagados. Recarregue a página para continuar.
                     </p>
 
                     <div className="mt-6 grid gap-2 sm:grid-cols-2">

@@ -19,5 +19,5 @@
 Ver logs no painel
 </x-mail::button>
 
-— Agendou
+— Agendabot
 </x-mail::message>

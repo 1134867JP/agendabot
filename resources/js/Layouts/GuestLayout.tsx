@@ -29,7 +29,7 @@ export default function Guest({ children }: PropsWithChildren) {
                             className="text-2xl text-primary"
                             style={{ fontFamily: 'Instrument Serif, Georgia, serif', letterSpacing: '-0.02em' }}
                         >
-                            Agendou
+                            Agendabot
                         </span>
                     </Link>
 
@@ -37,7 +37,7 @@ export default function Guest({ children }: PropsWithChildren) {
                         {children}
                     </main>
 
-                    <p className="mt-5 text-center text-xs text-muted">© {new Date().getFullYear()} Agendou</p>
+                    <p className="mt-5 text-center text-xs text-muted">© {new Date().getFullYear()} Agendabot</p>
                 </div>
             </div>
         </ForceDark>

@@ -57,7 +57,7 @@ export default function Login({
                         className="text-xl"
                         style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}
                     >
-                        Agendou
+                        Agendabot
                     </span>
                 </Link>
 
@@ -118,7 +118,7 @@ export default function Login({
 
                 {/* Rodapé esquerdo */}
                 <p className="relative text-[11px]" style={{ color: 'var(--text-3)' }}>
-                    © {new Date().getFullYear()} Agendou
+                    © {new Date().getFullYear()} Agendabot
                 </p>
             </div>
 
@@ -146,7 +146,7 @@ export default function Login({
                                 A
                             </span>
                             <span className="text-xl" style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'var(--text-1)' }}>
-                                Agendou
+                                Agendabot
                             </span>
                         </div>
                     </div>

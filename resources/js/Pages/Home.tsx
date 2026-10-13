@@ -198,7 +198,7 @@ export default function Home() {
 
     return (
         <LandingLayout currentPage="home">
-            <Head title="Agendou — Agendamento automático via WhatsApp" />
+            <Head title="Agendabot — Agendamento automático via WhatsApp" />
 
             <style>{`
                 @keyframes fadeUp {
@@ -428,7 +428,7 @@ export default function Home() {
                             </h2>
                         </div>
                         <p className="max-w-xs text-sm leading-relaxed" style={{ color: 'rgba(232,230,225,0.35)' }}>
-                            Se o seu cliente precisa de horário, o Agendou resolve.
+                            Se o seu cliente precisa de horário, o Agendabot resolve.
                         </p>
                     </div>
 

@@ -88,7 +88,7 @@ export default function AppLayout({ children, title, subtitle, headerActions, fu
             <div className={`flex min-w-0 flex-1 flex-col ${fullHeight ? 'overflow-hidden' : 'lg:overflow-hidden'}`}>
                 <header className="sticky top-0 z-10 flex min-h-14 items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3 lg:hidden" style={{ background: 'var(--bg-sidebar)', borderBottom: '1px solid var(--border)' }}>
                     <button onClick={() => setSidebarOpen(true)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-(--bg-surface-2)" style={{ color: 'var(--text-2)' }} aria-label="Abrir menu"><MenuIcon /></button>
-                    <span className="text-base text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>Agendou</span>
+                    <span className="text-base text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>Agendabot</span>
                     {currentTenant && <span className="min-w-0 flex-1 truncate text-sm text-muted">{currentTenant.nome}</span>}
                     {currentTenant && <div className="ml-auto"><NotificacoesBell count={conversasNaoLidas} preview={conversasPreview} size="md" align="right" /></div>}
                 </header>

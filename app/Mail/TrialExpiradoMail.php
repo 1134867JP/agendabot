@@ -18,7 +18,7 @@ class TrialExpiradoMail extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: '⏰ Seu período de teste encerrou — Agendou');
+        return new Envelope(subject: '⏰ Seu período de teste encerrou — Agendabot');
     }
 
     public function content(): Content

@@ -8,7 +8,7 @@ import { createRoot } from 'react-dom/client';
 import { ThemeProvider } from '@/Components/ThemeProvider';
 import AppErrorBoundary from '@/Components/UI/AppErrorBoundary';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Agendou';
+const appName = import.meta.env.VITE_APP_NAME || 'Agendabot';
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,

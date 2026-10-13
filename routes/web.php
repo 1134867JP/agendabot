@@ -123,6 +123,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('equipe', [EquipeController::class, 'index'])->middleware('tenant.admin')->name('equipe.index');
         Route::post('equipe', [EquipeController::class, 'store'])->middleware('tenant.admin')->name('equipe.store');
         Route::patch('equipe/{user}/acesso', [EquipeController::class, 'toggleAtivo'])->middleware(['tenant.admin', 'throttle:10,1'])->name('equipe.toggle-ativo');
+        Route::post('equipe/{user}/convite', [EquipeController::class, 'reenviarConvite'])->middleware(['tenant.admin', 'throttle:6,1'])->name('equipe.reenviar-convite');
         Route::delete('equipe/{user}', [EquipeController::class, 'destroy'])->middleware('tenant.admin')->name('equipe.destroy');
 
         // Clientes

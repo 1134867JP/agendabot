@@ -193,7 +193,7 @@ export default function Sidebar({
                                     <polyline points="9 16 11 18 15 14"/>
                                 </svg>
                             </span>
-                            Agendou
+                            Agendabot
                         </span>
                     </div>
                     {currentTenant && (

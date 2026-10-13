@@ -59,7 +59,7 @@ class AsaasService
             'value' => $valor,
             'nextDueDate' => now()->addDays((int) env('TRIAL_DAYS', 14))->format('Y-m-d'),
             'cycle' => 'MONTHLY',
-            'description' => 'Agendou — Plano '.ucfirst($plano),
+            'description' => 'Agendabot — Plano '.ucfirst($plano),
             'externalReference' => "plano_{$plano}",
         ]);
 

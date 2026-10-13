@@ -66,7 +66,7 @@ function RequisitosAgenda({
     return (
         <fieldset className="rounded-lg p-3.5" style={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border)' }}>
             <legend className="px-1 text-xs font-semibold text-primary">O que este serviço precisa?</legend>
-            <p className="mb-3 text-xs" style={{ color: 'var(--text-3)' }}>O Agendou mostra apenas as escolhas necessárias no momento do agendamento.</p>
+            <p className="mb-3 text-xs" style={{ color: 'var(--text-3)' }}>O Agendabot mostra apenas as escolhas necessárias no momento do agendamento.</p>
             <div className="space-y-2.5">
                 <Toggle checked={data.requer_profissional} onChange={value => setData('requer_profissional', value)} label={`Precisa de ${agenda.profissional.toLowerCase()}`} />
                 <Toggle checked={data.requer_recurso} onChange={value => setData('requer_recurso', value)} label={`Precisa de ${agenda.recurso.toLowerCase()}`} />
