@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\UpdateBotRequest;
 use App\Http\Requests\Tenant\UpdateConfiguracaoRequest;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -41,6 +42,7 @@ class ConfiguracaoController extends Controller
                 'lembrete_ativo' => $cfg['lembrete_ativo'] ?? true,
                 'lembrete_texto' => $cfg['lembrete_texto'] ?? '',
                 'lembrete_horas_antes' => $tenant->lembreteHorasAntes(),
+                'asaas_wallet_id' => $tenant->asaasWalletId(),
             ]),
         ]);
     }
@@ -61,6 +63,23 @@ class ConfiguracaoController extends Controller
         $tenant->update($data);
 
         return back()->with('success', 'Configurações salvas.');
+    }
+
+    /** Carteira Asaas que recebe o sinal PIX cobrado dos clientes. */
+    public function updatePagamentos(Request $request): RedirectResponse
+    {
+        $tenant = app('tenant');
+        $data = $request->validate([
+            'asaas_wallet_id' => ['nullable', 'uuid'],
+        ], [
+            'asaas_wallet_id.uuid' => 'O ID da carteira tem o formato 00000000-0000-0000-0000-000000000000. Copie em Asaas → Minha conta → Integrações.',
+        ]);
+
+        $tenant->update(['configuracoes' => array_merge($tenant->configuracoes ?? [], [
+            'asaas_wallet_id' => $data['asaas_wallet_id'] ?? null,
+        ])]);
+
+        return back()->with('success', 'Dados de pagamento salvos.');
     }
 
     public function updateBot(UpdateBotRequest $request): RedirectResponse

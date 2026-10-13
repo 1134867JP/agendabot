@@ -19,8 +19,9 @@ class ProfissionalController extends Controller
         $tenant = app('tenant');
 
         return Inertia::render('Tenant/Profissionais/Index', [
-            'profissionais' => $tenant->profissionais()->with(['horarios', 'servicos:id,nome'])->get(),
-            'servicos_disponiveis' => $tenant->servicos()->where('ativo', true)->orderBy('nome')->get(['id', 'nome']),
+            'profissionais' => $tenant->profissionais()->with(['horarios', 'servicos:id,nome'])->orderBy('nome')->get(),
+            'servicos_disponiveis' => $tenant->servicos()->where('ativo', true)->orderBy('nome')
+                ->get(['id', 'nome', 'valor_min', 'valor_max', 'duracao_minutos']),
         ]);
     }
 
@@ -71,11 +72,42 @@ class ProfissionalController extends Controller
             ]);
         }
 
-        $servicoIds = $data['servico_ids'] ?? [];
         $profissional->update(Arr::except($data, ['servico_ids']));
-        $profissional->servicos()->sync($servicoIds);
+        // Editar nome ou ativar/desativar não mexe nos serviços: só sincroniza
+        // quando a lista vem explicitamente no pedido.
+        if (array_key_exists('servico_ids', $data)) {
+            $profissional->servicos()->sync($data['servico_ids'] ?? []);
+        }
 
         return back()->with('success', 'Profissional atualizado.');
+    }
+
+    /**
+     * Serviços que o profissional faz, com preço e duração próprios opcionais
+     * (vazio = usa o padrão do serviço).
+     */
+    public function sincronizarServicos(Request $request, Profissional $profissional): RedirectResponse
+    {
+        $tenantId = app('tenant')->id;
+        abort_if((int) $profissional->tenant_id !== (int) $tenantId, 403);
+
+        $data = $request->validate([
+            'servicos' => 'present|array',
+            'servicos.*.servico_id' => ['required', 'integer', 'distinct', Rule::exists('servicos', 'id')->where('tenant_id', $tenantId)],
+            'servicos.*.valor' => 'nullable|numeric|min:0|max:99999',
+            'servicos.*.duracao_minutos' => 'nullable|integer|min:5|max:480',
+        ], [
+            'servicos.*.duracao_minutos.min' => 'A duração precisa ter pelo menos 5 minutos.',
+        ]);
+
+        $profissional->servicos()->sync(collect($data['servicos'])->mapWithKeys(fn ($item) => [
+            (int) $item['servico_id'] => [
+                'valor' => $item['valor'] ?? null,
+                'duracao_minutos' => $item['duracao_minutos'] ?? null,
+            ],
+        ])->all());
+
+        return back()->with('success', "Serviços de {$profissional->nome} salvos.");
     }
 
     public function destroy(Profissional $profissional): RedirectResponse

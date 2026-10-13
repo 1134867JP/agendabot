@@ -1,4 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
+import ServicosCombo, { ServicoComboOpcao, resumoServicos } from '@/Components/ServicosCombo';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import AgendaViewTabs from '@/Components/AgendaViewTabs';
@@ -10,7 +11,7 @@ import { PageProps, Recurso, Tenant } from '@/types';
 
 interface AgendamentoCalendario {
     id: number;
-    tipo: 'agendamento' | 'bloqueio';
+    tipo: 'agendamento' | 'bloqueio' | 'intervalo';
     title: string;
     start: string;
     end: string;
@@ -38,7 +39,7 @@ interface Props extends PageProps {
     servicos: ServicoAgenda[];
 }
 
-interface ServicoAgenda {
+interface ServicoAgenda extends ServicoComboOpcao {
     id: number;
     nome: string;
     duracao_minutos: number;
@@ -144,10 +145,12 @@ function professionalColor(id: number | null | undefined) {
     return PROFESSIONAL_COLORS[(id - 1) % PROFESSIONAL_COLORS.length];
 }
 
-function descricaoServico(servico: ServicoAgenda) {
-    const partes = [`${servico.duracao_minutos} min`];
-    const minimo = servico.valor_min != null ? Number(servico.valor_min) : null;
-    const maximo = servico.valor_max != null ? Number(servico.valor_max) : null;
+function descricaoServico(servico: ServicoAgenda, profissionalId?: number) {
+    // Preço e duração próprios do profissional, quando cadastrados.
+    const proprio = profissionalId ? servico.personalizado_por_profissional?.[String(profissionalId)] : undefined;
+    const partes = [`${proprio?.duracao_minutos || servico.duracao_minutos} min`];
+    const minimo = proprio?.valor ?? (servico.valor_min != null ? Number(servico.valor_min) : null);
+    const maximo = proprio?.valor ?? (servico.valor_max != null ? Number(servico.valor_max) : null);
 
     if (minimo != null && maximo != null && Math.abs(minimo - maximo) < 0.01) {
         partes.push(minimo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
@@ -162,6 +165,7 @@ function descricaoServico(servico: ServicoAgenda) {
 
 function slotColor(a: AgendamentoCalendario): { accent: string; bg: string; text: string } {
     if (a.tipo === 'bloqueio')   return { accent: '#94a3b8', bg: 'rgba(100,116,139,0.16)', text: '#cbd5e1' };
+    if (a.tipo === 'intervalo')  return { accent: '#d9a55b', bg: 'rgba(217,165,91,0.10)',  text: '#e9c48c' };
     if (a.status === 'cancelado') return { accent: '#f87171', bg: 'rgba(239,68,68,0.07)',   text: '#f87171' };
     if (a.status === 'concluido') return { accent: '#6b7280', bg: 'rgba(107,114,128,0.07)', text: 'rgba(232,230,225,0.4)' };
     if (a.profissional_id)        return professionalColor(a.profissional_id);
@@ -581,7 +585,7 @@ function DayTimeline({
                             className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"
                             style={{ background: accent + '30', color: accent }}
                         >
-                            {a.tipo === 'bloqueio' ? (
+                            {a.tipo !== 'agendamento' ? (
                                 <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <rect x="5" y="10" width="14" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" />
                                 </svg>
@@ -834,7 +838,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
     const [bloqueioForm, setBloqueioForm] = useState({ fim: '10:00', motivo: '' });
     const [bloqueioEntidadeId, setBloqueioEntidadeId] = useState<number>(() => entidades[0]?.id ?? 0);
     const [erroBloqueio, setErroBloqueio] = useState<string | null>(null);
-    const [novaForm, setNovaForm]     = useState({ nome: '', tel: '', fim: '', obs: '', servicoId: 0 });
+    const [novaForm, setNovaForm]     = useState({ nome: '', tel: '', fim: '', obs: '', servicoId: 0, extras: [] as number[] });
     const [clientesEncontrados, setClientesEncontrados] = useState<ClienteBusca[]>([]);
     const [buscandoCliente, setBuscandoCliente] = useState(false);
     const [clienteSelecionadoId, setClienteSelecionadoId] = useState<number | null>(null);
@@ -886,6 +890,8 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
     };
 
     const abrirDetalhe = (evento: AgendamentoCalendario) => {
+        // O almoço é configurado em Profissionais → Horários; aqui só aparece.
+        if (evento.tipo === 'intervalo') return;
         if (evento.tipo === 'bloqueio') setDetalheBloqueio(evento);
         else setDetalhe(evento);
     };
@@ -900,15 +906,22 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
         && (tipoEntidade === 'profissional' || servico.recurso_ids.length === 0 || servico.recurso_ids.includes(novoRecursoId))
     ), [novoProfissionalId, novoRecursoId, servicos, tipoEntidade]);
 
+    // Término = soma dos serviços com a duração própria do profissional.
+    const fimPara = (servicoIds: number[], profissionalId: number, padrao: string) => {
+        const ids = servicoIds.filter(Boolean);
+        if (!modalNova || ids.length === 0) return padrao;
+        return addMinutesToTime(modalNova.hora, resumoServicos(ids, servicos, profissionalId).duracao);
+    };
+
     const atualizarServico = (servicoId: number) => {
-        const servico = servicos.find(item => item.id === servicoId);
-        setNovaForm(form => ({
-            ...form,
-            servicoId,
-            fim: modalNova && servico
-                ? addMinutesToTime(modalNova.hora, servico.duracao_minutos)
-                : form.fim,
-        }));
+        setNovaForm(form => {
+            const extras = form.extras.filter(id => id !== servicoId);
+            return { ...form, servicoId, extras, fim: fimPara([servicoId, ...extras], novoProfissionalId, form.fim) };
+        });
+    };
+
+    const atualizarExtras = (extras: number[]) => {
+        setNovaForm(form => ({ ...form, extras, fim: fimPara([form.servicoId, ...extras], novoProfissionalId, form.fim) }));
     };
 
     const atualizarProfissional = (profissionalId: number) => {
@@ -920,8 +933,9 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
         setNovaForm(form => ({
             ...form,
             servicoId: servico?.id ?? 0,
+            extras: [],
             fim: modalNova
-                ? addMinutesToTime(modalNova.hora, servico?.duracao_minutos ?? 30)
+                ? (servico ? fimPara([servico.id], profissionalId, form.fim) : addMinutesToTime(modalNova.hora, 30))
                 : form.fim,
         }));
     };
@@ -930,7 +944,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
 
     const dotDates = useMemo(() => {
         const s = new Set<string>();
-        agendamentos.forEach(a => s.add(getDateSP(a.start)));
+        agendamentos.filter(a => a.tipo !== 'intervalo').forEach(a => s.add(getDateSP(a.start)));
         return s;
     }, [agendamentos]);
 
@@ -962,17 +976,21 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
         setNovaForm(form => {
             const servicoInicial = servicosDisponiveis.find(servico => servico.id === form.servicoId)
                 ?? servicosDisponiveis[0];
+            const profissionalInicial = tipoEntidade === 'profissional' ? (entidadeId || profissionais[0]?.id || 0) : 0;
             return {
                 ...form,
                 servicoId: servicoInicial?.id ?? 0,
-                fim: addMinutesToTime(modalNova.hora, servicoInicial?.duracao_minutos ?? 30),
+                extras: [],
+                fim: servicoInicial
+                    ? addMinutesToTime(modalNova.hora, resumoServicos([servicoInicial.id], servicos, profissionalInicial).duracao)
+                    : addMinutesToTime(modalNova.hora, 30),
             };
         });
         if (tipoEntidade === 'profissional') {
             setNovoProfissionalId(entidadeId || profissionais[0]?.id || 0);
         }
         setErroReserva(null);
-    }, [entidadeId, modalNova, profissionais, servicosDisponiveis, tipoEntidade]);
+    }, [entidadeId, modalNova, profissionais, servicos, servicosDisponiveis, tipoEntidade]);
 
     const navegarDia = (d: Date) => {
         setDiaAtivo(d);
@@ -1030,6 +1048,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
                 : `${modalNova.data}T${addMinutesToTime(modalNova.hora, 30)}:00`,
             observacoes:       novaForm.obs,
             servico_id:        novaForm.servicoId || undefined,
+            servico_ids:       novaForm.servicoId ? [novaForm.servicoId, ...novaForm.extras] : [],
             notificar_cliente: false as boolean,
         };
         const payload = {
@@ -1041,7 +1060,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
         router.post(route('tenant.agendamentos.store'), payload, {
             onSuccess: () => {
                 setModalNova(null);
-                setNovaForm({ nome: '', tel: '', fim: '', obs: '', servicoId: 0 });
+                setNovaForm({ nome: '', tel: '', fim: '', obs: '', servicoId: 0, extras: [] });
                 setClientesEncontrados([]);
                 setClienteSelecionadoId(null);
                 carregar();
@@ -1595,12 +1614,21 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
                                         >
                                             {servicosDisponiveis.map(servico => (
                                                 <option key={servico.id} value={servico.id}>
-                                                    {servico.nome} — {descricaoServico(servico)}
+                                                    {servico.nome} — {descricaoServico(servico, novoProfissionalId)}
                                                 </option>
                                             ))}
                                         </select>
+                                        <ServicosCombo
+                                            idPrefix="novo-agendamento"
+                                            principalId={novaForm.servicoId || null}
+                                            extras={novaForm.extras}
+                                            onChange={atualizarExtras}
+                                            opcoes={servicosDisponiveis}
+                                            todos={servicos}
+                                            profissionalId={novoProfissionalId}
+                                        />
                                         <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
-                                            O término é calculado pela duração do serviço.
+                                            O término é calculado pela duração dos serviços.
                                         </p>
                                     </div>
                                 ) : (

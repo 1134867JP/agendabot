@@ -5,19 +5,20 @@ namespace App\Http\Controllers\Tenant;
 use App\Http\Controllers\Controller;
 use App\Models\Agendamento;
 use App\Models\BloqueioAgenda;
+use App\Support\TenantAccess;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
-use App\Support\TenantAccess;
 
 class AgendaController extends Controller
 {
     public function index(): Response
     {
         $tenant = app('tenant');
+
         return Inertia::render('Tenant/Agenda', [
             'tenant' => $tenant,
             'agenda' => $tenant->agendaConfig(),
@@ -29,22 +30,23 @@ class AgendaController extends Controller
                     ->when(TenantAccess::profissionalId($tenant), fn ($query, $id) => $query->whereKey($id))
                     ->get(['id', 'nome']),
             'servicos' => $tenant->servicos()
-                    ->where('ativo', true)
-                    ->when(TenantAccess::profissionalId($tenant), fn ($query, $id) => $query->whereHas('profissionais', fn ($profissionais) => $profissionais->whereKey($id)))
-                    ->with(['profissionais:id', 'recursos:id'])
-                    ->orderBy('nome')
-                    ->get(['id', 'tenant_id', 'nome', 'duracao_minutos', 'valor_min', 'valor_max', 'requer_profissional', 'requer_recurso'])
-                    ->map(fn ($servico) => [
-                        'id' => $servico->id,
-                        'nome' => $servico->nome,
-                        'duracao_minutos' => (int) ($servico->duracao_minutos ?? 30),
-                        'valor_min' => $servico->valor_min,
-                        'valor_max' => $servico->valor_max,
-                        'profissional_ids' => $servico->profissionais->pluck('id')->values(),
-                        'recurso_ids' => $servico->recursos->pluck('id')->values(),
-                        'requer_profissional' => $servico->requer_profissional,
-                        'requer_recurso' => $servico->requer_recurso,
-                    ]),
+                ->where('ativo', true)
+                ->when(TenantAccess::profissionalId($tenant), fn ($query, $id) => $query->whereHas('profissionais', fn ($profissionais) => $profissionais->whereKey($id)))
+                ->with(['profissionais:id', 'recursos:id'])
+                ->orderBy('nome')
+                ->get(['id', 'tenant_id', 'nome', 'duracao_minutos', 'valor_min', 'valor_max', 'requer_profissional', 'requer_recurso'])
+                ->map(fn ($servico) => [
+                    'id' => $servico->id,
+                    'nome' => $servico->nome,
+                    'duracao_minutos' => (int) ($servico->duracao_minutos ?? 30),
+                    'valor_min' => $servico->valor_min,
+                    'valor_max' => $servico->valor_max,
+                    'profissional_ids' => $servico->profissionais->pluck('id')->values(),
+                    'personalizado_por_profissional' => AgendamentoController::personalizacoes($servico),
+                    'recurso_ids' => $servico->recursos->pluck('id')->values(),
+                    'requer_profissional' => $servico->requer_profissional,
+                    'requer_recurso' => $servico->requer_recurso,
+                ]),
         ]);
     }
 
@@ -64,7 +66,7 @@ class AgendaController extends Controller
 
         $query = Agendamento::where('tenant_id', $tenant->id)
             ->where('status', '!=', 'cancelado')
-            ->with(['profissional:id,nome', 'servico:id,nome']);
+            ->with(['profissional:id,nome', 'servico:id,nome', 'itensServico:id,agendamento_id,nome,ordem']);
 
         if ($profissionalIdLogado) {
             abort_if(! $tenant->agendaUsaProfissionais(), 403);
@@ -88,7 +90,7 @@ class AgendaController extends Controller
             return response()->json([]);
         }
 
-        $tz = new \DateTimeZone('America/Sao_Paulo');
+        $tz = new \DateTimeZone($tenant->resolvedTimezone());
 
         $agendamentos = $query->get()->map(function ($a) use ($tz) {
             $inicio = $a->inicio ?? $a->data_hora;
@@ -97,7 +99,7 @@ class AgendaController extends Controller
                 : null);
 
             $fmtSP = fn ($dt) => $dt
-                ? Carbon::parse($dt)->setTimezone($tz)->format('Y-m-d\TH:i:s')
+                ? Carbon::parse($dt)->setTimezone($tz)->format('Y-m-d\TH:i:sP')
                 : null;
 
             return [
@@ -112,7 +114,7 @@ class AgendaController extends Controller
                 'origem' => $a->origem ?? 'manual',
                 'profissional_id' => $a->profissional_id,
                 'profissional_nome' => $a->profissional?->nome,
-                'servico_nome' => $a->servico?->nome,
+                'servico_nome' => $a->descricaoServicos(),
             ];
         });
 
@@ -134,7 +136,7 @@ class AgendaController extends Controller
         }
 
         $bloqueios = $bloqueiosQuery->get()->map(function (BloqueioAgenda $bloqueio) use ($tz) {
-            $fmtSP = fn ($dt) => Carbon::parse($dt)->setTimezone($tz)->format('Y-m-d\TH:i:s');
+            $fmtSP = fn ($dt) => Carbon::parse($dt)->setTimezone($tz)->format('Y-m-d\TH:i:sP');
 
             return [
                 'id' => $bloqueio->id,
@@ -152,6 +154,53 @@ class AgendaController extends Controller
             ];
         });
 
-        return response()->json($agendamentos->concat($bloqueios)->values());
+        return response()->json($agendamentos->concat($bloqueios)->concat($this->intervalos($tenant, $request, $tz))->values());
+    }
+
+    /**
+     * Almoço/pausa fixa de cada profissional no período, para a agenda mostrar
+     * a faixa indisponível. Não é editável aqui: muda em Profissionais → Horários.
+     */
+    private function intervalos($tenant, Request $request, \DateTimeZone $tz): array
+    {
+        // Na visão geral (todos os profissionais) as faixas de almoço poluem a
+        // grade; elas aparecem ao filtrar um profissional.
+        if ($request->filled('recurso_id') || ! $request->filled('profissional_id')) {
+            return [];
+        }
+
+        $profissionais = $tenant->profissionais()->where('ativo', true)
+            ->when($request->filled('profissional_id'), fn ($q) => $q->whereKey($request->profissional_id))
+            ->with('horarios')
+            ->get();
+
+        $eventos = [];
+        $dia = Carbon::parse($request->data_inicio, $tz)->startOfDay();
+        $ultimo = Carbon::parse($request->data_fim, $tz)->startOfDay();
+        for ($indice = 0; $dia->lte($ultimo) && $indice < 62; $dia->addDay(), $indice++) {
+            foreach ($profissionais as $profissional) {
+                $horario = $profissional->horarios->firstWhere('dia_semana', $dia->dayOfWeek);
+                $intervalo = $horario?->intervaloNoDia($dia, $tz->getName());
+                if (! $intervalo) {
+                    continue;
+                }
+                $eventos[] = [
+                    'id' => $profissional->id * 1000 + $indice,
+                    'tipo' => 'intervalo',
+                    'title' => 'Almoço',
+                    'start' => $intervalo[0]->format('Y-m-d\TH:i:sP'),
+                    'end' => $intervalo[1]->format('Y-m-d\TH:i:sP'),
+                    'telefone' => '',
+                    'status' => 'bloqueado',
+                    'valor_total' => null,
+                    'origem' => 'manual',
+                    'profissional_id' => $profissional->id,
+                    'profissional_nome' => $profissional->nome,
+                    'servico_nome' => null,
+                ];
+            }
+        }
+
+        return $eventos;
     }
 }

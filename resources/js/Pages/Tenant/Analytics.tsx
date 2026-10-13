@@ -200,8 +200,8 @@ export default function Analytics({
                         <>
                             <StatCard label="Agendamentos" value={String(stats.total_mes)} sub="confirmados e concluídos" change={comparacao.agendamentos} />
                             <StatCard label="Receita prevista" value={receita} sub="valor dos agendamentos" change={comparacao.receita} />
-                            <StatCard label="Conversas" value={String(stats.conversas_mes)} sub="atendimentos iniciados" change={comparacao.conversas} />
-                            <StatCard label="Conversão" value={`${stats.taxa_conversao}%`} sub="conversas que viraram agenda" change={comparacao.conversao} suffix=" p.p." />
+                            <StatCard label="Conversas" value={String(stats.conversas_mes)} sub="clientes que chamaram no WhatsApp" change={comparacao.conversas} />
+                            <StatCard label="Conversão" value={`${stats.taxa_conversao}%`} sub="desses, marcaram pelo bot" change={comparacao.conversao} suffix=" p.p." />
                         </>
                     ) : (
                         <>

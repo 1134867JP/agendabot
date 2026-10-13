@@ -464,6 +464,33 @@ Custo estimado: **~US$ 0,0004 por mensagem**. O painel `/superadmin/tokens` exib
 
 ---
 
+## Barbearia
+
+Recursos pensados para a rotina de barbearia:
+
+| Recurso | Onde configurar |
+|---------|-----------------|
+| Preço e duração por barbeiro (ex.: barbeiro sênior mais caro) | Profissionais → **Serviços** |
+| Vários serviços no mesmo horário (corte + barba), com duração e valor somados | Bot e formulários de agendamento |
+| Intervalo de almoço por dia; o bot não oferece horários na pausa | Profissionais → **Horários** |
+| Lembrete relativo ao horário (padrão 2h antes; sem envios entre 21h e 8h) | Configurações → Bot |
+| Áudio do cliente transcrito (Whisper via Groq) | `AUDIO_TRANSCRICAO_ATIVA`, `GROQ_API_KEY` |
+| Bot pausa quando a equipe responde pelo celular e volta após inatividade | `BOT_RETOMAR_APOS_HUMANO_MINUTOS` |
+| Sinal via PIX com 100% do valor na carteira Asaas da barbearia | Configurações → **Pagamentos** |
+
+### Barbearia de demonstração
+
+Cria a "Barbearia do João" (dados fictícios) com três barbeiros, serviços, combo,
+almoço, agenda de hoje e dos próximos dias e conversas de exemplo. Pode ser rodado
+de novo para restaurar a demonstração:
+
+```bash
+DEMO_BARBEARIA_EMAIL=demo@suabarbearia.com DEMO_BARBEARIA_PASSWORD='senha-com-12+' \
+  php artisan db:seed --class='Database\Seeders\BarbeariaDemoSeeder'
+```
+
+---
+
 ## Configuração
 
 ### Pré-requisitos

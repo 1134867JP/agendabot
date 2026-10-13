@@ -184,6 +184,13 @@ function Bubble({ msg, prevRemetente }: { msg: Mensagem; prevRemetente?: string 
         labelColor = 'rgba(52,211,153,0.85)';
     }
 
+    // Áudio transcrito pelo bot: mostra a transcrição sem o marcador técnico.
+    const transcricao = msg.tipo === 'audio' && msg.conteudo?.startsWith('[áudio transcrito]')
+        ? msg.conteudo.replace('[áudio transcrito]', '').trim()
+        : null;
+    const soMarcador = msg.tipo !== 'texto' && /^\[(áudio|imagem|vídeo|documento|figurinha)\]$/.test(msg.conteudo ?? '');
+    const texto = transcricao ?? (soMarcador ? '' : msg.conteudo);
+
     const mediaUrl = (msg.tipo !== 'texto' && msg.evolution_message_id)
         ? route('tenant.conversas.media', { conversa: msg.conversa_id, mensagem: msg.id })
         : null;
@@ -235,11 +242,13 @@ function Bubble({ msg, prevRemetente }: { msg: Mensagem; prevRemetente?: string 
                 {(msg.tipo === 'documento' || msg.tipo === 'sticker' || (!mediaUrl && msg.tipo !== 'texto')) && (
                     <div className="px-3.5 py-2.5 flex items-center gap-2">
                         <span className="text-[11px] font-medium" style={{ color: 'var(--text-3)' }}>
-                            {msg.tipo === 'documento' ? 'Documento' : msg.tipo === 'sticker' ? 'Figurinha' : 'Anexo'}
+                            {msg.tipo === 'documento' ? 'Documento' : msg.tipo === 'sticker' ? 'Figurinha' : msg.tipo === 'audio' ? '🎤 Áudio' : 'Anexo'}
                         </span>
-                        <span style={{ color: 'var(--text-2)', fontSize: '12px' }}>
-                            {msg.conteudo || msg.tipo}
-                        </span>
+                        {!transcricao && msg.tipo !== 'audio' && (
+                            <span style={{ color: 'var(--text-2)', fontSize: '12px' }}>
+                                {msg.conteudo || msg.tipo}
+                            </span>
+                        )}
                         {mediaUrl && (
                             <a href={mediaUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', fontSize: '11px' }}>
                                 Baixar
@@ -249,9 +258,12 @@ function Bubble({ msg, prevRemetente }: { msg: Mensagem; prevRemetente?: string 
                 )}
 
                 {/* Texto (legenda ou conteúdo normal) */}
-                {(msg.tipo === 'texto' || msg.conteudo) && (
-                    <p className="px-3.5 py-2.5" style={{ whiteSpace: 'pre-wrap', lineHeight: 1.55, paddingTop: msg.tipo !== 'texto' && msg.conteudo ? '4px' : undefined }}>
-                        {msg.conteudo}
+                {(msg.tipo === 'texto' || texto) && (
+                    <p className="px-3.5 py-2.5" style={{ whiteSpace: 'pre-wrap', lineHeight: 1.55, paddingTop: msg.tipo !== 'texto' && texto ? '4px' : undefined }}>
+                        {transcricao && (
+                            <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--accent)' }}>Transcrição</span>
+                        )}
+                        {texto}
                     </p>
                 )}
 

@@ -19,6 +19,8 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class AgendamentoService
 {
+    public function __construct(private CatalogoServicos $catalogo) {}
+
     /**
      * Criação manual pelo painel (atendente). Suporta tanto `recurso_id` (tenants tipo
      * quadra/personalizado, sem conceito de expediente) quanto `profissional_id` (com
@@ -57,7 +59,13 @@ class AgendamentoService
                 $this->validarConflitoProfissional((int) $dados['profissional_id'], $inicio, $fim, $buffer);
             }
 
+            $montagem = $dados['montagem'] ?? null;
+            unset($dados['montagem']);
+
             $agendamento = Agendamento::create($dados);
+            if ($montagem && $montagem['itens'] !== []) {
+                $this->catalogo->gravarItens($agendamento, $montagem);
+            }
             OperationalEvent::record($tenant->id, 'appointment_created', [
                 'value' => $agendamento->valor_total,
                 'metadata' => ['origin' => $agendamento->origem ?? 'manual'],
@@ -234,28 +242,30 @@ class AgendamentoService
             }
 
             $profissionalId = (int) ($dados['profissional_id'] ?? $agendamento->profissional_id);
-            Profissional::where('id', $profissionalId)
+            $profissional = Profissional::where('id', $profissionalId)
                 ->where('tenant_id', $agendamento->tenant_id)
                 ->where('ativo', true)
                 ->firstOrFail();
 
-            if (! empty($dados['servico_id'])) {
-                Servico::where('id', $dados['servico_id'])
-                    ->where('tenant_id', $agendamento->tenant_id)
-                    ->firstOrFail();
+            // Mantém os serviços do agendamento, a menos que o cliente troque.
+            $servicoIds = $this->catalogo->normalizarIds((array) ($dados['servico_ids'] ?? $dados['servico_id'] ?? []))
+                ?: $this->catalogo->idsDoAgendamento($agendamento);
+            $montagem = null;
+            if ($servicoIds !== []) {
+                $this->catalogo->validarProfissionalFaz($profissional, $servicoIds);
+                $montagem = $this->catalogo->montar($agendamento->tenant, $servicoIds, $profissional);
             }
 
             $tz = $agendamento->tenant->resolvedTimezone();
             $horario = substr($dados['hora'], 0, 5);
             $inicio = Carbon::createFromFormat('Y-m-d H:i', "{$dados['data']} {$horario}", $tz);
-            $duracao = $agendamento->duracao_minutos ?? 30;
+            $duracao = $montagem['duracao_minutos'] ?? $agendamento->duracao_minutos ?? 30;
             $fim = $inicio->copy()->addMinutes($duracao);
 
             if ($inicio->isPast()) {
                 throw new HorarioIndisponivelException('Não é possível reagendar para datas passadas.');
             }
 
-            $profissional = Profissional::findOrFail($profissionalId);
             $this->validarExpediente($profissional, $inicio, $fim, $tz);
             $buffer = (int) $agendamento->tenant->regrasAgendamentoConfig()['buffer_entre_agendamentos_minutos'];
             $this->validarConflitoProfissional(
@@ -268,33 +278,56 @@ class AgendamentoService
 
             $agendamento->update([
                 'profissional_id' => $profissionalId,
-                'servico_id' => $dados['servico_id'] ?? $agendamento->servico_id,
+                'servico_id' => $servicoIds[0] ?? $agendamento->servico_id,
                 'data_hora' => $inicio,
                 'inicio' => $inicio,
                 'fim' => $fim,
+                'duracao_minutos' => $duracao,
+                'valor_total' => $montagem ? $montagem['valor_total'] : $agendamento->valor_total,
             ]);
+            if ($montagem) {
+                $this->catalogo->gravarItens($agendamento, $montagem);
+            }
 
             return $agendamento->fresh();
         });
     }
 
-    public function buscarHorariosDisponiveis(Tenant $tenant, int $dias = 7): array
+    /**
+     * Horários livres por profissional. Com $servicoIds, considera só quem faz
+     * todos os serviços e a duração total do atendimento para cada um.
+     *
+     * @return array<int, array<string, list<string>>>
+     */
+    public function buscarHorariosDisponiveis(Tenant $tenant, int $dias = 7, array $servicoIds = [], ?int $profissionalId = null): array
     {
         $regras = $tenant->regrasAgendamentoConfig();
         $dias = min($dias, $regras['antecedencia_maxima_dias']);
+        $buffer = (int) $regras['buffer_entre_agendamentos_minutos'];
+        $servicoIds = $this->catalogo->normalizarIds($servicoIds);
 
-        $profissionais = $tenant->profissionais()->where('ativo', true)->with('horarios')->get();
+        $profissionais = $tenant->profissionais()->where('ativo', true)
+            ->when($profissionalId, fn ($q, $id) => $q->whereKey($id))
+            ->with('horarios')->get();
         $resultado = [];
 
         $tz = $tenant->resolvedTimezone();
         $antecedenciaMinima = Carbon::now($tz)->addMinutes($regras['antecedencia_minima_minutos']);
 
         foreach ($profissionais as $profissional) {
+            $duracao = null;
+            if ($servicoIds !== []) {
+                if ($this->catalogo->naoAtendidos($profissional, $servicoIds)->isNotEmpty()) {
+                    continue;
+                }
+                $duracao = $this->catalogo->montar($tenant, $servicoIds, $profissional)['duracao_minutos'];
+            }
+
             $resultado[$profissional->id] = [];
 
             for ($i = 0; $i < $dias; $i++) {
                 $data = Carbon::today($tz)->addDays($i);
-                $slots = $profissional->slotsDisponiveis($data);
+                $slots = $profissional->slotsDisponiveis($data, $duracao, $buffer);
                 $disponiveis = collect($slots)
                     ->where('disponivel', true)
                     ->pluck('hora')
@@ -338,12 +371,13 @@ class AgendamentoService
                 ->where('ativo', true)
                 ->firstOrFail();
 
-            // Tenant isolation: garantir que o serviço pertence ao tenant
-            $servico = null;
-            if (! empty($dados['servico_id'])) {
-                $servico = Servico::where('id', $dados['servico_id'])
-                    ->where('tenant_id', $tenant->id)
-                    ->firstOrFail();
+            // Um ou mais serviços (combo). O catálogo garante que pertencem ao
+            // tenant e aplica preço/duração do profissional escolhido.
+            $servicoIds = $this->catalogo->normalizarIds((array) ($dados['servico_ids'] ?? $dados['servico_id'] ?? []));
+            $montagem = null;
+            if ($servicoIds !== []) {
+                $this->catalogo->validarProfissionalFaz($profissional, $servicoIds);
+                $montagem = $this->catalogo->montar($tenant, $servicoIds, $profissional);
             }
 
             if (! empty($dados['cliente_id'])) {
@@ -351,7 +385,7 @@ class AgendamentoService
                     ->where('tenant_id', $tenant->id)
                     ->firstOrFail();
             }
-            $duracao = $servico?->duracao_minutos ?? $dados['duracao_minutos'] ?? 30;
+            $duracao = $montagem['duracao_minutos'] ?? $dados['duracao_minutos'] ?? 30;
 
             // Timezone explícito para garantir que "10:00" seja interpretado como horário local
             $tz = $tenant->resolvedTimezone();
@@ -371,16 +405,20 @@ class AgendamentoService
                 'cliente_nome' => $dados['cliente_nome'],
                 'cliente_telefone' => $dados['cliente_telefone'],
                 'profissional_id' => $profissional->id,
-                'servico_id' => $servico?->id,
+                'servico_id' => $servicoIds[0] ?? null,
                 'data_hora' => $inicio,
                 'inicio' => $inicio,
                 'fim' => $fim,
                 'duracao_minutos' => $duracao,
+                'valor_total' => $montagem['valor_total'] ?? null,
                 'status' => 'agendado',
                 'opcao_extra' => $dados['opcao_extra'] ?? null,
                 'observacoes' => $dados['observacoes'] ?? null,
                 'origem' => $dados['origem'] ?? 'bot',
             ]);
+            if ($montagem) {
+                $this->catalogo->gravarItens($agendamento, $montagem);
+            }
 
             OperationalEvent::record($tenant->id, 'appointment_created', [
                 'value' => $agendamento->valor_total,

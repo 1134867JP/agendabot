@@ -34,7 +34,7 @@ class EnviarLembretesJob implements ShouldQueue
     {
         // Pré-filtro amplo; a janela exata é calculada no fuso de cada tenant.
         $agendamentos = Agendamento::query()
-            ->with(['recurso', 'profissional', 'tenant', 'cliente'])
+            ->with(['recurso', 'profissional', 'tenant', 'cliente', 'servico', 'itensServico'])
             ->whereIn('status', ['agendado', 'confirmado'])
             ->where('lembrete_enviado', false)
             ->where(fn ($q) => $q
@@ -127,6 +127,7 @@ class EnviarLembretesJob implements ShouldQueue
                    ."Passando para lembrar do seu horário *{$quando}*:\n\n"
                    ."📅 *Data:* {$dataHora->translatedFormat('l, d \d\e F')}\n"
                    ."⏰ *Horário:* {$dataHora->format('H:i')}\n"
+                   .(($servicos = $agendamento->descricaoServicos()) ? "✂️ *Serviço:* {$servicos}\n" : '')
                    ."📍 *Com:* {$recursoNome} — {$tenant}\n\n";
 
         $corpo = match (true) {

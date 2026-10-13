@@ -436,6 +436,50 @@ function BotConfigForm({ tenant }: { tenant: Tenant }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
+function PagamentosForm({ tenant }: { tenant: Tenant }) {
+    const { data, setData, put, processing, errors, wasSuccessful } = useForm({
+        asaas_wallet_id: tenant.asaas_wallet_id ?? '',
+    });
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        put(route('tenant.configuracoes.pagamentos'), { preserveScroll: true });
+    };
+
+    return (
+        <form onSubmit={submit} className="card p-4 sm:p-7">
+            <div className="mb-4 flex items-center gap-3">
+                <span className="h-4 w-0.5 rounded-full" style={{ background: 'var(--jade)' }} />
+                <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text-2)' }}>
+                    Pagamentos
+                </h2>
+            </div>
+            <p className="mb-4 text-sm" style={{ color: 'var(--text-3)' }}>
+                Para cobrar sinal via PIX, informe o ID da sua carteira Asaas. O valor pago pelo cliente cai direto na sua conta.
+            </p>
+            <label className="label mb-1" htmlFor="pagamentos-wallet">ID da carteira Asaas (walletId)</label>
+            <input
+                id="pagamentos-wallet"
+                value={data.asaas_wallet_id}
+                onChange={e => setData('asaas_wallet_id', e.target.value.trim())}
+                className="input font-mono text-sm"
+                placeholder="00000000-0000-0000-0000-000000000000"
+                autoComplete="off"
+            />
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
+                No Asaas: Minha conta → Integrações → Carteira (walletId). Deixe vazio para desativar o sinal.
+            </p>
+            {errors.asaas_wallet_id && <p className="mt-1 text-xs text-red-400">{errors.asaas_wallet_id}</p>}
+            {wasSuccessful && <p className="mt-2 text-xs text-emerald-400">Dados de pagamento salvos.</p>}
+            <div className="pt-4">
+                <button type="submit" disabled={processing} className="btn-primary">
+                    {processing ? 'Salvando…' : 'Salvar pagamentos'}
+                </button>
+            </div>
+        </form>
+    );
+}
+
 export default function Configuracoes({ tenant }: Props) {
     const { data, setData, put, processing, errors, wasSuccessful } = useForm({
         nome:                       tenant.nome,
@@ -676,6 +720,8 @@ export default function Configuracoes({ tenant }: Props) {
 
                 {/* Bot & IA section */}
                 <BotConfigForm tenant={tenant} />
+
+                <PagamentosForm tenant={tenant} />
             </div>
         </ConfiguracoesLayout>
     );

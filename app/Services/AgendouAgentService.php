@@ -41,7 +41,7 @@ class AgendouAgentService
         $this->agendamentoCriadoNesteTurno = false;
         $this->agendamentoCriadoId = null;
 
-        $hoje = Carbon::now('America/Sao_Paulo');
+        $hoje = Carbon::now($tenant->resolvedTimezone());
 
         $triagem = $tenant->modo_bot === 'triagem';
 
@@ -53,8 +53,8 @@ class AgendouAgentService
             ],
             [
                 'type' => 'text',
-                'text' => 'HOJE: '.$hoje->translatedFormat('l, d/m/Y').' ('.$hoje->format('Y-m-d').').'
-                    .($triagem ? '' : ' Só agende datas futuras a partir de amanhã.'),
+                'text' => 'HOJE: '.$hoje->translatedFormat('l, d/m/Y').' ('.$hoje->format('Y-m-d').'), agora são '.$hoje->format('H:i').'.'
+                    .($triagem ? '' : ' Pode agendar para hoje ou dias seguintes, sempre com horários vindos de buscar_slots.'),
             ],
         ];
 
@@ -66,9 +66,10 @@ class AgendouAgentService
             $dataHora = Carbon::parse($agendamentoPendente->data_hora ?? $agendamentoPendente->inicio)
                 ->locale('pt_BR')
                 ->translatedFormat('d/m/Y \\às H:i');
-            $servico = $agendamentoPendente->profissional?->nome
-                ?? $agendamentoPendente->recurso?->nome
-                ?? 'serviço';
+            $servico = collect([
+                $agendamentoPendente->descricaoServicos(),
+                $agendamentoPendente->profissional?->nome ?? $agendamentoPendente->recurso?->nome,
+            ])->filter()->join(' com ') ?: 'serviço';
             $systemBlocks[] = [
                 'type' => 'text',
                 'text' => "PENDENTE: Agendamento ID #{$agendamentoPendente->id} — {$dataHora} — {$servico}. Já está agendado — NÃO ofereça nem tente criar outro horário para este pedido. Use confirmar_agendamento ou cancelar_agendamento se o cliente confirmar/cancelar. Se o cliente só agradecer (ex: 'vlw', 'obrigado', 'ok'), responda normalmente sem chamar nenhuma ferramenta.",
@@ -241,26 +242,44 @@ class AgendouAgentService
 
     private function toolBuscarSlots(array $input): array
     {
+        $tenant = $this->currentTenant;
         $dias = min((int) ($input['dias'] ?? 4), 7);
-        $slots = $this->agendamentoService->buscarHorariosDisponiveis($this->currentTenant, $dias);
+        $servicoIds = array_values(array_filter(array_map('intval', (array) ($input['servico_ids'] ?? $input['servico_id'] ?? []))));
+        $profissionalId = ! empty($input['profissional_id']) ? (int) $input['profissional_id'] : null;
 
-        $hoje = Carbon::now('America/Sao_Paulo')->format('Y-m-d');
-
-        if (empty($slots)) {
-            return ['hoje' => $hoje, 'disponivel' => false, 'mensagem' => 'Nenhum horário disponível nos próximos dias.'];
+        try {
+            $slots = $this->agendamentoService->buscarHorariosDisponiveis($tenant, $dias, $servicoIds, $profissionalId);
+        } catch (\InvalidArgumentException $e) {
+            return ['disponivel' => false, 'erro' => 'servico_invalido', 'mensagem' => 'Algum servico_id não existe. Use os IDs da lista SERVIÇOS.'];
         }
 
+        $hoje = Carbon::now($tenant->resolvedTimezone())->format('Y-m-d');
+
+        if (empty(array_filter($slots))) {
+            return ['hoje' => $hoje, 'disponivel' => false, 'mensagem' => $servicoIds
+                ? 'Nenhum profissional que faz esse(s) serviço(s) tem horário livre nos próximos dias.'
+                : 'Nenhum horário disponível nos próximos dias.'];
+        }
+
+        $nomes = $tenant->profissionais()->whereIn('id', array_keys($slots))->pluck('nome', 'id');
+        $catalogo = app(CatalogoServicos::class);
         $linhas = [];
-        foreach ($slots as $profissionalId => $diasSlots) {
+        foreach ($slots as $id => $diasSlots) {
+            $resumo = '';
+            if ($servicoIds) {
+                $montagem = $catalogo->montar($tenant, $servicoIds, $tenant->profissionais()->find($id));
+                $valor = $montagem['valor_total'] !== null ? ' · R$ '.number_format($montagem['valor_total'], 2, ',', '.') : '';
+                $resumo = " ({$montagem['nomes']}: {$montagem['duracao_minutos']}min{$valor})";
+            }
             foreach ($diasSlots as $data => $horarios) {
                 if (! empty($horarios)) {
-                    $dataFormatada = Carbon::parse($data)->format('d/m (D)');
-                    $linhas[] = "#{$profissionalId}|{$data}|{$dataFormatada}: ".implode(' ', $horarios);
+                    $dataFormatada = Carbon::parse($data)->locale('pt_BR')->translatedFormat('d/m (D)');
+                    $linhas[] = "#{$id} {$nomes[$id]}{$resumo}|{$data}|{$dataFormatada}: ".implode(' ', $horarios);
                 }
             }
         }
 
-        return ['hoje' => $hoje, 'slots' => implode("\n", $linhas) ?: 'Nenhum horário disponível.'];
+        return ['hoje' => $hoje, 'slots' => implode("\n", $linhas)];
     }
 
     private function toolCriarAgendamento(array $input): array
@@ -312,7 +331,7 @@ class AgendouAgentService
             ->whereNotIn('status', ['cancelado', 'concluido'])
             ->where('data_hora', '>', now())
             ->orderBy('data_hora')
-            ->with(['profissional:id,nome', 'servico:id,nome'])
+            ->with(['profissional:id,nome', 'servico:id,nome', 'itensServico'])
             ->limit(5)
             ->get();
 
@@ -325,7 +344,7 @@ class AgendouAgentService
                 ->locale('pt_BR')
                 ->translatedFormat('D d/m \\às H:i');
             $profissional = $a->profissional?->nome ?? '—';
-            $servico = $a->servico?->nome ?? '—';
+            $servico = $a->descricaoServicos() ?? '—';
 
             return "ID #{$a->id} — {$dataHora} — {$profissional} ({$servico})";
         })->join("\n");
@@ -390,29 +409,31 @@ class AgendouAgentService
         $tools = [
             [
                 'name' => 'buscar_slots',
-                'description' => 'Busca horários disponíveis para agendamento nos próximos dias. DEVE ser chamada antes de criar_agendamento — nunca ofereça nem aceite horários sem antes chamar esta ferramenta.',
+                'description' => 'Busca horários disponíveis nos próximos dias. DEVE ser chamada antes de criar_agendamento — nunca ofereça nem aceite horários sem antes chamar esta ferramenta. Informe servico_ids sempre que souber o(s) serviço(s): assim só aparecem profissionais que fazem tudo e horários em que o atendimento inteiro cabe.',
                 'input_schema' => [
                     'type' => 'object',
                     'properties' => [
                         'dias' => ['type' => 'integer', 'description' => 'Número de dias para buscar (padrão 4, máximo 7)'],
+                        'servico_ids' => ['type' => 'array', 'items' => ['type' => 'integer'], 'description' => 'IDs dos serviços pedidos (ex.: corte e barba = dois IDs)'],
+                        'profissional_id' => ['type' => 'integer', 'description' => 'Só quando o cliente pedir um profissional específico'],
                     ],
                 ],
             ],
             [
                 'name' => 'criar_agendamento',
-                'description' => 'Registra o agendamento no sistema. OBRIGATÓRIO chamar esta ferramenta assim que tiver: nome do cliente, profissional_id, servico_id, data e horário — não envie mensagem de confirmação sem antes chamar esta ferramenta com sucesso. O agendamento só existe no sistema após a chamada.',
+                'description' => 'Registra o agendamento no sistema. OBRIGATÓRIO chamar esta ferramenta assim que tiver: nome do cliente, profissional_id, servico_ids, data e horário — não envie mensagem de confirmação sem antes chamar esta ferramenta com sucesso. O agendamento só existe no sistema após a chamada.',
                 'input_schema' => [
                     'type' => 'object',
                     'properties' => [
                         'cliente_nome' => ['type' => 'string',           'description' => 'Nome do cliente'],
                         'profissional_id' => ['type' => 'integer',          'description' => 'ID do profissional'],
-                        'servico_id' => ['type' => 'integer',          'description' => 'ID do serviço'],
+                        'servico_ids' => ['type' => 'array', 'items' => ['type' => 'integer'], 'description' => 'IDs de todos os serviços do atendimento, na ordem (ex.: [corte, barba])'],
                         'data' => ['type' => 'string',           'description' => 'Data no formato YYYY-MM-DD'],
                         'horario' => ['type' => 'string',           'description' => 'Horário no formato HH:MM'],
                         'opcao_extra' => ['type' => ['string', 'null'], 'description' => 'Opção extra (opcional)'],
                         'observacoes' => ['type' => ['string', 'null'], 'description' => 'Observações (opcional)'],
                     ],
-                    'required' => ['cliente_nome', 'profissional_id', 'servico_id', 'data', 'horario'],
+                    'required' => ['cliente_nome', 'profissional_id', 'servico_ids', 'data', 'horario'],
                 ],
             ],
             [
@@ -441,7 +462,7 @@ class AgendouAgentService
                         'data' => ['type' => 'string',  'description' => 'Nova data no formato YYYY-MM-DD'],
                         'hora' => ['type' => 'string',  'description' => 'Novo horário no formato HH:MM'],
                         'profissional_id' => ['type' => 'integer', 'description' => 'Novo profissional (opcional — mantém o atual se omitido)'],
-                        'servico_id' => ['type' => 'integer', 'description' => 'Novo serviço (opcional — mantém o atual se omitido)'],
+                        'servico_ids' => ['type' => 'array', 'items' => ['type' => 'integer'], 'description' => 'Novos serviços (opcional — mantém os atuais se omitido)'],
                     ],
                 ],
             ],
@@ -603,18 +624,38 @@ PROMPT;
 
     public function buildStaticPrompt(Tenant $tenant): string
     {
-        $profissionais = $tenant->profissionais()->where('ativo', true)->with('servicos:id,nome')->get()
-            ->map(function ($p) {
-                $servNomes = $p->servicos->pluck('nome')->join(', ');
-                $base = "- ID {$p->id}: {$p->nome}";
+        $servicosAtivos = $tenant->servicos()->where('ativo', true)->orderBy('nome')->get()->keyBy('id');
+        $real = fn ($valor) => 'R$ '.number_format((float) $valor, 2, ',', '.');
+        $precoBase = function ($s) use ($real) {
+            if ($s->valor_min === null) {
+                return null;
+            }
+            $max = $s->valor_max !== null && abs((float) $s->valor_max - (float) $s->valor_min) >= 0.01
+                ? ' a '.$real($s->valor_max) : '';
 
-                return $servNomes ? "{$base} → {$servNomes}" : $base;
+            return $real($s->valor_min).$max;
+        };
+
+        // Cada profissional com o que faz e, quando diferente do padrão, o preço/duração dele.
+        $profissionais = $tenant->profissionais()->where('ativo', true)->orderBy('nome')->with('servicos')->get()
+            ->map(function ($p) use ($servicosAtivos, $real) {
+                $base = "- ID {$p->id}: {$p->nome}";
+                $itens = $p->servicos->filter(fn ($s) => $servicosAtivos->has($s->id))->map(function ($s) use ($real) {
+                    $extras = array_filter([
+                        $s->pivot->valor !== null ? $real($s->pivot->valor) : null,
+                        $s->pivot->duracao_minutos ? "{$s->pivot->duracao_minutos}min" : null,
+                    ]);
+
+                    return $s->nome.($extras ? ' ('.implode(', ', $extras).')' : '');
+                });
+
+                return $itens->isNotEmpty() ? "{$base} → ".$itens->join(', ') : "{$base} → faz todos os serviços";
             })
             ->join("\n");
 
-        $servicos = $tenant->servicos()->where('ativo', true)->get()
+        $servicos = $servicosAtivos
             ->map(fn ($s) => "- ID {$s->id}: {$s->nome}".
-                ($s->valor_min ? " (R$ {$s->valor_min}".($s->valor_max ? "-{$s->valor_max}" : '').')' : '').
+                (($preco = $precoBase($s)) ? " ({$preco})" : '').
                 " — {$s->duracao_minutos}min".
                 ($s->requer_avaliacao ? ' [requer avaliação]' : ''))
             ->join("\n");
@@ -643,11 +684,16 @@ PROMPT;
 Você é {$tenant->nome_agente} de {$tenant->nome} ({$tenant->ramo_negocio}). {$tenant->descricao_negocio}
 Local: {$tenant->endereco}, {$tenant->cidade} | Horários: {$horarios} | Tom: {$tomInstrucao}
 
-PROFISSIONAIS:
+PROFISSIONAIS (preço/duração entre parênteses valem só para aquele profissional):
 {$profissionais}
 
-SERVIÇOS:
+SERVIÇOS (preço e duração padrão):
 {$servicos}{$opcoesPart}{$saudacao}{$instrucoes}
+
+VÁRIOS SERVIÇOS NO MESMO HORÁRIO:
+- Se existir na lista um serviço que já junta o que o cliente pediu (ex.: "Corte + Barba"), use esse serviço.
+- Senão, passe todos os IDs em servico_ids (buscar_slots e criar_agendamento): o sistema soma duração e preço.
+- Ao informar preço, use o valor que buscar_slots retornou para o profissional escolhido.
 
 FLUXO OBRIGATÓRIO PARA REAGENDAMENTO:
 1. Chame listar_agendamentos_cliente → mostre a lista ao cliente

@@ -45,13 +45,29 @@ class AnalyticsController extends Controller
         $receita = (float) (clone $atual)->sum('valor_total');
         $receitaAnterior = (float) (clone $anterior)->sum('valor_total');
 
-        $conversas = Conversa::where('tenant_id', $tenant->id)->whereBetween('created_at', [$inicio, $fim])->count();
-        $conversasAnterior = Conversa::where('tenant_id', $tenant->id)->whereBetween('created_at', [$inicioAnterior, $fimAnterior])->count();
+        // A conversa de um cliente é reaproveitada a cada contato, então contar
+        // conversas criadas subestima quem voltou. Conta-se quem escreveu no
+        // período e, desses, quem saiu com horário marcado pelo bot (≤ 100%).
+        $clientesQueEscreveram = fn ($de, $ate) => Conversa::where('conversas.tenant_id', $tenant->id)
+            ->whereHas('mensagens', fn ($q) => $q->where('remetente', 'cliente')->whereBetween('created_at', [$de, $ate]))
+            ->pluck('cliente_id')
+            ->filter()
+            ->unique();
+        $converteram = fn ($clientes, $de, $ate) => Agendamento::where('tenant_id', $tenant->id)
+            ->where('status', '!=', 'cancelado')
+            ->whereIn('origem', ['whatsapp', 'bot'])
+            ->whereBetween('created_at', [$de, $ate])
+            ->whereIn('cliente_id', $clientes)
+            ->distinct()
+            ->count('cliente_id');
 
-        $agendWhatsapp = (clone $atual)->whereIn('origem', ['whatsapp', 'bot'])->count();
-        $agendWhatsappAnterior = (clone $anterior)->whereIn('origem', ['whatsapp', 'bot'])->count();
-        $taxaConversao = $conversas > 0 ? round(($agendWhatsapp / $conversas) * 100, 1) : 0;
-        $taxaConversaoAnterior = $conversasAnterior > 0 ? round(($agendWhatsappAnterior / $conversasAnterior) * 100, 1) : 0;
+        $clientesAtual = $clientesQueEscreveram($inicio, $fim);
+        $clientesAnterior = $clientesQueEscreveram($inicioAnterior, $fimAnterior);
+        $conversas = $clientesAtual->count();
+        $conversasAnterior = $clientesAnterior->count();
+
+        $taxaConversao = $conversas > 0 ? round($converteram($clientesAtual, $inicio, $fim) / $conversas * 100, 1) : 0;
+        $taxaConversaoAnterior = $conversasAnterior > 0 ? round($converteram($clientesAnterior, $inicioAnterior, $fimAnterior) / $conversasAnterior * 100, 1) : 0;
 
         $tempoResposta = (int) round((float) OperationalEvent::where('tenant_id', $tenant->id)
             ->where('type', 'bot_response')

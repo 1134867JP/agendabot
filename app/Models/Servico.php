@@ -30,7 +30,8 @@ class Servico extends Model
 
     public function profissionais(): BelongsToMany
     {
-        return $this->belongsToMany(Profissional::class, 'profissional_servico');
+        return $this->belongsToMany(Profissional::class, 'profissional_servico')
+            ->withPivot(['valor', 'duracao_minutos']);
     }
 
     public function recursos(): BelongsToMany

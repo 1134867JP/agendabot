@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import AppLayout from "@/Layouts/AppLayout";
 import AgendaViewTabs from "@/Components/AgendaViewTabs";
+import ServicosCombo, { ServicoComboOpcao } from "@/Components/ServicosCombo";
 import { PageProps, Agendamento, Recurso, PaginatedData, Tenant } from "@/types";
 import { useConfirm } from "@/hooks/useConfirm";
 
@@ -12,16 +13,13 @@ interface Props extends PageProps {
     recursos: Recurso[];
     profissionais: { id: number; nome: string }[];
     agenda: { profissional: string; profissionais: string; recurso: string; recursos: string; modo: 'profissional' | 'recurso' | 'combinada' };
-    servicos: {
-        id: number;
-        nome: string;
-        duracao_minutos: number;
-        profissional_ids: number[];
+    servicos: (ServicoComboOpcao & {
         recurso_ids: number[];
         requer_profissional: boolean;
         requer_recurso: boolean;
-    }[];
+    })[];
     clienteInicial: { nome: string; telefone: string } | null;
+    sinalDisponivel: boolean;
     filtros: {
         data?: string;
         recurso_id?: string;
@@ -214,15 +212,82 @@ function toLocalInput(iso: string) {
         .replace(" ", "T");
 }
 
+function SinalPix({ agendamento, disponivel }: { agendamento: Agendamento; disponivel: boolean }) {
+    const { data, setData, post, processing, errors } = useForm({ valor: "20", enviar_whatsapp: true });
+    const [copiado, setCopiado] = useState(false);
+
+    if (agendamento.status === "cancelado") return null;
+
+    const link = agendamento.deposit_payment_url;
+    const copiar = async () => {
+        if (!link) return;
+        try {
+            await navigator.clipboard.writeText(link);
+            setCopiado(true);
+        } catch {
+            /* o link continua visível para copiar manualmente */
+        }
+    };
+
+    return (
+        <div className="mt-5 rounded-xl p-4" style={{ border: "1px solid var(--border)", background: "var(--bg-surface-2)" }}>
+            <p className="text-sm font-medium text-primary">Sinal via PIX</p>
+            {agendamento.deposit_status === "paid" ? (
+                <p className="mt-1 text-sm text-emerald-400">
+                    Sinal de {Number(agendamento.deposit_amount ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} pago.
+                </p>
+            ) : link ? (
+                <div className="mt-2 space-y-2">
+                    <p className="text-xs" style={{ color: "var(--text-3)" }}>
+                        Aguardando pagamento de {Number(agendamento.deposit_amount ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.
+                    </p>
+                    <div className="flex gap-2">
+                        <input id={`sinal-link-${agendamento.id}`} readOnly value={link} className="input min-w-0 flex-1 text-xs" onFocus={e => e.target.select()} />
+                        <button type="button" onClick={copiar} className="btn-secondary shrink-0 text-xs">{copiado ? "Copiado" : "Copiar"}</button>
+                    </div>
+                </div>
+            ) : !disponivel ? (
+                <p className="mt-1 text-xs" style={{ color: "var(--text-3)" }}>
+                    Para cobrar sinal, cadastre sua carteira Asaas em{" "}
+                    <Link href={route("tenant.configuracoes.index")} className="underline">Configurações → Pagamentos</Link>.
+                </p>
+            ) : (
+                <form
+                    className="mt-2 space-y-2"
+                    onSubmit={e => {
+                        e.preventDefault();
+                        post(route("tenant.agendamentos.sinal", agendamento.id), { preserveScroll: true });
+                    }}
+                >
+                    <div className="flex items-end gap-2">
+                        <div className="flex-1">
+                            <label className="label mb-1" htmlFor={`sinal-valor-${agendamento.id}`}>Valor (R$)</label>
+                            <input id={`sinal-valor-${agendamento.id}`} inputMode="decimal" value={data.valor} onChange={e => setData("valor", e.target.value.replace(",", "."))} className="input" />
+                        </div>
+                        <button type="submit" disabled={processing} className="btn-primary shrink-0">{processing ? "Gerando…" : "Cobrar sinal"}</button>
+                    </div>
+                    <label className="flex items-center gap-2 text-xs" style={{ color: "var(--text-2)" }}>
+                        <input type="checkbox" checked={data.enviar_whatsapp} onChange={e => setData("enviar_whatsapp", e.target.checked)} />
+                        Enviar o link do PIX ao cliente pelo WhatsApp
+                    </label>
+                    {errors.valor && <p className="text-xs text-red-400">{errors.valor}</p>}
+                </form>
+            )}
+        </div>
+    );
+}
+
 function EditarReservaModal({
     agendamento,
     recursos,
     tenant,
+    sinalDisponivel,
     onClose,
 }: {
     agendamento: Agendamento;
     recursos: Recurso[];
     tenant: Tenant;
+    sinalDisponivel: boolean;
     onClose: () => void;
 }) {
     const usaRecursos = tenant.tipo_servico === "quadra";
@@ -320,7 +385,7 @@ function EditarReservaModal({
                                 <label className="label mb-1" htmlFor="editar-agendamento-servico">Serviço</label>
                                 <input
                                     id="editar-agendamento-servico"
-                                    value={agendamento.servico?.nome ?? "Sem serviço definido"}
+                                    value={agendamento.servicos_nome ?? agendamento.servico?.nome ?? "Sem serviço definido"}
                                     className="input"
                                     readOnly
                                 />
@@ -480,6 +545,7 @@ function EditarReservaModal({
                         </button>
                     </div>
                 </form>
+                <SinalPix agendamento={agendamento} disponivel={sinalDisponivel} />
             </div>
         </div>
     );
@@ -504,10 +570,11 @@ function NovaReservaModal({
 }) {
     const primeiroProfissional = profissionais[0]?.id ?? "";
     const primeiroRecurso = recursos[0]?.id ?? "";
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         recurso_id: primeiroRecurso as number | string,
         profissional_id: primeiroProfissional as number | string,
         servico_id: "" as number | string,
+        servicos_extras: [] as number[],
         cliente_nome: clienteInicial?.nome ?? "",
         cliente_telefone: clienteInicial?.telefone ?? "",
         inicio: "",
@@ -546,7 +613,7 @@ function NovaReservaModal({
             );
             const ags: { start: string }[] = await res.json();
             const ocupadas = new Set(
-                ags.map((a) => new Date(a.start).getHours()),
+                ags.map((a) => parseInt(new Date(a.start).toLocaleString("en-US", { hour: "2-digit", hour12: false, timeZone: "America/Sao_Paulo" }), 10)),
             );
             setSlots(
                 Array.from({ length: 15 }, (_, i) => i + 7)
@@ -568,6 +635,10 @@ function NovaReservaModal({
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
+        transform(d => ({
+            ...d,
+            servico_ids: d.servico_id ? [Number(d.servico_id), ...d.servicos_extras] : [],
+        }));
         post(route("tenant.agendamentos.store"), { onSuccess: onClose });
     };
 
@@ -618,12 +689,14 @@ function NovaReservaModal({
                             <select
                                 id="nova-reserva-servico"
                                 value={data.servico_id}
-                                onChange={(e) =>
-                                    setData(
-                                        "servico_id",
-                                        e.target.value ? Number(e.target.value) : "",
-                                    )
-                                }
+                                onChange={(e) => {
+                                    const id = e.target.value ? Number(e.target.value) : "";
+                                    setData((d) => ({
+                                        ...d,
+                                        servico_id: id,
+                                        servicos_extras: d.servicos_extras.filter((extra) => extra !== id),
+                                    }));
+                                }}
                                 className="input"
                             >
                                 <option value="">Selecione o serviço</option>
@@ -633,6 +706,15 @@ function NovaReservaModal({
                                     </option>
                                 ))}
                             </select>
+                            <ServicosCombo
+                                idPrefix="nova-reserva"
+                                principalId={data.servico_id ? Number(data.servico_id) : null}
+                                extras={data.servicos_extras}
+                                onChange={(extras) => setData("servicos_extras", extras)}
+                                opcoes={servicosDisponiveis}
+                                todos={servicos}
+                                profissionalId={data.profissional_id}
+                            />
                             {errors.servico_id && (
                                 <p className="mt-1 text-xs text-red-400">
                                     {errors.servico_id}
@@ -876,6 +958,7 @@ export default function AgendamentosIndex({
     servicos,
     agenda,
     clienteInicial,
+    sinalDisponivel,
     filtros,
 }: Props) {
     const [modalAberto, setModalAberto] = useState(false);
@@ -961,8 +1044,9 @@ export default function AgendamentosIndex({
                         className="input"
                     />
                 </div>
+                {recursos.length > 0 && (
                 <div>
-                    <label className="label mb-1" htmlFor="filtro-agenda-recurso">Recurso</label>
+                    <label className="label mb-1" htmlFor="filtro-agenda-recurso">{agenda.recurso}</label>
                     <select
                         id="filtro-agenda-recurso"
                         name="recurso_id"
@@ -977,6 +1061,7 @@ export default function AgendamentosIndex({
                         ))}
                     </select>
                 </div>
+                )}
                 <div>
                     <label className="label mb-1" htmlFor="filtro-agenda-status">Status</label>
                     <select
@@ -1067,7 +1152,7 @@ export default function AgendamentosIndex({
                                     <span>{a.fim ? duracaoMin(a.inicio, a.fim) : (a.duracao_minutos ?? "—")} min</span>
                                     <span aria-hidden="true">•</span>
                                     <span>{a.origem === "bot" || a.origem === "whatsapp" ? "WhatsApp" : "Manual"}</span>
-                                    {a.servico?.nome && <><span aria-hidden="true">•</span><span>{a.servico.nome}</span></>}
+                                    {(a.servicos_nome ?? a.servico?.nome) && <><span aria-hidden="true">•</span><span>{a.servicos_nome ?? a.servico?.nome}</span></>}
                                 </div>
 
                                 <div className="mt-4 border-t pt-3" style={{ borderColor: "var(--border)" }}>
@@ -1105,7 +1190,7 @@ export default function AgendamentosIndex({
                             >
                                 {[
                                     "Cliente",
-                                    "Recurso",
+                                    agenda.modo === "recurso" ? agenda.recurso : agenda.profissional,
                                     "Início",
                                     "Duração",
                                     "Valor",
@@ -1229,14 +1314,14 @@ export default function AgendamentosIndex({
                                                     {a.recurso?.nome ?? a.profissional?.nome ?? "—"}
                                                 </p>
                                             </div>
-                                            {a.servico?.nome && (
+                                            {(a.servicos_nome ?? a.servico?.nome) && (
                                                 <p
                                                     className="text-xs"
                                                     style={{
                                                         color: "var(--text-3)",
                                                     }}
                                                 >
-                                                    {a.servico.nome}
+                                                    {a.servicos_nome ?? a.servico?.nome}
                                                 </p>
                                             )}
                                         </td>
@@ -1368,9 +1453,11 @@ export default function AgendamentosIndex({
             )}
             {agendamentoEditando && (
                 <EditarReservaModal
-                    agendamento={agendamentoEditando}
+                    // Depois de gerar o sinal a página recarrega; usa a versão atualizada.
+                    agendamento={agendamentos.data.find(a => a.id === agendamentoEditando.id) ?? agendamentoEditando}
                     recursos={recursos}
                     tenant={tenant}
+                    sinalDisponivel={sinalDisponivel}
                     onClose={() => setAgendamentoEditando(null)}
                 />
             )}

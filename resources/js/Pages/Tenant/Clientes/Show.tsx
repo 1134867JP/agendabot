@@ -20,6 +20,7 @@ interface AgendamentoCliente {
     origem: string;
     profissional?: { nome: string } | null;
     servico?: { nome: string } | null;
+    servicos_nome?: string | null;
 }
 
 interface ConversaCliente {
@@ -284,7 +285,7 @@ export default function ClienteShow({ cliente, agendamentos, conversas }: Props)
                             <div key={a.id} className="flex items-center justify-between gap-3 px-5 py-3">
                                 <div className="min-w-0">
                                     <p className="truncate text-sm font-medium text-primary">
-                                        {a.servico?.nome ?? a.profissional?.nome ?? 'Serviço'}
+                                        {a.servicos_nome ?? a.servico?.nome ?? a.profissional?.nome ?? 'Serviço'}
                                     </p>
                                     <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
                                         {fmtDt(a.data_hora ?? a.inicio)}

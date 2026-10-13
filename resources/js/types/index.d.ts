@@ -44,6 +44,7 @@ export interface Tenant {
     lembrete_ativo?: boolean | null;
     lembrete_texto?: string | null;
     lembrete_horas_antes?: number;
+    asaas_wallet_id?: string | null;
     agenda?: {
         modo: 'profissional' | 'recurso' | 'combinada';
         profissional: string;
@@ -99,6 +100,11 @@ export interface Agendamento {
     recurso: Recurso | null;
     profissional?: { id: number; nome: string } | null;
     servico?: { id: number; nome: string; duracao_minutos?: number | null } | null;
+    /** "Corte + Barba" quando o atendimento tem mais de um serviço. */
+    servicos_nome?: string | null;
+    deposit_status?: 'pending' | 'paid' | null;
+    deposit_amount?: string | number | null;
+    deposit_payment_url?: string | null;
     cliente_nome: string;
     cliente_telefone: string;
     inicio: string;

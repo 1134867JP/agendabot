@@ -106,6 +106,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('profissionais/{profissional}/horarios', [HorarioProfissionalController::class, 'sync'])
             ->middleware('tenant.admin')
             ->name('profissionais.horarios.sync');
+        Route::post('profissionais/{profissional}/servicos', [ProfissionalController::class, 'sincronizarServicos'])
+            ->middleware('tenant.admin')
+            ->name('profissionais.servicos.sync');
 
         // Serviços
         Route::resource('servicos', ServicoController::class)->except(['show'])->middleware('tenant.admin');
@@ -152,6 +155,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Config bot
         Route::put('configuracoes/bot', [Tenant\ConfiguracaoController::class, 'updateBot'])->middleware('tenant.admin')->name('configuracoes.bot');
+        Route::put('configuracoes/pagamentos', [Tenant\ConfiguracaoController::class, 'updatePagamentos'])->middleware('tenant.admin')->name('configuracoes.pagamentos');
 
         // WhatsApp
         Route::get('whatsapp', [Tenant\WhatsAppController::class, 'index'])->name('whatsapp');

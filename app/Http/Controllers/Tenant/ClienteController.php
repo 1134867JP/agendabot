@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cliente;
+use App\Support\TenantAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use App\Support\TenantAccess;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -133,10 +133,11 @@ class ClienteController extends Controller
         return Inertia::render('Tenant/Clientes/Show', [
             'cliente' => $cliente,
             'agendamentos' => TenantAccess::scopeAgendamentos($cliente->agendamentos(), app('tenant'))
-                ->with('profissional', 'servico')
+                ->with('profissional', 'servico', 'itensServico')
                 ->orderByDesc('data_hora')
                 ->limit(30)
-                ->get(),
+                ->get()
+                ->each->append('servicos_nome'),
             'conversas' => TenantAccess::scopeConversas($cliente->conversas(), app('tenant'))
                 ->orderByDesc('ultima_mensagem_em')
                 ->limit(20)

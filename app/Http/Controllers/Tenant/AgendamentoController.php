@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Tenant;
 
+use App\Exceptions\AsaasApiException;
 use App\Exceptions\HorarioIndisponivelException;
 use App\Http\Controllers\Controller;
 use App\Models\Agendamento;
@@ -12,6 +13,8 @@ use App\Models\Recurso;
 use App\Models\Servico;
 use App\Services\AgendamentoService;
 use App\Services\AsaasService;
+use App\Services\CatalogoServicos;
+use App\Services\OutboundMessageService;
 use App\Support\Csv;
 use App\Support\TenantAccess;
 use Carbon\Carbon;
@@ -26,7 +29,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AgendamentoController extends Controller
 {
-    public function __construct(private AgendamentoService $agendamentoService) {}
+    public function __construct(
+        private AgendamentoService $agendamentoService,
+        private CatalogoServicos $catalogo,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -40,7 +46,7 @@ class AgendamentoController extends Controller
             : null;
 
         $query = TenantAccess::scopeAgendamentos(Agendamento::where('tenant_id', $tenant->id), $tenant)
-            ->with(['recurso', 'profissional', 'servico'])
+            ->with(['recurso', 'profissional', 'servico', 'itensServico'])
             ->orderByRaw('COALESCE(inicio, data_hora) DESC');
 
         if ($request->filled('data')) {
@@ -61,7 +67,9 @@ class AgendamentoController extends Controller
 
         return Inertia::render('Tenant/Agendamentos/Index', [
             'tenant' => $tenant,
-            'agendamentos' => $query->paginate(20)->withQueryString(),
+            'sinalDisponivel' => (bool) $tenant->asaasWalletId(),
+            'agendamentos' => $query->paginate(20)->withQueryString()
+                ->through(fn (Agendamento $agendamento) => $agendamento->append('servicos_nome')),
             'agenda' => $tenant->agendaConfig(),
             'recursos' => $tenant->agendaUsaRecursos() ? $tenant->recursos()->where('ativo', true)->get() : collect(),
             'profissionais' => ! $tenant->agendaUsaProfissionais()
@@ -72,25 +80,43 @@ class AgendamentoController extends Controller
                     ->orderBy('nome')
                     ->get(['id', 'nome']),
             'servicos' => $tenant->servicos()
-                    ->where('ativo', true)
-                    ->when(TenantAccess::profissionalId($tenant), fn ($query, $id) => $query->whereHas('profissionais', fn ($profissionais) => $profissionais->whereKey($id)))
-                    ->with(['profissionais:id', 'recursos:id'])
-                    ->orderBy('nome')
-                    ->get(['id', 'tenant_id', 'nome', 'duracao_minutos', 'requer_profissional', 'requer_recurso'])
-                    ->map(fn (Servico $servico) => [
-                        'id' => $servico->id,
-                        'nome' => $servico->nome,
-                        'duracao_minutos' => (int) ($servico->duracao_minutos ?? 30),
-                        'profissional_ids' => $servico->profissionais->pluck('id')->values(),
-                        'recurso_ids' => $servico->recursos->pluck('id')->values(),
-                        'requer_profissional' => $servico->requer_profissional,
-                        'requer_recurso' => $servico->requer_recurso,
-                    ]),
+                ->where('ativo', true)
+                ->when(TenantAccess::profissionalId($tenant), fn ($query, $id) => $query->whereHas('profissionais', fn ($profissionais) => $profissionais->whereKey($id)))
+                ->with(['profissionais:id', 'recursos:id'])
+                ->orderBy('nome')
+                ->get(['id', 'tenant_id', 'nome', 'duracao_minutos', 'valor_min', 'valor_max', 'requer_profissional', 'requer_recurso'])
+                ->map(fn (Servico $servico) => [
+                    'id' => $servico->id,
+                    'nome' => $servico->nome,
+                    'duracao_minutos' => (int) ($servico->duracao_minutos ?? 30),
+                    'profissional_ids' => $servico->profissionais->pluck('id')->values(),
+                    'personalizado_por_profissional' => self::personalizacoes($servico),
+                    'recurso_ids' => $servico->recursos->pluck('id')->values(),
+                    'requer_profissional' => $servico->requer_profissional,
+                    'requer_recurso' => $servico->requer_recurso,
+                ]),
             'clienteInicial' => $clienteInicial
                 ? ['nome' => $clienteInicial->nome, 'telefone' => $clienteInicial->telefone]
                 : null,
             'filtros' => $request->only(['data', 'recurso_id', 'status', 'busca']),
         ]);
+    }
+
+    /**
+     * Duração e valor próprios de cada profissional para o serviço, para o
+     * formulário mostrar o total certo antes de salvar.
+     *
+     * @return array<int, array{valor: ?float, duracao_minutos: ?int}>
+     */
+    public static function personalizacoes(Servico $servico): array
+    {
+        return $servico->profissionais
+            ->filter(fn ($p) => $p->pivot->valor !== null || $p->pivot->duracao_minutos !== null)
+            ->mapWithKeys(fn ($p) => [$p->id => [
+                'valor' => $p->pivot->valor !== null ? (float) $p->pivot->valor : null,
+                'duracao_minutos' => $p->pivot->duracao_minutos !== null ? (int) $p->pivot->duracao_minutos : null,
+            ]])
+            ->all();
     }
 
     public function store(Request $request): RedirectResponse
@@ -103,10 +129,14 @@ class AgendamentoController extends Controller
         ]);
 
         $tenantId = $tenant->id;
+        $rotuloRecurso = strtolower($tenant->agendaConfig()['recurso']);
         $validated = $request->validate([
-            'recurso_id' => ['nullable', 'integer', Rule::exists('recursos', 'id')->where('tenant_id', $tenantId)],
-            'profissional_id' => ['nullable', 'integer', Rule::exists('profissionais', 'id')->where('tenant_id', $tenantId)],
+            // Agenda só por recurso (quadras) nunca aceita profissional como fallback.
+            'recurso_id' => [Rule::requiredIf($agendaUsaApenasRecursos), 'nullable', 'integer', Rule::exists('recursos', 'id')->where('tenant_id', $tenantId)],
+            'profissional_id' => [Rule::prohibitedIf($agendaUsaApenasRecursos), 'nullable', 'integer', Rule::exists('profissionais', 'id')->where('tenant_id', $tenantId)],
             'servico_id' => ['nullable', 'integer', Rule::exists('servicos', 'id')->where('tenant_id', $tenantId)],
+            'servico_ids' => ['nullable', 'array', 'max:5'],
+            'servico_ids.*' => ['integer', Rule::exists('servicos', 'id')->where('tenant_id', $tenantId)->where('ativo', true)],
             'cliente_nome' => ['required', 'string', 'max:255'],
             'cliente_telefone' => ['required', 'string', 'regex:/^(?:55)?[1-9][0-9]{9,10}$/'],
             'inicio' => ['required', 'date'],
@@ -115,21 +145,30 @@ class AgendamentoController extends Controller
             'notificar_cliente' => ['boolean'],
         ], [
             'cliente_telefone.regex' => 'Informe um telefone válido com DDD, por exemplo: 54999999999.',
+            'recurso_id.required' => "Selecione uma {$rotuloRecurso}.",
+            'profissional_id.prohibited' => "As reservas desta agenda são feitas por {$rotuloRecurso}, não por profissional.",
         ]);
 
         $profissionalIdLogado = TenantAccess::profissionalId($tenant);
         abort_if($profissionalIdLogado && (int) ($validated['profissional_id'] ?? 0) !== $profissionalIdLogado, 403);
 
+        // O primeiro serviço define as regras de agenda; os demais compõem o combo.
+        $servicoIds = $this->catalogo->normalizarIds($validated['servico_ids'] ?? [$validated['servico_id'] ?? null]);
+        $validated['servico_id'] = $servicoIds[0] ?? null;
+
         $servico = null;
+        $profissional = ! empty($validated['profissional_id'])
+            ? Profissional::where('tenant_id', $tenant->id)->findOrFail($validated['profissional_id'])
+            : null;
         if (! empty($validated['servico_id'])) {
             $servico = Servico::where('tenant_id', $tenant->id)
                 ->where('ativo', true)
                 ->findOrFail($validated['servico_id']);
 
-            if (! empty($validated['profissional_id'])
-                && $servico->profissionais()->exists()
-                && ! $servico->profissionais()->whereKey($validated['profissional_id'])->exists()) {
-                return back()->withErrors(['servico_id' => 'Este serviço não é realizado pelo profissional selecionado.']);
+            if ($profissional && $this->catalogo->naoAtendidos($profissional, $servicoIds)->isNotEmpty()) {
+                $nomes = $this->catalogo->naoAtendidos($profissional, $servicoIds)->join(', ', ' e ');
+
+                return back()->withErrors(['servico_id' => "{$profissional->nome} não realiza: {$nomes}."]);
             }
 
             if ($servico->requer_profissional && empty($validated['profissional_id'])) {
@@ -148,9 +187,11 @@ class AgendamentoController extends Controller
             return back()->withErrors(['profissional_id' => 'Selecione uma agenda para este agendamento.']);
         }
 
+        $montagem = $servicoIds !== [] ? $this->catalogo->montar($tenant, $servicoIds, $profissional) : null;
+
         $inicio = Carbon::parse($validated['inicio']);
-        $fim = $servico && $servico->duracao_minutos
-            ? $inicio->copy()->addMinutes((int) $servico->duracao_minutos)
+        $fim = $montagem && $montagem['duracao_minutos'] > 0
+            ? $inicio->copy()->addMinutes($montagem['duracao_minutos'])
             : Carbon::parse($validated['fim']);
 
         $dados = [
@@ -163,6 +204,7 @@ class AgendamentoController extends Controller
             'origem' => 'manual',
             'status' => 'confirmado',
             'servico_id' => $servico?->id,
+            'montagem' => $montagem,
         ];
 
         $cliente = Cliente::firstOrCreate(
@@ -171,9 +213,8 @@ class AgendamentoController extends Controller
         );
         $dados['cliente_id'] = $cliente->id;
 
-        if ($servico && $servico->valor_min !== null
-            && ($servico->valor_max === null || abs((float) $servico->valor_max - (float) $servico->valor_min) < 0.01)) {
-            $dados['valor_total'] = $servico->valor_min;
+        if ($montagem && $montagem['valor_total'] !== null) {
+            $dados['valor_total'] = $montagem['valor_total'];
         }
 
         if (! empty($validated['recurso_id'])) {
@@ -185,9 +226,8 @@ class AgendamentoController extends Controller
                     : null;
             }
         }
-        if (! empty($validated['profissional_id'])) {
-            Profissional::where('tenant_id', $tenant->id)->findOrFail($validated['profissional_id']);
-            $dados['profissional_id'] = $validated['profissional_id'];
+        if ($profissional) {
+            $dados['profissional_id'] = $profissional->id;
             $dados['data_hora'] = $inicio;
             $dados['duracao_minutos'] = (int) $inicio->diffInMinutes($fim);
         }
@@ -261,13 +301,23 @@ class AgendamentoController extends Controller
         return back()->with('success', 'Ausência registrada.');
     }
 
-    public function gerarSinal(Request $request, Agendamento $agendamento, AsaasService $asaas): RedirectResponse
+    public function gerarSinal(Request $request, Agendamento $agendamento, AsaasService $asaas, OutboundMessageService $outboundMessages): RedirectResponse
     {
-        TenantAccess::assertAgendamento($agendamento, app('tenant'));
-        $data = $request->validate(['valor' => ['required', 'numeric', 'min:1', 'max:9999']]);
+        $tenant = app('tenant');
+        TenantAccess::assertAgendamento($agendamento, $tenant);
+        $data = $request->validate([
+            'valor' => ['required', 'numeric', 'min:5', 'max:9999'],
+            'enviar_whatsapp' => ['boolean'],
+        ], [
+            'valor.min' => 'O Asaas aceita cobranças a partir de R$ 5,00.',
+        ]);
+
+        if (! $tenant->asaasWalletId()) {
+            return back()->withErrors(['valor' => 'Cadastre a carteira Asaas da barbearia em Configurações → Pagamentos para receber o sinal na sua conta.']);
+        }
 
         try {
-            return Cache::lock("asaas:deposit:appointment:{$agendamento->id}", 45)->block(5, function () use ($agendamento, $asaas, $data): RedirectResponse {
+            return Cache::lock("asaas:deposit:appointment:{$agendamento->id}", 45)->block(5, function () use ($agendamento, $asaas, $data, $tenant, $outboundMessages): RedirectResponse {
                 $agendamento->refresh();
 
                 if (in_array($agendamento->deposit_status, ['pending', 'paid'], true)
@@ -276,7 +326,11 @@ class AgendamentoController extends Controller
                     return back()->with('info', 'Este agendamento já possui uma cobrança de sinal.');
                 }
 
-                $payment = $asaas->criarSinalAgendamento($agendamento, (float) $data['valor']);
+                try {
+                    $payment = $asaas->criarSinalAgendamento($agendamento, (float) $data['valor']);
+                } catch (AsaasApiException $e) {
+                    return back()->withErrors(['valor' => $e->getMessage()]);
+                }
                 $agendamento->update([
                     'deposit_status' => 'pending',
                     'deposit_amount' => $data['valor'],
@@ -284,7 +338,22 @@ class AgendamentoController extends Controller
                     'deposit_payment_url' => $payment['url'],
                 ]);
 
-                return back()->with('success', 'Cobrança de sinal gerada.');
+                if (($data['enviar_whatsapp'] ?? true) && $payment['url'] && $tenant->whatsapp_conectado && $agendamento->cliente_telefone) {
+                    $quando = Carbon::parse($agendamento->data_hora ?? $agendamento->inicio)->locale('pt_BR')->translatedFormat('d/m \\à\\s H:i');
+                    $valor = number_format((float) $data['valor'], 2, ',', '.');
+                    $outboundMessages->queue(
+                        tenant: $tenant,
+                        telefone: $agendamento->cliente_telefone,
+                        conteudo: "Olá, {$agendamento->cliente_nome}! Para garantir seu horário de {$quando} na {$tenant->nome}, pague o sinal de R$ {$valor} pelo PIX:\n{$payment['url']}",
+                        purpose: 'deposit_request',
+                        idempotencyKey: "deposit-request:{$agendamento->id}:{$payment['id']}",
+                        agendamento: $agendamento,
+                    );
+
+                    return back()->with('success', 'Cobrança de sinal gerada e enviada ao cliente pelo WhatsApp.');
+                }
+
+                return back()->with('success', 'Cobrança de sinal gerada. Copie o link e envie ao cliente.');
             });
         } catch (LockTimeoutException) {
             return back()->with('erro', 'A cobrança já está sendo gerada. Aguarde alguns instantes.');
@@ -304,7 +373,7 @@ class AgendamentoController extends Controller
         $tenant = app('tenant');
 
         $query = TenantAccess::scopeAgendamentos(Agendamento::where('tenant_id', $tenant->id), $tenant)
-            ->with(['recurso', 'profissional', 'servico'])
+            ->with(['recurso', 'profissional', 'servico', 'itensServico'])
             ->orderBy('inicio', 'desc');
 
         if ($request->filled('data_inicio')) {
@@ -326,7 +395,7 @@ class AgendamentoController extends Controller
             $query->chunk(500, function ($agendamentos) use ($handle) {
                 foreach ($agendamentos as $ag) {
                     $dataHora = $ag->data_hora ?? $ag->inicio;
-                    $servico = $ag->servico?->nome ?? $ag->recurso?->nome ?? '–';
+                    $servico = $ag->descricaoServicos() ?? $ag->recurso?->nome ?? '–';
                     $duracao = $ag->duracao_minutos ?? (
                         ($ag->inicio && $ag->fim)
                             ? Carbon::parse($ag->inicio)->diffInMinutes($ag->fim)
