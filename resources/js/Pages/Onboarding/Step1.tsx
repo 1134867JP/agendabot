@@ -218,7 +218,7 @@ export default function OnboardingStep1() {
                                     type="checkbox"
                                     checked={data.aceite_legal}
                                     onChange={event => setData('aceite_legal', event.target.checked)}
-                                    className="mt-0.5 rounded border-[var(--border-strong)] bg-transparent text-[var(--accent)] focus:ring-[var(--accent)]"
+                                    className="mt-0.5 rounded-sm border-(--border-strong) bg-transparent text-(--accent) focus:ring-(--accent)"
                                     aria-invalid={Boolean(errors.aceite_legal)}
                                     required
                                 />

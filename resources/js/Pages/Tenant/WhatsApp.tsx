@@ -294,7 +294,7 @@ export default function WhatsAppPage({ tenant, ultimo_backup }: Props) {
 
             {/* Modal de confirmação de desconexão */}
             {confirmarDesconectar && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/50 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6" role="dialog" aria-modal="true" aria-labelledby="desconectar-whatsapp-title">
+                <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/50 backdrop-blur-xs sm:items-center sm:px-4 sm:py-6" role="dialog" aria-modal="true" aria-labelledby="desconectar-whatsapp-title">
                     <div className="max-h-[92dvh] w-full max-w-sm overflow-y-auto overscroll-contain rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl sm:p-7" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}>
                         <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full" style={{ background: 'rgba(239,68,68,0.1)' }}>
                             <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -341,7 +341,7 @@ export default function WhatsAppPage({ tenant, ultimo_backup }: Props) {
                             <button
                                 type="button"
                                 onClick={() => { setQrcode(null); setQrExpirado(false); }}
-                                className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
+                                className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-(--bg-surface-2)"
                                 style={{ color: 'var(--text-3)' }}
                                 aria-label="Fechar QR Code"
                             >

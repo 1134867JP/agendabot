@@ -198,7 +198,7 @@ function Bubble({ msg, prevRemetente }: { msg: Mensagem; prevRemetente?: string 
     return (
         <div className={`flex ${isCliente ? 'justify-start' : 'justify-end'} ${showLabel ? 'mt-3' : 'mt-1'}`}>
             <div
-                className="max-w-[88%] text-sm shadow-sm sm:max-w-[75%] lg:max-w-[60%]"
+                className="max-w-[88%] text-sm shadow-xs sm:max-w-[75%] lg:max-w-[60%]"
                 style={{ background: bg, border, borderRadius: radius, color: 'var(--text-1)', wordBreak: 'break-word', overflow: 'hidden' }}
             >
                 {showLabel && (
@@ -702,7 +702,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
             >
                 {/* ── Painel esquerdo — lista de conversas ────────────────── */}
                 <div
-                    className={`flex flex-col flex-shrink-0 w-full md:w-72 ${showChat ? 'hidden md:flex' : 'flex'}`}
+                    className={`flex flex-col shrink-0 w-full md:w-72 ${showChat ? 'hidden md:flex' : 'flex'}`}
                     style={{ borderRight: '1px solid var(--border)' }}
                 >
                     {/* Header */}
@@ -775,7 +775,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                             </p>
                                         )}
                                     </div>
-                                    {syncAtivo && <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[var(--border-strong)] border-t-[var(--jade)]" />}
+                                    {syncAtivo && <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-(--border-strong) border-t-(--jade)" />}
                                     {!syncAtivo && (
                                         <button
                                             type="button"
@@ -838,7 +838,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                 onChange={e => setBusca(e.target.value)}
                                 aria-label="Pesquisar conversas"
                                 placeholder="Pesquisar conversa…"
-                                className="w-full rounded-full py-2 pl-8 pr-8 text-[12px] outline-none transition-colors"
+                                className="w-full rounded-full py-2 pl-8 pr-8 text-[12px] outline-hidden transition-colors"
                                 style={{
                                     background: 'var(--bg-surface-2)',
                                     color: 'var(--text-1)',
@@ -956,12 +956,12 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
 
                         {/* Chat header */}
                         <div
-                            className="flex flex-shrink-0 items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3"
+                            className="flex shrink-0 items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3"
                             style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}
                         >
                             <div className="flex items-center gap-3 min-w-0">
                                 <button
-                                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md transition-colors hover:bg-surface-2 md:hidden"
+                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-surface-2 md:hidden"
                                     style={{ color: 'var(--text-2)' }}
                                     onClick={() => setShowChat(false)}
                                     aria-label="Voltar"
@@ -998,7 +998,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                 </div>
                             </div>
 
-                            <div className="flex gap-2 flex-shrink-0">
+                            <div className="flex gap-2 shrink-0">
                                 {!emAtendimento && selecionada.status_v2 !== 'encerrada' && (
                                     <button
                                         onClick={() => assumir()}
@@ -1061,7 +1061,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                         {/* Input */}
                         <form
                             onSubmit={enviar}
-                            className="flex flex-shrink-0 items-end gap-2 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5 sm:gap-2.5 sm:px-4 sm:py-3 md:px-5"
+                            className="flex shrink-0 items-end gap-2 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5 sm:gap-2.5 sm:px-4 sm:py-3 md:px-5"
                             style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-surface)' }}
                         >
                             <textarea
@@ -1076,7 +1076,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                                 }}
                                 placeholder={emAtendimento ? 'Mensagem… (Enter para enviar)' : 'Escrever para assumir o atendimento…'}
                                 rows={1}
-                                className="flex-1 resize-none rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent/40"
+                                className="flex-1 resize-none rounded-2xl px-4 py-2.5 text-sm focus:outline-hidden focus:ring-1 focus:ring-accent/40"
                                 style={{
                                     background: 'var(--bg-surface-2)',
                                     border: '1px solid var(--border-strong)',
@@ -1093,7 +1093,7 @@ export default function ConversasIndex({ conversas, filtros }: Props) {
                             <button
                                 type="submit"
                                 disabled={processing || assumindo || !data.conteudo.trim()}
-                                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-white transition-all hover:brightness-110 disabled:opacity-40"
+                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition-all hover:brightness-110 disabled:opacity-40"
                                 style={{ background: data.conteudo.trim() ? 'var(--jade)' : 'var(--text-3)' }}
                             >
                                 {(processing || assumindo)

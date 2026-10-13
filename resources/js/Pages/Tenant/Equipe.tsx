@@ -149,7 +149,7 @@ export default function Equipe({ usuarios, meu_id, profissionais_disponiveis }: 
                         </div>
                         <button
                             onClick={() => { setShowForm(false); reset(); }}
-                            className="text-xs transition-colors hover:text-[var(--text-1)]"
+                            className="text-xs transition-colors hover:text-primary"
                             style={{ color: 'var(--text-3)' }}
                         >✕ Cancelar</button>
                     </div>
@@ -303,7 +303,7 @@ export default function Equipe({ usuarios, meu_id, profissionais_disponiveis }: 
                                     <div className="flex items-center gap-2">
                                         <p className="truncate text-sm font-medium text-primary">{u.name}</p>
                                         {u.id === meu_id && (
-                                            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium" style={{ background: 'var(--bg-surface-2)', color: 'var(--text-3)' }}>
+                                            <span className="shrink-0 rounded-sm px-1.5 py-0.5 text-[10px] font-medium" style={{ background: 'var(--bg-surface-2)', color: 'var(--text-3)' }}>
                                                 Você
                                             </span>
                                         )}

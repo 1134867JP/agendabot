@@ -54,7 +54,7 @@ export default function BottomNavigation() {
 
     return (
         <nav
-            className="fixed inset-x-0 bottom-0 z-30 grid min-h-[4.5rem] lg:hidden"
+            className="fixed inset-x-0 bottom-0 z-30 grid min-h-18 lg:hidden"
             style={{
                 gridTemplateColumns: `repeat(${visibleItems.length + 1}, minmax(0, 1fr))`,
                 paddingBottom: 'env(safe-area-inset-bottom)',
@@ -70,7 +70,7 @@ export default function BottomNavigation() {
                     <Link
                         key={item.routeName}
                         href={route(item.routeName)}
-                        className="relative flex min-h-[4.5rem] flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium transition-colors"
+                        className="relative flex min-h-18 flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium transition-colors"
                         style={{ color: active ? 'var(--accent)' : 'var(--text-3)' }}
                         aria-current={active ? 'page' : undefined}
                     >
@@ -95,7 +95,7 @@ export default function BottomNavigation() {
                     <Link
                         key={item.routeName}
                         href={route(item.routeName)}
-                        className="relative flex min-h-[4.5rem] flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium transition-colors"
+                        className="relative flex min-h-18 flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium transition-colors"
                         style={{ color: active ? 'var(--accent)' : 'var(--text-3)' }}
                         aria-current={active ? 'page' : undefined}
                     >

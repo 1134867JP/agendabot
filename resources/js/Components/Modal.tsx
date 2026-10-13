@@ -66,7 +66,7 @@ export default function Modal({
                             paddingBottom: 'env(safe-area-inset-bottom)',
                         }}
                     >
-                        <div className="sticky top-0 z-10 flex h-5 items-center justify-center bg-[var(--bg-surface)] sm:hidden" aria-hidden>
+                        <div className="sticky top-0 z-10 flex h-5 items-center justify-center bg-(--bg-surface) sm:hidden" aria-hidden>
                             <span className="h-1 w-10 rounded-full" style={{ background: 'var(--border-strong)' }} />
                         </div>
                         {children}
