@@ -72,20 +72,20 @@ class AgendamentoController extends Controller
                     ->orderBy('nome')
                     ->get(['id', 'nome']),
             'servicos' => $tenant->servicos()
-                    ->where('ativo', true)
-                    ->when(TenantAccess::profissionalId($tenant), fn ($query, $id) => $query->whereHas('profissionais', fn ($profissionais) => $profissionais->whereKey($id)))
-                    ->with(['profissionais:id', 'recursos:id'])
-                    ->orderBy('nome')
-                    ->get(['id', 'tenant_id', 'nome', 'duracao_minutos', 'requer_profissional', 'requer_recurso'])
-                    ->map(fn (Servico $servico) => [
-                        'id' => $servico->id,
-                        'nome' => $servico->nome,
-                        'duracao_minutos' => (int) ($servico->duracao_minutos ?? 30),
-                        'profissional_ids' => $servico->profissionais->pluck('id')->values(),
-                        'recurso_ids' => $servico->recursos->pluck('id')->values(),
-                        'requer_profissional' => $servico->requer_profissional,
-                        'requer_recurso' => $servico->requer_recurso,
-                    ]),
+                ->where('ativo', true)
+                ->when(TenantAccess::profissionalId($tenant), fn ($query, $id) => $query->whereHas('profissionais', fn ($profissionais) => $profissionais->whereKey($id)))
+                ->with(['profissionais:id', 'recursos:id'])
+                ->orderBy('nome')
+                ->get(['id', 'tenant_id', 'nome', 'duracao_minutos', 'requer_profissional', 'requer_recurso'])
+                ->map(fn (Servico $servico) => [
+                    'id' => $servico->id,
+                    'nome' => $servico->nome,
+                    'duracao_minutos' => (int) ($servico->duracao_minutos ?? 30),
+                    'profissional_ids' => $servico->profissionais->pluck('id')->values(),
+                    'recurso_ids' => $servico->recursos->pluck('id')->values(),
+                    'requer_profissional' => $servico->requer_profissional,
+                    'requer_recurso' => $servico->requer_recurso,
+                ]),
             'clienteInicial' => $clienteInicial
                 ? ['nome' => $clienteInicial->nome, 'telefone' => $clienteInicial->telefone]
                 : null,
