@@ -211,7 +211,7 @@ function MiniCalendar({
                     type="button"
                     onClick={prev}
                     aria-label="Mês anterior"
-                    className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-(--bg-surface-2)"
                     style={{ color: 'var(--text-3)' }}
                 >
                     <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -225,7 +225,7 @@ function MiniCalendar({
                     type="button"
                     onClick={next}
                     aria-label="Próximo mês"
-                    className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-(--bg-surface-2)"
                     style={{ color: 'var(--text-3)' }}
                 >
                     <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -303,7 +303,7 @@ function NowIndicator() {
             style={{ top }}
         >
             <div
-                className="h-2 w-2 flex-shrink-0 rounded-full"
+                className="h-2 w-2 shrink-0 rounded-full"
                 style={{ background: 'var(--accent)', marginLeft: -4 }}
             />
             <div className="flex-1" style={{ borderTop: '1.5px solid var(--accent)', opacity: 0.7 }} />
@@ -374,7 +374,7 @@ function EventBlock({
                 {!compact && (
                     <div className="mt-0.5 flex items-center gap-1 text-[10px] leading-tight opacity-75">
                         {event.profissional_id && (
-                            <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ background: professionalColor(event.profissional_id).accent }} />
+                            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: professionalColor(event.profissional_id).accent }} />
                         )}
                         <span className="truncate">
                             {event.profissional_nome ? `${event.profissional_nome} · ` : ''}{fmtHora(event.start)}–{fmtHora(event.end)}
@@ -413,7 +413,7 @@ function WeekGrid({
         <div className="flex min-h-0 flex-1 flex-col">
             {/* Sticky day headers */}
             <div
-                className="flex flex-shrink-0"
+                className="flex shrink-0"
                 style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-sidebar)' }}
             >
                 <div style={{ width: 52, flexShrink: 0 }} />
@@ -493,7 +493,7 @@ function WeekGrid({
                                         <div
                                             key={h}
                                             onClick={() => onSlotClick(iso, `${String(h).padStart(2, '0')}:00`)}
-                                            className="absolute left-0 right-0 cursor-pointer transition-colors hover:bg-[var(--accent-light)]"
+                                            className="absolute left-0 right-0 cursor-pointer transition-colors hover:bg-(--accent-light)"
                                             style={{
                                                 top: (h - HOUR_START) * PX_PER_HOUR,
                                                 height: PX_PER_HOUR,
@@ -578,7 +578,7 @@ function DayTimeline({
                         style={{ background: bg, borderLeft: `4px solid ${accent}` }}
                     >
                         <div
-                            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold"
                             style={{ background: accent + '30', color: accent }}
                         >
                             {a.tipo === 'bloqueio' ? (
@@ -679,7 +679,7 @@ function DetalheModal({
                             type="button"
                             onClick={onClose}
                             aria-label="Fechar detalhes do agendamento"
-                            className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[var(--bg-surface-2)]"
+                            className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-(--bg-surface-2)"
                             style={{ color: 'var(--text-3)' }}
                         >
                             <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1110,7 +1110,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
             <div className="flex flex-1 flex-col overflow-hidden lg:hidden">
                 {/* Top panel: mini calendar + day nav + entity pills */}
                 <div
-                    className="flex-shrink-0"
+                    className="shrink-0"
                     style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-sidebar)' }}
                 >
                     {/* Day navigation row */}
@@ -1118,7 +1118,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
                         <button
                             onClick={() => navegarDia(addDays(diaAtivo, -1))}
                             aria-label="Dia anterior"
-                            className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
+                            className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-(--bg-surface-2)"
                             style={{ color: 'var(--text-3)' }}
                         >
                             <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1129,7 +1129,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
                             type="button"
                             onClick={() => setCalendarioMobileAberto(aberto => !aberto)}
                             aria-expanded={calendarioMobileAberto}
-                            className="flex min-h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-2 text-center text-[13px] font-semibold text-primary hover:bg-[var(--bg-surface-2)]"
+                            className="flex min-h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-2 text-center text-[13px] font-semibold text-primary hover:bg-(--bg-surface-2)"
                         >
                             <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                                 <rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/>
@@ -1139,7 +1139,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
                         <button
                             onClick={() => navegarDia(addDays(diaAtivo, 1))}
                             aria-label="Próximo dia"
-                            className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
+                            className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-(--bg-surface-2)"
                             style={{ color: 'var(--text-3)' }}
                         >
                             <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1200,7 +1200,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
                             {temVisaoGeral && (
                                 <button
                                     onClick={() => setEntidadeId(ALL_PROFESSIONALS_ID)}
-                                    className="flex min-h-10 flex-shrink-0 items-center rounded-full px-3 py-1.5 text-xs font-medium transition-all"
+                                    className="flex min-h-10 shrink-0 items-center rounded-full px-3 py-1.5 text-xs font-medium transition-all"
                                     style={{
                                         background: entidadeId === ALL_PROFESSIONALS_ID ? 'var(--jade)' : 'var(--bg-surface-2)',
                                         color: entidadeId === ALL_PROFESSIONALS_ID ? 'white' : 'var(--text-2)',
@@ -1213,7 +1213,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
                                 <button
                                     key={e.id}
                                     onClick={() => setEntidadeId(e.id)}
-                                    className="flex min-h-10 flex-shrink-0 items-center rounded-full px-3 py-1.5 text-xs font-medium transition-all"
+                                    className="flex min-h-10 shrink-0 items-center rounded-full px-3 py-1.5 text-xs font-medium transition-all"
                                     style={{
                                         background: entidadeId === e.id ? 'var(--jade)' : 'var(--bg-surface-2)',
                                         color: entidadeId === e.id ? 'white' : 'var(--text-2)',
@@ -1254,7 +1254,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
             <div className="hidden flex-1 overflow-hidden lg:flex">
                 {/* Left panel */}
                 <aside
-                    className="flex flex-col overflow-y-auto overscroll-contain scroll-hidden flex-shrink-0"
+                    className="flex flex-col overflow-y-auto overscroll-contain scroll-hidden shrink-0"
                     style={{ width: 220, borderRight: '1px solid var(--border)', background: 'var(--bg-sidebar)' }}
                 >
                     <MiniCalendar
@@ -1281,7 +1281,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
                                     }}
                                 >
                                     <span className="flex h-3 w-3 items-center justify-center">
-                                        <span className="h-2 w-2 rounded-full bg-[var(--jade)]" />
+                                        <span className="h-2 w-2 rounded-full bg-(--jade)" />
                                     </span>
                                     Visão geral
                                 </button>
@@ -1299,7 +1299,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
                                     }}
                                 >
                                     <span
-                                        className="h-2 w-2 flex-shrink-0 rounded-full"
+                                        className="h-2 w-2 shrink-0 rounded-full"
                                         style={{ background: e.cor }}
                                     />
                                     {e.nome}
@@ -1321,12 +1321,12 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
                             ]
                         ).map(l => (
                             <div key={l.label} className="flex items-center gap-2 px-2 py-0.5">
-                                <span className="h-2.5 w-2.5 flex-shrink-0 rounded-sm" style={{ background: l.accent, opacity: 0.85 }} />
+                                <span className="h-2.5 w-2.5 shrink-0 rounded-xs" style={{ background: l.accent, opacity: 0.85 }} />
                                 <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{l.label}</span>
                             </div>
                         ))}
                         <div className="mt-1 flex items-center gap-2 px-2 py-0.5">
-                            <span className="h-2.5 w-2.5 flex-shrink-0 rounded-sm" style={{ background: '#94a3b8', opacity: 0.85 }} />
+                            <span className="h-2.5 w-2.5 shrink-0 rounded-xs" style={{ background: '#94a3b8', opacity: 0.85 }} />
                             <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Bloqueado</span>
                         </div>
                     </div>
@@ -1336,14 +1336,14 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                     {/* Toolbar */}
                     <div
-                        className="flex flex-shrink-0 items-center gap-3 px-5 py-3"
+                        className="flex shrink-0 items-center gap-3 px-5 py-3"
                         style={{ borderBottom: '1px solid var(--border)' }}
                     >
                         <button
                             type="button"
                             onClick={prevWeek}
                             aria-label="Semana anterior"
-                            className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
+                            className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-(--bg-surface-2)"
                             style={{ color: 'var(--text-3)' }}
                         >
                             <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1353,7 +1353,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
 
                         <button
                             onClick={goToday}
-                            className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors hover:bg-[var(--bg-surface-2)]"
+                            className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors hover:bg-(--bg-surface-2)"
                             style={{ border: '1px solid var(--border-strong)', color: 'var(--text-2)' }}
                         >
                             Hoje
@@ -1363,7 +1363,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
                             type="button"
                             onClick={nextWeek}
                             aria-label="Próxima semana"
-                            className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[var(--bg-surface-2)]"
+                            className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-(--bg-surface-2)"
                             style={{ color: 'var(--text-3)' }}
                         >
                             <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1463,7 +1463,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
                                     {detalheBloqueio.title}
                                 </h3>
                             </div>
-                            <button type="button" onClick={() => setDetalheBloqueio(null)} aria-label="Fechar detalhes do bloqueio" className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-[var(--bg-surface-2)]" style={{ color: 'var(--text-3)' }}>
+                            <button type="button" onClick={() => setDetalheBloqueio(null)} aria-label="Fechar detalhes do bloqueio" className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-(--bg-surface-2)" style={{ color: 'var(--text-3)' }}>
                                 <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
                             </button>
                         </div>
@@ -1491,7 +1491,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
                                     <p className="label mb-1">Indisponibilidade</p>
                                     <h3 className="text-xl font-semibold text-primary" style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}>Bloquear horário</h3>
                                 </div>
-                                <button type="button" onClick={() => setModalBloqueio(null)} aria-label="Fechar bloqueio de horário" className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-[var(--bg-surface-2)]" style={{ color: 'var(--text-3)' }}>
+                                <button type="button" onClick={() => setModalBloqueio(null)} aria-label="Fechar bloqueio de horário" className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-(--bg-surface-2)" style={{ color: 'var(--text-3)' }}>
                                     <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
                                 </button>
                             </div>
@@ -1552,7 +1552,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
                                     type="button"
                                     onClick={() => setModalNova(null)}
                                     aria-label="Fechar novo agendamento"
-                                    className="flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-[var(--bg-surface-2)]"
+                                    className="flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-(--bg-surface-2)"
                                     style={{ color: 'var(--text-3)' }}
                                 >
                                     <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1651,7 +1651,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
                                                     key={cliente.id}
                                                     type="button"
                                                     onClick={() => selecionarCliente(cliente)}
-                                                    className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-[var(--bg-surface-2)]"
+                                                    className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-(--bg-surface-2)"
                                                 >
                                                     <span className="min-w-0">
                                                         <span className="block truncate text-sm font-medium text-primary">{cliente.nome}</span>

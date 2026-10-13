@@ -27,7 +27,7 @@ export default function Login({
 
     return (
         <ForceDark>
-        <div className="flex min-h-[100dvh]" style={{ background: 'var(--bg-app)' }}>
+        <div className="flex min-h-dvh" style={{ background: 'var(--bg-app)' }}>
             <Head title="Entrar" />
 
             {/* ── Painel esquerdo — marca ─────────────────────────────────────── */}
@@ -257,7 +257,7 @@ export default function Login({
                                 type="checkbox"
                                 checked={data.remember}
                                 onChange={e => setData('remember', e.target.checked as false)}
-                                className="rounded"
+                                className="rounded-sm"
                                 style={{ accentColor: INDIGO }}
                             />
                             Lembrar de mim
@@ -267,7 +267,7 @@ export default function Login({
                         <button
                             type="submit"
                             disabled={processing}
-                            className="relative mt-2 w-full overflow-hidden rounded-xl py-3 text-sm font-semibold text-white transition-all hover:brightness-110 disabled:opacity-60"
+                            className="relative w-full overflow-hidden rounded-xl py-3 text-sm font-semibold text-white transition-all hover:brightness-110 disabled:opacity-60"
                             style={{ background: INDIGO }}
                         >
                             {processing ? (

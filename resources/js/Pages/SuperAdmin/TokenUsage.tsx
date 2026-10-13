@@ -94,7 +94,7 @@ function DiffBadge({ atual, anterior }: { atual: number; anterior: number }) {
     const up = diff > 0;
     return (
         <span
-            className="ml-2 rounded px-1.5 py-0.5 text-[10px] font-semibold"
+            className="ml-2 rounded-sm px-1.5 py-0.5 text-[10px] font-semibold"
             style={{ background: up ? 'rgba(239,68,68,0.12)' : 'rgba(52,211,153,0.12)', color: up ? '#f87171' : '#34d399' }}
         >
             {up ? '▲' : '▼'} {Math.abs(diff).toFixed(0)}%
@@ -109,7 +109,7 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: R
             style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
         >
             <p className="mb-1 text-[11px] uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>{label}</p>
-            <p className="break-words text-xl font-semibold tabular-nums sm:text-2xl" style={{ color: 'var(--text-1)' }}>{value}</p>
+            <p className="wrap-break-word text-xl font-semibold tabular-nums sm:text-2xl" style={{ color: 'var(--text-1)' }}>{value}</p>
             {sub && <p className="mt-0.5 text-[11px]" style={{ color: 'var(--text-3)' }}>{sub}</p>}
         </div>
     );
@@ -129,7 +129,7 @@ function MiniBarChart({ data }: { data: DiaRow[] }) {
             {data.map(d => (
                 <div
                     key={d.dia}
-                    className="group relative flex-1 rounded-sm transition-opacity hover:opacity-80"
+                    className="group relative flex-1 rounded-xs transition-opacity hover:opacity-80"
                     style={{ height: `${Math.max((d.custo_usd / max) * 100, 2)}%`, background: 'var(--accent)', opacity: 0.75 }}
                     title={`${d.dia}: ${usd(d.custo_usd)} (${num(d.calls)} calls)`}
                 />
@@ -338,7 +338,7 @@ export default function TokenUsage({ ia, mes, mesAnterior, cacheHitRate, economi
                         </thead>
                         <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
                             {porProvider.map(p => (
-                                <tr key={`${p.provider}-${p.model}`} className="transition-colors hover:bg-white/[0.02]">
+                                <tr key={`${p.provider}-${p.model}`} className="transition-colors hover:bg-white/2">
                                     <td className="px-5 py-3 font-medium" style={{ color: 'var(--text-1)' }}>
                                         {PROVIDER_LABELS[p.provider] ?? p.provider}
                                     </td>
@@ -418,7 +418,7 @@ export default function TokenUsage({ ia, mes, mesAnterior, cacheHitRate, economi
                         </thead>
                         <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
                             {porTenant.map(t => (
-                                <tr key={t.id} className="transition-colors hover:bg-white/[0.02]">
+                                <tr key={t.id} className="transition-colors hover:bg-white/2">
                                     <td className="px-5 py-3 font-medium" style={{ color: 'var(--text-1)' }}>{t.nome}</td>
                                     <td className="px-5 py-3 tabular-nums" style={{ color: 'var(--text-2)' }}>{num(t.calls)}</td>
                                     <td className="px-5 py-3 tabular-nums" style={{ color: 'var(--text-2)' }}>{num(t.input)}</td>

@@ -81,7 +81,7 @@ export default function Precos({ planos }: Props) {
                     Planos e preços
                 </p>
                 <h1
-                    className="mb-3 text-4xl leading-tight sm:text-5xl"
+                    className="mb-3 text-4xl leading-tight sm:text-5xl sm:leading-none"
                     style={{ fontFamily: 'Instrument Serif, Georgia, serif', color: 'rgba(232,230,225,0.95)' }}
                 >
                     Um preço claro,<br />

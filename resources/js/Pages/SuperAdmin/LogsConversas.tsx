@@ -108,7 +108,7 @@ export default function LogsConversas() {
                         </div>
                         <div className="shrink-0">
                             <span
-                                className="inline-block rounded px-1.5 py-0.5 text-[10px] font-bold"
+                                className="inline-block rounded-sm px-1.5 py-0.5 text-[10px] font-bold"
                                 style={m.remetente === 'cliente'
                                     ? { background: 'rgba(99,102,241,0.12)', color: '#a5b4fc' }
                                     : { background: 'rgba(52,211,153,0.1)',  color: '#34d399' }
@@ -118,10 +118,10 @@ export default function LogsConversas() {
                             </span>
                         </div>
                         <div className="min-w-0 text-xs sm:w-[110px] sm:shrink-0" style={{ color: 'var(--text-3)' }}>
-                            <div className="break-words">{m.tenant ?? '—'}</div>
+                            <div className="wrap-break-word">{m.tenant ?? '—'}</div>
                             <div className="break-all font-mono">{m.telefone}</div>
                         </div>
-                        <div className="min-w-0 flex-1 break-words whitespace-pre-wrap text-sm" style={{ color: 'var(--text-1)' }}>
+                        <div className="min-w-0 flex-1 wrap-break-word whitespace-pre-wrap text-sm" style={{ color: 'var(--text-1)' }}>
                             {m.conteudo}
                         </div>
                     </div>

@@ -38,7 +38,7 @@ export default function ConfiguracoesTabs() {
                                 href={route(tab.routeName)}
                                 aria-current={active ? 'page' : undefined}
                                 aria-label={tab.label}
-                                className="flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 px-1 py-2 text-center transition-colors focus-visible:relative focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
+                                className="flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 px-1 py-2 text-center transition-colors focus-visible:relative focus-visible:z-10 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-(--accent)"
                                 style={{
                                     background: active ? 'var(--accent-light)' : 'var(--bg-surface)',
                                     color: active ? 'var(--accent)' : 'var(--text-3)',

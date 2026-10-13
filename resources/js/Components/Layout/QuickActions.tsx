@@ -75,7 +75,7 @@ export default function QuickActions() {
     ];
 
     return (
-        <div ref={ref} className="relative flex min-h-[4.5rem] min-w-0 items-center justify-center">
+        <div ref={ref} className="relative flex min-h-18 min-w-0 items-center justify-center">
             {open && (
                 <nav
                     id="quick-actions-menu"
@@ -95,7 +95,7 @@ export default function QuickActions() {
                                 key={action.label}
                                 href={action.href}
                                 onClick={() => setOpen(false)}
-                                className="flex min-h-14 items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[var(--bg-surface-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] active:bg-[var(--bg-surface-2)] motion-reduce:transition-none"
+                                className="flex min-h-14 items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-(--bg-surface-2) focus-visible:outline-solid focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--accent) active:bg-(--bg-surface-2) motion-reduce:transition-none"
                             >
                                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}>
                                     <svg aria-hidden="true" focusable="false" width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -119,7 +119,7 @@ export default function QuickActions() {
                 aria-controls="quick-actions-menu"
                 aria-expanded={open}
                 aria-label={open ? 'Fechar ações rápidas' : 'Abrir ações rápidas'}
-                className="flex min-h-[4.5rem] w-full min-w-0 flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)]"
+                className="flex min-h-18 w-full min-w-0 flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--accent)"
                 style={{ color: open ? 'var(--accent)' : 'var(--text-3)' }}
             >
                 <span

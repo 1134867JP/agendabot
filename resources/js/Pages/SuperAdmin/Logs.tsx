@@ -28,7 +28,7 @@ function LevelBadge({ level }: { level: string }) {
     const s = LEVEL_STYLE[level] ?? LEVEL_STYLE.DEBUG;
     return (
         <span
-            className="inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wider font-mono"
+            className="inline-block shrink-0 rounded-sm px-1.5 py-0.5 text-[10px] font-bold tracking-wider font-mono"
             style={{ background: s.bg, color: s.text }}
         >
             {s.label}
@@ -53,7 +53,7 @@ function CopyButton({ entry }: { entry: LogEntry }) {
         <button
             onClick={copy}
             title="Copiar"
-            className="shrink-0 rounded p-1 transition-colors"
+            className="shrink-0 rounded-sm p-1 transition-colors"
             style={{ color: copied ? 'var(--jade)' : 'var(--text-3)' }}
             onMouseEnter={e => { if (!copied) (e.currentTarget as HTMLElement).style.color = 'var(--text-1)'; }}
             onMouseLeave={e => { if (!copied) (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'; }}
@@ -154,7 +154,7 @@ export default function Logs() {
                         <button
                             key={c}
                             onClick={() => { setCanal(c); setExpanded(null); setBusca(''); }}
-                            className="rounded px-3 py-1.5 text-xs font-medium transition-all"
+                            className="rounded-sm px-3 py-1.5 text-xs font-medium transition-all"
                             style={
                                 canal === c
                                     ? { background: 'var(--accent)', color: 'white' }
@@ -171,7 +171,7 @@ export default function Logs() {
                     aria-label="Filtrar logs por tenant"
                     value={tenantId}
                     onChange={e => { setTenantId(e.target.value); setExpanded(null); }}
-                    className="max-w-full rounded-lg px-3 py-2 text-xs font-medium outline-none"
+                    className="max-w-full rounded-lg px-3 py-2 text-xs font-medium outline-hidden"
                     style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
                 >
                     <option value="">Todos os tenants</option>
@@ -189,7 +189,7 @@ export default function Logs() {
                         <button
                             key={n}
                             onClick={() => { setNivel(n); setLoading(true); }}
-                            className="rounded px-3 py-1.5 text-xs font-medium transition-all"
+                            className="rounded-sm px-3 py-1.5 text-xs font-medium transition-all"
                             style={
                                 nivel === n
                                     ? { background: 'var(--accent)', color: 'white' }
@@ -252,7 +252,7 @@ export default function Logs() {
                         value={busca}
                         onChange={e => { setBusca(e.target.value); setExpanded(null); }}
                         placeholder="Buscar nos logs…"
-                        className="w-full rounded-lg py-2 pl-8 pr-3 text-xs outline-none"
+                        className="w-full rounded-lg py-2 pl-8 pr-3 text-xs outline-hidden"
                         style={{
                             background: 'var(--bg-surface)',
                             border:     '1px solid var(--border)',
@@ -300,7 +300,7 @@ export default function Logs() {
                             <div key={i}>
                                 <button
                                     onClick={() => setExpanded(expanded === i ? null : i)}
-                                    className="w-full px-4 py-3 text-left transition-colors hover:bg-white/[0.02]"
+                                    className="w-full px-4 py-3 text-left transition-colors hover:bg-white/2"
                                 >
                                     {/* Meta row: badge + timestamp + copy + chevron */}
                                     <div className="flex items-center gap-2">
