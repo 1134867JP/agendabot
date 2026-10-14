@@ -8,6 +8,7 @@ use App\Models\Tenant;
 use App\Services\AI\AiOrchestrator;
 use App\Services\AI\Exceptions\AiLimitExceededException;
 use App\Services\AI\Exceptions\AiProviderException;
+use App\Support\WhatsappTexto;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -23,6 +24,15 @@ class AgendouAgentService
     private bool $agendamentoCriadoNesteTurno = false;
 
     private ?int $agendamentoCriadoId = null;
+
+    /**
+     * Última alteração gravada neste turno ('criado', 'reagendado', 'cancelado',
+     * 'confirmado') e o agendamento afetado. Permite responder com os dados
+     * reais quando o texto do modelo vem degenerado.
+     *
+     * @var array{tipo: string, agendamento: Agendamento}|null
+     */
+    private ?array $acaoConcluida = null;
 
     public function __construct(
         private AgendamentoService $agendamentoService,
@@ -40,6 +50,7 @@ class AgendouAgentService
         $this->transferir = false;
         $this->agendamentoCriadoNesteTurno = false;
         $this->agendamentoCriadoId = null;
+        $this->acaoConcluida = null;
 
         $hoje = Carbon::now($tenant->resolvedTimezone());
 
@@ -175,6 +186,18 @@ class AgendouAgentService
             'output' => $totalUsage['output_tokens'],
         ]);
 
+        // Alguns modelos (visto no Groq gpt-oss) degeneram em espaços invisíveis no
+        // meio da frase. Esse texto não pode chegar ao cliente: se algo foi gravado
+        // neste turno, respondemos com os dados reais; senão pedimos para repetir.
+        if (WhatsappTexto::pareceDegenerado($resposta)) {
+            Log::channel('jobs')->warning('BOT_DEGENERATE_AI_RESPONSE', [
+                'tenant_id' => $tenant->id,
+                'acao_concluida' => $this->acaoConcluida['tipo'] ?? null,
+            ]);
+            $resposta = $this->respostaDaAcaoConcluida($tenant) ?? '';
+        }
+        $resposta = WhatsappTexto::normalizar($resposta);
+
         // Alguns modelos menores podem responder que transferiram a conversa sem
         // efetivamente chamar a ferramenta. Nunca deixamos esse texto solto: ele vira
         // um handoff real, pausa o bot no job e usa a mensagem padronizada abaixo.
@@ -205,7 +228,7 @@ class AgendouAgentService
         }
 
         return [
-            'resposta' => $resposta ?: 'Desculpe, não consegui processar sua mensagem. Tente novamente.',
+            'resposta' => $resposta ?: 'Desculpe, não consegui processar sua mensagem. Pode repetir, por favor?',
             'transferir' => $this->transferir,
             'usage' => $totalUsage,
             'agendamento_id' => $this->agendamentoCriadoId,
@@ -284,16 +307,21 @@ class AgendouAgentService
 
     private function toolCriarAgendamento(array $input): array
     {
+        // O bot pergunta o nome ao cliente; o cadastro costuma ter só o nome do
+        // perfil do WhatsApp, que fica como reserva se a IA não informar um nome.
+        $nomeInformado = trim((string) ($input['cliente_nome'] ?? ''));
+
         try {
             $agendamento = $this->agendamentoService->criarAgendamentoV2($this->currentTenant, array_merge($input, [
                 'cliente_id' => $this->currentCliente['id'],
-                'cliente_nome' => $this->currentCliente['nome'],
+                'cliente_nome' => $nomeInformado !== '' ? $nomeInformado : $this->currentCliente['nome'],
                 'cliente_telefone' => $this->currentCliente['telefone'],
                 'origem' => 'bot',
             ]));
 
             $this->agendamentoCriadoNesteTurno = true;
             $this->agendamentoCriadoId = $agendamento->id;
+            $this->acaoConcluida = ['tipo' => 'criado', 'agendamento' => $agendamento];
 
             return ['sucesso' => true, 'agendamento_id' => $agendamento->id];
         } catch (HorarioIndisponivelException $e) {
@@ -311,6 +339,7 @@ class AgendouAgentService
             return ['sucesso' => false, 'mensagem' => 'Nenhum agendamento pendente encontrado.'];
         }
         $agendamento->update(['status' => 'confirmado', 'confirmed_by_client_at' => now()]);
+        $this->acaoConcluida = ['tipo' => 'confirmado', 'agendamento' => $agendamento];
 
         return ['sucesso' => true];
     }
@@ -321,6 +350,7 @@ class AgendouAgentService
             return ['sucesso' => false, 'mensagem' => 'Nenhum agendamento pendente encontrado.'];
         }
         $this->agendamentoService->cancelar($agendamento);
+        $this->acaoConcluida = ['tipo' => 'cancelado', 'agendamento' => $agendamento];
 
         return ['sucesso' => true];
     }
@@ -367,6 +397,7 @@ class AgendouAgentService
 
         try {
             $this->agendamentoService->reagendar($agendamento, $input);
+            $this->acaoConcluida = ['tipo' => 'reagendado', 'agendamento' => $agendamento->fresh()];
 
             return ['sucesso' => true];
         } catch (HorarioIndisponivelException $e) {
@@ -550,6 +581,32 @@ class AgendouAgentService
         }
 
         return 'Recebi sua solicitação. Vou encaminhar para uma atendente, que dará sequência em instantes.';
+    }
+
+    /** Resposta montada com os dados gravados, usada quando o texto da IA é descartado. */
+    private function respostaDaAcaoConcluida(Tenant $tenant): ?string
+    {
+        if (! $this->acaoConcluida) {
+            return null;
+        }
+
+        $agendamento = $this->acaoConcluida['agendamento'];
+        $quando = Carbon::parse($agendamento->data_hora ?? $agendamento->inicio)
+            ->setTimezone($tenant->resolvedTimezone());
+        $dataHora = $quando->format('d/m').' às '.$quando->format('H:i');
+        $detalhe = collect([
+            $agendamento->descricaoServicos(),
+            $agendamento->profissional?->nome ? 'com '.$agendamento->profissional->nome : null,
+        ])->filter()->join(' ');
+        $detalhe = $detalhe !== '' ? "{$detalhe} em {$dataHora}" : $dataHora;
+
+        return match ($this->acaoConcluida['tipo']) {
+            'criado' => "Agendamento confirmado! ✅\n{$detalhe}. Te esperamos!",
+            'reagendado' => "Pronto! Seu horário foi alterado: {$detalhe}. ✅",
+            'confirmado' => "Presença confirmada! ✅\n{$detalhe}. Te esperamos!",
+            'cancelado' => "Pronto, seu horário de {$dataHora} foi cancelado.",
+            default => null,
+        };
     }
 
     private function respostaIndicaTransferencia(string $resposta): bool
