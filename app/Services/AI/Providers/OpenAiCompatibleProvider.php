@@ -130,7 +130,8 @@ abstract class OpenAiCompatibleProvider implements AiProviderInterface
                     'type' => 'function',
                     'function' => [
                         'name' => $block['name'],
-                        'arguments' => json_encode($block['input'] ?? [], JSON_UNESCAPED_UNICODE),
+                        // Sem parâmetros vai como "{}": "[]" é recusado (Groq: "cannot unmarshal array into map").
+                        'arguments' => json_encode((object) ($block['input'] ?? []), JSON_UNESCAPED_UNICODE),
                     ],
                 ])->values()->all();
                 if ($toolCalls) {
