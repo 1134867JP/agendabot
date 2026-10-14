@@ -128,6 +128,25 @@ class BotRespostaAgendamentoTest extends TestCase
         $this->assertArrayHasKey('slots', $resultado);
     }
 
+    public function test_data_invalida_volta_para_a_ia_com_o_formato_esperado(): void
+    {
+        // Antes virava erro_tecnico e o bot respondia "deu um erro no sistema".
+        $this->fakeIaFerramentaSeguidaDe('criar_agendamento', [
+            'cliente_nome' => 'Carlos Silva',
+            'profissional_id' => $this->profissional->id,
+            'servico_ids' => [$this->servico->id],
+            'data' => 'amanhã',
+            'horario' => '10:00',
+        ], 'Só um instante.');
+
+        $this->clienteEnvia('5551966000013', 'Pode marcar amanhã às 10h', 'Carlos');
+
+        $resultado = $this->resultadoDaFerramentaNaSegundaChamada();
+        $this->assertFalse($resultado['sucesso']);
+        $this->assertSame('dados_invalidos', $resultado['erro']);
+        $this->assertStringContainsString('AAAA-MM-DD', $resultado['mensagem']);
+    }
+
     public function test_listar_agendamentos_do_cliente_mostra_data_e_hora_legiveis(): void
     {
         $agendamento = $this->agendamentoPendente('5551966000012');
