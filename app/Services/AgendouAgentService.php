@@ -365,6 +365,9 @@ class AgendouAgentService
             return ['sucesso' => true, 'agendamento_id' => $agendamento->id];
         } catch (HorarioIndisponivelException $e) {
             return ['sucesso' => false, 'erro' => 'horario_indisponivel', 'mensagem' => $e->getMessage()];
+        } catch (\InvalidArgumentException $e) {
+            // Dado em formato errado: o modelo recebe o formato esperado e tenta de novo.
+            return ['sucesso' => false, 'erro' => 'dados_invalidos', 'mensagem' => $e->getMessage()];
         } catch (\Throwable $e) {
             Log::channel('jobs')->error('toolCriarAgendamento error', ['error' => $e->getMessage(), 'input' => $input]);
 
@@ -451,6 +454,9 @@ class AgendouAgentService
             return ['sucesso' => true];
         } catch (HorarioIndisponivelException $e) {
             return ['sucesso' => false, 'erro' => 'horario_indisponivel', 'mensagem' => $e->getMessage()];
+        } catch (\InvalidArgumentException $e) {
+            // Dado em formato errado: o modelo recebe o formato esperado e tenta de novo.
+            return ['sucesso' => false, 'erro' => 'dados_invalidos', 'mensagem' => $e->getMessage()];
         } catch (\Throwable $e) {
             Log::channel('jobs')->error('toolReagendarAgendamento error', ['error' => $e->getMessage(), 'input' => $input]);
 

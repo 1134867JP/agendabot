@@ -151,6 +151,47 @@ class AgendamentoService
         }
     }
 
+    /**
+     * Data e hora informadas pela IA, no fuso do estabelecimento. Aceita os formatos
+     * que os modelos costumam mandar ("2026-10-15", "2026-10-15T15:00:00", "15/10/2026",
+     * "15/10"; "15:00", "15:00:00", "9:30", "15h", "15h30"). Formato irreconhecível vira
+     * InvalidArgumentException com o formato esperado, para o modelo corrigir.
+     */
+    private function dataHoraLocal(string $data, string $horario, string $tz): Carbon
+    {
+        $data = trim($data);
+        if (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})/', $data, $m)) {
+            [$ano, $mes, $dia] = [(int) $m[1], (int) $m[2], (int) $m[3]];
+        } elseif (preg_match('/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2}|\d{4}))?$/', $data, $m)) {
+            [$dia, $mes] = [(int) $m[1], (int) $m[2]];
+            $ano = isset($m[3]) ? (int) $m[3] : null;
+            if ($ano !== null && $ano < 100) {
+                $ano += 2000;
+            }
+            if ($ano === null) {
+                // Sem ano: a próxima ocorrência dessa data.
+                $hoje = Carbon::today($tz);
+                $ano = $hoje->year;
+                if (checkdate($mes, $dia, $ano) && Carbon::create($ano, $mes, $dia, 0, 0, 0, $tz)->lt($hoje)) {
+                    $ano++;
+                }
+            }
+        } else {
+            throw new \InvalidArgumentException("Data inválida ({$data}). Use o formato AAAA-MM-DD.");
+        }
+
+        if (! checkdate($mes, $dia, $ano)) {
+            throw new \InvalidArgumentException("Data inexistente ({$data}). Use o formato AAAA-MM-DD.");
+        }
+
+        if (! preg_match('/^(\d{1,2})(?:\s*[:hH]\s*(\d{2})?)?(?::\d{2})?$/', trim($horario), $h)
+            || (int) $h[1] > 23 || (int) ($h[2] ?? 0) > 59) {
+            throw new \InvalidArgumentException("Horário inválido ({$horario}). Use o formato HH:MM.");
+        }
+
+        return Carbon::create($ano, $mes, $dia, (int) $h[1], (int) ($h[2] ?? 0), 0, $tz);
+    }
+
     private function validarExpediente(Profissional $profissional, Carbon $inicio, Carbon $fim, string $tz): void
     {
         $diaSemana = (int) $inicio->format('N');
@@ -257,8 +298,7 @@ class AgendamentoService
             }
 
             $tz = $agendamento->tenant->resolvedTimezone();
-            $horario = substr($dados['hora'], 0, 5);
-            $inicio = Carbon::createFromFormat('Y-m-d H:i', "{$dados['data']} {$horario}", $tz);
+            $inicio = $this->dataHoraLocal((string) $dados['data'], (string) $dados['hora'], $tz);
             $duracao = $montagem['duracao_minutos'] ?? $agendamento->duracao_minutos ?? 30;
             $fim = $inicio->copy()->addMinutes($duracao);
 
@@ -389,8 +429,7 @@ class AgendamentoService
 
             // Timezone explícito para garantir que "10:00" seja interpretado como horário local
             $tz = $tenant->resolvedTimezone();
-            $horario = substr($dados['horario'], 0, 5); // garante formato HH:MM (descarta segundos se vierem)
-            $inicio = Carbon::createFromFormat('Y-m-d H:i', "{$dados['data']} {$horario}", $tz);
+            $inicio = $this->dataHoraLocal((string) $dados['data'], (string) $dados['horario'], $tz);
             $fim = $inicio->copy()->addMinutes($duracao);
 
             $this->validarAntecedencia($inicio, $regras, $tz);
