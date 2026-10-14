@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Jobs\ProcessarMensagemWhatsapp;
 use App\Models\Agendamento;
+use App\Models\Cliente;
 use App\Models\Conversa;
 use App\Models\Profissional;
 use App\Models\Servico;
@@ -97,6 +98,104 @@ class BotRespostaAgendamentoTest extends TestCase
             'não informado' => ['Não informado'],
             'telefone' => ['+55 51 96600-0002'],
         ];
+    }
+
+    public function test_bloco_pendente_mostra_data_e_hora_legiveis(): void
+    {
+        $agendamento = $this->agendamentoPendente('5551966000010');
+        $this->fakeIaTexto('Combinado!');
+
+        $this->clienteEnvia('5551966000010', 'obrigado', 'Carlos');
+
+        $sistema = collect($this->requisicoesIa()[0]['system'])->pluck('text')->join("\n");
+        $dataBr = Carbon::parse($this->data)->format('d/m/Y');
+        $this->assertStringContainsString("#{$agendamento->id} — {$dataBr} às 15:00", $sistema);
+    }
+
+    public function test_buscar_slots_avisa_que_o_horario_ocupado_e_do_proprio_cliente(): void
+    {
+        // Cliente responde "sim" a um agendamento já feito e o modelo busca horários:
+        // sem o aviso, o horário dele aparece ocupado e o bot dizia "15:00 indisponível".
+        $agendamento = $this->agendamentoPendente('5551966000011');
+        $this->fakeIaFerramentaSeguidaDe('buscar_slots', ['servico_ids' => [$this->servico->id]], 'Seu horário das 15:00 está mantido.');
+
+        $this->clienteEnvia('5551966000011', 'Sim, pode confirmar', 'Carlos');
+
+        $resultado = $this->resultadoDaFerramentaNaSegundaChamada();
+        $dataBr = Carbon::parse($this->data)->format('d/m');
+        $this->assertStringContainsString("#{$agendamento->id}", $resultado['agendamentos_do_cliente']);
+        $this->assertStringContainsString("{$dataBr} às 15:00", $resultado['agendamentos_do_cliente']);
+        $this->assertArrayHasKey('slots', $resultado);
+    }
+
+    public function test_listar_agendamentos_do_cliente_mostra_data_e_hora_legiveis(): void
+    {
+        $agendamento = $this->agendamentoPendente('5551966000012');
+        $this->fakeIaFerramentaSeguidaDe('listar_agendamentos_cliente', [], 'Você tem um corte marcado.');
+
+        $this->clienteEnvia('5551966000012', 'quais horários eu tenho?', 'Carlos');
+
+        $resultado = $this->resultadoDaFerramentaNaSegundaChamada();
+        $dataBr = Carbon::parse($this->data)->format('d/m');
+        $this->assertStringContainsString("ID #{$agendamento->id}", $resultado['agendamentos']);
+        $this->assertStringContainsString("{$dataBr} às 15:00", $resultado['agendamentos']);
+        $this->assertStringNotContainsString('à00', $resultado['agendamentos']);
+    }
+
+    private function agendamentoPendente(string $telefone): Agendamento
+    {
+        $cliente = Cliente::create(['tenant_id' => $this->tenant->id, 'telefone' => $telefone, 'nome' => 'Carlos']);
+        $inicio = Carbon::parse("{$this->data} 15:00", $this->tenant->resolvedTimezone());
+
+        return Agendamento::create([
+            'tenant_id' => $this->tenant->id,
+            'profissional_id' => $this->profissional->id,
+            'servico_id' => $this->servico->id,
+            'cliente_id' => $cliente->id,
+            'cliente_nome' => $cliente->nome,
+            'cliente_telefone' => $telefone,
+            'inicio' => $inicio,
+            'fim' => $inicio->copy()->addMinutes(30),
+            'data_hora' => $inicio,
+            'duracao_minutos' => 30,
+            'status' => 'agendado',
+            'origem' => 'bot',
+        ]);
+    }
+
+    private function fakeIaFerramentaSeguidaDe(string $ferramenta, array $input, string $textoFinal): void
+    {
+        Http::fake([
+            'api.anthropic.com/*' => Http::sequence()
+                ->push([
+                    'content' => [['type' => 'tool_use', 'id' => 'toolu_1', 'name' => $ferramenta, 'input' => $input]],
+                    'stop_reason' => 'tool_use',
+                    'usage' => ['input_tokens' => 10, 'output_tokens' => 5],
+                ])
+                ->push([
+                    'content' => [['type' => 'text', 'text' => $textoFinal]],
+                    'stop_reason' => 'end_turn',
+                    'usage' => ['input_tokens' => 10, 'output_tokens' => 5],
+                ]),
+            '*' => Http::response(['status' => 'success'], 200),
+        ]);
+    }
+
+    /** @return list<array> corpos das requisições enviadas à IA, em ordem */
+    private function requisicoesIa(): array
+    {
+        return Http::recorded(fn ($request) => str_contains($request->url(), 'anthropic.com'))
+            ->map(fn ($par) => $par[0]->data())
+            ->values()
+            ->all();
+    }
+
+    private function resultadoDaFerramentaNaSegundaChamada(): array
+    {
+        $segunda = $this->requisicoesIa()[1];
+        $toolResult = collect(end($segunda['messages'])['content'])->firstWhere('type', 'tool_result');
+
+        return json_decode($toolResult['content'], true);
     }
 
     public function test_resposta_degenerada_apos_reserva_vira_confirmacao_com_os_dados_reais(): void

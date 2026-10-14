@@ -81,14 +81,14 @@ class AgendouAgentService
         if ($agendamentoPendente && ! $triagem) {
             $dataHora = Carbon::parse($agendamentoPendente->data_hora ?? $agendamentoPendente->inicio)
                 ->locale('pt_BR')
-                ->translatedFormat('d/m/Y \\às H:i');
+                ->translatedFormat('d/m/Y \\à\\s H:i');
             $servico = collect([
                 $agendamentoPendente->descricaoServicos(),
                 $agendamentoPendente->profissional?->nome ?? $agendamentoPendente->recurso?->nome,
             ])->filter()->join(' com ') ?: 'serviço';
             $systemBlocks[] = [
                 'type' => 'text',
-                'text' => "PENDENTE: Agendamento ID #{$agendamentoPendente->id} — {$dataHora} — {$servico}. Já está agendado — NÃO ofereça nem tente criar outro horário para este pedido. Use confirmar_agendamento ou cancelar_agendamento se o cliente confirmar/cancelar. Se o cliente só agradecer (ex: 'vlw', 'obrigado', 'ok'), responda normalmente sem chamar nenhuma ferramenta.",
+                'text' => "PENDENTE: Agendamento ID #{$agendamentoPendente->id} — {$dataHora} — {$servico}. Já está agendado — NÃO ofereça nem tente criar outro horário para este pedido. Use confirmar_agendamento ou cancelar_agendamento se o cliente confirmar/cancelar. Se o cliente responder 'sim', 'pode confirmar' ou 'confirmo' sobre este agendamento, chame confirmar_agendamento e NÃO chame buscar_slots: o horário dele aparece ocupado justamente por já ser dele. Se o cliente só agradecer (ex: 'vlw', 'obrigado', 'ok'), responda normalmente sem chamar nenhuma ferramenta.",
             ];
         }
 
@@ -284,9 +284,9 @@ class AgendouAgentService
         $hoje = Carbon::now($tenant->resolvedTimezone())->format('Y-m-d');
 
         if (empty(array_filter($slots))) {
-            return ['hoje' => $hoje, 'disponivel' => false, 'mensagem' => $servicoIds
+            return $this->comAgendamentosDoCliente(['hoje' => $hoje, 'disponivel' => false, 'mensagem' => $servicoIds
                 ? 'Nenhum profissional que faz esse(s) serviço(s) tem horário livre nos próximos dias.'
-                : 'Nenhum horário disponível nos próximos dias.'];
+                : 'Nenhum horário disponível nos próximos dias.']);
         }
 
         $nomes = $tenant->profissionais()->whereIn('id', array_keys($slots))->pluck('nome', 'id');
@@ -307,7 +307,23 @@ class AgendouAgentService
             }
         }
 
-        return ['hoje' => $hoje, 'slots' => implode("\n", $linhas)];
+        return $this->comAgendamentosDoCliente(['hoje' => $hoje, 'slots' => implode("\n", $linhas)]);
+    }
+
+    /**
+     * Os horários do próprio cliente saem da lista de livres. Sem este aviso o modelo
+     * respondia "15:00 indisponível" quando o cliente só confirmava o que já tinha marcado.
+     */
+    private function comAgendamentosDoCliente(array $resultado): array
+    {
+        $agendamentos = $this->agendamentosFuturosDoCliente();
+        if ($agendamentos !== null) {
+            $resultado['agendamentos_do_cliente'] = $agendamentos."\n"
+                .'Estes horários já são do cliente e por isso não aparecem como livres. Não diga que estão indisponíveis; '
+                .'se ele quer manter, use confirmar_agendamento.';
+        }
+
+        return $resultado;
     }
 
     private function toolCriarAgendamento(array $input): array
@@ -362,6 +378,18 @@ class AgendouAgentService
 
     private function toolListarAgendamentosCliente(): array
     {
+        $lista = $this->agendamentosFuturosDoCliente();
+
+        if ($lista === null) {
+            return ['agendamentos' => [], 'mensagem' => 'Nenhum agendamento futuro encontrado.'];
+        }
+
+        return ['agendamentos' => $lista];
+    }
+
+    /** Próximos agendamentos ativos do cliente atual, uma linha por agendamento, ou null. */
+    private function agendamentosFuturosDoCliente(): ?string
+    {
         $agendamentos = Agendamento::where('cliente_id', $this->currentCliente['id'])
             ->whereNotIn('status', ['cancelado', 'concluido'])
             ->where('data_hora', '>', now())
@@ -371,20 +399,18 @@ class AgendouAgentService
             ->get();
 
         if ($agendamentos->isEmpty()) {
-            return ['agendamentos' => [], 'mensagem' => 'Nenhum agendamento futuro encontrado.'];
+            return null;
         }
 
-        $lista = $agendamentos->map(function ($a) {
+        return $agendamentos->map(function ($a) {
             $dataHora = Carbon::parse($a->data_hora)
                 ->locale('pt_BR')
-                ->translatedFormat('D d/m \\às H:i');
+                ->translatedFormat('D d/m \\à\\s H:i');
             $profissional = $a->profissional?->nome ?? '—';
             $servico = $a->descricaoServicos() ?? '—';
 
             return "ID #{$a->id} — {$dataHora} — {$profissional} ({$servico})";
         })->join("\n");
-
-        return ['agendamentos' => $lista];
     }
 
     private function toolReagendarAgendamento(array $input): array
