@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Services\AI\DTO\AiRequest;
 use App\Services\AI\Exceptions\AiProviderException;
+use App\Services\AI\Providers\CloudflareProvider;
 use App\Services\AI\Providers\GeminiProvider;
 use App\Services\AI\Providers\GroqProvider;
 use Illuminate\Support\Facades\Http;
@@ -11,6 +12,84 @@ use Tests\TestCase;
 
 class AiProvidersTest extends TestCase
 {
+    private const HISTORICO_COM_FERRAMENTA = [
+        'system' => [['type' => 'text', 'text' => 'Sistema']],
+        'messages' => [
+            ['role' => 'user', 'content' => 'Quero agendar amanhã às 14h'],
+            ['role' => 'assistant', 'content' => [
+                ['type' => 'tool_use', 'id' => 'call_1', 'name' => 'buscar_slots', 'input' => ['dias' => 2]],
+            ]],
+            ['role' => 'user', 'content' => [
+                ['type' => 'tool_result', 'tool_use_id' => 'call_1', 'content' => '{"slots":["14:00"]}'],
+            ]],
+        ],
+    ];
+
+    private function configurarCloudflare(): void
+    {
+        config([
+            'ai.providers.cloudflare.key' => 'cf-test',
+            'ai.providers.cloudflare.base_url' => 'https://api.cloudflare.test/client/v4/accounts/abc/ai/v1',
+        ]);
+    }
+
+    public function test_cloudflare_envia_content_vazio_na_chamada_de_ferramenta_do_historico(): void
+    {
+        // O Workers AI rejeita content null na mensagem do assistente com tool_calls (400 Bad input).
+        $this->configurarCloudflare();
+        Http::fake([
+            'api.cloudflare.test/*' => Http::response([
+                'choices' => [['finish_reason' => 'stop', 'message' => ['content' => '14h está livre, confirmo?']]],
+                'usage' => ['prompt_tokens' => 50, 'completion_tokens' => 10],
+            ]),
+        ]);
+
+        $response = (new CloudflareProvider)->chat(new AiRequest(self::HISTORICO_COM_FERRAMENTA, '@cf/openai/gpt-oss-20b'));
+
+        $this->assertSame('14h está livre, confirmo?', $response->content[0]['text']);
+        Http::assertSent(fn ($request) => $request['messages'][2]['role'] === 'assistant'
+            && $request['messages'][2]['content'] === ''
+            && $request['messages'][2]['tool_calls'][0]['id'] === 'call_1');
+    }
+
+    public function test_groq_mantem_content_null_na_chamada_de_ferramenta_do_historico(): void
+    {
+        config([
+            'ai.providers.groq.key' => 'groq-test',
+            'ai.providers.groq.base_url' => 'https://api.groq.test/openai/v1',
+        ]);
+        Http::fake([
+            'api.groq.test/*' => Http::response([
+                'choices' => [['finish_reason' => 'stop', 'message' => ['content' => 'ok']]],
+                'usage' => ['prompt_tokens' => 50, 'completion_tokens' => 10],
+            ]),
+        ]);
+
+        (new GroqProvider)->chat(new AiRequest(self::HISTORICO_COM_FERRAMENTA, 'openai/gpt-oss-120b'));
+
+        Http::assertSent(fn ($request) => $request['messages'][2]['content'] === null);
+    }
+
+    public function test_cloudflare_expoe_mensagem_de_erro_no_formato_errors(): void
+    {
+        $this->configurarCloudflare();
+        Http::fake([
+            'api.cloudflare.test/*' => Http::response([
+                'errors' => [['message' => 'AiError: Bad input: required properties']],
+                'success' => false,
+            ], 400),
+        ]);
+
+        try {
+            (new CloudflareProvider)->chat(new AiRequest(self::HISTORICO_COM_FERRAMENTA, '@cf/openai/gpt-oss-20b'));
+            $this->fail('Era esperada AiProviderException.');
+        } catch (AiProviderException $e) {
+            $this->assertSame('AiError: Bad input: required properties', $e->getMessage());
+            $this->assertSame(400, $e->status);
+            $this->assertTrue($e->fallbackAllowed);
+        }
+    }
+
     public function test_gemini_permite_fallback_quando_modelo_nao_existe(): void
     {
         config([

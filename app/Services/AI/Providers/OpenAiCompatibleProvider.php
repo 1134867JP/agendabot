@@ -22,7 +22,7 @@ abstract class OpenAiCompatibleProvider implements AiProviderInterface
     {
         $startedAt = hrtime(true);
         $config = config("ai.providers.{$this->configKey()}");
-        $payload = $this->toOpenAiPayload($request->payload, $request->model);
+        $payload = $this->ajustarPayload($this->toOpenAiPayload($request->payload, $request->model));
 
         try {
             $http = Http::timeout((int) config('ai.timeout_seconds', 30))
@@ -43,7 +43,8 @@ abstract class OpenAiCompatibleProvider implements AiProviderInterface
 
         if (! $response->successful()) {
             throw new AiProviderException(
-                (string) ($response->json('error.message') ?: "Falha na API {$this->name()}."),
+                // Cloudflare devolve o erro em errors[0].message, não em error.message.
+                (string) ($response->json('error.message') ?: $response->json('errors.0.message') ?: "Falha na API {$this->name()}."),
                 $this->name(),
                 $response->status(),
                 $response->json('error.type') ?? $response->json('error.code'),
@@ -93,6 +94,12 @@ abstract class OpenAiCompatibleProvider implements AiProviderInterface
             latencyMs: (int) ((hrtime(true) - $startedAt) / 1_000_000),
             requestId: $response->header('x-request-id'),
         );
+    }
+
+    /** Ponto de ajuste para provedores que divergem do formato OpenAI. */
+    protected function ajustarPayload(array $payload): array
+    {
+        return $payload;
     }
 
     private function toOpenAiPayload(array $payload, string $model): array
