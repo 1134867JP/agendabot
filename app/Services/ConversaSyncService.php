@@ -52,7 +52,16 @@ class ConversaSyncService
         );
 
         try {
-            return DB::transaction(fn () => $conversa->registrarMensagem('cliente', $conteudo, $evolutionMessageId, $tipo));
+            return DB::transaction(function () use ($conversa, $conteudo, $evolutionMessageId, $tipo) {
+                // Conversa encerrada por inatividade volta a ficar ativa quando o cliente
+                // escreve; sem isso o handoff para humano (que exige 'ativa') era ignorado.
+                // Conversas com atendimento humano não são tocadas.
+                Conversa::whereKey($conversa->id)
+                    ->where('status_v2', 'encerrada')
+                    ->update(['status_v2' => 'ativa']);
+
+                return $conversa->registrarMensagem('cliente', $conteudo, $evolutionMessageId, $tipo);
+            });
         } catch (QueryException $e) {
             if (! $this->isUniqueViolation($e)) {
                 throw $e;

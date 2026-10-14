@@ -91,4 +91,59 @@ class ProcessarMensagemWhatsappTriagemTest extends TestCase
         $this->assertNotNull($conversa);
         $this->assertNotSame('aguardando_humano', $conversa->status_v2);
     }
+
+    public function test_transfere_para_humano_quando_cliente_volta_a_conversa_encerrada_por_inatividade(): void
+    {
+        Http::fake();
+
+        $telefone = '5551977000003';
+        $sync = app(ConversaSyncService::class);
+        $sync->registrarMensagemRecebida($this->tenant, $telefone, 'Oi', 'MSG_TRIAGEM_3A', 'Cliente Teste');
+        Conversa::where('tenant_id', $this->tenant->id)->where('telefone_cliente', $telefone)
+            ->update(['status_v2' => 'encerrada']);
+
+        $mensagem = $sync->registrarMensagemRecebida(
+            $this->tenant, $telefone, 'Quero falar com um atendente', 'MSG_TRIAGEM_3B', 'Cliente Teste'
+        );
+        ProcessarMensagemWhatsapp::dispatchSync($this->tenant, $telefone, $mensagem->id);
+
+        $conversa = Conversa::where('tenant_id', $this->tenant->id)->where('telefone_cliente', $telefone)->first();
+        $this->assertSame('aguardando_humano', $conversa->status_v2);
+        $this->assertDatabaseHas('mensagens', [
+            'conversa_id' => $conversa->id,
+            'remetente' => 'bot',
+            'conteudo' => 'Já vou te transferir!',
+        ]);
+    }
+
+    public function test_mensagem_do_cliente_reabre_conversa_encerrada(): void
+    {
+        $telefone = '5551977000004';
+        $sync = app(ConversaSyncService::class);
+        $sync->registrarMensagemRecebida($this->tenant, $telefone, 'Oi', 'MSG_TRIAGEM_4A', 'Cliente Teste');
+        Conversa::where('tenant_id', $this->tenant->id)->where('telefone_cliente', $telefone)
+            ->update(['status_v2' => 'encerrada']);
+
+        $sync->registrarMensagemRecebida($this->tenant, $telefone, 'Voltei', 'MSG_TRIAGEM_4B', 'Cliente Teste');
+
+        $this->assertSame('ativa', Conversa::where('tenant_id', $this->tenant->id)
+            ->where('telefone_cliente', $telefone)->value('status_v2'));
+    }
+
+    public function test_mensagem_do_cliente_nao_tira_conversa_do_atendimento_humano(): void
+    {
+        $telefone = '5551977000005';
+        $sync = app(ConversaSyncService::class);
+
+        foreach (['aguardando_humano', 'em_atendimento_humano'] as $i => $status) {
+            $sync->registrarMensagemRecebida($this->tenant, $telefone, 'Oi', "MSG_TRIAGEM_5_{$i}A", 'Cliente Teste');
+            Conversa::where('tenant_id', $this->tenant->id)->where('telefone_cliente', $telefone)
+                ->update(['status_v2' => $status]);
+
+            $sync->registrarMensagemRecebida($this->tenant, $telefone, 'Alguém aí?', "MSG_TRIAGEM_5_{$i}B", 'Cliente Teste');
+
+            $this->assertSame($status, Conversa::where('tenant_id', $this->tenant->id)
+                ->where('telefone_cliente', $telefone)->value('status_v2'));
+        }
+    }
 }
