@@ -40,15 +40,35 @@ class AgendouAgentService
      */
     private ?array $acaoConcluida = null;
 
-    /** Mensagens do cliente no histórico deste turno (para a trava da transferência na triagem). */
+    /** Mensagens do cliente no histórico deste turno (para as travas da transferência). */
     private array $mensagensDoCliente = [];
 
     private bool $transferenciaRecusada = false;
+
+    /** Transferência pedida pelo modelo e ignorada porque a ação do cliente já foi gravada. */
+    private bool $transferenciaDispensada = false;
 
     /** A partir daqui a conversa é considerada travada e a transferência é liberada sem os dados. */
     private const MENSAGENS_PARA_LIBERAR_TRANSFERENCIA = 4;
 
     private const PEDIDO_DE_HUMANO = '/\b(atendente|humano|humana|pessoa|algu[eé]m|rob[oô]|recep[cç][aã]o|secret[aá]ria)\b/iu';
+
+    /**
+     * Pedido explícito para sair do bot. Mais estrito que PEDIDO_DE_HUMANO: "alguém pode
+     * cancelar pra mim?" menciona alguém, mas o cliente só quer o cancelamento.
+     */
+    private const PEDIDO_CLARO_DE_ATENDENTE = [
+        // "quero falar com uma pessoa", "preciso conversar com alguém"
+        '/\b(falar|conversar|fala|falo)\s+com\s+(um|uma|o|a|algum|alguma)?\s*(atendente|humano|humana|pessoa|algu[eé]m|recep[cç][aã]o|secret[aá]ria)\b/iu',
+        // "me passa pra atendente", "chama um humano"
+        '/\b(passa|passe|transfere|transfira|encaminha|encaminhe|chama|chame|manda|mande)\b.{0,25}\b(atendente|humano|humana|pessoa|algu[eé]m|recep[cç][aã]o|secret[aá]ria)\b/iu',
+        // "quero um atendente", "preciso de uma atendente"
+        '/\b(quero|preciso|prefiro|tem)\s+(de\s+)?(um|uma)\s+(atendente|humano|humana|pessoa\s+de\s+verdade)\b/iu',
+        '/\batendimento\s+humano\b/iu',
+        '/\bn[aã]o\s+quero\s+(falar\s+com\s+)?(um\s+|o\s+)?(rob[oô]|bot)\b/iu',
+        // mensagem que é só o pedido: "atendente", "humano por favor"
+        '/^\W*(um\s+|uma\s+)?(atendente|humano|humana)(\s+por\s+favor)?\W*$/iu',
+    ];
 
     public function __construct(
         private AgendamentoService $agendamentoService,
@@ -68,6 +88,7 @@ class AgendouAgentService
         $this->agendamentoCriadoId = null;
         $this->acaoConcluida = null;
         $this->transferenciaRecusada = false;
+        $this->transferenciaDispensada = false;
         // O histórico chega com mensagens seguidas do cliente unidas por quebra de linha.
         $this->mensagensDoCliente = collect($mensagens)
             ->filter(fn ($m) => ($m['role'] ?? null) === 'user' && is_string($m['content'] ?? null))
@@ -173,29 +194,45 @@ class AgendouAgentService
             $assistantMessage = ['role' => 'assistant', 'content' => $content];
             $toolResults = [];
 
-            foreach ($content as $block) {
-                if ($block['type'] !== 'tool_use') {
-                    continue;
-                }
+            // A transferência roda por último: se o modelo a pedir antes de um
+            // cancelamento na mesma resposta, o cancelamento ainda é gravado.
+            [$transferencias, $demais] = collect($content)
+                ->where('type', 'tool_use')
+                ->partition(fn ($block) => $block['name'] === 'transferir_para_humano');
 
+            foreach ($demais->concat($transferencias) as $block) {
                 $toolResult = $this->executeTool($block['name'], $block['input'] ?? [], $agendamentoPendente);
                 $toolResults[] = [
                     'type' => 'tool_result',
                     'tool_use_id' => $block['id'],
                     'content' => json_encode($toolResult),
                 ];
+            }
 
-                // A transferência encerra o fluxo do bot. Não delegamos a mensagem
-                // final a uma segunda chamada de IA: em um fallback de provider esse
-                // histórico de ferramenta pode ser interpretado de forma diferente e
-                // gerar trechos soltos, outro idioma ou uma nova transferência.
-                if ($this->transferir) {
-                    return [
-                        'resposta' => $this->mensagemTransferencia($tenant, $hoje),
-                        'transferir' => true,
-                        'usage' => $totalUsage,
-                    ];
-                }
+            // A transferência encerra o fluxo do bot. Não delegamos a mensagem
+            // final a uma segunda chamada de IA: em um fallback de provider esse
+            // histórico de ferramenta pode ser interpretado de forma diferente e
+            // gerar trechos soltos, outro idioma ou uma nova transferência.
+            // Se uma ação foi gravada antes, o cliente sabe dela antes do handoff.
+            if ($this->transferir) {
+                return [
+                    'resposta' => collect([$this->respostaDaAcaoConcluida($tenant), $this->mensagemTransferencia($tenant, $hoje)])
+                        ->filter()
+                        ->join("\n\n"),
+                    'transferir' => true,
+                    'usage' => $totalUsage,
+                ];
+            }
+
+            // Pelo mesmo motivo, a transferência dispensada responde com os dados
+            // gravados: o texto do modelo ainda poderia dizer que vai encaminhar.
+            if ($this->transferenciaDispensada) {
+                return [
+                    'resposta' => $this->respostaDaAcaoConcluida($tenant),
+                    'transferir' => false,
+                    'usage' => $totalUsage,
+                    'agendamento_id' => $this->agendamentoCriadoId,
+                ];
             }
 
             $messages[] = $assistantMessage;
@@ -481,6 +518,19 @@ class AgendouAgentService
             ];
         }
 
+        // No agendamento, o modelo às vezes transfere logo depois de cancelar, criar,
+        // remarcar ou confirmar, sem o cliente ter pedido. A ação já resolveu o
+        // pedido; transferir só tiraria o cliente do bot.
+        if ($this->currentTenant->modo_bot !== 'triagem' && $this->acaoConcluida && ! $this->clientePediuAtendenteClaramente()) {
+            $this->transferenciaDispensada = true;
+            Log::channel('jobs')->info('BOT_HANDOFF_DISPENSADO', [
+                'tenant' => $this->currentTenant->id,
+                'acao_concluida' => $this->acaoConcluida['tipo'],
+            ]);
+
+            return ['sucesso' => false, 'mensagem' => 'A ação do cliente já foi concluída; a conversa segue com o bot.'];
+        }
+
         $this->transferir = true;
 
         // Em modo triagem, o resumo estruturado da conversa fica registrado no log
@@ -507,8 +557,7 @@ class AgendouAgentService
      */
     private function dadosFaltandoParaTransferir(array $input): array
     {
-        $ultima = (string) end($this->mensagensDoCliente);
-        if (preg_match(self::PEDIDO_DE_HUMANO, $ultima) === 1
+        if ($this->clientePediuPessoa()
             || count($this->mensagensDoCliente) >= self::MENSAGENS_PARA_LIBERAR_TRANSFERENCIA) {
             return [];
         }
@@ -517,6 +566,24 @@ class AgendouAgentService
             $this->nomeRealInformado($input['nome_cliente'] ?? null) === null ? 'o nome do cliente' : null,
             trim((string) ($input['preferencia'] ?? '')) === '' ? 'a preferência de dia/horário' : null,
         ]));
+    }
+
+    private function clientePediuPessoa(): bool
+    {
+        return preg_match(self::PEDIDO_DE_HUMANO, (string) end($this->mensagensDoCliente)) === 1;
+    }
+
+    private function clientePediuAtendenteClaramente(): bool
+    {
+        $ultima = (string) end($this->mensagensDoCliente);
+
+        foreach (self::PEDIDO_CLARO_DE_ATENDENTE as $padrao) {
+            if (preg_match($padrao, $ultima) === 1) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
