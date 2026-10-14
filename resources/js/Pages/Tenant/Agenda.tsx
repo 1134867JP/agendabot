@@ -17,6 +17,8 @@ interface AgendamentoCalendario {
     end: string;
     telefone: string;
     status: 'confirmado' | 'cancelado' | 'concluido' | 'bloqueado';
+    /** Cliente não compareceu (o status fica "concluido"). */
+    no_show?: boolean;
     valor_total: number | null;
     origem: 'whatsapp' | 'manual';
     profissional_id: number | null;
@@ -625,12 +627,14 @@ function DetalheModal({
     detalhe,
     onClose,
     onConcluir,
+    onMarcarFalta,
     onCancelar,
     onSalvar,
 }: {
     detalhe: AgendamentoCalendario;
     onClose: () => void;
     onConcluir: (id: number) => void;
+    onMarcarFalta: (id: number) => void;
     onCancelar: (id: number) => void;
     onSalvar: (id: number, dados: { cliente_nome: string; cliente_telefone: string; inicio: string; fim: string; status: string }) => void;
 }) {
@@ -645,6 +649,10 @@ function DetalheModal({
     });
     const nomeRef = useRef<HTMLInputElement>(null);
     const telefoneValido = isValidPhone(form.cliente_telefone);
+    // Falta só depois do horário de início; vale também para o que a rotina já concluiu.
+    const podeMarcarFalta = !detalhe.no_show
+        && (detalhe.status === 'confirmado' || detalhe.status === 'concluido')
+        && new Date(detalhe.start).getTime() < Date.now();
 
     useEffect(() => {
         if (editando) nomeRef.current?.focus();
@@ -781,8 +789,8 @@ function DetalheModal({
                                 )}
                                 <div className="flex justify-between">
                                     <span style={{ color: 'var(--text-3)' }}>Status</span>
-                                    <StatusBadge tone={detalhe.status === 'confirmado' ? 'success' : detalhe.status === 'cancelado' ? 'danger' : 'neutral'} dot>
-                                        {detalhe.status}
+                                    <StatusBadge tone={detalhe.no_show ? 'warning' : detalhe.status === 'confirmado' ? 'success' : detalhe.status === 'cancelado' ? 'danger' : 'neutral'} dot>
+                                        {detalhe.no_show ? 'faltou' : detalhe.status}
                                     </StatusBadge>
                                 </div>
                             </div>
@@ -794,6 +802,11 @@ function DetalheModal({
                                 <button onClick={() => setEditando(true)} className="btn-secondary flex-1 justify-center text-xs py-2">
                                     Editar
                                 </button>
+                                {podeMarcarFalta && (
+                                    <button onClick={() => onMarcarFalta(detalhe.id)} className="btn-secondary flex-1 justify-center text-xs py-2">
+                                        Marcar falta
+                                    </button>
+                                )}
                                 {detalhe.status === 'confirmado' && (
                                     <>
                                         <button onClick={() => onConcluir(detalhe.id)} className="btn-secondary flex-1 justify-center text-xs py-2">
@@ -1019,6 +1032,11 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
     };
     const concluir = (id: number) => {
         router.patch(route('tenant.agendamentos.concluir', id), {}, {
+            onSuccess: () => { setDetalhe(null); carregar(); },
+        });
+    };
+    const marcarFalta = (id: number) => {
+        router.patch(route('tenant.agendamentos.no-show', id), {}, {
             onSuccess: () => { setDetalhe(null); carregar(); },
         });
     };
@@ -1467,6 +1485,7 @@ export default function Agenda({ tenant, agenda, recursos, profissionais, servic
                     detalhe={detalhe}
                     onClose={() => setDetalhe(null)}
                     onConcluir={concluir}
+                    onMarcarFalta={marcarFalta}
                     onCancelar={cancelar}
                     onSalvar={salvarEdicao}
                 />

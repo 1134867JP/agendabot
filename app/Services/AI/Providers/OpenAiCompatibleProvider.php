@@ -62,7 +62,8 @@ abstract class OpenAiCompatibleProvider implements AiProviderInterface
             $content[] = [
                 'type' => 'tool_use',
                 'id' => $toolCall['id'],
-                'name' => $toolCall['function']['name'],
+                // O gpt-oss às vezes vaza o marcador de canal: "reagendar_agendamento<|channel|>analysis".
+                'name' => trim((string) preg_replace('/<\|.*$/s', '', (string) $toolCall['function']['name'])),
                 'input' => is_array($arguments) ? $arguments : [],
             ];
         }

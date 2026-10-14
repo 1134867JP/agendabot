@@ -52,6 +52,32 @@ class AiProvidersTest extends TestCase
             && $request['messages'][2]['tool_calls'][0]['id'] === 'call_1');
     }
 
+    public function test_remove_marcador_de_canal_vazado_no_nome_da_ferramenta(): void
+    {
+        // O gpt-oss às vezes devolve "reagendar_agendamento<|channel|>analysis" como nome.
+        config([
+            'ai.providers.groq.key' => 'groq-test',
+            'ai.providers.groq.base_url' => 'https://api.groq.test/openai/v1',
+        ]);
+        Http::fake([
+            'api.groq.test/*' => Http::response([
+                'choices' => [[
+                    'finish_reason' => 'tool_calls',
+                    'message' => ['tool_calls' => [[
+                        'id' => 'call_1',
+                        'type' => 'function',
+                        'function' => ['name' => 'reagendar_agendamento<|channel|>analysis', 'arguments' => '{}'],
+                    ]]],
+                ]],
+                'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 5],
+            ]),
+        ]);
+
+        $response = (new GroqProvider)->chat(new AiRequest(self::HISTORICO_COM_FERRAMENTA, 'openai/gpt-oss-120b'));
+
+        $this->assertSame('reagendar_agendamento', $response->content[0]['name']);
+    }
+
     public function test_groq_mantem_content_null_na_chamada_de_ferramenta_do_historico(): void
     {
         config([
