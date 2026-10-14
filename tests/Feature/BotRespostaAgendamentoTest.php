@@ -12,6 +12,7 @@ use App\Services\ConversaSyncService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class BotRespostaAgendamentoTest extends TestCase
@@ -77,13 +78,25 @@ class BotRespostaAgendamentoTest extends TestCase
         $this->assertSame('Carlos Silva', Agendamento::where('tenant_id', $this->tenant->id)->value('cliente_nome'));
     }
 
-    public function test_nome_vazio_da_ia_mantem_o_nome_do_cadastro(): void
+    #[DataProvider('nomesGenericos')]
+    public function test_nome_generico_da_ia_mantem_o_nome_do_cadastro(string $nomeDaIa): void
     {
-        $this->fakeIaReservaSeguidaDe('Agendado! ✂️', clienteNome: '   ');
+        $this->fakeIaReservaSeguidaDe('Agendado! ✂️', clienteNome: $nomeDaIa);
 
         $this->clienteEnvia('5551966000002', 'pode ser', 'Maria Souza');
 
         $this->assertSame('Maria Souza', Agendamento::where('tenant_id', $this->tenant->id)->value('cliente_nome'));
+    }
+
+    public static function nomesGenericos(): array
+    {
+        return [
+            'vazio' => ['   '],
+            'cliente' => ['Cliente'],
+            'cliente whatsapp' => ['cliente WhatsApp'],
+            'não informado' => ['Não informado'],
+            'telefone' => ['+55 51 96600-0002'],
+        ];
     }
 
     public function test_resposta_degenerada_apos_reserva_vira_confirmacao_com_os_dados_reais(): void
