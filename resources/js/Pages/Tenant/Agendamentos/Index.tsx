@@ -41,6 +41,14 @@ const STATUS_LABEL: Record<string, string> = {
     concluido: "Concluído",
 };
 
+/** Falta fica com status "concluido" + no_show; na lista aparece como "Faltou". */
+function statusBadge(a: Agendamento): string {
+    return a.no_show ? "badge-amber" : (STATUS_BADGE[a.status] ?? "badge-gray");
+}
+function statusLabel(a: Agendamento): string {
+    return a.no_show ? "Faltou" : (STATUS_LABEL[a.status] ?? a.status);
+}
+
 function fmtDt(iso: string) {
     return new Date(iso).toLocaleString("pt-BR", {
         day: "2-digit",
@@ -93,12 +101,14 @@ function AcoesAgendamento({
     agendamento,
     onEditar,
     onConcluir,
+    onMarcarFalta,
     onCancelar,
     onExcluir,
 }: {
     agendamento: Agendamento;
     onEditar: () => void;
     onConcluir: () => void;
+    onMarcarFalta: () => void;
     onCancelar: () => void;
     onExcluir: () => void;
 }) {
@@ -107,6 +117,10 @@ function AcoesAgendamento({
     const botaoRef = useRef<HTMLButtonElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
     const ativo = agendamento.status === "confirmado" || agendamento.status === "agendado";
+    // Falta só faz sentido depois do horário; vale também para o que a rotina já concluiu.
+    const podeMarcarFalta = !agendamento.no_show
+        && (ativo || agendamento.status === "concluido")
+        && new Date(agendamento.inicio).getTime() < Date.now();
 
     const alternarMenu = () => {
         if (!aberto && botaoRef.current) {
@@ -181,6 +195,11 @@ function AcoesAgendamento({
                     }}
                     role="menu"
                 >
+                    {podeMarcarFalta && (
+                        <button type="button" onClick={() => { setAberto(false); onMarcarFalta(); }} className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-surface-2" style={{ color: "var(--text-2)" }} role="menuitem">
+                            Marcar falta
+                        </button>
+                    )}
                     {ativo && (
                         <>
                             <button type="button" onClick={() => { setAberto(false); onConcluir(); }} className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-surface-2" style={{ color: "var(--text-2)" }} role="menuitem">
@@ -1008,6 +1027,16 @@ export default function AgendamentosIndex({
         if (ok) router.patch(route("tenant.agendamentos.concluir", id));
     };
 
+    const marcarFalta = async (id: number) => {
+        const ok = await confirm({
+            title: "Marcar falta",
+            message: "Registrar que o cliente não compareceu a este atendimento?",
+            confirmLabel: "Marcar falta",
+            variant: "warning",
+        });
+        if (ok) router.patch(route("tenant.agendamentos.no-show", id));
+    };
+
     const excluir = async (id: number) => {
         const ok = await confirm({
             title: "Excluir agendamento",
@@ -1129,8 +1158,8 @@ export default function AgendamentosIndex({
                                         <p className="truncate text-sm font-semibold text-primary">{a.cliente_nome}</p>
                                         <p className="mt-0.5 text-xs" style={{ color: "var(--text-3)" }}>{a.cliente_telefone}</p>
                                     </div>
-                                    <span className={`badge shrink-0 ${STATUS_BADGE[a.status] ?? "badge-gray"}`}>
-                                        {STATUS_LABEL[a.status] ?? a.status}
+                                    <span className={`badge shrink-0 ${statusBadge(a)}`}>
+                                        {statusLabel(a)}
                                     </span>
                                 </div>
 
@@ -1160,6 +1189,7 @@ export default function AgendamentosIndex({
                                         agendamento={a}
                                         onEditar={() => setAgendamentoEditando(a)}
                                         onConcluir={() => concluir(a.id)}
+                                        onMarcarFalta={() => marcarFalta(a.id)}
                                         onCancelar={() => cancelar(a.id)}
                                         onExcluir={() => excluir(a.id)}
                                     />
@@ -1364,11 +1394,8 @@ export default function AgendamentosIndex({
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span
-                                                className={`badge ${STATUS_BADGE[a.status] ?? "badge-gray"}`}
-                                            >
-                                                {STATUS_LABEL[a.status] ??
-                                                    a.status}
+                                            <span className={`badge ${statusBadge(a)}`}>
+                                                {statusLabel(a)}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
@@ -1376,6 +1403,7 @@ export default function AgendamentosIndex({
                                                 agendamento={a}
                                                 onEditar={() => setAgendamentoEditando(a)}
                                                 onConcluir={() => concluir(a.id)}
+                                        onMarcarFalta={() => marcarFalta(a.id)}
                                                 onCancelar={() => cancelar(a.id)}
                                                 onExcluir={() => excluir(a.id)}
                                             />

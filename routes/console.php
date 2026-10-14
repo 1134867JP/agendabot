@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\BackupELimparHistoricoJob;
+use App\Jobs\ConcluirAgendamentosPassadosJob;
 use App\Jobs\EnviarLembretesJob;
 use App\Jobs\ExpirarConversasInativasJob;
 use App\Jobs\GerarCobrancaBotJob;
@@ -45,6 +46,12 @@ Schedule::job(new VerificarTrialExpiradoJob, 'financial')
 Schedule::job(new ExpirarConversasInativasJob, 'maintenance')
     ->name('conversations:expire-inactive')
     ->everyFifteenMinutes()
+    ->withoutOverlapping(30);
+
+// Concluir agendamentos que já passaram e ninguém marcou (a falta continua no painel).
+Schedule::job(new ConcluirAgendamentosPassadosJob, 'maintenance')
+    ->name('appointments:conclude-past')
+    ->hourly()
     ->withoutOverlapping(30);
 
 // Aplica diariamente a retenção contratada (Starter 30d, Pro 90d, Business completo).

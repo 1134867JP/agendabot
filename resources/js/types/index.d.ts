@@ -112,6 +112,8 @@ export interface Agendamento {
     data_hora?: string | null;
     duracao_minutos?: number | null;
     status: StatusAgendamento;
+    /** Cliente não compareceu (o status fica "concluido"). */
+    no_show?: boolean;
     valor_total: number | null;
     origem: 'bot' | 'whatsapp' | 'manual';
     observacoes: string | null;
