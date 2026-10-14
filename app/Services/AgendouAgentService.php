@@ -14,6 +14,11 @@ use Illuminate\Support\Facades\Log;
 
 class AgendouAgentService
 {
+    private const NOMES_GENERICOS = [
+        'cliente', 'cliente whatsapp', 'cliente simulado', 'você', 'voce', 'you',
+        'nome', 'nome do cliente', 'não informado', 'nao informado', 'desconhecido', 'sem nome',
+    ];
+
     private Tenant $currentTenant;
 
     private array $currentCliente;
@@ -308,13 +313,13 @@ class AgendouAgentService
     private function toolCriarAgendamento(array $input): array
     {
         // O bot pergunta o nome ao cliente; o cadastro costuma ter só o nome do
-        // perfil do WhatsApp, que fica como reserva se a IA não informar um nome.
-        $nomeInformado = trim((string) ($input['cliente_nome'] ?? ''));
+        // perfil do WhatsApp, que fica como reserva se a IA não informar um nome real.
+        $nomeInformado = $this->nomeRealInformado($input['cliente_nome'] ?? null);
 
         try {
             $agendamento = $this->agendamentoService->criarAgendamentoV2($this->currentTenant, array_merge($input, [
                 'cliente_id' => $this->currentCliente['id'],
-                'cliente_nome' => $nomeInformado !== '' ? $nomeInformado : $this->currentCliente['nome'],
+                'cliente_nome' => $nomeInformado ?? $this->currentCliente['nome'],
                 'cliente_telefone' => $this->currentCliente['telefone'],
                 'origem' => 'bot',
             ]));
@@ -581,6 +586,24 @@ class AgendouAgentService
         }
 
         return 'Recebi sua solicitação. Vou encaminhar para uma atendente, que dará sequência em instantes.';
+    }
+
+    /**
+     * Quando o cliente não disse o nome, o modelo costuma preencher o campo
+     * obrigatório com algo genérico ("Cliente", "Não informado") ou com o telefone.
+     */
+    private function nomeRealInformado(mixed $nome): ?string
+    {
+        $nome = trim((string) $nome);
+        $normalizado = mb_strtolower($nome);
+
+        if ($nome === ''
+            || preg_match('/^\+?[\d\s().-]+$/', $nome) === 1
+            || in_array($normalizado, self::NOMES_GENERICOS, true)) {
+            return null;
+        }
+
+        return $nome;
     }
 
     /** Resposta montada com os dados gravados, usada quando o texto da IA é descartado. */
