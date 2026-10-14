@@ -17,6 +17,7 @@ class AgendouAgentService
     private const NOMES_GENERICOS = [
         'cliente', 'cliente whatsapp', 'cliente simulado', 'você', 'voce', 'you',
         'nome', 'nome do cliente', 'não informado', 'nao informado', 'desconhecido', 'sem nome',
+        'paciente', 'nome do paciente', 'usuário', 'usuario',
     ];
 
     private Tenant $currentTenant;
@@ -39,6 +40,16 @@ class AgendouAgentService
      */
     private ?array $acaoConcluida = null;
 
+    /** Mensagens do cliente no histórico deste turno (para a trava da transferência na triagem). */
+    private array $mensagensDoCliente = [];
+
+    private bool $transferenciaRecusada = false;
+
+    /** A partir daqui a conversa é considerada travada e a transferência é liberada sem os dados. */
+    private const MENSAGENS_PARA_LIBERAR_TRANSFERENCIA = 4;
+
+    private const PEDIDO_DE_HUMANO = '/\b(atendente|humano|humana|pessoa|algu[eé]m|rob[oô]|recep[cç][aã]o|secret[aá]ria)\b/iu';
+
     public function __construct(
         private AgendamentoService $agendamentoService,
         private AiOrchestrator $ai,
@@ -56,6 +67,13 @@ class AgendouAgentService
         $this->agendamentoCriadoNesteTurno = false;
         $this->agendamentoCriadoId = null;
         $this->acaoConcluida = null;
+        $this->transferenciaRecusada = false;
+        // O histórico chega com mensagens seguidas do cliente unidas por quebra de linha.
+        $this->mensagensDoCliente = collect($mensagens)
+            ->filter(fn ($m) => ($m['role'] ?? null) === 'user' && is_string($m['content'] ?? null))
+            ->flatMap(fn ($m) => array_filter(array_map('trim', explode("\n", $m['content']))))
+            ->values()
+            ->all();
 
         $hoje = Carbon::now($tenant->resolvedTimezone());
 
@@ -206,7 +224,7 @@ class AgendouAgentService
         // Alguns modelos menores podem responder que transferiram a conversa sem
         // efetivamente chamar a ferramenta. Nunca deixamos esse texto solto: ele vira
         // um handoff real, pausa o bot no job e usa a mensagem padronizada abaixo.
-        if ($triagem && $this->respostaIndicaTransferencia($resposta)) {
+        if ($triagem && ! $this->transferenciaRecusada && $this->respostaIndicaTransferencia($resposta)) {
             return [
                 'resposta' => $this->mensagemTransferencia($tenant, $hoje),
                 'transferir' => true,
@@ -442,6 +460,21 @@ class AgendouAgentService
 
     private function toolTransferirParaHumano(array $input = []): array
     {
+        if ($this->currentTenant->modo_bot === 'triagem' && ($faltando = $this->dadosFaltandoParaTransferir($input))) {
+            $this->transferenciaRecusada = true;
+            Log::channel('jobs')->info('TRIAGEM_HANDOFF_RECUSADO', [
+                'tenant' => $this->currentTenant->id,
+                'faltando' => $faltando,
+            ]);
+
+            return [
+                'sucesso' => false,
+                'erro' => 'dados_incompletos',
+                'mensagem' => 'Ainda faltam: '.implode(' e ', $faltando).'. Responda a dúvida do cliente usando as '
+                    .'informações do negócio e pergunte o que falta. Não diga que transferiu.',
+            ];
+        }
+
         $this->transferir = true;
 
         // Em modo triagem, o resumo estruturado da conversa fica registrado no log
@@ -457,6 +490,27 @@ class AgendouAgentService
         }
 
         return ['sucesso' => true];
+    }
+
+    /**
+     * Na triagem a atendente precisa de nome e preferência para dar sequência. O modelo
+     * às vezes transfere logo na primeira dúvida inventando esses dados; só liberamos
+     * sem eles quando o cliente pede uma pessoa ou a conversa não avança.
+     *
+     * @return list<string> dados que faltam (vazio = pode transferir)
+     */
+    private function dadosFaltandoParaTransferir(array $input): array
+    {
+        $ultima = (string) end($this->mensagensDoCliente);
+        if (preg_match(self::PEDIDO_DE_HUMANO, $ultima) === 1
+            || count($this->mensagensDoCliente) >= self::MENSAGENS_PARA_LIBERAR_TRANSFERENCIA) {
+            return [];
+        }
+
+        return array_values(array_filter([
+            $this->nomeRealInformado($input['nome_cliente'] ?? null) === null ? 'o nome do cliente' : null,
+            trim((string) ($input['preferencia'] ?? '')) === '' ? 'a preferência de dia/horário' : null,
+        ]));
     }
 
     /**
