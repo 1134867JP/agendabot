@@ -299,6 +299,40 @@ class AiProvidersTest extends TestCase
         $this->assertArrayNotHasKey('parameters', $declarations[1]);
     }
 
+    public function test_openai_compativel_serializa_args_vazio_da_ferramenta_como_objeto(): void
+    {
+        // Groq recusava o histórico com "cannot unmarshal array into map" quando uma
+        // ferramenta sem parâmetros (listar/cancelar/confirmar) ia como "[]".
+        config([
+            'ai.providers.groq.key' => 'groq-test',
+            'ai.providers.groq.base_url' => 'https://api.groq.test/openai/v1',
+        ]);
+        Http::fake([
+            'api.groq.test/*' => Http::response([
+                'choices' => [['finish_reason' => 'stop', 'message' => ['content' => 'ok']]],
+                'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 5],
+            ]),
+        ]);
+
+        (new GroqProvider)->chat(new AiRequest([
+            'system' => [['type' => 'text', 'text' => 'Sistema']],
+            'messages' => [
+                ['role' => 'user', 'content' => 'Muda meu horário'],
+                ['role' => 'assistant', 'content' => [
+                    ['type' => 'tool_use', 'id' => 'call_a', 'name' => 'buscar_slots', 'input' => ['dias' => 3]],
+                    ['type' => 'tool_use', 'id' => 'call_b', 'name' => 'listar_agendamentos_cliente', 'input' => []],
+                ]],
+                ['role' => 'user', 'content' => [
+                    ['type' => 'tool_result', 'tool_use_id' => 'call_a', 'content' => '{}'],
+                    ['type' => 'tool_result', 'tool_use_id' => 'call_b', 'content' => '{}'],
+                ]],
+            ],
+        ], 'openai/gpt-oss-20b'));
+
+        Http::assertSent(fn ($request) => $request['messages'][2]['tool_calls'][0]['function']['arguments'] === '{"dias":3}'
+            && $request['messages'][2]['tool_calls'][1]['function']['arguments'] === '{}');
+    }
+
     public function test_gemini_serializa_args_vazio_da_ferramenta_como_objeto(): void
     {
         config([
