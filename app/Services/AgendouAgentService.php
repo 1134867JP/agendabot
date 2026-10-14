@@ -82,7 +82,7 @@ class AgendouAgentService
         $systemBlocks = [
             [
                 'type' => 'text',
-                'text' => $triagem ? $this->buildTriagemPrompt($tenant) : $this->buildStaticPrompt($tenant),
+                'text' => $triagem ? $this->buildTriagemPrompt($tenant) : $this->buildStaticPrompt($tenant, (bool) $agendamentoPendente),
                 'cache_control' => ['type' => 'ephemeral'],
             ],
             [
@@ -519,6 +519,8 @@ class AgendouAgentService
      * texto do bloco PENDENTE e tentar "reservar de novo", batendo contra a própria
      * reserva recém-criada (horario_indisponivel). Remover a ferramenta torna isso
      * estruturalmente impossível — só reagendar/confirmar/cancelar seguem disponíveis.
+     * Sem agendamento, o inverso: as ferramentas de gestão saem (não há o que gerir e
+     * elas custavam ~40% dos tokens de cada chamada).
      */
     private function buildTools(bool $temAgendamentoPendente = false): array
     {
@@ -590,11 +592,11 @@ class AgendouAgentService
             ],
         ];
 
-        if ($temAgendamentoPendente) {
-            $tools = array_values(array_filter($tools, fn ($tool) => $tool['name'] !== 'criar_agendamento'));
-        }
+        $foraDoContexto = $temAgendamentoPendente
+            ? ['criar_agendamento']
+            : ['confirmar_agendamento', 'cancelar_agendamento', 'listar_agendamentos_cliente', 'reagendar_agendamento'];
 
-        return $tools;
+        return array_values(array_filter($tools, fn ($tool) => ! in_array($tool['name'], $foraDoContexto, true)));
     }
 
     private function buildToolsTriagem(): array
@@ -782,7 +784,7 @@ REGRAS CRÍTICAS:
 PROMPT;
     }
 
-    public function buildStaticPrompt(Tenant $tenant): string
+    public function buildStaticPrompt(Tenant $tenant, bool $clienteTemAgendamento = true): string
     {
         $servicosAtivos = $tenant->servicos()->where('ativo', true)->orderBy('nome')->get()->keyBy('id');
         $real = fn ($valor) => 'R$ '.number_format((float) $valor, 2, ',', '.');
@@ -797,7 +799,7 @@ PROMPT;
         };
 
         // Cada profissional com o que faz e, quando diferente do padrão, o preço/duração dele.
-        $profissionais = $tenant->profissionais()->where('ativo', true)->orderBy('nome')->with('servicos')->get()
+        $profissionais = $tenant->profissionais()->where('ativo', true)->whereHas('horarios')->orderBy('nome')->with('servicos')->get()
             ->map(function ($p) use ($servicosAtivos, $real) {
                 $base = "- ID {$p->id}: {$p->nome}";
                 $itens = $p->servicos->filter(fn ($s) => $servicosAtivos->has($s->id))->map(function ($s) use ($real) {
@@ -839,22 +841,22 @@ PROMPT;
         $saudacao = $tenant->bot_saudacao ? "\nMENSAGEM DE BOAS-VINDAS (use como referência ao saudar o cliente pela primeira vez):\n{$tenant->bot_saudacao}" : '';
         $opcoesPart = $opcoes ? "\n{$opcoes}\n" : '';
         $maxTentativas = $tenant->triagemConfig()['max_tentativas_sem_entender'];
+        $apresentacao = trim("{$tenant->nome_agente} de {$tenant->nome}".($tenant->ramo_negocio ? " ({$tenant->ramo_negocio})" : '').". {$tenant->descricao_negocio}");
+        $local = collect([$tenant->endereco, $tenant->cidade])->filter()->join(', ');
+        $localPart = $local !== '' ? "Local: {$local} | " : '';
 
-        return <<<PROMPT
-Você é {$tenant->nome_agente} de {$tenant->nome} ({$tenant->ramo_negocio}). {$tenant->descricao_negocio}
-Local: {$tenant->endereco}, {$tenant->cidade} | Horários: {$horarios} | Tom: {$tomInstrucao}
-
-PROFISSIONAIS (preço/duração entre parênteses valem só para aquele profissional):
-{$profissionais}
-
-SERVIÇOS (preço e duração padrão):
-{$servicos}{$opcoesPart}{$saudacao}{$instrucoes}
+        $variosServicos = $servicosAtivos->count() > 1 ? <<<'TXT'
 
 VÁRIOS SERVIÇOS NO MESMO HORÁRIO:
 - Se existir na lista um serviço que já junta o que o cliente pediu (ex.: "Corte + Barba"), use esse serviço.
 - Senão, passe todos os IDs em servico_ids (buscar_slots e criar_agendamento): o sistema soma duração e preço.
 - Ao informar preço, use o valor que buscar_slots retornou para o profissional escolhido.
 
+TXT : "\n";
+
+        // O fluxo de reagendamento só interessa a quem já tem horário marcado; para os
+        // demais, dizemos explicitamente que não há agendamento (evita "cancelei" inventado).
+        $gestao = $clienteTemAgendamento ? <<<'TXT'
 FLUXO OBRIGATÓRIO PARA REAGENDAMENTO:
 1. Chame listar_agendamentos_cliente → mostre a lista ao cliente
 2. Cliente escolhe qual quer alterar → se ele ainda não disse dia e período (manhã/tarde), pergunte antes de buscar horários
@@ -862,6 +864,18 @@ FLUXO OBRIGATÓRIO PARA REAGENDAMENTO:
 4. Cliente confirma novo horário → chame reagendar_agendamento com o agendamento_id e os novos dados
 5. reagendar_agendamento sucesso=true → confirme o novo horário ao cliente
 - Se retornar horario_indisponivel: chame buscar_slots novamente e ofereça alternativas dentro do mesmo período
+TXT : 'O cliente não tem agendamento futuro. Se ele pedir para cancelar, remarcar ou confirmar um horário, diga que não encontrou agendamento ativo no nome dele e ofereça marcar um novo.';
+
+        return <<<PROMPT
+Você é {$apresentacao}
+{$localPart}Horários: {$horarios} | Tom: {$tomInstrucao}
+
+PROFISSIONAIS (preço/duração entre parênteses valem só para aquele profissional):
+{$profissionais}
+
+SERVIÇOS (preço e duração padrão):
+{$servicos}{$opcoesPart}{$saudacao}{$instrucoes}
+{$variosServicos}{$gestao}
 
 FLUXO OBRIGATÓRIO PARA NOVO AGENDAMENTO:
 1. Se o cliente ainda não disse dia e período (manhã/tarde) que prefere, pergunte antes de buscar horários
