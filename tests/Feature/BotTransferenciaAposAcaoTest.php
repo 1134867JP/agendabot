@@ -165,6 +165,69 @@ class BotTransferenciaAposAcaoTest extends TestCase
         $this->assertSame('aguardando_humano', $conversa->status_v2);
     }
 
+    public function test_agendamento_criado_com_transferencia_nao_pedida_confirma_e_segue_no_bot(): void
+    {
+        $this->expedienteTodosOsDias();
+        $data = now($this->tenant->resolvedTimezone())->addDays(2);
+        $this->fakeIaChamando([
+            ['name' => 'criar_agendamento', 'input' => [
+                'cliente_nome' => 'Bruno Lima', 'profissional_id' => $this->asafe->id,
+                'servico_ids' => [$this->corte->id], 'data' => $data->format('Y-m-d'), 'horario' => '10:00',
+            ]],
+            ['name' => 'transferir_para_humano', 'input' => []],
+        ]);
+
+        $conversa = $this->clienteEnvia('5551933000010', 'pode marcar às 10h, meu nome é Bruno Lima');
+
+        $this->assertSame(1, Agendamento::where('tenant_id', $this->tenant->id)->where('status', 'agendado')->count());
+        $this->assertSame('ativa', $conversa->status_v2);
+        $this->assertStringContainsString("Agendamento confirmado! ✅\nCorte com Asafe em {$data->format('d/m')} às 10:00", $this->ultimaRespostaDoBot($conversa));
+        $this->assertSame(1, $this->chamadasAIa());
+    }
+
+    public function test_confirmacao_com_transferencia_nao_pedida_confirma_e_segue_no_bot(): void
+    {
+        $agendamento = $this->agendamentoFuturo('5551933000011');
+        $this->fakeIaChamando([
+            ['name' => 'confirmar_agendamento', 'input' => []],
+            ['name' => 'transferir_para_humano', 'input' => []],
+        ]);
+
+        $conversa = $this->clienteEnvia('5551933000011', 'sim, confirmo');
+
+        $this->assertSame('confirmado', $agendamento->fresh()->status);
+        $this->assertSame('ativa', $conversa->status_v2);
+        $this->assertStringContainsString('Presença confirmada!', $this->ultimaRespostaDoBot($conversa));
+        $this->assertSame(1, $this->chamadasAIa());
+    }
+
+    public function test_remarcacao_com_transferencia_nao_pedida_informa_o_novo_horario_e_segue_no_bot(): void
+    {
+        $this->expedienteTodosOsDias();
+        $agendamento = $this->agendamentoFuturo('5551933000012');
+        $novaData = now($this->tenant->resolvedTimezone())->addDays(3);
+        $this->fakeIaChamando([
+            ['name' => 'reagendar_agendamento', 'input' => [
+                'agendamento_id' => $agendamento->id, 'data' => $novaData->format('Y-m-d'), 'hora' => '11:00',
+            ]],
+            ['name' => 'transferir_para_humano', 'input' => []],
+        ]);
+
+        $conversa = $this->clienteEnvia('5551933000012', 'muda para depois de amanhã às 11h');
+
+        $this->assertSame('11:00', $agendamento->fresh()->data_hora->setTimezone($this->tenant->resolvedTimezone())->format('H:i'));
+        $this->assertSame('ativa', $conversa->status_v2);
+        $this->assertStringContainsString("Seu horário foi alterado: Corte com Asafe em {$novaData->format('d/m')} às 11:00", $this->ultimaRespostaDoBot($conversa));
+        $this->assertSame(1, $this->chamadasAIa());
+    }
+
+    private function expedienteTodosOsDias(): void
+    {
+        for ($dia = 0; $dia <= 6; $dia++) {
+            $this->asafe->horarios()->create(['dia_semana' => $dia, 'hora_inicio' => '09:00', 'hora_fim' => '18:00', 'duracao_slot' => 30]);
+        }
+    }
+
     private function agendamentoFuturo(string $telefone): Agendamento
     {
         $cliente = Cliente::create(['tenant_id' => $this->tenant->id, 'telefone' => $telefone, 'nome' => 'Bruno']);
