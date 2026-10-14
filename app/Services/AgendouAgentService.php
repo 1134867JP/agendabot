@@ -109,9 +109,18 @@ class AgendouAgentService
             [
                 'type' => 'text',
                 'text' => 'HOJE: '.$hoje->translatedFormat('l, d/m/Y').' ('.$hoje->format('Y-m-d').'), agora são '.$hoje->format('H:i').'.'
+                    .' PRÓXIMOS DIAS: '.$this->proximosDias($hoje).'.'
                     .($triagem ? '' : ' Pode agendar para hoje ou dias seguintes, sempre com horários vindos de buscar_slots.'),
             ],
         ];
+
+        // Sem isso o bot perguntava o nome até de quem já agendou várias vezes.
+        if ($nomeCadastro = $this->nomeRealInformado($clienteInfo['nome'] ?? null)) {
+            $systemBlocks[] = [
+                'type' => 'text',
+                'text' => "NOME DO CLIENTE (cadastro): {$nomeCadastro}. Não pergunte o nome de novo; use-o ao registrar, a menos que o cliente informe outro.",
+            ];
+        }
 
         if ($triagem) {
             $systemBlocks[] = ['type' => 'text', 'text' => $this->buildAtendimentoBlock($tenant, $hoje)];
@@ -326,7 +335,9 @@ class AgendouAgentService
     private function toolBuscarSlots(array $input): array
     {
         $tenant = $this->currentTenant;
-        $dias = min((int) ($input['dias'] ?? 4), 7);
+        // O modelo pedia dias=1 achando que era "amanhã"; a busca começa hoje, então
+        // cobrimos ao menos 3 dias para "amanhã" e "depois de amanhã" sempre aparecerem.
+        $dias = min(max((int) ($input['dias'] ?? 4), 3), 7);
         $servicoIds = array_values(array_filter(array_map('intval', (array) ($input['servico_ids'] ?? $input['servico_id'] ?? []))));
         $profissionalId = ! empty($input['profissional_id']) ? (int) $input['profissional_id'] : null;
 
@@ -761,6 +772,17 @@ class AgendouAgentService
         return $nome;
     }
 
+    /** "amanhã = quinta-feira 15/10 (2026-10-15); sexta-feira 16/10 (2026-10-16); ..." */
+    private function proximosDias(Carbon $hoje): string
+    {
+        return collect(range(1, 6))->map(function (int $i) use ($hoje) {
+            $dia = $hoje->copy()->locale('pt_BR')->addDays($i);
+            $texto = "{$dia->translatedFormat('l')} {$dia->format('d/m')} ({$dia->format('Y-m-d')})";
+
+            return $i === 1 ? "amanhã = {$texto}" : $texto;
+        })->join('; ');
+    }
+
     /** Resposta montada com os dados gravados, usada quando o texto da IA é descartado. */
     private function respostaDaAcaoConcluida(Tenant $tenant): ?string
     {
@@ -953,6 +975,7 @@ SERVIÇOS (preço e duração padrão):
 FLUXO OBRIGATÓRIO PARA NOVO AGENDAMENTO:
 1. Se o cliente ainda não disse dia e período (manhã/tarde) que prefere, pergunte antes de buscar horários
 2. Chame buscar_slots para conferir a disponibilidade real
+   - Se o cliente já disse dia e horário e esse horário está livre em buscar_slots, vá direto ao passo 4 com ele (não liste outras opções)
 3. NUNCA despeje a lista inteira retornada — ofereça só 2-3 horários dentro do período escolhido (ex.: "Na segunda de manhã tenho 09:00, 10:00 e 11:00, algum serve?"). Se o cliente quiser ver mais opções, ofereça outras dentro do mesmo critério
 4. Cliente escolhe → confirme em texto: "Ok! [serviço] com [profissional] em [data] às [hora], certo?"
 5. Cliente confirma → chame criar_agendamento com os dados EXATOS do slot escolhido

@@ -110,6 +110,7 @@ class AgendaController extends Controller
                 'end' => $fmtSP($fimRaw),
                 'telefone' => $a->cliente_telefone,
                 'status' => in_array($a->status, ['confirmado', 'agendado']) ? 'confirmado' : $a->status,
+                'no_show' => (bool) $a->no_show,
                 'valor_total' => $a->valor_total,
                 'origem' => $a->origem ?? 'manual',
                 'profissional_id' => $a->profissional_id,
