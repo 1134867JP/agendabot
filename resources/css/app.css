@@ -25,10 +25,10 @@
   --font-display: Instrument Serif, Georgia, serif;
   --font-syne: Syne, sans-serif;
 
-  --color-app-bg: #071214;
-  --color-app-sidebar: #0a181a;
-  --color-app-surface: #0f1f21;
-  --color-app-surface2: #172b2e;
+  --color-app-bg: #050707;
+  --color-app-sidebar: #090c0c;
+  --color-app-surface: #0e1212;
+  --color-app-surface2: #161b1b;
 
   --color-accent: #2dd4bf;
   --color-accent-light: rgba(45, 212, 191, 0.12);
@@ -123,16 +123,16 @@
 
 @layer base {
     :root, .dark {
-        --bg-app:        #071214;
+        --bg-app:        #050707;
         --amber-text:    #f1c77a;
         --amber-btn-bg:  rgba(227,169,75,0.14);
         --amber-btn-bdr: rgba(227,169,75,0.26);
         --danger-text:   #f0a09a;
         --danger-btn-bg: rgba(225,100,100,0.14);
         --danger-btn-bdr:rgba(225,100,100,0.26);
-        --bg-sidebar:    #0a181a;
-        --bg-surface:    #0f1f21;
-        --bg-surface-2:  #172b2e;
+        --bg-sidebar:    #090c0c;
+        --bg-surface:    #0e1212;
+        --bg-surface-2:  #161b1b;
         --accent:        #2dd4bf;
         --accent-hover:  #5eead4;
         --accent-light:  rgba(45, 212, 191, 0.12);
